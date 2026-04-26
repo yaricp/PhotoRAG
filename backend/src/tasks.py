@@ -126,7 +126,7 @@ def metadata_task(photo_id: int):
             lat = res.get("gps_latitude")
             lon = res.get("gps_longitude")
             if lat is not None and lon is not None:
-                enricher = GeoEnricher()
+                enricher = registry.geo_enricher # Use registry for geo too
                 address = enricher.reverse_geocode(lat, lon)
                 update_photo_geoposition(db, photo_id, lat, lon, address)
                 
@@ -191,6 +191,25 @@ def ocr_task(photo_id: int):
         if photo:
             text = extract_text_from_image(photo.file_path)
             photo.ocr_text = text
+            db.commit()
+            
+            # TRIGGER DOCUMENT DETECTION if text exists
+            if text and len(text.strip()) > 0:
+                is_this_document_task(photo_id)
+    finally:
+        db.close()
+
+@task_queue.task()
+def is_this_document_task(photo_id: int):
+    """Refined check: Use Vision model to confirm if photo is a document."""
+    db = SessionLocal()
+    try:
+        photo = db.query(Photo).filter(Photo.id == photo_id).first()
+        if photo:
+            gen = registry.vision_generator
+            result = gen.generate_vision_text(photo.file_path, prompt_key="is_document")
+            # Simple binary conversion
+            photo.is_doc = "yes" in result.lower()
             db.commit()
     finally:
         db.close()

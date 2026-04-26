@@ -39,13 +39,18 @@ class QwenVisionGenerator:
                 "role": "user",
                 "content": [
                     {"type": "image", "image": f"file://{filepath}"},
-                    {"type": "text", "text": "Describe this scene in one concise, high-quality sentence focusing on the main action and environment."},
+                    {
+                        "type": "text", 
+                        "text": "Describe this scene in one concise, high-quality sentence focusing on the main action and environment."
+                    },
                 ],
             }
         ]
 
         # Preparation
-        text = self.processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        text = self.processor.apply_chat_template(
+            messages, tokenize=False, add_generation_prompt=True
+        )
         image_inputs, video_inputs = process_vision_info(messages)
         inputs = self.processor(
             text=[text],

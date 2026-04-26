@@ -3,16 +3,20 @@ from pydantic import BaseModel
 
 from src.observer import start_observer
 
+
 app = FastAPI(title="Photo Describer MVP")
+
 
 class WatchRequest(BaseModel):
     path: str
+
 
 # Store active observers in a global dict to manage their lifecycle
 active_observers = {}
 
 from src.db_service import get_all_model_states
 from src.database import SessionLocal
+
 
 @app.get("/api/system/status")
 def get_system_status():
@@ -26,6 +30,7 @@ def get_system_status():
     finally:
         db.close()
 
+
 @app.post("/api/watch")
 def trigger_directory_watch(request: WatchRequest):
     if request.path not in active_observers:
@@ -36,6 +41,7 @@ def trigger_directory_watch(request: WatchRequest):
         except Exception as e:
             return {"status": "error", "message": str(e)}
     return {"status": "already_watching", "target": request.path}
+
 
 @app.get("/api/stream")
 def sse_event_stream():

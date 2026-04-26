@@ -1,6 +1,7 @@
 import threading
 from src.ai.clip import ClipTagger
 from src.ai.vision import QwenVisionGenerator
+from src.geo import GeoEnricher
 from src.config import Settings
 
 class AIModelRegistry:
@@ -15,6 +16,7 @@ class AIModelRegistry:
         self._clip_tagger = None
         self._vision_generator = None
         self._nomic_embedder = None
+        self._geo_enricher = None
         self._settings = Settings()
 
     @classmethod
@@ -32,7 +34,7 @@ class AIModelRegistry:
                 if self._clip_tagger is None:
                     print("Registry: Warming up CLIP Tagger...")
                     tagger = ClipTagger()
-                    tagger.load() # Force load into memory
+                    tagger.load() 
                     self._clip_tagger = tagger
         return self._clip_tagger
 
@@ -43,7 +45,6 @@ class AIModelRegistry:
                 if self._vision_generator is None:
                     print("Registry: Warming up Qwen-VL Vision Generator...")
                     generator = QwenVisionGenerator(self._settings)
-                    # Qwen loads on first use or explicit call if implemented
                     self._vision_generator = generator
         return self._vision_generator
 
@@ -57,6 +58,14 @@ class AIModelRegistry:
                     model = SentenceTransformer('nomic-ai/nomic-embed-text-v1.5', trust_remote_code=True)
                     self._nomic_embedder = model
         return self._nomic_embedder
+
+    @property
+    def geo_enricher(self):
+        if self._geo_enricher is None:
+            with self._lock:
+                if self._geo_enricher is None:
+                    self._geo_enricher = GeoEnricher()
+        return self._geo_enricher
 
 # Global Access Point
 registry = AIModelRegistry.get_instance()

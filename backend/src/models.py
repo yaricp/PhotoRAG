@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, JSON, DateTime, ForeignKey, Table, Float
+from sqlalchemy import Column, Integer, String, JSON, DateTime, ForeignKey, Table, Float, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
@@ -48,6 +48,7 @@ class Photo(Base):
     keywords = Column(JSON, nullable=True) 
     ocr_text = Column(String, nullable=True)
     description = Column(String, nullable=True)
+    is_doc = Column(Boolean, default=False)
     embedding = Column(Vector(768), nullable=True)
     
     file_created_at = Column(DateTime, nullable=True)
