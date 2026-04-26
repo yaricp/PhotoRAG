@@ -6,3 +6,4 @@ uvicorn
 sqlalchemy
 pgvector
 watchdog
+huey==2.5.0
