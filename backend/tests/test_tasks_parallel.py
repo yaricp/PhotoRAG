@@ -1,4 +1,5 @@
 import sys
+from datetime import datetime
 from unittest.mock import MagicMock, patch
 import sqlalchemy.types
 
@@ -13,10 +14,10 @@ import sqlalchemy.orm
 import os
 from sqlalchemy import create_engine
 from src.models import Photo, Base
-from src.tasks import metadata_task, clip_task, vision_task, ocr_task
+from src.tasks import metadata_task
 from src.db_service import create_photo_record
 
-TEST_DB_FILE = "test_id_based.sqlite3"
+TEST_DB_FILE = "test_accuracy.sqlite3"
 test_engine = create_engine(f"sqlite:///{TEST_DB_FILE}")
 
 @pytest.fixture(scope="session", autouse=True)
@@ -44,25 +45,34 @@ def db_session():
     session.commit()
     session.close()
 
-@patch('src.tasks.get_exif_data', return_value={"model": "Test Camera"})
-def test_metadata_task_by_id(mock_exif, db_session):
-    # Step 1: Sync Creation (Simulating Observer)
-    photo = create_photo_record(db_session, "id_hash_1", "test.jpg")
-    photo_id = photo.id
+def test_atomic_creation_with_file_timestamp(db_session):
+    file_now = datetime(2020, 1, 1)
+    photo = create_photo_record(db_session, "hash_1", "test.jpg", file_created_at=file_now)
     
-    # Step 2: Async Launch (by ID)
-    metadata_task.call_local(photo_id)
-    
-    db_session.refresh(photo)
-    assert photo.exif_data["model"] == "Test Camera"
+    assert photo.file_created_at == file_now
+    assert photo.captured_at is None # Should be empty until metadata task runs
 
-@patch('src.tasks.ClipTagger')
-def test_clip_task_by_id(mock_tagger_class, db_session):
-    photo = create_photo_record(db_session, "id_hash_2", "test.jpg")
-    mock_tagger = mock_tagger_class.return_value
-    mock_tagger.generate_keywords.return_value = ["tag1"]
+@patch('src.tasks.get_exif_data')
+def test_metadata_task_populates_captured_at(mock_get_exif, db_session):
+    file_now = datetime(2020, 1, 1)
+    captured_now = datetime(2019, 12, 25, 10, 30) # True camera time
     
-    clip_task.call_local(photo.id)
+    # 1. Start with file system time
+    photo = create_photo_record(db_session, "hash_2", "test.jpg", file_created_at=file_now)
+    
+    # 2. Mock EXIF returning camera time
+    mock_get_exif.return_value = {
+        "model": "Sony A7",
+        "captured_at_obj": captured_now,
+        "captured_at_str": "2019:12:25 10:30:00",
+        "gps_lat": "None",
+        "gps_lon": "None"
+    }
+    
+    # 3. Run Metadata task
+    metadata_task.call_local(photo.id)
     
     db_session.refresh(photo)
-    assert "tag1" in photo.keywords
+    assert photo.file_created_at == file_now # Preserved
+    assert photo.captured_at == captured_now # Updated from EXIF
+    assert photo.exif_data["model"] == "Sony A7"

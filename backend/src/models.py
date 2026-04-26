@@ -17,4 +17,6 @@ class Photo(Base):
     ocr_text = Column(String, nullable=True)
     description = Column(String, nullable=True)  # Populated via Qwen2
     embedding = Column(Vector(768), nullable=True)  # Populated via nomic
+    file_created_at = Column(DateTime, nullable=True) # File system time (Sync)
+    captured_at = Column(DateTime, nullable=True) # EXIF capture time (Async)
     created_at = Column(DateTime, default=datetime.utcnow)

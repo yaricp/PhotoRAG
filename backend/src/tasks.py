@@ -13,8 +13,16 @@ def metadata_task(photo_id: int):
     try:
         photo = db.query(Photo).filter(Photo.id == photo_id).first()
         if photo:
-            exif = get_exif_data(photo.file_path)
-            photo.exif_data = exif
+            res = get_exif_data(photo.file_path)
+            # 1. Update the high-fidelity DateTime column
+            if res.get("captured_at_obj"):
+                photo.captured_at = res["captured_at_obj"]
+            
+            # 2. Update the JSON blob (remove the non-serializable object)
+            exif_blob = res.copy()
+            exif_blob.pop("captured_at_obj", None)
+            photo.exif_data = exif_blob
+            
             db.commit()
     finally:
         db.close()

@@ -1,3 +1,5 @@
+import os
+from datetime import datetime
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from src.watcher import generate_file_hash
@@ -13,15 +15,19 @@ class PhotoEventHandler(FileSystemEventHandler):
                 # 2. Sync Hashing
                 file_hash = generate_file_hash(event.src_path)
                 
-                # 3. Sync DB Check & Registration (Atomic)
+                # 3. Get File System creation time (Sync Proxy)
+                stat = os.stat(event.src_path)
+                file_created_at = datetime.fromtimestamp(getattr(stat, 'st_birthtime', stat.st_ctime))
+                
+                # 4. Sync DB Check & Registration (Atomic)
                 db = SessionLocal()
                 try:
                     photo = check_photo_hash_exists(db, file_hash)
                     if not photo:
-                        # 4. Sync Create Record (Atomic Registration)
-                        photo = create_photo_record(db, file_hash, event.src_path)
+                        # 5. Sync Create Record with file_created_at
+                        photo = create_photo_record(db, file_hash, event.src_path, file_created_at)
                         
-                        # 5. Dispatch Async Tasks with the Photo ID
+                        # 6. Dispatch Async Tasks with the Photo ID
                         metadata_task(photo.id)
                         clip_task(photo.id)
                         vision_task(photo.id)
