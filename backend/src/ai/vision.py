@@ -29,20 +29,23 @@ class QwenVisionGenerator:
             self.processor = AutoProcessor.from_pretrained(self.model_id)
             self.model.eval()
 
-    def describe_scene(self, filepath: str) -> str:
-        """Generates a high-quality descriptive sentence about the photo."""
+    def generate_vision_text(self, filepath: str, prompt_key: str = "describe_scene") -> str:
+        """Universal vision generation using prompts from central registry."""
         from qwen_vl_utils import process_vision_info
         self.load()
         
+        # Pull prompt from registry
+        prompt_text = PROMPTS["vision_analysis"].get(
+            prompt_key, 
+            PROMPTS["vision_analysis"]["describe_scene"]
+        )
+
         messages = [
             {
                 "role": "user",
                 "content": [
                     {"type": "image", "image": f"file://{filepath}"},
-                    {
-                        "type": "text", 
-                        "text": "Describe this scene in one concise, high-quality sentence focusing on the main action and environment."
-                    },
+                    {"type": "text", "text": prompt_text},
                 ],
             }
         ]
@@ -71,4 +74,8 @@ class QwenVisionGenerator:
                 generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False
             )
             
-        return output_text[0] if output_text else "A photo of an unknown scene."
+        return output_text[0] if output_text else ""
+
+    def describe_scene(self, filepath: str) -> str:
+        """Legacy wrapper for scene description."""
+        return self.generate_vision_text(filepath, prompt_key="describe_scene")

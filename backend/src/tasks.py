@@ -19,6 +19,7 @@ from src.models import Photo, PhotoTag, PhotoCategory, Geoposition
 import torch
 import os
 
+
 def check_and_trigger_finalization(db, photo_id: int):
     """Barrier: Checks if all parallel AI tasks are done, then triggers synthesis."""
     photo = db.query(Photo).filter(Photo.id == photo_id).first()
@@ -33,6 +34,7 @@ def check_and_trigger_finalization(db, photo_id: int):
 
     if has_metadata and has_tags and has_categories and has_description:
         final_embedding_task(photo_id)
+
 
 @task_queue.task()
 def final_embedding_task(photo_id: int):
@@ -67,6 +69,7 @@ Location: {location}
         db.commit()
     finally:
         db.close()
+
 
 @task_queue.task()
 def download_models_task():
@@ -108,6 +111,7 @@ def download_models_task():
 
     db.close()
 
+
 @task_queue.task()
 def metadata_task(photo_id: int):
     db = SessionLocal()
@@ -135,6 +139,7 @@ def metadata_task(photo_id: int):
     finally:
         db.close()
 
+
 @task_queue.task()
 def auto_tag_clip_task(photo_id: int):
     db = SessionLocal()
@@ -151,6 +156,7 @@ def auto_tag_clip_task(photo_id: int):
             check_and_trigger_finalization(db, photo_id)
     finally:
         db.close()
+
 
 @task_queue.task()
 def categorize_photo_task(photo_id: int):
@@ -169,6 +175,7 @@ def categorize_photo_task(photo_id: int):
     finally:
         db.close()
 
+
 @task_queue.task()
 def vision_task(photo_id: int):
     db = SessionLocal()
@@ -176,12 +183,13 @@ def vision_task(photo_id: int):
         photo = db.query(Photo).filter(Photo.id == photo_id).first()
         if photo:
             generator = registry.vision_generator
-            desc = generator.describe_scene(photo.file_path)
+            desc = generator.generate_vision_text(photo.file_path)
             photo.description = desc
             db.commit()
             check_and_trigger_finalization(db, photo_id)
     finally:
         db.close()
+
 
 @task_queue.task()
 def ocr_task(photo_id: int):
@@ -198,6 +206,7 @@ def ocr_task(photo_id: int):
                 is_this_document_task(photo_id)
     finally:
         db.close()
+
 
 @task_queue.task()
 def is_this_document_task(photo_id: int):
