@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from src.models import Photo, ModelState
+from src.models import Photo, ModelState, Camera, Geoposition, Keyword, Tag, Person, Category
 from src.watcher import generate_file_hash
 from datetime import datetime
 
@@ -38,3 +38,34 @@ def update_model_status(db: Session, name: str, status: str):
 
 def get_all_model_states(db: Session):
     return db.query(ModelState).all()
+
+# Semantic Upsert Helpers
+def get_or_create_camera(db: Session, make: str, model: str):
+    camera = db.query(Camera).filter_by(make=make, model=model).first()
+    if not camera:
+        camera = Camera(make=make, model=model)
+        db.add(camera)
+        db.commit()
+        db.refresh(camera)
+    return camera
+
+def get_or_create_keyword(db: Session, name: str):
+    kw = db.query(Keyword).filter_by(name=name).first()
+    if not kw:
+        kw = Keyword(name=name)
+        db.add(kw)
+        db.commit()
+        db.refresh(kw)
+    return kw
+
+def update_photo_geoposition(db: Session, photo_id: int, lat: float, lon: float, address: str = None):
+    geo = db.query(Geoposition).filter_by(photo_id=photo_id).first()
+    if not geo:
+        geo = Geoposition(photo_id=photo_id, latitude=lat, longitude=lon, address=address)
+        db.add(geo)
+    else:
+        geo.latitude = lat
+        geo.longitude = lon
+        geo.address = address
+    db.commit()
+    return geo
