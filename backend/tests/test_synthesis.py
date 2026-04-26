@@ -55,4 +55,5 @@ def test_final_embedding_generation_logic(mock_session, mock_st_class):
     final_embedding_task.call_local(1)
     
     assert photo.embedding == ([0.1] * 768)
+    mock_st_class.assert_called_with('nomic-ai/nomic-embed-text-v1.5', trust_remote_code=True)
     db.commit.assert_called()

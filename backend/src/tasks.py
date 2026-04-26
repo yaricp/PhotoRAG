@@ -19,6 +19,7 @@ from src.db_service import (
 )
 from src.models import Photo, PhotoTag, PhotoCategory, Geoposition
 import torch
+import os
 
 def check_and_trigger_finalization(db, photo_id: int):
     """Barrier: Checks if all parallel AI tasks are done, then triggers synthesis."""
@@ -37,7 +38,7 @@ def check_and_trigger_finalization(db, photo_id: int):
 
 @task_queue.task()
 def final_embedding_task(photo_id: int):
-    """Aggregates all AI results and saves a 768-dim semantic vector."""
+    """Aggregates results and saves 768-dim vector using Nomic embedder."""
     db = SessionLocal()
     try:
         photo = db.query(Photo).filter(Photo.id == photo_id).first()
@@ -47,7 +48,6 @@ def final_embedding_task(photo_id: int):
         # 1. Gather components
         tags = [pt.tag.name for pt in photo.tags_rel]
         categories = [pc.category.name for pc in photo.categories_rel]
-        # Use first category as primary for narrative
         main_category = categories[0] if categories else "Uncategorized"
         
         geo = db.query(Geoposition).filter_by(photo_id=photo_id).first()
@@ -61,9 +61,9 @@ Category: {main_category}
 Location: {location}
 """
         # 3. Generate Embedding (768-dim)
-        # Using a reliable st-model that matches our 768-dim DB column
         from sentence_transformers import SentenceTransformer
-        model = SentenceTransformer('all-mpnet-base-v2')
+        # Swapped to Nomic as per Implementation Plan
+        model = SentenceTransformer('nomic-ai/nomic-embed-text-v1.5', trust_remote_code=True)
         embedding = model.encode(photo_text)
         
         # 4. Persist to pgvector column
@@ -74,8 +74,12 @@ Location: {location}
 
 @task_queue.task()
 def download_models_task():
+    """Bootstrap task: Models + Vocab + Default Categories + Nomic Embedder."""
     db = SessionLocal()
     settings = Settings()
+    from sentence_transformers import SentenceTransformer
+    
+    # 1. CLIP & Vocab
     try:
         update_model_status(db, "clip", "downloading")
         ClipTagger().download()
@@ -84,10 +88,12 @@ def download_models_task():
         db.rollback()
         update_model_status(db, "clip", "error")
 
+    # 2. Categories Seeding
     defaults = ["Nature", "Architecture", "People", "Urban", "Interior", "Portrait", "Landscape", "Abstract", "Food", "Animals"]
     for cat in defaults:
         get_or_create_category(db, cat)
 
+    # 3. Vision Model (Qwen)
     try:
         update_model_status(db, "vision", "downloading")
         QwenVisionGenerator(settings).download()
@@ -96,7 +102,16 @@ def download_models_task():
         db.rollback()
         update_model_status(db, "vision", "error")
 
-    update_model_status(db, "embedding", "ready")
+    # 4. Nomic Embedder
+    try:
+        update_model_status(db, "embedding", "downloading")
+        # Ensure model is locally cached
+        SentenceTransformer('nomic-ai/nomic-embed-text-v1.5', trust_remote_code=True)
+        update_model_status(db, "embedding", "ready")
+    except Exception:
+        db.rollback()
+        update_model_status(db, "embedding", "error")
+
     db.close()
 
 @task_queue.task()
