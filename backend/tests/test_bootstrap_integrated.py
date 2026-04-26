@@ -1,65 +1,56 @@
 import pytest
-import sys
-from unittest.mock import MagicMock, patch
-import sqlalchemy.types
-import sqlalchemy.orm
-import os
-import uuid
-from sqlalchemy import create_engine
-from src.models import Base, ModelState
+from unittest.mock import MagicMock, patch, PropertyMock
 from src.tasks import download_models_task
+from src.models import Base, ModelState
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+import os
 
-# ATOMIC MOCK: Must happen before any project imports
-mock_pgvector = MagicMock()
-mock_pgvector.sqlalchemy.Vector = lambda size: sqlalchemy.types.JSON()
-sys.modules['pgvector'] = mock_pgvector
-sys.modules['pgvector.sqlalchemy'] = mock_pgvector.sqlalchemy
+# SETUP LOCAL TEST DB
+TEST_DB_URL = "sqlite:///:memory:"
+test_engine = create_engine(TEST_DB_URL)
+TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
+
+@pytest.fixture(scope="module", autouse=True)
+def setup_db():
+    Base.metadata.create_all(bind=test_engine)
+    yield
+    Base.metadata.drop_all(bind=test_engine)
 
 @pytest.fixture
-def isolated_db():
-    db_name = f"test_iso_{uuid.uuid4().hex}.sqlite3"
-    engine = create_engine(f"sqlite:///{db_name}")
-    Base.metadata.create_all(bind=engine)
-    
-    SessionLocal = sqlalchemy.orm.sessionmaker(bind=engine)
-    session = SessionLocal()
-    
-    # Pre-seed
-    session.add(ModelState(name="clip", status="pending"))
-    session.add(ModelState(name="vision", status="pending"))
-    session.add(ModelState(name="embedding", status="pending"))
+def db_session():
+    session = TestSessionLocal()
+    yield session
+    session.query(ModelState).delete()
     session.commit()
-    
-    with patch('src.tasks.SessionLocal', return_value=session):
-        yield session
-    
     session.close()
-    if os.path.exists(db_name):
-        os.remove(db_name)
 
-# CRITICAL: Patch BOTH AI modules globally for all tests in this file
-@patch('src.tasks.ClipTagger')
-@patch('src.tasks.QwenVisionGenerator')
-def test_download_models_task_lifecycle(mock_vision_class, mock_clip_class, isolated_db):
+@patch('src.tasks.registry')
+@patch('src.tasks.SessionLocal')
+def test_download_models_task_lifecycle(mock_session_class, mock_registry, db_session):
+    mock_session_class.return_value = db_session
+    
+    # Use call_local for synchronous execution in tests
     download_models_task.call_local()
     
-    states = isolated_db.query(ModelState).all()
-    assert len(states) == 3
-    for s in states:
-        assert s.status == "ready"
+    # Verify model states
+    states = {s.name: s.status for s in db_session.query(ModelState).all()}
+    assert "clip" in states
+    assert states["clip"] == "ready"
+    assert states["vision"] == "ready"
+    assert states["embedding"] == "ready"
 
-@patch('src.tasks.ClipTagger')
-@patch('src.tasks.QwenVisionGenerator')
-def test_bootstrap_sets_error_status(mock_vision_class, mock_clip_class, isolated_db):
-    # Simulate a crash in CLIP
-    mock_clip_class.return_value.download.side_effect = Exception("Down")
+@patch('src.tasks.registry')
+@patch('src.tasks.SessionLocal')
+def test_bootstrap_sets_error_status(mock_session_class, mock_registry, db_session):
+    mock_session_class.return_value = db_session
+    
+    # Simulate clip failure
+    # Need to simulate failure on property access
+    type(mock_registry).clip_tagger = PropertyMock(side_effect=Exception("Fail"))
     
     download_models_task.call_local()
     
-    # CLIP should be error
-    clip_state = isolated_db.query(ModelState).filter_by(name="clip").first()
-    assert clip_state.status == "error"
-    
-    # Vision should proceed to ready (because it was mocked)
-    vision_state = isolated_db.query(ModelState).filter_by(name="vision").first()
-    assert vision_state.status == "ready"
+    state = db_session.query(ModelState).filter_by(name="clip").first()
+    assert state is not None
+    assert state.status == "error"

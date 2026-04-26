@@ -37,10 +37,10 @@ def test_finalizer_barrier_waits_when_missing_vision(mock_db):
         check_and_trigger_finalization(mock_db, 1)
         mock_final.assert_not_called()
 
-# Updated: Patch the library source instead of the module attribute
-@patch('sentence_transformers.SentenceTransformer') 
+# Updated: Patch the registry instead of sentence_transformers
+@patch('src.tasks.registry') 
 @patch('src.tasks.SessionLocal')
-def test_final_embedding_generation_logic(mock_session, mock_st_class):
+def test_final_embedding_generation_logic(mock_session, mock_registry):
     db = mock_session.return_value
     photo = Photo(id=1, description="Magnificent Forest")
     photo.tags_rel = [MagicMock(tag=Tag(name="Tree"))]
@@ -49,11 +49,12 @@ def test_final_embedding_generation_logic(mock_session, mock_st_class):
     db.query.return_value.filter.return_value.first.return_value = photo
     db.query.return_value.filter_by.return_value.first.return_value = Geoposition(address="Berlin")
     
-    mock_st = mock_st_class.return_value
-    mock_st.encode.return_value = np.array([0.1] * 768)
+    # Registry mock setup
+    mock_model = MagicMock()
+    mock_model.encode.return_value = np.array([0.1] * 768)
+    mock_registry.nomic_embedder = mock_model
     
     final_embedding_task.call_local(1)
     
     assert photo.embedding == ([0.1] * 768)
-    mock_st_class.assert_called_with('nomic-ai/nomic-embed-text-v1.5', trust_remote_code=True)
     db.commit.assert_called()
