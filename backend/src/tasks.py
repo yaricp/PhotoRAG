@@ -17,11 +17,63 @@ from src.db_service import (
     get_or_create_category,
     add_photo_category_with_score
 )
-from src.models import Photo
+from src.models import Photo, PhotoTag, PhotoCategory, Geoposition
+import torch
+
+def check_and_trigger_finalization(db, photo_id: int):
+    """Barrier: Checks if all parallel AI tasks are done, then triggers synthesis."""
+    photo = db.query(Photo).filter(Photo.id == photo_id).first()
+    if not photo:
+        return
+
+    # Check for presence of all synthesized parts
+    has_metadata = photo.captured_at is not None
+    has_tags = db.query(PhotoTag).filter_by(photo_id=photo_id).count() > 0
+    has_categories = db.query(PhotoCategory).filter_by(photo_id=photo_id).count() > 0
+    has_description = photo.description is not None
+
+    if has_metadata and has_tags and has_categories and has_description:
+        final_embedding_task(photo_id)
+
+@task_queue.task()
+def final_embedding_task(photo_id: int):
+    """Aggregates all AI results and saves a 768-dim semantic vector."""
+    db = SessionLocal()
+    try:
+        photo = db.query(Photo).filter(Photo.id == photo_id).first()
+        if not photo:
+            return
+
+        # 1. Gather components
+        tags = [pt.tag.name for pt in photo.tags_rel]
+        categories = [pc.category.name for pc in photo.categories_rel]
+        # Use first category as primary for narrative
+        main_category = categories[0] if categories else "Uncategorized"
+        
+        geo = db.query(Geoposition).filter_by(photo_id=photo_id).first()
+        location = geo.address if geo and geo.address else "Unknown Location"
+
+        # 2. Format Synthesis Template
+        photo_text = f"""
+Scene: {photo.description}
+Tags: {", ".join(tags)}
+Category: {main_category}
+Location: {location}
+"""
+        # 3. Generate Embedding (768-dim)
+        # Using a reliable st-model that matches our 768-dim DB column
+        from sentence_transformers import SentenceTransformer
+        model = SentenceTransformer('all-mpnet-base-v2')
+        embedding = model.encode(photo_text)
+        
+        # 4. Persist to pgvector column
+        photo.embedding = embedding.tolist()
+        db.commit()
+    finally:
+        db.close()
 
 @task_queue.task()
 def download_models_task():
-    """Bootstrap task: Models + Vocab + Default Categories."""
     db = SessionLocal()
     settings = Settings()
     try:
@@ -49,7 +101,6 @@ def download_models_task():
 
 @task_queue.task()
 def metadata_task(photo_id: int):
-    """Enriches photo with EXIF and Reverse Geocoding (City, Country)."""
     db = SessionLocal()
     try:
         photo = db.query(Photo).filter(Photo.id == photo_id).first()
@@ -59,12 +110,10 @@ def metadata_task(photo_id: int):
             if res.get("captured_at_obj"):
                 photo.captured_at = res["captured_at_obj"]
             
-            # Camera Enrichment
             if res.get("model") and res.get("model") != "Unknown":
                 camera = get_or_create_camera(db, make="Unknown", model=res["model"])
                 photo.camera_id = camera.id
             
-            # Geo Enrichment (Reverse Geocoding)
             lat = res.get("gps_latitude")
             lon = res.get("gps_longitude")
             if lat is not None and lon is not None:
@@ -73,6 +122,7 @@ def metadata_task(photo_id: int):
                 update_photo_geoposition(db, photo_id, lat, lon, address)
                 
             db.commit()
+            check_and_trigger_finalization(db, photo_id)
     finally:
         db.close()
 
@@ -89,6 +139,7 @@ def auto_tag_clip_task(photo_id: int):
             for tag_name, score in confident_tags:
                 add_photo_tag_with_score(db, photo_id, tag_name, score)
             db.commit()
+            check_and_trigger_finalization(db, photo_id)
     finally:
         db.close()
 
@@ -105,6 +156,7 @@ def categorize_photo_task(photo_id: int):
                 if score > 0.5:
                     add_photo_category_with_score(db, photo_id, cat_name, score)
             db.commit()
+            check_and_trigger_finalization(db, photo_id)
     finally:
         db.close()
 
@@ -118,6 +170,7 @@ def vision_task(photo_id: int):
             desc = gen.describe_scene(photo.file_path)
             photo.description = desc
             db.commit()
+            check_and_trigger_finalization(db, photo_id)
     finally:
         db.close()
 
