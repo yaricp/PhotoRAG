@@ -10,28 +10,37 @@ from src.db_service import (
     update_model_status, 
     get_or_create_camera, 
     update_photo_geoposition,
-    get_or_create_keyword
+    get_or_create_keyword,
+    add_photo_tag_with_score,
+    get_all_categories,
+    get_or_create_category,
+    add_photo_category_with_score
 )
 from src.models import Photo
 
 @task_queue.task()
 def download_models_task():
-    """Bootstrap task to ensure all AI models are downloaded and ready."""
+    """Bootstrap task: Models + Vocab + Default Categories."""
     db = SessionLocal()
     settings = Settings()
     try:
         update_model_status(db, "clip", "downloading")
         ClipTagger().download()
         update_model_status(db, "clip", "ready")
-    except Exception as e:
+    except Exception:
         db.rollback()
         update_model_status(db, "clip", "error")
+
+    # Seed Default Categories
+    defaults = ["Nature", "Architecture", "People", "Urban", "Interior", "Portrait", "Landscape", "Abstract", "Food", "Animals"]
+    for cat in defaults:
+        get_or_create_category(db, cat)
 
     try:
         update_model_status(db, "vision", "downloading")
         QwenVisionGenerator(settings).download()
         update_model_status(db, "vision", "ready")
-    except Exception as e:
+    except Exception:
         db.rollback()
         update_model_status(db, "vision", "error")
 
@@ -45,51 +54,46 @@ def metadata_task(photo_id: int):
         photo = db.query(Photo).filter(Photo.id == photo_id).first()
         if photo:
             res = get_exif_data(photo.file_path)
-            # 1. Update existing JSON blob
             photo.exif_data = {k: v for k, v in res.items() if k != "captured_at_obj"}
-            
-            # 2. Update specific columns
             if res.get("captured_at_obj"):
                 photo.captured_at = res["captured_at_obj"]
-            
-            # 3. Relational: Camera
             if res.get("model") and res.get("model") != "Unknown":
                 camera = get_or_create_camera(db, make="Unknown", model=res["model"])
                 photo.camera_id = camera.id
-            
-            # 4. Relational: Geoposition
-            lat = res.get("gps_lat")
-            lon = res.get("gps_lon")
-            # Simple check if lat/lon are valid floats (need better parsing in real case)
-            try:
-                if lat and lon and lat != "None" and lon != "None":
-                    # Placeholder for coordinate parsing
-                    update_photo_geoposition(db, photo_id, float(0.0), float(0.0)) 
-            except Exception:
-                pass
-
             db.commit()
     finally:
         db.close()
 
 @task_queue.task()
-def clip_task(photo_id: int):
+def auto_tag_clip_task(photo_id: int):
     db = SessionLocal()
     try:
         photo = db.query(Photo).filter(Photo.id == photo_id).first()
         if photo:
             tagger = ClipTagger()
-            keywords = tagger.generate_keywords(photo.file_path)
-            
-            # 1. Update JSON blob
-            photo.keywords = keywords
-            
-            # 2. Relational: Keywords
-            for kw_name in keywords:
-                kw_obj = get_or_create_keyword(db, kw_name)
-                if kw_obj not in photo.keywords_rel:
-                    photo.keywords_rel.append(kw_obj)
-            
+            tags_with_scores = tagger.find_tags(photo.file_path)
+            confident_tags = [ (t, s) for t, s in tags_with_scores if s > 0.5 ]
+            photo.keywords = [t for t, s in confident_tags]
+            for tag_name, score in confident_tags:
+                add_photo_tag_with_score(db, photo_id, tag_name, score)
+            db.commit()
+    finally:
+        db.close()
+
+@task_queue.task()
+def categorize_photo_task(photo_id: int):
+    """New task for hierarchical categorization across managed Categories table."""
+    db = SessionLocal()
+    try:
+        photo = db.query(Photo).filter(Photo.id == photo_id).first()
+        categories = get_all_categories(db)
+        if photo and categories:
+            tagger = ClipTagger()
+            cat_results = tagger.categorize(photo.file_path, categories)
+            # Filter and Save (Threshold > 0.5)
+            for cat_name, score in cat_results:
+                if score > 0.5:
+                    add_photo_category_with_score(db, photo_id, cat_name, score)
             db.commit()
     finally:
         db.close()

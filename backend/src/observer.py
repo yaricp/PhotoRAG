@@ -3,7 +3,7 @@ from datetime import datetime
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from src.watcher import generate_file_hash
-from src.tasks import metadata_task, clip_task, vision_task, ocr_task
+from src.tasks import metadata_task, auto_tag_clip_task, categorize_photo_task, vision_task, ocr_task
 from src.database import SessionLocal
 from src.db_service import check_photo_hash_exists, create_photo_record
 
@@ -29,7 +29,8 @@ class PhotoEventHandler(FileSystemEventHandler):
                         
                         # 6. Dispatch Async Tasks with the Photo ID
                         metadata_task(photo.id)
-                        clip_task(photo.id)
+                        auto_tag_clip_task(photo.id)
+                        categorize_photo_task(photo.id)
                         vision_task(photo.id)
                         ocr_task(photo.id)
                 finally:

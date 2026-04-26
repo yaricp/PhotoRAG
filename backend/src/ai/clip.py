@@ -6,7 +6,6 @@ import os
 import requests
 
 class ClipTagger:
-    # Use environment-aware paths
     CSV_PATH = "class-descriptions-boxable.csv"
     NPY_PATH = "tags_features.npy"
     TAGS_LIST_PATH = "tags_list.txt"
@@ -25,7 +24,6 @@ class ClipTagger:
         return list(set(t.lower().strip() for t in tags if t.strip()))
 
     def download_vocabulary(self) -> list[str]:
-        """Downloads the Open Images CSV and returns normalized tags."""
         print(f"Downloading Open Images Vocabulary from {self.VOCAB_URL}...")
         response = requests.get(self.VOCAB_URL)
         if response.status_code == 200:
@@ -40,7 +38,6 @@ class ClipTagger:
                     tags.append(row[1])
         
         normalized = self._normalize_tags(tags)
-        # Save tags list for reference
         with open(self.TAGS_LIST_PATH, "w") as f:
             for t in normalized:
                 f.write(f"{t}\n")
@@ -48,11 +45,8 @@ class ClipTagger:
         return normalized
 
     def compute_embeddings(self, tags: list[str]):
-        """Runs CLIP text encoder and saves features to NPY."""
         self.load()
         print(f"Computing embeddings for {len(tags)} tags...")
-        
-        # Batch processing to avoid OOM
         batch_size = 128
         all_features = []
         
@@ -67,14 +61,9 @@ class ClipTagger:
         
         self.tags_features = np.concatenate(all_features, axis=0)
         np.save(self.NPY_PATH, self.tags_features)
-        print(f"Saved {self.tags_features.shape} embeddings to {self.NPY_PATH}")
 
     def download(self):
-        """Full bootstrap process: Models -> CSV -> NPY."""
-        # 1. Download Model Weights
         open_clip.create_model_and_transforms(self.model_name, self.pretrained)
-        
-        # 2. Vocabulary
         if not os.path.exists(self.NPY_PATH):
             tags = self.download_vocabulary()
             self.compute_embeddings(tags)
@@ -93,23 +82,45 @@ class ClipTagger:
             with open(self.TAGS_LIST_PATH, "r") as f:
                 self.tags = [line.strip() for line in f]
 
-    def generate_keywords(self, filepath: str, top_k=5) -> list[str]:
-        """Zero-Shot classification against cached vocabulary."""
+    def find_tags(self, filepath: str, top_k=20) -> list[tuple[str, float]]:
         from PIL import Image
         self.load()
-        
         if self.tags_features is None or not self.tags:
-            return ["error: vocabulary not initialized"]
-
+            return []
         image = self.preprocess(Image.open(filepath)).unsqueeze(0).to(self.device)
-        
         with torch.no_grad():
             image_features = self.model.encode_image(image)
             img_norm = image_features.norm(dim=-1, keepdim=True)
             image_features = image_features / img_norm
-            
-            # Cosine Similarity (Dot product since normalized)
             similarities = (image_features.cpu().numpy() @ self.tags_features.T).squeeze()
-            
             top_indices = similarities.argsort()[-top_k:][::-1]
-            return [self.tags[i] for i in top_indices]
+            return [(self.tags[i], float(similarities[i])) for i in top_indices]
+
+    def categorize(self, filepath: str, categories: list[str]) -> list[tuple[str, float]]:
+        """Dynamic Zero-Shot categorization against custom category list."""
+        from PIL import Image
+        if not categories:
+            return []
+        self.load()
+        image = self.preprocess(Image.open(filepath)).unsqueeze(0).to(self.device)
+        
+        with torch.no_grad():
+            # 1. Encode Image
+            image_features = self.model.encode_image(image)
+            image_features /= image_features.norm(dim=-1, keepdim=True)
+            
+            # 2. Encode Categories (On-the-fly)
+            tokens = open_clip.tokenize(categories).to(self.device)
+            text_features = self.model.encode_text(tokens)
+            text_features /= text_features.norm(dim=-1, keepdim=True)
+            
+            # 3. Compare
+            similarities = (image_features.cpu().numpy() @ text_features.cpu().numpy().T).squeeze()
+            
+            # Handles single category edge case
+            if len(categories) == 1:
+                return [(categories[0], float(similarities))]
+                
+            # Return sorted results
+            results = [(categories[i], float(similarities[i])) for i in range(len(categories))]
+            return sorted(results, key=lambda x: x[1], reverse=True)

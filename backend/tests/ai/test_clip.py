@@ -14,7 +14,7 @@ def test_clip_tagger_instantiation():
     assert tagger.pretrained == "laion2b_s34b_b79k"
 
 @patch('src.ai.clip.open_clip')
-def test_clip_tagger_generate_keywords_mock(mock_open_clip):
+def test_clip_tagger_find_tags_mock(mock_open_clip):
     # Setup tagger with fake vocabulary and model
     tagger = ClipTagger()
     tagger.tags = ["nature", "mountain"]
@@ -40,10 +40,12 @@ def test_clip_tagger_generate_keywords_mock(mock_open_clip):
     
     with patch.object(tagger, 'load', return_value=None):
         with patch('PIL.Image.open', return_value=MagicMock()):
-             keywords = tagger.generate_keywords("mock_path.jpg")
+             keywords = tagger.find_tags("mock_path.jpg")
              assert isinstance(keywords, list)
              assert len(keywords) == 2
-             assert "nature" in keywords or "mountain" in keywords
+             # Updated for (tag, score) tuples
+             labels = [t for t, s in keywords]
+             assert "nature" in labels or "mountain" in labels
              
 @patch('requests.get')
 def test_clip_tagger_download_vocab_logic(mock_get):
