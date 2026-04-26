@@ -3,6 +3,7 @@ from src.metadata import get_exif_data
 from src.ai.ocr import extract_text_from_image
 from src.ai.clip import ClipTagger
 from src.ai.vision import QwenVisionGenerator
+from src.geo import GeoEnricher
 from src.config import Settings
 from src.database import SessionLocal
 from src.db_service import (
@@ -31,7 +32,6 @@ def download_models_task():
         db.rollback()
         update_model_status(db, "clip", "error")
 
-    # Seed Default Categories
     defaults = ["Nature", "Architecture", "People", "Urban", "Interior", "Portrait", "Landscape", "Abstract", "Food", "Animals"]
     for cat in defaults:
         get_or_create_category(db, cat)
@@ -49,6 +49,7 @@ def download_models_task():
 
 @task_queue.task()
 def metadata_task(photo_id: int):
+    """Enriches photo with EXIF and Reverse Geocoding (City, Country)."""
     db = SessionLocal()
     try:
         photo = db.query(Photo).filter(Photo.id == photo_id).first()
@@ -57,9 +58,20 @@ def metadata_task(photo_id: int):
             photo.exif_data = {k: v for k, v in res.items() if k != "captured_at_obj"}
             if res.get("captured_at_obj"):
                 photo.captured_at = res["captured_at_obj"]
+            
+            # Camera Enrichment
             if res.get("model") and res.get("model") != "Unknown":
                 camera = get_or_create_camera(db, make="Unknown", model=res["model"])
                 photo.camera_id = camera.id
+            
+            # Geo Enrichment (Reverse Geocoding)
+            lat = res.get("gps_latitude")
+            lon = res.get("gps_longitude")
+            if lat is not None and lon is not None:
+                enricher = GeoEnricher()
+                address = enricher.reverse_geocode(lat, lon)
+                update_photo_geoposition(db, photo_id, lat, lon, address)
+                
             db.commit()
     finally:
         db.close()
@@ -82,7 +94,6 @@ def auto_tag_clip_task(photo_id: int):
 
 @task_queue.task()
 def categorize_photo_task(photo_id: int):
-    """New task for hierarchical categorization across managed Categories table."""
     db = SessionLocal()
     try:
         photo = db.query(Photo).filter(Photo.id == photo_id).first()
@@ -90,7 +101,6 @@ def categorize_photo_task(photo_id: int):
         if photo and categories:
             tagger = ClipTagger()
             cat_results = tagger.categorize(photo.file_path, categories)
-            # Filter and Save (Threshold > 0.5)
             for cat_name, score in cat_results:
                 if score > 0.5:
                     add_photo_category_with_score(db, photo_id, cat_name, score)
