@@ -12,3 +12,6 @@ langgraph
 langchain-huggingface
 pytesseract
 Pillow
+open_clip_torch
+torch
+torchvision
