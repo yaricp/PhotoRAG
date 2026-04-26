@@ -1,34 +1,45 @@
-import time
-import os
 from unittest.mock import MagicMock, patch
 from src.observer import PhotoEventHandler
 
-def test_on_created_triggers_task():
-    # Mock the task and the hash function
-    mock_task = MagicMock()
-    mock_hash = MagicMock(return_value="fake_hash")
+@patch('src.observer.os.stat')
+@patch('src.observer.SessionLocal')
+@patch('src.observer.check_photo_hash_exists')
+@patch('src.observer.create_photo_record')
+@patch('src.observer.metadata_task')
+@patch('src.observer.generate_file_hash')
+def test_on_created_triggers_4_parallel_tasks(mock_hash, mock_metadata, mock_create, mock_check, mock_db, mock_stat):
+    mock_hash.return_value = "fake_hash"
+    mock_check.return_value = None # Assume photo doesn't exist
+    mock_photo = MagicMock()
+    mock_photo.id = 123
+    mock_create.return_value = mock_photo
     
-    with patch('src.observer.process_photo_task', mock_task), \
-         patch('src.observer.generate_file_hash', mock_hash):
-        
-        handler = PhotoEventHandler()
-        mock_event = MagicMock()
-        mock_event.is_directory = False
-        mock_event.src_path = "test_photo.jpg"
-        
-        handler.on_created(mock_event)
-        
-        mock_hash.assert_called_once_with("test_photo.jpg")
-        mock_task.assert_called_once_with("test_photo.jpg")
+    # Mock os.stat return value
+    mock_stat_res = MagicMock()
+    mock_stat_res.st_birthtime = 1600000000.0
+    mock_stat.return_value = mock_stat_res
+    
+    handler = PhotoEventHandler()
+    mock_event = MagicMock()
+    mock_event.is_directory = False
+    mock_event.src_path = "test_photo.jpg"
+    
+    handler.on_created(mock_event)
+    
+    # Verify sync registration
+    mock_hash.assert_called_once_with("test_photo.jpg")
+    mock_create.assert_called_once()
+    
+    # Verify tasks are dispatched with the ID
+    mock_metadata.assert_called_once_with(123)
 
-def test_on_created_ignores_non_photos():
-    mock_task = MagicMock()
-    with patch('src.observer.process_photo_task', mock_task):
-        handler = PhotoEventHandler()
-        mock_event = MagicMock()
-        mock_event.is_directory = False
-        mock_event.src_path = "test_data.txt"
-        
-        handler.on_created(mock_event)
-        
-        mock_task.assert_not_called()
+@patch('src.observer.metadata_task')
+def test_on_created_ignores_non_photos(mock_task):
+    handler = PhotoEventHandler()
+    mock_event = MagicMock()
+    mock_event.is_directory = False
+    mock_event.src_path = "test_data.txt"
+    
+    handler.on_created(mock_event)
+    
+    mock_task.assert_not_called()

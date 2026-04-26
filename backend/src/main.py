@@ -11,6 +11,21 @@ class WatchRequest(BaseModel):
 # Store active observers in a global dict to manage their lifecycle
 active_observers = {}
 
+from src.db_service import get_all_model_states
+from src.database import SessionLocal
+
+@app.get("/api/system/status")
+def get_system_status():
+    db = SessionLocal()
+    try:
+        states = get_all_model_states(db)
+        return {
+            "ready": all(s.status == "ready" for s in states),
+            "models": [{"name": s.name, "status": s.status} for s in states]
+        }
+    finally:
+        db.close()
+
 @app.post("/api/watch")
 def trigger_directory_watch(request: WatchRequest):
     if request.path not in active_observers:

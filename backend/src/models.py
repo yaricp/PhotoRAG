@@ -20,3 +20,11 @@ class Photo(Base):
     file_created_at = Column(DateTime, nullable=True) # File system time (Sync)
     captured_at = Column(DateTime, nullable=True) # EXIF capture time (Async)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+class ModelState(Base):
+    __tablename__ = "model_states"
+    
+    id = Column(Integer, primary_key=True)
+    name = Column(String, unique=True) # clip, vision, embedding
+    status = Column(String, default="pending") # pending, downloading, ready, error
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

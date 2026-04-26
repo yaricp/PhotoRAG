@@ -1,3 +1,9 @@
+from unittest.mock import patch, MagicMock
+import sys
+
+# Pre-mock transformers to avoid loading environment during unit tests
+sys.modules['transformers'] = MagicMock()
+
 from src.ai.vision import QwenVisionGenerator
 from src.config import Settings
 from src.ai.prompts import PROMPTS

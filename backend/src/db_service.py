@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from src.models import Photo
+from src.models import Photo, ModelState
 from src.watcher import generate_file_hash
 from datetime import datetime
 
@@ -23,3 +23,18 @@ def get_or_create_photo(db: Session, filepath: str, file_created_at: datetime = 
     if not photo:
         photo = create_photo_record(db, file_hash, filepath, file_created_at)
     return photo
+
+# Model State Helpers
+def update_model_status(db: Session, name: str, status: str):
+    state = db.query(ModelState).filter_by(name=name).first()
+    if not state:
+        state = ModelState(name=name, status=status)
+        db.add(state)
+    else:
+        state.status = status
+    db.commit()
+    db.refresh(state)
+    return state
+
+def get_all_model_states(db: Session):
+    return db.query(ModelState).all()

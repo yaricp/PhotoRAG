@@ -5,7 +5,35 @@ from src.ai.clip import ClipTagger
 from src.ai.vision import QwenVisionGenerator
 from src.config import Settings
 from src.database import SessionLocal
+from src.db_service import get_or_create_photo, update_model_status
 from src.models import Photo
+
+@task_queue.task()
+def download_models_task():
+    """Bootstrap task to ensure all AI models are downloaded and ready."""
+    db = SessionLocal()
+    settings = Settings()
+    
+    try:
+        # 1. CLIP
+        update_model_status(db, "clip", "downloading")
+        ClipTagger().download()
+        update_model_status(db, "clip", "ready")
+    except Exception as e:
+        db.rollback()
+        update_model_status(db, "clip", "error")
+
+    try:
+        # 2. Vision
+        update_model_status(db, "vision", "downloading")
+        QwenVisionGenerator(settings).download()
+        update_model_status(db, "vision", "ready")
+    except Exception as e:
+        db.rollback()
+        update_model_status(db, "vision", "error")
+
+    update_model_status(db, "embedding", "ready")
+    db.close()
 
 @task_queue.task()
 def metadata_task(photo_id: int):
@@ -14,15 +42,11 @@ def metadata_task(photo_id: int):
         photo = db.query(Photo).filter(Photo.id == photo_id).first()
         if photo:
             res = get_exif_data(photo.file_path)
-            # 1. Update the high-fidelity DateTime column
             if res.get("captured_at_obj"):
                 photo.captured_at = res["captured_at_obj"]
-            
-            # 2. Update the JSON blob (remove the non-serializable object)
             exif_blob = res.copy()
             exif_blob.pop("captured_at_obj", None)
             photo.exif_data = exif_blob
-            
             db.commit()
     finally:
         db.close()
