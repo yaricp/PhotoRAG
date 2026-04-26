@@ -3,7 +3,7 @@ from watchdog.events import FileSystemEventHandler
 from src.watcher import generate_file_hash
 from src.tasks import metadata_task, clip_task, vision_task, ocr_task
 from src.database import SessionLocal
-from src.db_service import check_photo_hash_exists
+from src.db_service import check_photo_hash_exists, create_photo_record
 
 class PhotoEventHandler(FileSystemEventHandler):
     def on_created(self, event):
@@ -13,16 +13,19 @@ class PhotoEventHandler(FileSystemEventHandler):
                 # 2. Sync Hashing
                 file_hash = generate_file_hash(event.src_path)
                 
-                # 3. Sync DB Check
+                # 3. Sync DB Check & Registration (Atomic)
                 db = SessionLocal()
                 try:
                     photo = check_photo_hash_exists(db, file_hash)
                     if not photo:
-                        # 4. Dispatch 4 Parallel Async Tasks
-                        metadata_task(event.src_path)
-                        clip_task(event.src_path)
-                        vision_task(event.src_path)
-                        ocr_task(event.src_path)
+                        # 4. Sync Create Record (Atomic Registration)
+                        photo = create_photo_record(db, file_hash, event.src_path)
+                        
+                        # 5. Dispatch Async Tasks with the Photo ID
+                        metadata_task(photo.id)
+                        clip_task(photo.id)
+                        vision_task(photo.id)
+                        ocr_task(photo.id)
                 finally:
                     db.close()
                     

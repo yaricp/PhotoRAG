@@ -5,50 +5,54 @@ from src.ai.clip import ClipTagger
 from src.ai.vision import QwenVisionGenerator
 from src.config import Settings
 from src.database import SessionLocal
-from src.db_service import get_or_create_photo
+from src.models import Photo
 
 @task_queue.task()
-def metadata_task(filepath: str):
+def metadata_task(photo_id: int):
     db = SessionLocal()
     try:
-        photo = get_or_create_photo(db, filepath)
-        exif = get_exif_data(filepath)
-        photo.exif_data = exif
-        db.commit()
+        photo = db.query(Photo).filter(Photo.id == photo_id).first()
+        if photo:
+            exif = get_exif_data(photo.file_path)
+            photo.exif_data = exif
+            db.commit()
     finally:
         db.close()
 
 @task_queue.task()
-def clip_task(filepath: str):
+def clip_task(photo_id: int):
     db = SessionLocal()
     try:
-        photo = get_or_create_photo(db, filepath)
-        tagger = ClipTagger()
-        keywords = tagger.generate_keywords(filepath)
-        photo.keywords = keywords
-        db.commit()
+        photo = db.query(Photo).filter(Photo.id == photo_id).first()
+        if photo:
+            tagger = ClipTagger()
+            keywords = tagger.generate_keywords(photo.file_path)
+            photo.keywords = keywords
+            db.commit()
     finally:
         db.close()
 
 @task_queue.task()
-def vision_task(filepath: str):
+def vision_task(photo_id: int):
     db = SessionLocal()
     try:
-        photo = get_or_create_photo(db, filepath)
-        gen = QwenVisionGenerator(Settings())
-        desc = gen.describe_scene(filepath)
-        photo.description = desc
-        db.commit()
+        photo = db.query(Photo).filter(Photo.id == photo_id).first()
+        if photo:
+            gen = QwenVisionGenerator(Settings())
+            desc = gen.describe_scene(photo.file_path)
+            photo.description = desc
+            db.commit()
     finally:
         db.close()
 
 @task_queue.task()
-def ocr_task(filepath: str):
+def ocr_task(photo_id: int):
     db = SessionLocal()
     try:
-        photo = get_or_create_photo(db, filepath)
-        text = extract_text_from_image(filepath)
-        photo.ocr_text = text
-        db.commit()
+        photo = db.query(Photo).filter(Photo.id == photo_id).first()
+        if photo:
+            text = extract_text_from_image(photo.file_path)
+            photo.ocr_text = text
+            db.commit()
     finally:
         db.close()
