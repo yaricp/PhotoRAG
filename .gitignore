@@ -1,0 +1,14 @@
+*.sqlite
+*.sqlite3
+*.sqlite3*
+*.sqlite3-*
+.env
+**/*.pyc
+**/__pycache__
+**/*.pyo
+**/*.pyd
+**/*.pyi
+**/.pytest_cache
+**/.venv
+venv/
+**/venv
