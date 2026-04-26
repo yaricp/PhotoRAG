@@ -7,3 +7,6 @@ sqlalchemy
 pgvector
 watchdog
 huey==2.5.0
+langchain
+langgraph
+langchain-huggingface
