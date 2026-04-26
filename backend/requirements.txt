@@ -1,0 +1,8 @@
+pydantic-settings
+pytest
+pytest-asyncio
+fastapi
+uvicorn
+sqlalchemy
+pgvector
+watchdog
