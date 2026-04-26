@@ -1,0 +1,9 @@
+{
+  "vision_analysis": {
+    "system_prompt": "You are an expert AI visually analyzing photos. Be concise and precise.",
+    "describe_scene": "Analyze the provided image. What objects do you see? What is the setting? Describe the overall context clearly."
+  },
+  "chat_agent": {
+    "context_rag": "Given the following retrieved database logs representing photos, answer the user's question accurately."
+  }
+}
