@@ -1,3 +1,4 @@
+import os
 from src.queue import task_queue
 from src.metadata import get_exif_data
 from src.ai.ocr import extract_text_from_image
@@ -5,9 +6,10 @@ from src.ai.registry import registry
 from src.config import Settings
 from src.database import SessionLocal
 from src.db_service import (
-    get_or_create_photo, 
-    update_model_status, 
-    get_or_create_camera, 
+    get_or_create_photo,
+    update_model_status,
+    get_model_status,
+    get_or_create_camera,
     update_photo_geoposition,
     get_or_create_keyword,
     add_photo_tag_with_score,
@@ -17,7 +19,7 @@ from src.db_service import (
 )
 from src.models import Photo, PhotoTag, PhotoCategory, Geoposition
 import torch
-import os
+from loguru import logger
 
 
 def check_and_trigger_finalization(db, photo_id: int):
@@ -73,41 +75,65 @@ Location: {location}
 
 @task_queue.task()
 def download_models_task():
-    """Bootstrap task: Warm up all models in the Global Registry."""
-    db = SessionLocal()
-    settings = Settings()
-    
-    # 1. CLIP & Vocab
-    try:
-        update_model_status(db, "clip", "downloading")
-        _ = registry.clip_tagger # Force warm-up
-        update_model_status(db, "clip", "ready")
-    except Exception:
-        db.rollback()
-        update_model_status(db, "clip", "error")
+    """First-install bootstrap: downloads all models to disk if not already present.
 
-    # 2. Categories Seeding
-    defaults = ["Nature", "Architecture", "People", "Urban", "Interior", "Portrait", "Landscape", "Abstract", "Food", "Animals"]
+    Responsibility: DISK / NETWORK only.
+    - Checks ModelState table before acting (idempotent).
+    - Calls model.download() directly — never goes through AIModelRegistry.
+    The Registry is a separate RAM-only concern.
+    """
+    db = SessionLocal()
+
+    # 1. CLIP weights + Open Images vocabulary
+    from src.ai.clip import ClipTagger
+    if get_model_status(db, "clip") == "ready":
+        logger.info("CLIP: already ready, skipping download.")
+    else:
+        try:
+            update_model_status(db, "clip", "downloading")
+            ClipTagger().download()  # fetches ViT weights + CSV + .npy
+            update_model_status(db, "clip", "ready")
+            logger.info("CLIP: download complete.")
+        except Exception as e:
+            db.rollback()
+            update_model_status(db, "clip", "error")
+            logger.error(f"CLIP: download failed: {e}")
+
+    # 2. Seed default categories (idempotent — get_or_create is safe to repeat)
+    defaults = ["Nature", "Architecture", "People", "Urban", "Interior",
+                "Portrait", "Landscape", "Abstract", "Food", "Animals"]
     for cat in defaults:
         get_or_create_category(db, cat)
 
-    # 3. Vision Model (Qwen)
-    try:
-        update_model_status(db, "vision", "downloading")
-        _ = registry.vision_generator # Force warm-up
-        update_model_status(db, "vision", "ready")
-    except Exception:
-        db.rollback()
-        update_model_status(db, "vision", "error")
+    # 3. Vision model (Qwen2-VL) — weights go to HuggingFace local cache
+    from src.ai.vision import QwenVisionGenerator
+    if get_model_status(db, "vision") == "ready":
+        logger.info("Vision: already ready, skipping download.")
+    else:
+        try:
+            update_model_status(db, "vision", "downloading")
+            QwenVisionGenerator(Settings()).download()
+            update_model_status(db, "vision", "ready")
+            logger.info("Vision: download complete.")
+        except Exception as e:
+            db.rollback()
+            update_model_status(db, "vision", "error")
+            logger.error(f"Vision: download failed: {e}")
 
-    # 4. Nomic Embedder
-    try:
-        update_model_status(db, "embedding", "downloading")
-        _ = registry.nomic_embedder # Force warm-up
-        update_model_status(db, "embedding", "ready")
-    except Exception:
-        db.rollback()
-        update_model_status(db, "embedding", "error")
+    # 4. Nomic semantic embedder — weights go to HuggingFace local cache
+    if get_model_status(db, "embedding") == "ready":
+        logger.info("Nomic Embedder: already ready, skipping download.")
+    else:
+        try:
+            update_model_status(db, "embedding", "downloading")
+            from sentence_transformers import SentenceTransformer
+            SentenceTransformer('nomic-ai/nomic-embed-text-v1.5', trust_remote_code=True)
+            update_model_status(db, "embedding", "ready")
+            logger.info("Nomic Embedder: download complete.")
+        except Exception as e:
+            db.rollback()
+            update_model_status(db, "embedding", "error")
+            logger.error(f"Nomic Embedder: download failed: {e}")
 
     db.close()
 

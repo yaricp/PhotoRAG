@@ -4,12 +4,13 @@ import csv
 import numpy as np
 import os
 import requests
+from loguru import logger
 
 class ClipTagger:
-    CSV_PATH = "class-descriptions-boxable.csv"
-    NPY_PATH = "tags_features.npy"
-    TAGS_LIST_PATH = "tags_list.txt"
-    VOCAB_URL = "https://storage.googleapis.com/openimages/v7/class-descriptions-boxable.csv"
+    CSV_PATH = "data/class-descriptions-boxable.csv"
+    NPY_PATH = "data/tags_features.npy"
+    TAGS_LIST_PATH = "data/tags_list.txt"
+    VOCAB_URL = "https://storage.googleapis.com/openimages/v7/oidv7-class-descriptions-boxable.csv"
 
     def __init__(self):
         self.model_name = "ViT-B-32"
@@ -24,11 +25,25 @@ class ClipTagger:
         return list(set(t.lower().strip() for t in tags if t.strip()))
 
     def download_vocabulary(self) -> list[str]:
-        print(f"Downloading Open Images Vocabulary from {self.VOCAB_URL}...")
-        response = requests.get(self.VOCAB_URL)
+        os.makedirs(os.path.dirname(self.CSV_PATH), exist_ok=True)
+        logger.info(f"Downloading Open Images Vocabulary from {self.VOCAB_URL}...")
+        try:
+            response = requests.get(self.VOCAB_URL)
+            logger.info(f"Response: {response}")
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Failed to download vocabulary: {e}")
+            raise Exception(f"Failed to download vocabulary: {e}")
         if response.status_code == 200:
-            with open(self.CSV_PATH, "w") as f:
-                f.write(response.text)
+            try:
+                with open(self.CSV_PATH, "w") as f:
+                    f.write(response.text)
+                logger.info(f"Vocabulary saved to {self.CSV_PATH}")
+            except Exception as e:
+                logger.error(f"Failed to save vocabulary: {e}")
+                raise Exception(f"Failed to save vocabulary: {e}")
+        else:
+            logger.error(f"Failed to download vocabulary: {response.status_code}")
+            raise Exception(f"Failed to download vocabulary: {response.status_code}")
         
         tags = []
         with open(self.CSV_PATH, "r") as f:
@@ -41,12 +56,12 @@ class ClipTagger:
         with open(self.TAGS_LIST_PATH, "w") as f:
             for t in normalized:
                 f.write(f"{t}\n")
-        
+        logger.info("Vocabulary downloaded and normalized.")
         return normalized
 
     def compute_embeddings(self, tags: list[str]):
         self.load()
-        print(f"Computing embeddings for {len(tags)} tags...")
+        logger.info(f"Computing embeddings for {len(tags)} tags...")
         batch_size = 128
         all_features = []
         

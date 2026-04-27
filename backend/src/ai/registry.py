@@ -3,11 +3,14 @@ from src.ai.clip import ClipTagger
 from src.ai.vision import QwenVisionGenerator
 from src.geo import GeoEnricher
 from src.config import Settings
+from loguru import logger
+
 
 class AIModelRegistry:
     """
-    Thread-safe Singleton Registry to keep AI models warm in memory.
-    Prevents repeated disk I/O and VRAM fragmentation.
+    Thread-safe Singleton Registry — RAM concern only.
+    Loads already-downloaded models into memory once per process.
+    Never downloads, never checks the network.
     """
     _instance = None
     _lock = threading.Lock()
@@ -17,7 +20,14 @@ class AIModelRegistry:
         self._vision_generator = None
         self._nomic_embedder = None
         self._geo_enricher = None
-        self._settings = Settings()
+        self.__settings = None  # lazy
+
+    @property
+    def _settings(self):
+        if self.__settings is None:
+            from src.config import Settings
+            self.__settings = Settings()
+        return self.__settings
 
     @classmethod
     def get_instance(cls):
@@ -32,10 +42,11 @@ class AIModelRegistry:
         if self._clip_tagger is None:
             with self._lock:
                 if self._clip_tagger is None:
-                    print("Registry: Warming up CLIP Tagger...")
+                    logger.info("Registry: Warming up CLIP Tagger...")
                     tagger = ClipTagger()
-                    tagger.load() 
+                    tagger.load()  # assumes download_models_task already ran
                     self._clip_tagger = tagger
+        logger.info("Registry: CLIP Tagger is ready.")
         return self._clip_tagger
 
     @property
@@ -43,9 +54,10 @@ class AIModelRegistry:
         if self._vision_generator is None:
             with self._lock:
                 if self._vision_generator is None:
-                    print("Registry: Warming up Qwen-VL Vision Generator...")
+                    logger.info("Registry: Warming up Qwen-VL Vision Generator...")
                     generator = QwenVisionGenerator(self._settings)
                     self._vision_generator = generator
+        logger.info("Registry: Qwen-VL Vision Generator is ready.")
         return self._vision_generator
 
     @property
@@ -53,10 +65,11 @@ class AIModelRegistry:
         if self._nomic_embedder is None:
             with self._lock:
                 if self._nomic_embedder is None:
-                    print("Registry: Warming up Nomic Semantic Embedder...")
+                    logger.info("Registry: Warming up Nomic Semantic Embedder...")
                     from sentence_transformers import SentenceTransformer
                     model = SentenceTransformer('nomic-ai/nomic-embed-text-v1.5', trust_remote_code=True)
                     self._nomic_embedder = model
+        logger.info("Registry: Nomic Semantic Embedder is ready.")
         return self._nomic_embedder
 
     @property
@@ -65,6 +78,7 @@ class AIModelRegistry:
             with self._lock:
                 if self._geo_enricher is None:
                     self._geo_enricher = GeoEnricher()
+        logger.info("Registry: Geo enricher is ready.")
         return self._geo_enricher
 
 # Global Access Point

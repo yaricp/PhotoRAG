@@ -19,3 +19,6 @@ transformers
 accelerate
 qwen-vl-utils
 exifread
+einops
+geopy
+loguru

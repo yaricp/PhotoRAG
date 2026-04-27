@@ -2,6 +2,8 @@ from transformers import AutoProcessor, Qwen2VLForConditionalGeneration
 from src.config import Settings
 from src.ai.prompts import PROMPTS
 import torch
+from loguru import logger
+
 
 class QwenVisionGenerator:
     def __init__(self, settings: Settings):
@@ -20,7 +22,7 @@ class QwenVisionGenerator:
 
     def load(self):
         if not self.model:
-            print(f"Vision: Loading {self.model_id} on {self.device}...")
+            logger.info(f"Vision: Loading {self.model_id} on {self.device}...")
             self.model = Qwen2VLForConditionalGeneration.from_pretrained(
                 self.model_id, 
                 torch_dtype="auto", 

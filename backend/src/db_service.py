@@ -1,3 +1,4 @@
+from typing import Optional
 from sqlalchemy.orm import Session
 from src.models import (
     Photo, ModelState, Camera, Geoposition, 
@@ -34,6 +35,11 @@ def update_model_status(db: Session, name: str, status: str):
     db.commit()
     db.refresh(state)
     return state
+
+def get_model_status(db: Session, name: str) -> Optional[str]:
+    """Returns the current status string for a model, or None if not found."""
+    state = db.query(ModelState).filter_by(name=name).first()
+    return state.status if state else None
 
 def get_all_model_states(db: Session):
     return db.query(ModelState).all()

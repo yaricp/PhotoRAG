@@ -5,9 +5,11 @@ import os
 from src.database import engine, SessionLocal
 from src.models import Base, ModelState
 from src.tasks import download_models_task
+from loguru import logger
+
 
 def init_db():
-    print("Initializing Database...")
+    logger.info("Initializing Database...")
     Base.metadata.create_all(bind=engine)
     
     # Initialize model states if empty
@@ -19,35 +21,39 @@ def init_db():
     db.commit()
     db.close()
 
+
 def start_workers():
-    print("Starting Background Workers...")
+    logger.info("Starting Background Workers...")
     # Spawn Huey consumer
     return subprocess.Popen([
         sys.executable, "-m", "huey.bin.huey_consumer", 
         "src.tasks.task_queue", "-w", "4", "-k", "thread"
     ])
 
+
 def check_and_bootstrap():
-    print("Checking AI Models readiness...")
+    logger.info("Checking AI Models readiness...")
     db = SessionLocal()
     states = db.query(ModelState).all()
     
     needs_download = any(s.status != "ready" for s in states)
     if needs_download:
-        print("Models not ready. Triggering background download...")
+        logger.info("Models not ready. Triggering background download...")
         download_models_task() # Trigger the async task
     else:
-        print("All models ready.")
+        logger.info("All models ready.")
     db.close()
 
+
 def start_api():
-    print("Starting FastAPI Server...")
+    logger.info("Starting FastAPI Server...")
     # Use uvicorn to run our app
     try:
         import uvicorn
         uvicorn.run("src.main:app", host="127.0.0.1", port=8000, reload=True)
     except KeyboardInterrupt:
-        print("Shutting down...")
+        logger.info("Shutting down...")
+
 
 if __name__ == "__main__":
     init_db()
@@ -63,5 +69,5 @@ if __name__ == "__main__":
     try:
         start_api()
     finally:
-        print("Stopping workers...")
+        logger.info("Stopping workers...")
         worker_proc.terminate()

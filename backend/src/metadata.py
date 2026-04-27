@@ -1,6 +1,7 @@
 import exifread
 from datetime import datetime
 
+
 def get_exif_data(filepath: str) -> dict:
     try:
         with open(filepath, 'rb') as f:

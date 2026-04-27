@@ -7,6 +7,7 @@ from src.tasks import metadata_task, auto_tag_clip_task, categorize_photo_task, 
 from src.database import SessionLocal
 from src.db_service import check_photo_hash_exists, create_photo_record
 
+
 class PhotoEventHandler(FileSystemEventHandler):
     def on_created(self, event):
         # 1. Sync Extension Check
@@ -38,6 +39,7 @@ class PhotoEventHandler(FileSystemEventHandler):
                     
             except Exception as e:
                 print(f"Error processing {event.src_path}: {e}")
+
 
 def start_observer(path: str):
     observer = Observer()
