@@ -1,5 +1,3 @@
-import os
-import torch
 from loguru import logger
 
 from src.queue import task_queue
@@ -19,30 +17,122 @@ from src.db_service import (
     add_photo_tag_with_score,
     get_all_categories,
     get_or_create_category,
-    add_photo_category_with_score
+    add_photo_category_with_score,
+    get_or_create_job,
+    update_job_tasks,
+    delete_job,
 )
-from src.models import Photo, PhotoTag, PhotoCategory, Geoposition
-from src.utils import load_categories_from_json
+from src.models import (
+    Photo, PhotoTag, PhotoCategory, Geoposition, ProcessingJob
+)
+from src.utils import (
+    load_categories_from_json, extract_exif,
+    convert_ocr_result_to_json, parse_datetime
+)
+from src.geo import GeoEnricher
 
 
-def check_and_trigger_finalization(db, photo_id: int):
-    """Barrier: Checks if all parallel AI tasks are done, then triggers synthesis."""
-    photo = db.query(Photo).filter(Photo.id == photo_id).first()
-    if not photo:
-        return
+def phase_logic(phase:str) ->tuple[str, str]:
+    new_tasks = ""
+    next_phase_name = ""
+    if phase == "init":
+        next_phase_name = "first"
+        new_tasks = "metadata_task,auto_tag_clip_task,categorize_photo_task,vision_task,"
+    elif phase == "first":
+        next_phase_name = "second"
+        new_tasks = "final_embedding_task,"
+    elif phase == "second":
+        next_phase_name = "third"
+        new_tasks = "ocr_task,"
+    return next_phase_name, new_tasks
 
-    # Check for presence of all synthesized parts
-    has_metadata = photo.captured_at is not None
-    has_tags = db.query(PhotoTag).filter_by(photo_id=photo_id).count() > 0
-    has_categories = db.query(PhotoCategory).filter_by(photo_id=photo_id).count() > 0
-    has_description = photo.description is not None
 
-    if has_metadata and has_tags and has_categories and has_description:
-        final_embedding_task(photo_id)
+def start_pipeline(photo_id: int):
+    """
+    Starts the pipeline for the given photo.
+    """
+    logger.info(f"Starting pipeline for photo {photo_id}")
+    db=SessionLocal()
+    try:
+        next_phase_name, new_tasks = phase_logic("init")
+        get_or_create_job(
+            db,
+            photo_id=photo_id,
+            phase=next_phase_name,
+            tasks=new_tasks
+        )
+        logger.info(f"Job created for photo {photo_id}")
+        start_next_phase_tasks(
+            photo_id=photo_id,
+            phase=next_phase_name,
+            tasks=new_tasks
+        )
+        logger.info(f"Tasks dispatched for photo {photo_id}")
+    finally:
+        db.close()
+
+
+def start_next_phase_tasks(photo_id: int, phase: str, tasks: str):
+    for task_name in tasks.split(","):
+        if task_name == "final_embedding_task":
+            final_embedding_task(photo_id, phase=phase)
+            logger.info(f"Final embedding task dispatched for photo {photo_id}")
+        elif task_name == "metadata_task":
+            metadata_task(photo_id, phase=phase)
+            logger.info(f"Metadata task dispatched for photo {photo_id}")
+        elif task_name == "auto_tag_clip_task":
+            auto_tag_clip_task(photo_id, phase=phase)
+            logger.info(f"Auto tag clip task dispatched for photo {photo_id}")
+        elif task_name == "categorize_photo_task":
+            categorize_photo_task(photo_id, phase=phase)
+            logger.info(f"Categorize photo task dispatched for photo {photo_id}")
+        elif task_name == "vision_task":
+            vision_task(photo_id, phase=phase)
+            logger.info(f"Vision task dispatched for photo {photo_id}")
+        elif task_name == "ocr_task":
+            ocr_task(photo_id, phase=phase)
+            logger.info(f"OCR task dispatched for photo {photo_id}")
+        elif task_name == "is_this_document_task":
+            is_this_document_task(photo_id, phase=phase)
+            logger.info(f"Is this document task dispatched for photo {photo_id}")
+    
+
+def finish_task(photo_id: int, phase: str, name:str):
+    db = SessionLocal()
+    try:
+        job = db.query(ProcessingJob).filter_by(photo_id=photo_id, phase=phase).first()
+        if not job:
+            return
+        job.tasks = job.tasks.replace(name+",", "")
+        db.commit()
+        logger.info(f"Task {name} finished for photo {photo_id}")
+        logger.info(f"Remaining tasks: {job.tasks}")
+        if job.tasks == "":
+            next_phase_name, new_tasks = phase_logic(job.phase)
+            logger.info(f"Next phase: {next_phase_name}")
+            logger.info(f"New tasks: {new_tasks}")
+            if new_tasks != "":   
+                update_job_tasks(
+                    db, 
+                    photo_id=photo_id,
+                    phase=phase,
+                    new_phase=next_phase_name,
+                    tasks=new_tasks
+                )
+                start_next_phase_tasks(
+                    photo_id=photo_id,
+                    phase=next_phase_name,
+                    tasks=new_tasks
+                )
+            else:
+                delete_job(db, photo_id, phase)
+                logger.info(f"Job {job.id} deleted for photo {photo_id}")
+    finally:
+        db.close()
 
 
 @task_queue.task()
-def final_embedding_task(photo_id: int):
+def final_embedding_task(photo_id: int, phase: str):
     """Aggregates results and saves 768-dim vector using Warm Registry Embedder."""
     db = SessionLocal()
     try:
@@ -57,7 +147,10 @@ def final_embedding_task(photo_id: int):
         
         geo = db.query(Geoposition).filter_by(photo_id=photo_id).first()
         location = geo.address if geo and geo.address else "Unknown Location"
-
+        logger.info(f"Embedding photo with: {photo.description}")
+        logger.info(f"Embedding photo tags: {tags}")
+        logger.info(f"Embedding photo categories: {categories}")
+        logger.info(f"Embedding photo geoposition: {location}")
         # 2. Format Synthesis Template
         photo_text = f"""
 Scene: {photo.description}
@@ -65,13 +158,18 @@ Tags: {", ".join(tags)}
 Category: {main_category}
 Location: {location}
 """
+        logger.info(f"Embedding photo text: {photo_text}")
         # 3. Generate Embedding (Using Warm Registry)
         model = registry.nomic_embedder
         embedding = model.encode(photo_text)
-        
         # 4. Persist to pgvector column
         photo.embedding = embedding.tolist()
+        logger.info(f"Embedding photo embedding saved")
         db.commit()
+        logger.info(f"Embedding photo embedding committed")
+        finish_task(
+            photo_id=photo_id, phase=phase, name="final_embedding_task"
+        )
     finally:
         db.close()
 
@@ -148,35 +246,57 @@ def download_models_task():
 
 
 @task_queue.task()
-def metadata_task(photo_id: int):
+def metadata_task(photo_id: int, phase: str):
+    """Extract metadata from photo and save it to the database."""
     db = SessionLocal()
     try:
         photo = db.query(Photo).filter(Photo.id == photo_id).first()
+        logger.info(f"Photo found in DB: {photo}")
         if photo:
-            res = get_exif_data(photo.file_path)
-            photo.exif_data = {k: v for k, v in res.items() if k != "captured_at_obj"}
-            if res.get("captured_at_obj"):
-                photo.captured_at = res["captured_at_obj"]
+            exif_raw = extract_exif(photo.file_path)
+            logger.info(f"Photo exif_data: {exif_raw}")
+            photo.captured_at = parse_datetime(exif_raw)
+            logger.info(f"Photo captured_at: {photo.captured_at}")
+            if exif_raw.get("Model") and exif_raw.get("Model") != "Unknown":
+                make = exif_raw.get("Make")
+                model = exif_raw.get("Model")
+                if make and model and model != "Unknown":
+                    logger.info(f"Photo make: {make}")
+                    logger.info(f"Photo model: {model}")
+                    camera = get_or_create_camera(
+                        db, make=make, model=model
+                    )
+                    photo.camera_id = camera.id
+                else:   
+                    logger.info(f"Photo make or model not found")
             
-            if res.get("model") and res.get("model") != "Unknown":
-                camera = get_or_create_camera(db, make="Unknown", model=res["model"])
-                photo.camera_id = camera.id
-            
-            lat = res.get("gps_latitude")
-            lon = res.get("gps_longitude")
-            if lat is not None and lon is not None:
-                enricher = registry.geo_enricher # Use registry for geo too
-                address = enricher.reverse_geocode(lat, lon)
-                update_photo_geoposition(db, photo_id, lat, lon, address)
-                
+            geo = GeoEnricher()
+            geo_result = geo.geocode_photo(exif_raw)
+            logger.info(f"Photo geoposition: {geo_result}")
+            try:
+                if geo_result["latitude"] and geo_result["longitude"]:
+                    update_photo_geoposition(
+                        db,
+                        photo_id,
+                        geo_result["latitude"],
+                        geo_result["longitude"],
+                        geo_result["address"]
+                    )
+                    logger.info(f"Updated photo geoposition")
+            except Exception as e:
+                logger.error(f"Failed to update photo geoposition: {e}")
+
             db.commit()
-            check_and_trigger_finalization(db, photo_id)
+            logger.info(f"Photo updated: {photo.id}")
+            finish_task(
+                photo_id=photo_id, phase=phase, name="metadata_task"
+            )
     finally:
         db.close()
 
 
 @task_queue.task()
-def auto_tag_clip_task(photo_id: int):
+def auto_tag_clip_task(photo_id: int, phase: str):
     logger.info(f"Auto-tagging photo: {photo_id}")
     db = SessionLocal()
     try:
@@ -193,14 +313,15 @@ def auto_tag_clip_task(photo_id: int):
             for tag_name, score in confident_tags:
                 add_photo_tag_with_score(db, photo_id, tag_name, score)
                 logger.info(f"Added tag: {tag_name} with score: {score}")
-            check_and_trigger_finalization(db, photo_id)
-            logger.info(f"Checked and triggered finalization")
+            finish_task(
+                photo_id=photo_id, phase=phase, name="auto_tag_clip_task"
+            )
     finally:
         db.close()
 
 
 @task_queue.task()
-def categorize_photo_task(photo_id: int):
+def categorize_photo_task(photo_id: int, phase: str):
     db = SessionLocal()
     try:
         photo = get_photo_by_id(db, photo_id)
@@ -212,13 +333,15 @@ def categorize_photo_task(photo_id: int):
             logger.info(f"Category results: {cat_results}")
             for cat_id, cat_name, score in cat_results:
                 add_photo_category_with_score(db, photo_id, cat_id, score)
-            check_and_trigger_finalization(db, photo_id)
+            finish_task(
+                photo_id=photo_id, phase=phase, name="categorize_photo_task"
+            )
     finally:
         db.close()
 
 
 @task_queue.task()
-def vision_task(photo_id: int):
+def vision_task(photo_id: int, phase: str):
     logger.info(f"Vision task for photo: {photo_id}")
     db = SessionLocal()
     try:
@@ -227,45 +350,63 @@ def vision_task(photo_id: int):
         if photo:
             generator = registry.vision_generator
             logger.info(f"Vision generator: {generator}")
-            desc = generator.generate_vision_text(photo.file_path)
+            desc = generator.generate_vision_text(
+                file_path=photo.file_path, prompt_key="describe_scene"
+            )
             logger.info(f"Description: {desc}")
             photo.description = desc
             db.commit()
             logger.info(f"Photo updated: {photo}")
-            check_and_trigger_finalization(db, photo_id)
-            logger.info(f"Photo finalized: {photo}")
+            finish_task(
+                photo_id=photo_id, phase=phase, name="vision_task"
+            )
     finally:
         db.close()
 
 
 @task_queue.task()
-def ocr_task(photo_id: int):
+def ocr_task(photo_id: int, phase: str):
+    """
+    Performs OCR on the photo.
+    """
+    logger.info(f"OCR task for photo: {photo_id}")
     db = SessionLocal()
     try:
         photo = db.query(Photo).filter(Photo.id == photo_id).first()
+        logger.info(f"Photo found in DB: {photo}")
         if photo:
             text = extract_text_from_image(photo.file_path)
-            photo.ocr_text = text
-            db.commit()
-            
-            # TRIGGER DOCUMENT DETECTION if text exists
+            logger.info(f"OCR text: {text}")
             if text and len(text.strip()) > 0:
-                is_this_document_task(photo_id)
+                photo.ocr_text = text
+                db.commit()
+                logger.info(f"Photo updated: {photo}")
+                is_this_document_task(photo_id, phase)
+                logger.info("Started process to identify this image as a document")
+                finish_task(
+                    photo_id=photo_id, phase=phase, name="ocr_task"
+                )
     finally:
         db.close()
 
 
 @task_queue.task()
-def is_this_document_task(photo_id: int):
+def is_this_document_task(photo_id: int, phase: str):
     """Refined check: Use Vision model to confirm if photo is a document."""
     db = SessionLocal()
     try:
         photo = db.query(Photo).filter(Photo.id == photo_id).first()
         if photo:
             gen = registry.vision_generator
-            result = gen.generate_vision_text(photo.file_path, prompt_key="is_document")
+            result = gen.generate_vision_text(
+                photo.file_path, prompt_key="is_document"
+            )
+            logger.info(f"Is document result: {result}")
             # Simple binary conversion
             photo.is_doc = "yes" in result.lower()
             db.commit()
+            finish_task(
+                photo_id=photo_id, phase=phase, name="is_this_document_task"
+            )
     finally:
         db.close()

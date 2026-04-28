@@ -5,12 +5,20 @@ from watchdog.events import FileSystemEventHandler
 from loguru import logger
 
 from src.utils import generate_file_hash
-from src.tasks import metadata_task, auto_tag_clip_task, categorize_photo_task, vision_task, ocr_task
+from src.tasks import (
+    start_pipeline,
+    metadata_task,
+    auto_tag_clip_task,
+    categorize_photo_task,
+    vision_task, ocr_task,
+    final_embedding_task,
+)
 from src.database import SessionLocal
 from src.db_service import (
     check_photo_hash_exists, create_photo_record,
     get_or_create_watcher,
-    update_watcher_status
+    update_watcher_status,
+    get_or_create_job
 )
 
 
@@ -36,19 +44,24 @@ class PhotoEventHandler(FileSystemEventHandler):
                     if not photo:
                         logger.info(f"Photo not found in DB")
                         # 5. Sync Create Record with file_created_at
-                        photo = create_photo_record(db, file_hash, event.src_path, file_created_at)
-                        logger.info(f"Photo created: {photo}")
+                        try:
+                            photo = create_photo_record(db, file_hash, event.src_path, file_created_at)
+                            logger.info(f"Photo created: {photo}")
+                        except Exception as e:
+                            logger.error(f"Error creating photo record for photo {event.src_path}: {e}")
+                            return
                         # 6. Dispatch Async Tasks with the Photo ID
-                        logger.info(f"Dispatching tasks for photo: {photo.id}")
-                        metadata_task(photo.id)
-                        auto_tag_clip_task(photo.id)
-                        categorize_photo_task(photo.id)
-                        # vision_task(photo.id)
-                        # ocr_task(photo.id)
-                        logger.info(f"Tasks dispatched")
+                        logger.info(f"Starting pipeline for photo: {photo.id}")
+                        try:
+                            start_pipeline(photo.id)
+                        except Exception as e:
+                            logger.error(f"Error starting pipeline for photo {photo.id}: {e}")
+                except Exception as e:
+                    logger.error(f"Error dispatching tasks for photo {photo.id}: {e}")
+                    return
                 finally:
                     db.close()
-                    logger.info(f"Photo {event.src_path} processed successfully")
+                    logger.info(f"working with {event.src_path} is finished")
                     
             except Exception as e:
                 logger.error(f"Error processing {event.src_path}: {e}")

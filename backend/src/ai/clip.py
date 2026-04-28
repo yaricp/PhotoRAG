@@ -238,8 +238,6 @@ class ClipTagger:
         logger.info(f"DEBUG: ClipTagger.categorize() called for {filepath}")
         self.load_or_compute_categories()
         logger.info(f"DEBUG: ClipTagger.categorize() categories loaded")
-        logger.info(f"DEBUG: ClipTagger.categorize() categories_features: {self.categories_features}")
-        logger.info(f"DEBUG: ClipTagger.categorize() categories: {self.categories}")
         self.load_model()
         image = self.preprocess(Image.open(filepath)).unsqueeze(0).to(self.device)
         logger.info(f"DEBUG: ClipTagger.categorize() image loaded")
@@ -248,10 +246,8 @@ class ClipTagger:
             image_features /= image_features.norm(dim=-1, keepdim=True)
             logger.info(f"DEBUG: ClipTagger.categorize() image features encoded")
             similarities = (image_features @ self.categories_features.T).squeeze(0)
-            logger.info(f"DEBUG: ClipTagger.categorize() similarities: {similarities}")
             # threshold first
             mask = similarities > self.CATEGORIES_CLIP_THRESHOLD
-            logger.info(f"DEBUG: ClipTagger.categorize() mask: {mask}")
             filtered_indices = mask.nonzero(as_tuple=True)[0]
             logger.info(f"DEBUG: ClipTagger.categorize() filtered indices: {filtered_indices}")
 

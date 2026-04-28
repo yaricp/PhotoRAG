@@ -1,5 +1,4 @@
-from fastapi import FastAPI, Depends
-from pydantic import BaseModel
+from fastapi import FastAPI, Depends,HTTPException
 from typing import List
 from loguru import logger
 from contextlib import asynccontextmanager
@@ -12,11 +11,15 @@ from src.db_service import (
 from src.database import get_db, Session, SessionLocal
 from src.config import Api_Settings
 from src.models import Photo
-from src.schemas import Photo as PhotoSchema
+from src.schemas import (
+    Photo as PhotoSchema,
+    WatchRequest
+)
 from src.watcher_service import WatcherService
 
 
 watcher_service = WatcherService()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -35,14 +38,6 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan
 )
-
-
-class WatchRequest(BaseModel):
-    path: str
-
-
-# Store active observers in a global dict to manage their lifecycle
-active_observers = {}
 
 
 @app.get("/api/system/status/")
@@ -77,6 +72,8 @@ def sse_event_stream():
 def get_photo(photo_id: int, db: Session = Depends(get_db)) -> PhotoSchema:
     logger.info(f"Getting photo: {photo_id}")
     photo = get_photo_by_id(db, photo_id)
+    if not photo:
+        raise HTTPException(status_code=404, detail="Photo not found")
     logger.info(f"Photo found in DB: {photo}")
     return photo
 

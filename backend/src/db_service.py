@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from src.models import (
     Photo, ModelState, Camera, Geoposition, 
     Keyword, Tag, Person, Category, PhotoTag, PhotoCategory,
-    Watcher
+    Watcher, ProcessingJob
 )
 from src.utils import generate_file_hash
 from datetime import datetime
@@ -161,3 +161,44 @@ def get_all_active_watchers(db: Session):
 
 def get_all_watchers(db: Session):
     return db.query(Watcher).all()
+
+def get_or_create_job(
+    db: Session, photo_id: int, phase: str, tasks: str
+):
+    job = db.query(ProcessingJob).filter_by(photo_id=photo_id, phase=phase).first()
+    if not job:
+        job = ProcessingJob(
+            photo_id=photo_id, phase=phase, tasks=tasks,
+        )
+        db.add(job)
+        db.commit()
+        db.refresh(job)
+    return job
+
+def update_job_tasks(
+    db: Session,
+    photo_id: int,
+    phase: str,
+    tasks: str,
+    new_phase: str = None
+):
+    logger.info(f"Updating job tasks for photo {photo_id}")
+    logger.info(f"in phase {phase} with tasks {tasks}")
+    logger.info(f"new phase {new_phase}")
+    job = db.query(ProcessingJob).filter_by(photo_id=photo_id, phase=phase).first()
+    logger.info(f"Job found: {job}")
+    if job:
+        job.tasks = tasks
+        if new_phase is not None:
+            job.phase = new_phase
+        db.commit()
+        logger.info(f"Job updated: {job}")
+        return job
+    else:
+        return None
+
+def delete_job(db: Session, photo_id: int, phase: str):
+    job = db.query(ProcessingJob).filter_by(photo_id=photo_id, phase=phase).first()
+    db.delete(job)
+    db.commit()
+    return True

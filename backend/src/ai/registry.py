@@ -55,7 +55,7 @@ class AIModelRegistry:
             with self._lock:
                 if self._vision_generator is None:
                     logger.info("Registry: Warming up Qwen-VL Vision Generator...")
-                    generator = QwenVisionGenerator(self._settings)
+                    generator = QwenVisionGenerator()
                     self._vision_generator = generator
         logger.info("Registry: Qwen-VL Vision Generator is ready.")
         return self._vision_generator

@@ -28,6 +28,18 @@ class Api_Settings(BaseSettings):
 class ML_Settings(BaseSettings):
     VISION_DESCRIBER_MODEL: str = "Qwen/Qwen2-VL-2B-Instruct"
     PHOTO_EMBEDDER_MODEL: str = "nomic-ai/nomic-embed-text-v1.5"
+    RESIZE_FOR_DESCRIPTION_Y: int = 448
+    RESIZE_FOR_DESCRIPTION_X: int = 448
+    RESIZE_FOR_DESCRIPTION: tuple[int, int] = (
+        RESIZE_FOR_DESCRIPTION_Y,
+        RESIZE_FOR_DESCRIPTION_X
+    )
+    RESIZE_FOR_DETECTION_Y: int = 224
+    RESIZE_FOR_DETECTION_X: int = 224
+    RESIZE_FOR_DETECTION: tuple[int, int] = (
+        RESIZE_FOR_DETECTION_Y,
+        RESIZE_FOR_DETECTION_X
+    )
 
 
 class CLIP_Settings(BaseSettings):

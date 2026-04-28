@@ -3,6 +3,10 @@ from typing import Optional
 from datetime import datetime
 
 
+class WatchRequest(BaseModel):
+    path: str
+
+
 class Camera(BaseModel):
     id: int
     make: str
@@ -40,6 +44,16 @@ class PhotoTag(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class GeoPosition(BaseModel):
+    id: int
+    photo_id: int
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    address: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class Photo(BaseModel):
     id: int
     hash: Optional[str] = None
@@ -49,5 +63,8 @@ class Photo(BaseModel):
     tags_rel: Optional[list[PhotoTag]] = None
     categories_rel: Optional[list[PhotoCategory]] = None
     camera: Optional[Camera] = None
+    geoposition: Optional[GeoPosition] = None
+    is_doc: Optional[bool] = None
+    ocr_text: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)

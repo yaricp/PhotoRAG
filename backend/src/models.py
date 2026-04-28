@@ -130,3 +130,11 @@ class Watcher(Base):
     path = Column(String, unique=True)
     status = Column(String, default="pending")
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class ProcessingJob(Base):
+    __tablename__ = "processing_jobs"
+    id = Column(Integer, primary_key=True)
+    phase = Column(String)
+    photo_id = Column(Integer, ForeignKey('photos.id'), unique=True)
+    tasks = Column(String, nullable=True)
