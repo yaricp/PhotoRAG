@@ -3,6 +3,7 @@ import sys
 import time
 import subprocess
 from loguru import logger
+from sqlalchemy import text
 
 from src.database import engine, SessionLocal
 from src.models import Base, ModelState
@@ -11,12 +12,20 @@ from src.tasks import download_models_task
 from src.config import Api_Settings
 
 
-
 def init_db():
     logger.info("Initializing Database...")
+
+    # 1. Create tables
     Base.metadata.create_all(bind=engine)
+
+    # 2. Create VSS tables
+    with engine.begin() as conn:
+        conn.execute(text("""
+            CREATE VIRTUAL TABLE IF NOT EXISTS photo_embeddings_vss
+            USING vec0(embedding FLOAT[768]);
+        """))
     
-    # Initialize model states if empty
+    # 3. Initialize model states if empty
     db = SessionLocal()
     for model_name in ["clip", "vision", "embedding", "categories"]:
         state = db.query(ModelState).filter_by(name=model_name).first()

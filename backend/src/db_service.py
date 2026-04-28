@@ -1,14 +1,16 @@
 from typing import Optional, List
-
+from datetime import datetime
+from loguru import logger
 from sqlalchemy.orm import Session
+
 from src.models import (
     Photo, ModelState, Camera, Geoposition, 
     Keyword, Tag, Person, Category, PhotoTag, PhotoCategory,
     Watcher, ProcessingJob
 )
 from src.utils import generate_file_hash
-from datetime import datetime
-from loguru import logger
+from src.vector_db_services import search_similar_photos
+
 
 # Registration & Status Helpers (Existing)
 def check_photo_hash_exists(db: Session, hash_str: str) -> Photo:
@@ -33,6 +35,27 @@ def get_photo_by_id(db: Session, photo_id: int) -> Photo | None:
 
 def get_all_photos(db: Session) -> List[Photo]:
     return db.query(Photo).all()
+
+def get_photos_by_vector(
+    db: Session, request_text: str, k: int
+) -> List[Photo]:
+    """Returns a list of photos that are similar to the query vector."""
+    logger.info("Getting photos by vector")
+    from src.ai.registry import registry
+
+    model = registry.nomic_embedder
+    embedding = registry.embedder_encode_text(
+        text=request_text, purpose="search"
+    )
+    results = search_similar_photos(db=db, query_embedding=embedding, limit=k)
+    logger.info(f"Photos found in DB: {results}")
+    photo_ids = [item[0] for item in results]
+    photos = []
+    for photo_id in photo_ids:
+        photo = get_photo_by_id(db, photo_id)
+        photos.append(photo)
+    logger.info(f"Photos found in DB: {photos}")
+    return photos
 
 def update_model_status(db: Session, name: str, status: str):
     state = db.query(ModelState).filter_by(name=name).first()
@@ -199,6 +222,9 @@ def update_job_tasks(
 
 def delete_job(db: Session, photo_id: int, phase: str):
     job = db.query(ProcessingJob).filter_by(photo_id=photo_id, phase=phase).first()
-    db.delete(job)
-    db.commit()
-    return True
+    if job:
+        db.delete(job)
+        db.commit()
+        logger.info(f"Job deleted for photo {photo_id} in phase {phase}")
+        return True
+    return False

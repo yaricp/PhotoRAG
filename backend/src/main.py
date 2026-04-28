@@ -1,19 +1,22 @@
-from fastapi import FastAPI, Depends,HTTPException
-from typing import List
+from fastapi import FastAPI, Depends, HTTPException
+
+from typing import List, Dict, Any
 from loguru import logger
 from contextlib import asynccontextmanager
 
 from src.db_service import (
     get_all_model_states,
     get_photo_by_id,
-    get_all_photos
+    get_all_photos,
+    get_photos_by_vector
 )
 from src.database import get_db, Session, SessionLocal
 from src.config import Api_Settings
 from src.models import Photo
 from src.schemas import (
     Photo as PhotoSchema,
-    WatchRequest
+    WatchRequest,
+    QueryRequest
 )
 from src.watcher_service import WatcherService
 
@@ -83,4 +86,16 @@ def get_photos(db: Session = Depends(get_db)) -> List[PhotoSchema]:
     logger.info("Getting all photos")
     photos = get_all_photos(db)
     logger.info(f"Photos found in DB: {photos}")
+    return photos
+
+
+@app.post("/api/search/", response_model=List[PhotoSchema])
+async def search_photos(
+    request: QueryRequest,
+    db: Session = Depends(get_db)
+):
+    """Search photos by vector"""
+    logger.info(f"Received search request for text: {request.text_query}")
+    photos = get_photos_by_vector(db, request.text_query, request.k)
+    logger.info(f"Found photos: {photos}")
     return photos

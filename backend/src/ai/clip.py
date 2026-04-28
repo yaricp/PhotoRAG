@@ -29,13 +29,18 @@ class ClipTagger:
     def __init__(self):
         self.model_name = self.settings.CLIP_MODEL
         self.pretrained = self.settings.PRETRAINED
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model = None
         self.preprocess = None
         self.tags_features = None
         self.tags = []
         self.categories_features = None
         self.categories = []
+        if torch.cuda.is_available():
+            self.device = "cuda"
+        elif torch.backends.mps.is_available():
+            self.device = "mps"
+        else:
+            self.device = "cpu"
 
 
     def _normalize_tags(self, tags: list[str]) -> list[str]:

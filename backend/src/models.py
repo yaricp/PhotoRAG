@@ -50,7 +50,7 @@ class Photo(Base):
     ocr_text = Column(String, nullable=True)
     description = Column(String, nullable=True)
     is_doc = Column(Boolean, default=False)
-    embedding = Column(Vector(768), nullable=True)
+    # embedding = Column(Vector(768), nullable=True)
     
     file_created_at = Column(DateTime, nullable=True)
     captured_at = Column(DateTime, nullable=True)
@@ -66,6 +66,18 @@ class Photo(Base):
     
     persons_rel = relationship("Person", secondary=photo_persons, back_populates="photos")
     keywords_rel = relationship("Keyword", secondary=photo_keywords, back_populates="photos")
+
+
+class PhotoEmbedding(Base):
+    __tablename__ = "photo_embedding_map"
+
+    id = Column(Integer, primary_key=True)
+    photo_id = Column(Integer, ForeignKey("photos.id"), index=True)
+
+    vss_rowid = Column(Integer, index=True)
+
+    model = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 
 class Category(Base):

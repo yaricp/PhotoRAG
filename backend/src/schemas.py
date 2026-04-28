@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional
 from datetime import datetime
 
@@ -68,3 +68,9 @@ class Photo(BaseModel):
     ocr_text: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class QueryRequest(BaseModel):
+    text_query: str = Field(..., min_length=1, max_length=200)
+    k: int = Field(..., ge=10, le=100)
+    thresholds: float = Field(..., ge=0.0, le=1.0)

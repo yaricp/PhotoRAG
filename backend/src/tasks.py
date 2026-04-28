@@ -22,6 +22,7 @@ from src.db_service import (
     update_job_tasks,
     delete_job,
 )
+from src.vector_db_services import store_photo_embedding
 from src.models import (
     Photo, PhotoTag, PhotoCategory, Geoposition, ProcessingJob
 )
@@ -68,6 +69,9 @@ def start_pipeline(photo_id: int):
             tasks=new_tasks
         )
         logger.info(f"Tasks dispatched for photo {photo_id}")
+    except Exception as e:
+        logger.error(f"Error in start_pipeline for photo {photo_id}: {e}")
+        delete_job(db, photo_id, next_phase_name)
     finally:
         db.close()
 
@@ -97,7 +101,7 @@ def start_next_phase_tasks(photo_id: int, phase: str, tasks: str):
             logger.info(f"Is this document task dispatched for photo {photo_id}")
     
 
-def finish_task(photo_id: int, phase: str, name:str):
+def finish_task(photo_id: int, phase: str, name: str):
     db = SessionLocal()
     try:
         job = db.query(ProcessingJob).filter_by(photo_id=photo_id, phase=phase).first()
@@ -127,6 +131,9 @@ def finish_task(photo_id: int, phase: str, name:str):
             else:
                 delete_job(db, photo_id, phase)
                 logger.info(f"Job {job.id} deleted for photo {photo_id}")
+    except Exception as e:
+        logger.error(f"Error finishing task {name} phase {phase} for photo {photo_id}: {e}")
+        
     finally:
         db.close()
 
@@ -161,15 +168,20 @@ Location: {location}
         logger.info(f"Embedding photo text: {photo_text}")
         # 3. Generate Embedding (Using Warm Registry)
         model = registry.nomic_embedder
-        embedding = model.encode(photo_text)
+        embedding = registry.embedder_encode_text(
+            text=photo_text, purpose="save"
+        )
         # 4. Persist to pgvector column
-        photo.embedding = embedding.tolist()
+        store_photo_embedding(db, photo.id, embedding, model.name)
         logger.info(f"Embedding photo embedding saved")
         db.commit()
         logger.info(f"Embedding photo embedding committed")
         finish_task(
             photo_id=photo_id, phase=phase, name="final_embedding_task"
         )
+    except Exception as e:
+        logger.error(f"Error in task for photo {photo_id}: {e}")
+        delete_job(db, photo_id, phase)
     finally:
         db.close()
 
@@ -219,7 +231,7 @@ def download_models_task():
     else:
         try:
             update_model_status(db, "vision", "downloading")
-            QwenVisionGenerator(ML_Settings()).download()
+            QwenVisionGenerator().download()
             update_model_status(db, "vision", "ready")
             logger.info("Vision: download complete.")
         except Exception as e:
@@ -291,6 +303,9 @@ def metadata_task(photo_id: int, phase: str):
             finish_task(
                 photo_id=photo_id, phase=phase, name="metadata_task"
             )
+    except Exception as e:
+        logger.error(f"Error in task for photo {photo_id}: {e}")
+        delete_job(db, photo_id, phase)
     finally:
         db.close()
 
@@ -305,7 +320,7 @@ def auto_tag_clip_task(photo_id: int, phase: str):
         if photo:
             logger.info(f"Processing photo: {photo.file_path}")
             tagger = registry.clip_tagger
-            logger.info(f"CLIP tagger: {tagger}")
+            logger.info(f"ID of tagger: {id(tagger)}")
             confident_tags = tagger.find_tags(photo.file_path)
             logger.info(f"Confident tags: {confident_tags}")
             # photo.keywords = [t for t, s in confident_tags]
@@ -316,6 +331,9 @@ def auto_tag_clip_task(photo_id: int, phase: str):
             finish_task(
                 photo_id=photo_id, phase=phase, name="auto_tag_clip_task"
             )
+    except Exception as e:
+        logger.error(f"Error in task for photo {photo_id}: {e}")
+        delete_job(db, photo_id, phase)
     finally:
         db.close()
 
@@ -336,6 +354,9 @@ def categorize_photo_task(photo_id: int, phase: str):
             finish_task(
                 photo_id=photo_id, phase=phase, name="categorize_photo_task"
             )
+    except Exception as e:
+        logger.error(f"Error in task for photo {photo_id}: {e}")
+        delete_job(db, photo_id, phase)
     finally:
         db.close()
 
@@ -360,6 +381,9 @@ def vision_task(photo_id: int, phase: str):
             finish_task(
                 photo_id=photo_id, phase=phase, name="vision_task"
             )
+    except Exception as e:
+        logger.error(f"Error in task for photo {photo_id}: {e}")
+        delete_job(db, photo_id, phase)
     finally:
         db.close()
 
@@ -383,9 +407,12 @@ def ocr_task(photo_id: int, phase: str):
                 logger.info(f"Photo updated: {photo}")
                 is_this_document_task(photo_id, phase)
                 logger.info("Started process to identify this image as a document")
-                finish_task(
-                    photo_id=photo_id, phase=phase, name="ocr_task"
-                )
+            finish_task(
+                photo_id=photo_id, phase=phase, name="ocr_task"
+            )
+    except Exception as e:
+        logger.error(f"Error in task for photo {photo_id}: {e}")
+        delete_job(db, photo_id, phase)
     finally:
         db.close()
 
@@ -408,5 +435,8 @@ def is_this_document_task(photo_id: int, phase: str):
             finish_task(
                 photo_id=photo_id, phase=phase, name="is_this_document_task"
             )
+    except Exception as e:
+        logger.error(f"Error in task for photo {photo_id}: {e}")
+        delete_job(db, photo_id, phase)
     finally:
         db.close()

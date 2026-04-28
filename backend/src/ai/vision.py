@@ -20,9 +20,14 @@ class QwenVisionGenerator:
 
     def __init__(self):
         self.system_prompt = PROMPTS["vision_analysis"]["system_prompt"]
-        self.device = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
         self.processor = None
         self.model = None
+        if torch.cuda.is_available():
+            self.device = "cuda"
+        elif torch.backends.mps.is_available():
+            self.device = "mps"
+        else:
+            self.device = "cpu"
 
     def download(self):
         """Pre-downloads the models and weights from HuggingFace."""
@@ -36,11 +41,11 @@ class QwenVisionGenerator:
             logger.info(f"Vision: Loading {self.MODEL_ID} on {self.device}...")
             self.model = Qwen2VLForConditionalGeneration.from_pretrained(
                 self.MODEL_ID, 
-                torch_dtype="auto", 
-                device_map="auto"
-            )
+                torch_dtype=torch.float16
+            ).to(self.device)
             self.processor = AutoProcessor.from_pretrained(self.MODEL_ID)
             self.model.eval()
+            logger.info(f"Vision: {self.MODEL_ID} loaded on {self.device}")
 
     def generate_vision_text(
         self, file_path: str, prompt_key: str = "describe_scene"
