@@ -1,12 +1,12 @@
 from transformers import AutoProcessor, Qwen2VLForConditionalGeneration
-from src.config import Settings
+from src.config import ML_Settings
 from src.ai.prompts import PROMPTS
 import torch
 from loguru import logger
 
 
 class QwenVisionGenerator:
-    def __init__(self, settings: Settings):
+    def __init__(self, settings: ML_Settings):
         self.model_id = settings.VISION_DESCRIBER_MODEL 
         self.system_prompt = PROMPTS["vision_analysis"]["system_prompt"]
         self.device = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"

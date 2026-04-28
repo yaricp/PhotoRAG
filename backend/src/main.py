@@ -1,10 +1,40 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from pydantic import BaseModel
+from typing import List
+from loguru import logger
+from contextlib import asynccontextmanager
 
-from src.observer import start_observer
+from src.db_service import (
+    get_all_model_states,
+    get_photo_by_id,
+    get_all_photos
+)
+from src.database import get_db, Session, SessionLocal
+from src.config import Api_Settings
+from src.models import Photo
+from src.schemas import Photo as PhotoSchema
+from src.watcher_service import WatcherService
 
 
-app = FastAPI(title="Photo Describer MVP")
+watcher_service = WatcherService()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    db = SessionLocal()
+    # startup
+    watcher_service.start_all(db)
+    yield
+    # shutdown
+    watcher_service.stop_all(db)
+    db.close()
+
+
+app = FastAPI(
+    title="Photo Describer MVP",
+    description="AI photo analyzer that detects objects, locations, and generates descriptions.",
+    version="1.0.0",
+    lifespan=lifespan
+)
 
 
 class WatchRequest(BaseModel):
@@ -14,15 +44,14 @@ class WatchRequest(BaseModel):
 # Store active observers in a global dict to manage their lifecycle
 active_observers = {}
 
-from src.db_service import get_all_model_states
-from src.database import SessionLocal
 
-
-@app.get("/api/system/status")
+@app.get("/api/system/status/")
 def get_system_status():
+    logger.info("Getting system status")
     db = SessionLocal()
     try:
         states = get_all_model_states(db)
+        logger.info(f"System status: {states}")
         return {
             "ready": all(s.status == "ready" for s in states),
             "models": [{"name": s.name, "status": s.status} for s in states]
@@ -31,19 +60,30 @@ def get_system_status():
         db.close()
 
 
-@app.post("/api/watch")
-def trigger_directory_watch(request: WatchRequest):
-    if request.path not in active_observers:
-        try:
-            observer = start_observer(request.path)
-            active_observers[request.path] = observer
-            return {"status": "watching", "target": request.path}
-        except Exception as e:
-            return {"status": "error", "message": str(e)}
-    return {"status": "already_watching", "target": request.path}
+@app.post("/api/watch/")
+def trigger_directory_watch(request: WatchRequest, db: Session = Depends(get_db)):
+    logger.info(f"Received watch request for path: {request.path}")
+    watcher = watcher_service.start_watcher(request.path, db)
+    return watcher
 
 
-@app.get("/api/stream")
+@app.get("/api/stream/")
 def sse_event_stream():
     # Will yield Async generator for SSE UI updates
     return {"status": "stream_placeholder"}
+
+
+@app.get("/api/photos/{photo_id}", response_model=PhotoSchema)
+def get_photo(photo_id: int, db: Session = Depends(get_db)) -> PhotoSchema:
+    logger.info(f"Getting photo: {photo_id}")
+    photo = get_photo_by_id(db, photo_id)
+    logger.info(f"Photo found in DB: {photo}")
+    return photo
+
+
+@app.get("/api/photos/", tags=["Photos"], response_model=List[PhotoSchema])
+def get_photos(db: Session = Depends(get_db)) -> List[PhotoSchema]:
+    logger.info("Getting all photos")
+    photos = get_all_photos(db)
+    logger.info(f"Photos found in DB: {photos}")
+    return photos

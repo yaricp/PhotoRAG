@@ -37,6 +37,7 @@ photo_keywords = Table(
     Column('keyword_id', Integer, ForeignKey('keywords.id'), primary_key=True)
 )
 
+
 class Photo(Base):
     __tablename__ = "photos"
 
@@ -66,17 +67,21 @@ class Photo(Base):
     persons_rel = relationship("Person", secondary=photo_persons, back_populates="photos")
     keywords_rel = relationship("Keyword", secondary=photo_keywords, back_populates="photos")
 
+
 class Category(Base):
     __tablename__ = "categories"
     id = Column(Integer, primary_key=True)
     name = Column(String, unique=True)
+    prompt = Column(String, nullable=True)
     photos = relationship("PhotoCategory", back_populates="category")
+
 
 class Tag(Base):
     __tablename__ = "tags"
     id = Column(Integer, primary_key=True)
     name = Column(String, unique=True)
     photos = relationship("PhotoTag", back_populates="tag")
+
 
 class Camera(Base):
     __tablename__ = "cameras"
@@ -85,6 +90,7 @@ class Camera(Base):
     model = Column(String)
     serial_number = Column(String, nullable=True)
     photos = relationship("Photo", back_populates="camera")
+
 
 class Geoposition(Base):
     __tablename__ = "geopositions"
@@ -95,11 +101,13 @@ class Geoposition(Base):
     address = Column(String, nullable=True)
     photo = relationship("Photo", back_populates="geoposition")
 
+
 class Person(Base):
     __tablename__ = "persons"
     id = Column(Integer, primary_key=True)
     name = Column(String)
     photos = relationship("Photo", secondary=photo_persons, back_populates="persons_rel")
+
 
 class Keyword(Base):
     __tablename__ = "keywords"
@@ -107,9 +115,18 @@ class Keyword(Base):
     name = Column(String, unique=True)
     photos = relationship("Photo", secondary=photo_keywords, back_populates="keywords_rel")
 
+
 class ModelState(Base):
     __tablename__ = "model_states"
     id = Column(Integer, primary_key=True)
     name = Column(String, unique=True)
+    status = Column(String, default="pending")
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class Watcher(Base):
+    __tablename__ = "watchers"
+    id = Column(Integer, primary_key=True)
+    path = Column(String, unique=True)
     status = Column(String, default="pending")
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

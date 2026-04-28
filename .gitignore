@@ -12,3 +12,8 @@
 **/.venv
 venv/
 **/venv
+**/*.DS_Store
+.pytest_cache
+backend/.pytest_cache
+backend/data/*.*
+Pictures/

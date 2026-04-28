@@ -1,11 +1,15 @@
 import os
+import torch
+from loguru import logger
+
 from src.queue import task_queue
 from src.metadata import get_exif_data
 from src.ai.ocr import extract_text_from_image
 from src.ai.registry import registry
-from src.config import Settings
+from src.config import ML_Settings
 from src.database import SessionLocal
 from src.db_service import (
+    get_photo_by_id,
     get_or_create_photo,
     update_model_status,
     get_model_status,
@@ -18,8 +22,7 @@ from src.db_service import (
     add_photo_category_with_score
 )
 from src.models import Photo, PhotoTag, PhotoCategory, Geoposition
-import torch
-from loguru import logger
+from src.utils import load_categories_from_json
 
 
 def check_and_trigger_finalization(db, photo_id: int):
@@ -84,12 +87,24 @@ def download_models_task():
     """
     db = SessionLocal()
 
-    # 1. CLIP weights + Open Images vocabulary
+    # 1. Seed default categories (idempotent — get_or_create is safe to repeat)
+    if get_model_status(db, "categories") == "ready":
+        logger.info("Categories: already ready, skipping seeding.")
+    else:
+        logger.info("Categories: seeding default categories...")
+        defaults = load_categories_from_json("defaults/default_categories.json")
+        for cat in defaults:
+            get_or_create_category(db, cat['name'], cat['prompt'])
+        update_model_status(db, "categories", "ready")
+        logger.info("Categories: seeding complete.")
+
+    # 2. CLIP weights + Open Images vocabulary
     from src.ai.clip import ClipTagger
     if get_model_status(db, "clip") == "ready":
         logger.info("CLIP: already ready, skipping download.")
     else:
         try:
+            logger.info("CLIP: downloading...")
             update_model_status(db, "clip", "downloading")
             ClipTagger().download()  # fetches ViT weights + CSV + .npy
             update_model_status(db, "clip", "ready")
@@ -99,12 +114,6 @@ def download_models_task():
             update_model_status(db, "clip", "error")
             logger.error(f"CLIP: download failed: {e}")
 
-    # 2. Seed default categories (idempotent — get_or_create is safe to repeat)
-    defaults = ["Nature", "Architecture", "People", "Urban", "Interior",
-                "Portrait", "Landscape", "Abstract", "Food", "Animals"]
-    for cat in defaults:
-        get_or_create_category(db, cat)
-
     # 3. Vision model (Qwen2-VL) — weights go to HuggingFace local cache
     from src.ai.vision import QwenVisionGenerator
     if get_model_status(db, "vision") == "ready":
@@ -112,7 +121,7 @@ def download_models_task():
     else:
         try:
             update_model_status(db, "vision", "downloading")
-            QwenVisionGenerator(Settings()).download()
+            QwenVisionGenerator(ML_Settings()).download()
             update_model_status(db, "vision", "ready")
             logger.info("Vision: download complete.")
         except Exception as e:
@@ -168,18 +177,24 @@ def metadata_task(photo_id: int):
 
 @task_queue.task()
 def auto_tag_clip_task(photo_id: int):
+    logger.info(f"Auto-tagging photo: {photo_id}")
     db = SessionLocal()
     try:
-        photo = db.query(Photo).filter(Photo.id == photo_id).first()
+        photo = get_photo_by_id(db, photo_id)
+        logger.info(f"Photo found in DB: {photo}")
         if photo:
+            logger.info(f"Processing photo: {photo.file_path}")
             tagger = registry.clip_tagger
-            tags_with_scores = tagger.find_tags(photo.file_path)
-            confident_tags = [ (t, s) for t, s in tags_with_scores if s > 0.5 ]
-            photo.keywords = [t for t, s in confident_tags]
+            logger.info(f"CLIP tagger: {tagger}")
+            confident_tags = tagger.find_tags(photo.file_path)
+            logger.info(f"Confident tags: {confident_tags}")
+            # photo.keywords = [t for t, s in confident_tags]
+            # logger.info(f"Photo keywords: {photo.keywords}")
             for tag_name, score in confident_tags:
                 add_photo_tag_with_score(db, photo_id, tag_name, score)
-            db.commit()
+                logger.info(f"Added tag: {tag_name} with score: {score}")
             check_and_trigger_finalization(db, photo_id)
+            logger.info(f"Checked and triggered finalization")
     finally:
         db.close()
 
@@ -188,15 +203,15 @@ def auto_tag_clip_task(photo_id: int):
 def categorize_photo_task(photo_id: int):
     db = SessionLocal()
     try:
-        photo = db.query(Photo).filter(Photo.id == photo_id).first()
-        categories = get_all_categories(db)
-        if photo and categories:
-            tagger = registry.clip_tagger
-            cat_results = tagger.categorize(photo.file_path, categories)
-            for cat_name, score in cat_results:
-                if score > 0.5:
-                    add_photo_category_with_score(db, photo_id, cat_name, score)
-            db.commit()
+        photo = get_photo_by_id(db, photo_id)
+        logger.info(f"Photo found in DB: {photo}")
+        tagger = registry.clip_tagger
+        logger.info(f"CLIP tagger: {tagger}")
+        if photo:
+            cat_results = tagger.categorize(photo.file_path)
+            logger.info(f"Category results: {cat_results}")
+            for cat_id, cat_name, score in cat_results:
+                add_photo_category_with_score(db, photo_id, cat_id, score)
             check_and_trigger_finalization(db, photo_id)
     finally:
         db.close()
@@ -204,15 +219,21 @@ def categorize_photo_task(photo_id: int):
 
 @task_queue.task()
 def vision_task(photo_id: int):
+    logger.info(f"Vision task for photo: {photo_id}")
     db = SessionLocal()
     try:
         photo = db.query(Photo).filter(Photo.id == photo_id).first()
+        logger.info(f"Photo found in DB: {photo}")
         if photo:
             generator = registry.vision_generator
+            logger.info(f"Vision generator: {generator}")
             desc = generator.generate_vision_text(photo.file_path)
+            logger.info(f"Description: {desc}")
             photo.description = desc
             db.commit()
+            logger.info(f"Photo updated: {photo}")
             check_and_trigger_finalization(db, photo_id)
+            logger.info(f"Photo finalized: {photo}")
     finally:
         db.close()
 

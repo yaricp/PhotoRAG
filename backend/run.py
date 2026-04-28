@@ -1,11 +1,15 @@
-import subprocess
+import os
 import sys
 import time
-import os
+import subprocess
+from loguru import logger
+
 from src.database import engine, SessionLocal
 from src.models import Base, ModelState
 from src.tasks import download_models_task
-from loguru import logger
+
+from src.config import Api_Settings
+
 
 
 def init_db():
@@ -14,7 +18,7 @@ def init_db():
     
     # Initialize model states if empty
     db = SessionLocal()
-    for model_name in ["clip", "vision", "embedding"]:
+    for model_name in ["clip", "vision", "embedding", "categories"]:
         state = db.query(ModelState).filter_by(name=model_name).first()
         if not state:
             db.add(ModelState(name=model_name, status="pending"))
@@ -50,7 +54,12 @@ def start_api():
     # Use uvicorn to run our app
     try:
         import uvicorn
-        uvicorn.run("src.main:app", host="127.0.0.1", port=8000, reload=True)
+        uvicorn.run(
+            "src.main:app",
+            host=Api_Settings().API_HOST,
+            port=Api_Settings().API_PORT,
+            reload=True
+        )
     except KeyboardInterrupt:
         logger.info("Shutting down...")
 

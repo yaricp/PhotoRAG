@@ -2,7 +2,7 @@ import threading
 from src.ai.clip import ClipTagger
 from src.ai.vision import QwenVisionGenerator
 from src.geo import GeoEnricher
-from src.config import Settings
+from src.config import ML_Settings
 from loguru import logger
 
 
@@ -25,8 +25,8 @@ class AIModelRegistry:
     @property
     def _settings(self):
         if self.__settings is None:
-            from src.config import Settings
-            self.__settings = Settings()
+            # from src.config import Settings
+            self.__settings = ML_Settings()
         return self.__settings
 
     @classmethod
@@ -44,7 +44,7 @@ class AIModelRegistry:
                 if self._clip_tagger is None:
                     logger.info("Registry: Warming up CLIP Tagger...")
                     tagger = ClipTagger()
-                    tagger.load()  # assumes download_models_task already ran
+                    tagger.load_model()  # assumes download_models_task already ran
                     self._clip_tagger = tagger
         logger.info("Registry: CLIP Tagger is ready.")
         return self._clip_tagger

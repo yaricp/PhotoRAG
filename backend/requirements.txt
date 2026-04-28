@@ -22,3 +22,4 @@ exifread
 einops
 geopy
 loguru
+sentence_transformers
