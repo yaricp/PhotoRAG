@@ -1,0 +1,252 @@
+[
+    {
+        "id": 1,
+        "name": "people",
+        "prompt": "a photo of people or a person"
+    },
+    {
+        "id": 2,
+        "name": "portrait",
+        "prompt": "a portrait photo of a person"
+    },
+    {
+        "id": 3,
+        "name": "selfie",
+        "prompt": "a selfie photo of a person"
+    },
+    {
+        "id": 4,
+        "name": "family",
+        "prompt": "a family photo with relatives"
+    },
+    {
+        "id": 5,
+        "name": "friends",
+        "prompt": "a group of friends having fun"
+    },
+    {
+        "id": 6,
+        "name": "pets",
+        "prompt": "a pet animal like a dog or cat"
+    },
+    {
+        "id": 7,
+        "name": "wild_animals",
+        "prompt": "wild animals in nature"
+    },
+    {
+        "id": 8,
+        "name": "food",
+        "prompt": "a photo of food or a meal on a plate"
+    },
+    {
+        "id": 9,
+        "name": "dessert",
+        "prompt": "cakes, sweets or dessert food"
+    },
+    {
+        "id": 10,
+        "name": "drinks",
+        "prompt": "beverages like coffee, juice or alcohol drinks"
+    },
+    {
+        "id": 11,
+        "name": "travel",
+        "prompt": "a travel or vacation photo"
+    },
+    {
+        "id": 12,
+        "name": "nature",
+        "prompt": "natural landscape, forest or countryside"
+    },
+    {
+        "id": 13,
+        "name": "mountains",
+        "prompt": "mountains landscape scenery"
+    },
+    {
+        "id": 14,
+        "name": "beach",
+        "prompt": "a beach, sea or ocean view"
+    },
+    {
+        "id": 15,
+        "name": "sunset",
+        "prompt": "sunset or sunrise sky colors"
+    },
+    {
+        "id": 16,
+        "name": "waterfall",
+        "prompt": "a waterfall in nature"
+    },
+    {
+        "id": 17,
+        "name": "lake",
+        "prompt": "a lake or calm water scenery"
+    },
+    {
+        "id": 18,
+        "name": "city",
+        "prompt": "urban city street environment"
+    },
+    {
+        "id": 19,
+        "name": "night_city",
+        "prompt": "city at night with lights"
+    },
+    {
+        "id": 20,
+        "name": "architecture",
+        "prompt": "buildings and architecture structures"
+    },
+    {
+        "id": 21,
+        "name": "street",
+        "prompt": "street photography in a city"
+    },
+    {
+        "id": 22,
+        "name": "indoor",
+        "prompt": "indoor room or interior scene"
+    },
+    {
+        "id": 23,
+        "name": "home",
+        "prompt": "home interior living space"
+    },
+    {
+        "id": 24,
+        "name": "kitchen",
+        "prompt": "kitchen interior or cooking area"
+    },
+    {
+        "id": 25,
+        "name": "bedroom",
+        "prompt": "bedroom interior scene"
+    },
+    {
+        "id": 26,
+        "name": "office",
+        "prompt": "office workplace environment"
+    },
+    {
+        "id": 27,
+        "name": "work",
+        "prompt": "work activity or working environment"
+    },
+    {
+        "id": 28,
+        "name": "study",
+        "prompt": "studying, books, learning environment"
+    },
+    {
+        "id": 29,
+        "name": "sports",
+        "prompt": "sports or physical activity"
+    },
+    {
+        "id": 30,
+        "name": "gym",
+        "prompt": "gym workout fitness training"
+    },
+    {
+        "id": 31,
+        "name": "running",
+        "prompt": "running or jogging activity"
+    },
+    {
+        "id": 32,
+        "name": "cycling",
+        "prompt": "cycling or biking outdoor activity"
+    },
+    {
+        "id": 33,
+        "name": "car",
+        "prompt": "a car or vehicle on road"
+    },
+    {
+        "id": 34,
+        "name": "transport",
+        "prompt": "transport like train bus airplane"
+    },
+    {
+        "id": 35,
+        "name": "documents",
+        "prompt": "documents papers or text on paper"
+    },
+    {
+        "id": 36,
+        "name": "screenshots",
+        "prompt": "screenshots or digital screen content"
+    },
+    {
+        "id": 37,
+        "name": "events",
+        "prompt": "events, parties or gatherings"
+    },
+    {
+        "id": 38,
+        "name": "wedding",
+        "prompt": "wedding ceremony celebration"
+    },
+    {
+        "id": 39,
+        "name": "concert",
+        "prompt": "concert or live music event"
+    },
+    {
+        "id": 40,
+        "name": "festival",
+        "prompt": "festival or public celebration event"
+    },
+    {
+        "id": 41,
+        "name": "art",
+        "prompt": "art, painting, drawing or creative artwork"
+    },
+    {
+        "id": 42,
+        "name": "design",
+        "prompt": "design, graphic design or creative visuals"
+    },
+    {
+        "id": 43,
+        "name": "shopping",
+        "prompt": "shopping, stores or retail environment"
+    },
+    {
+        "id": 44,
+        "name": "products",
+        "prompt": "product photography or objects on display"
+    },
+    {
+        "id": 45,
+        "name": "night",
+        "prompt": "night time scene or low light environment"
+    },
+    {
+        "id": 46,
+        "name": "snow",
+        "prompt": "snow winter landscape or snowy environment"
+    },
+    {
+        "id": 47,
+        "name": "abstract",
+        "prompt": "abstract shapes, patterns or textures"
+    },
+    {
+        "id": 48,
+        "name": "minimal",
+        "prompt": "minimalist clean simple composition"
+    },
+    {
+        "id": 49,
+        "name": "messy",
+        "prompt": "messy room or cluttered environment"
+    },
+    {
+        "id": 50,
+        "name": "other",
+        "prompt": "generic photo that does not fit other categories"
+    }
+]
