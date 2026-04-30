@@ -5,18 +5,14 @@ import sqlalchemy.types
 import numpy as np
 
 # ATOMIC MOCK
-mock_pgvector = MagicMock()
-mock_pgvector.sqlalchemy.Vector = lambda size: sqlalchemy.types.JSON()
-sys.modules['pgvector'] = mock_pgvector
-sys.modules['pgvector.sqlalchemy'] = mock_pgvector.sqlalchemy
 sys.modules['open_clip'] = MagicMock()
-sys.modules['torch'] = MagicMock()
+
 
 import sqlalchemy.orm
 import os
 from sqlalchemy import create_engine
 from src.models import Base, Photo, Category, PhotoCategory
-from src.db_service import add_photo_category_with_score, get_all_categories
+from src.db_service import add_photo_category_with_score, get_or_create_category
 from src.ai.clip import ClipTagger
 
 TEST_DB_FILE = "test_categories_scored.sqlite3"
@@ -48,38 +44,41 @@ def test_category_persistence_with_score(db_session):
     db_session.add(photo)
     db_session.commit()
     
-    add_photo_category_with_score(db_session, photo.id, "Nature", 0.88)
+    cat = get_or_create_category(db_session, "Nature")
+    
+    add_photo_category_with_score(db_session, photo.id, cat.id, 0.88)
     
     pc = db_session.query(PhotoCategory).filter_by(photo_id=photo.id).first()
     assert pc.category.name == "Nature"
     assert pc.confidence_score == 0.88
 
+@patch('src.ai.clip.SessionLocal')
 @patch('src.ai.clip.open_clip')
-def test_clip_categorize_logic(mock_open_clip, tmp_path):
-    tagger = ClipTagger()
-    tagger.model = MagicMock()
-    tagger.preprocess = MagicMock()
-    tagger.device = "cpu"
+def test_clip_categorize_logic(mock_open_clip, mock_session, tmp_path):
+    import torch
+    # Mock db to return categories
+    mock_db = mock_session.return_value
+    mock_cat1 = MagicMock(id=1, name="Nature", prompt="Nature")
+    mock_cat2 = MagicMock(id=2, name="Urban", prompt="Urban")
     
-    # Mock Image & Text Features
-    mock_img_feat = MagicMock()
-    mock_img_feat.norm.return_value = 1.0
-    # Division result
-    mock_img_norm = MagicMock()
-    mock_raw_feat = MagicMock()
-    mock_raw_feat.__truediv__.return_value = mock_img_norm
-    mock_img_norm.cpu.return_value.numpy.return_value = np.array([[1.0, 0.0]]) # 1x2 fake feat
-    tagger.model.encode_image.return_value = mock_raw_feat
-    
-    # Mock text features (2 categories)
-    mock_text_feat = MagicMock()
-    mock_text_feat.__itruediv__.return_value = mock_text_feat
-    mock_text_feat.cpu.return_value.numpy.return_value = np.array([[1.0, 0.0], [0.0, 1.0]]) # 2x2 identity
-    tagger.model.encode_text.return_value = mock_text_feat
-    
-    with patch('PIL.Image.open', return_value=MagicMock()):
-        with patch.object(tagger, 'load', return_value=None):
-            results = tagger.categorize("fake.jpg", ["Nature", "Urban"])
-            assert len(results) == 2
-            assert results[0][0] == "Nature"
-            assert isinstance(results[0][1], float)
+    with patch('src.ai.clip.get_all_categories', return_value=[mock_cat1, mock_cat2]):
+        tagger = ClipTagger()
+        tagger.model = MagicMock()
+        tagger.preprocess = MagicMock()
+        tagger.device = "cpu"
+        
+        # Use real PyTorch tensors to bypass MagicMock math issues
+        # Image feature matches first category (Nature)
+        mock_img_feat = torch.tensor([[1.0, 0.0]])
+        tagger.model.encode_image.return_value = mock_img_feat
+        tagger.categories_features = torch.tensor([[1.0, 0.0], [0.0, 1.0]])
+        
+        with patch('PIL.Image.open', return_value=MagicMock()):
+            with patch.object(tagger, 'load_model', return_value=None):
+                with patch.object(tagger, 'load_or_compute_categories', return_value=None):
+                    tagger.categories = [{"id": 1, "name": "Nature"}, {"id": 2, "name": "Urban"}]
+                    results = tagger.categorize("fake.jpg")
+                    assert len(results) == 1
+                    assert results[0][0] == 1
+                    assert results[0][1] == "Nature"
+                    assert isinstance(results[0][2], float)

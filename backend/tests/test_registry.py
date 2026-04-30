@@ -4,7 +4,7 @@ import sys
 
 # ATOMIC MOCK setup to prevent actual model loading during registry test
 sys.modules['open_clip'] = MagicMock()
-sys.modules['torch'] = MagicMock()
+
 sys.modules['sentence_transformers'] = MagicMock()
 sys.modules['transformers'] = MagicMock()
 

@@ -1,3 +1,4 @@
+import os
 from loguru import logger
 
 from src.queue import task_queue
@@ -202,7 +203,9 @@ def download_models_task():
         logger.info("Categories: already ready, skipping seeding.")
     else:
         logger.info("Categories: seeding default categories...")
-        defaults = load_categories_from_json("defaults/default_categories.json")
+        base_dir = os.path.dirname(os.path.dirname(__file__))
+        defaults_path = os.path.join(base_dir, "defaults", "default_categories.json")
+        defaults = load_categories_from_json(defaults_path)
         for cat in defaults:
             get_or_create_category(db, cat['name'], cat['prompt'])
         update_model_status(db, "categories", "ready")

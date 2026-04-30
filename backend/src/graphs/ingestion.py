@@ -3,11 +3,11 @@ from langgraph.graph import StateGraph, END
 from src.metadata import get_exif_data
 from src.database import SessionLocal
 from src.db_service import create_photo_record, check_photo_hash_exists
-from src.watcher import generate_file_hash
+from src.utils import generate_file_hash
 from src.ai.ocr import extract_text_from_image
 from src.ai.clip import ClipTagger
 from src.ai.vision import QwenVisionGenerator
-from src.config import Settings
+from src.config import ML_Settings
 
 class IngestionState(TypedDict):
     filepath: str
@@ -44,7 +44,7 @@ def clip_node(state: IngestionState):
     return {"keywords": keywords}
 
 def vision_node(state: IngestionState):
-    gen = QwenVisionGenerator(Settings())
+    gen = QwenVisionGenerator(ML_Settings())
     desc = gen.describe_scene(state["filepath"])
     return {"description": desc}
 

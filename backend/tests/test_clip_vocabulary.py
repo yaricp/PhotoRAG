@@ -2,6 +2,8 @@ import pytest
 import os
 import numpy as np
 from unittest.mock import MagicMock, patch, mock_open
+
+# We don't need atomic mocks because we use @patch later and want real open_clip to be importable
 from src.ai.clip import ClipTagger
 
 @pytest.fixture
@@ -51,7 +53,7 @@ def test_compute_embeddings_saves_npy(mock_open_clip, clip_tagger, tmp_path):
     with patch.object(clip_tagger, 'NPY_PATH', npy_path):
         # We need to also patch TAGS_LIST_PATH to avoid polluting project root
         with patch.object(clip_tagger, 'TAGS_LIST_PATH', os.path.join(tmp_path, "tags.txt")):
-            clip_tagger.compute_embeddings(["dog", "cat"])
+            clip_tagger.compute_embeddings_tags(["dog", "cat"])
             assert os.path.exists(npy_path)
             data = np.load(npy_path)
             assert data.shape == (2, 512)

@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from loguru import logger
 from contextlib import asynccontextmanager
 
@@ -8,7 +8,12 @@ from src.db_service import (
     get_all_model_states,
     get_photo_by_id,
     get_all_photos,
-    get_photos_by_vector
+    get_photos_by_vector,
+    get_all_watchers,
+    get_all_tags,
+    get_all_categories,
+    get_all_cameras,
+    get_all_geopositions
 )
 from src.database import get_db, Session, SessionLocal
 from src.config import Api_Settings
@@ -16,7 +21,13 @@ from src.models import Photo
 from src.schemas import (
     Photo as PhotoSchema,
     WatchRequest,
-    QueryRequest
+    QueryRequest,
+    Watcher,
+    PaginatedResponse,
+    Tag as TagSchema,
+    Category as CategorySchema,
+    Camera as CameraSchema,
+    GeoPosition as GeoPositionSchema
 )
 from src.watcher_service import WatcherService
 
@@ -44,18 +55,14 @@ app = FastAPI(
 
 
 @app.get("/api/system/status/")
-def get_system_status():
+def get_system_status(db: Session = Depends(get_db)):
     logger.info("Getting system status")
-    db = SessionLocal()
-    try:
-        states = get_all_model_states(db)
-        logger.info(f"System status: {states}")
-        return {
-            "ready": all(s.status == "ready" for s in states),
-            "models": [{"name": s.name, "status": s.status} for s in states]
-        }
-    finally:
-        db.close()
+    states = get_all_model_states(db)
+    logger.info(f"System status: {states}")
+    return {
+        "ready": all(s.status == "ready" for s in states),
+        "models": [{"name": s.name, "status": s.status} for s in states]
+    }
 
 
 @app.post("/api/watch/")
@@ -63,6 +70,14 @@ def trigger_directory_watch(request: WatchRequest, db: Session = Depends(get_db)
     logger.info(f"Received watch request for path: {request.path}")
     watcher = watcher_service.start_watcher(request.path, db)
     return watcher
+
+
+@app.get("/api/watchers/", response_model=List[Watcher])
+def get_watchers(db: Session = Depends(get_db)) -> List[Watcher]:
+    logger.info("Getting watchers")
+    watchers = get_all_watchers(db)
+    logger.info(f"Watchers found in DB: {watchers}")
+    return watchers
 
 
 @app.get("/api/stream/")
@@ -81,12 +96,29 @@ def get_photo(photo_id: int, db: Session = Depends(get_db)) -> PhotoSchema:
     return photo
 
 
-@app.get("/api/photos/", tags=["Photos"], response_model=List[PhotoSchema])
-def get_photos(db: Session = Depends(get_db)) -> List[PhotoSchema]:
+@app.get("/api/photos/", tags=["Photos"], response_model=PaginatedResponse[PhotoSchema])
+def get_photos(
+    skip: int = 0,
+    limit: int = 100,
+    sort_by: str = "created_at",
+    sort_order: str = "desc",
+    category_id: Optional[int] = None,
+    tag_id: Optional[int] = None,
+    camera_id: Optional[int] = None,
+    is_doc: Optional[bool] = None,
+    db: Session = Depends(get_db)
+) -> PaginatedResponse[PhotoSchema]:
     logger.info("Getting all photos")
-    photos = get_all_photos(db)
-    logger.info(f"Photos found in DB: {photos}")
-    return photos
+    photos, total = get_all_photos(
+        db, skip=skip, limit=limit, sort_by=sort_by, sort_order=sort_order,
+        category_id=category_id, tag_id=tag_id, camera_id=camera_id, is_doc=is_doc
+    )
+    return PaginatedResponse(
+        items=photos,
+        total=total,
+        page=(skip // limit) + 1 if limit > 0 else 1,
+        size=limit
+    )
 
 
 @app.post("/api/search/", response_model=List[PhotoSchema])
@@ -99,3 +131,23 @@ async def search_photos(
     photos = get_photos_by_vector(db, request.text_query, request.k)
     logger.info(f"Found photos: {photos}")
     return photos
+
+
+@app.get("/api/tags/", tags=["Metadata"], response_model=List[TagSchema])
+def get_tags(db: Session = Depends(get_db)) -> List[TagSchema]:
+    return get_all_tags(db)
+
+
+@app.get("/api/categories/", tags=["Metadata"], response_model=List[CategorySchema])
+def get_categories(db: Session = Depends(get_db)) -> List[CategorySchema]:
+    return get_all_categories(db)
+
+
+@app.get("/api/cameras/", tags=["Metadata"], response_model=List[CameraSchema])
+def get_cameras(db: Session = Depends(get_db)) -> List[CameraSchema]:
+    return get_all_cameras(db)
+
+
+@app.get("/api/geopositions/", tags=["Metadata"], response_model=List[GeoPositionSchema])
+def get_geopositions(db: Session = Depends(get_db)) -> List[GeoPositionSchema]:
+    return get_all_geopositions(db)

@@ -17,3 +17,4 @@ venv/
 backend/.pytest_cache
 backend/data/*.*
 Pictures/
+test_photo_db

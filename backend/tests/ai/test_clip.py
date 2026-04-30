@@ -4,7 +4,7 @@ import sys
 
 # Pre-mock to avoid loading environment
 sys.modules['open_clip'] = MagicMock()
-sys.modules['torch'] = MagicMock()
+
 
 from src.ai.clip import ClipTagger
 
@@ -26,7 +26,7 @@ def test_clip_tagger_find_tags_mock(mock_open_clip):
     mock_model = MagicMock()
     tagger.model = mock_model
     
-    # Mock image_features calculation
+    # Mock image_features calculation using torch
     mock_raw_feat = MagicMock()
     mock_raw_feat.norm.return_value = 1.0
     mock_model.encode_image.return_value = mock_raw_feat
@@ -38,15 +38,16 @@ def test_clip_tagger_find_tags_mock(mock_open_clip):
     # The normalized features must return a real array
     mock_norm_feat.cpu.return_value.numpy.return_value = np.random.rand(1, 512).astype(np.float32)
     
-    with patch.object(tagger, 'load', return_value=None):
-        with patch('PIL.Image.open', return_value=MagicMock()):
-             keywords = tagger.find_tags("mock_path.jpg")
-             assert isinstance(keywords, list)
-             assert len(keywords) == 2
-             # Updated for (tag, score) tuples
-             labels = [t for t, s in keywords]
-             assert "nature" in labels or "mountain" in labels
-             
+    with patch.object(tagger, 'load_model', return_value=None):
+        with patch.object(tagger, 'load_tags', return_value=None):
+            with patch('PIL.Image.open', return_value=MagicMock()):
+                 keywords = tagger.find_tags("mock_path.jpg")
+                 assert isinstance(keywords, list)
+                 assert len(keywords) == 2
+                 # Updated for (tag, score) tuples
+                 labels = [t for t, s in keywords]
+                 assert "nature" in labels or "mountain" in labels
+                 
 @patch('requests.get')
 def test_clip_tagger_download_vocab_logic(mock_get):
     tagger = ClipTagger()
@@ -55,6 +56,7 @@ def test_clip_tagger_download_vocab_logic(mock_get):
     
     with patch("builtins.open", MagicMock()):
         with patch("csv.reader", return_value=[["/m/01", "dog"], ["/m/02", "cat"]]):
-            tags = tagger.download_vocabulary()
-            assert "dog" in tags
-            assert "cat" in tags
+            with patch("os.makedirs", return_value=None):
+                tags = tagger.download_vocabulary()
+                assert "dog" in tags
+                assert "cat" in tags

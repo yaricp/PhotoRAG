@@ -25,9 +25,10 @@ def db_session():
     session.commit()
     session.close()
 
-@patch('src.tasks.registry')
+@patch('src.ai.vision.QwenVisionGenerator')
+@patch('src.ai.clip.ClipTagger')
 @patch('src.tasks.SessionLocal')
-def test_download_models_task_lifecycle(mock_session_class, mock_registry, db_session):
+def test_download_models_task_lifecycle(mock_session_class, mock_clip_class, mock_vision_class, db_session):
     mock_session_class.return_value = db_session
     
     # Use call_local for synchronous execution in tests
@@ -38,16 +39,15 @@ def test_download_models_task_lifecycle(mock_session_class, mock_registry, db_se
     assert "clip" in states
     assert states["clip"] == "ready"
     assert states["vision"] == "ready"
-    assert states["embedding"] == "ready"
 
-@patch('src.tasks.registry')
+@patch('src.ai.vision.QwenVisionGenerator')
+@patch('src.ai.clip.ClipTagger')
 @patch('src.tasks.SessionLocal')
-def test_bootstrap_sets_error_status(mock_session_class, mock_registry, db_session):
+def test_bootstrap_sets_error_status(mock_session_class, mock_clip_class, mock_vision_class, db_session):
     mock_session_class.return_value = db_session
     
     # Simulate clip failure
-    # Need to simulate failure on property access
-    type(mock_registry).clip_tagger = PropertyMock(side_effect=Exception("Fail"))
+    mock_clip_class.return_value.download.side_effect = Exception("Fail")
     
     download_models_task.call_local()
     

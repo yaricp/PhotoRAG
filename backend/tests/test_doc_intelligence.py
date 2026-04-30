@@ -24,7 +24,7 @@ def test_is_this_document_logic_yes(mock_session, mock_registry, mock_db):
     mock_gen = mock_registry.vision_generator
     mock_gen.generate_vision_text.return_value = "Yes, this is a document."
     
-    is_this_document_task.call_local(1)
+    is_this_document_task.call_local(1, phase="test_phase")
     
     assert photo.is_doc is True
     mock_db.commit.assert_called()
@@ -39,7 +39,7 @@ def test_is_this_document_logic_no(mock_session, mock_registry, mock_db):
     mock_gen = mock_registry.vision_generator
     mock_gen.generate_vision_text.return_value = "No, this is a cat."
     
-    is_this_document_task.call_local(1)
+    is_this_document_task.call_local(1, phase="test_phase")
     
     assert photo.is_doc is False
 
@@ -53,6 +53,6 @@ def test_ocr_triggers_doc_check_when_text_found(mock_session, mock_ocr, mock_doc
     
     mock_ocr.return_value = "Invoice #123"
     
-    ocr_task.call_local(1)
+    ocr_task.call_local(1, phase="test_phase")
     
-    mock_doc_task.assert_called_once_with(1)
+    mock_doc_task.assert_called_once_with(1, "test_phase")

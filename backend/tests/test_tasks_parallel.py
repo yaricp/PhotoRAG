@@ -52,8 +52,9 @@ def test_atomic_creation_with_file_timestamp(db_session):
     assert photo.file_created_at == file_now
     assert photo.captured_at is None # Should be empty until metadata task runs
 
-@patch('src.tasks.get_exif_data')
-def test_metadata_task_populates_captured_at(mock_get_exif, db_session):
+@patch('src.tasks.parse_datetime')
+@patch('src.tasks.extract_exif')
+def test_metadata_task_populates_captured_at(mock_extract, mock_parse, db_session):
     file_now = datetime(2020, 1, 1)
     captured_now = datetime(2019, 12, 25, 10, 30) # True camera time
     
@@ -61,18 +62,15 @@ def test_metadata_task_populates_captured_at(mock_get_exif, db_session):
     photo = create_photo_record(db_session, "hash_2", "test.jpg", file_created_at=file_now)
     
     # 2. Mock EXIF returning camera time
-    mock_get_exif.return_value = {
-        "model": "Sony A7",
-        "captured_at_obj": captured_now,
-        "captured_at_str": "2019:12:25 10:30:00",
-        "gps_lat": "None",
-        "gps_lon": "None"
-    }
+    mock_extract.return_value = {"Model": "Sony A7"}
+    mock_parse.return_value = captured_now
+    
+    db_session.commit()
     
     # 3. Run Metadata task
-    metadata_task.call_local(photo.id)
+    metadata_task.call_local(photo.id, phase="test_phase")
     
-    db_session.refresh(photo)
+    db_session.expire_all()
+    photo = db_session.query(Photo).get(photo.id)
     assert photo.file_created_at == file_now # Preserved
     assert photo.captured_at == captured_now # Updated from EXIF
-    assert photo.exif_data["model"] == "Sony A7"

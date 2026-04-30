@@ -33,8 +33,45 @@ def get_or_create_photo(db: Session, filepath: str, file_created_at: datetime = 
 def get_photo_by_id(db: Session, photo_id: int) -> Photo | None:
     return db.query(Photo).filter(Photo.id == photo_id).first()
 
-def get_all_photos(db: Session) -> List[Photo]:
-    return db.query(Photo).all()
+def get_all_photos(
+    db: Session,
+    skip: int = 0,
+    limit: int = 100,
+    sort_by: str = "created_at",
+    sort_order: str = "desc",
+    category_id: Optional[int] = None,
+    tag_id: Optional[int] = None,
+    camera_id: Optional[int] = None,
+    is_doc: Optional[bool] = None
+) -> tuple[List[Photo], int]:
+    query = db.query(Photo)
+    
+    if category_id is not None:
+        query = query.join(Photo.categories_rel).filter(PhotoCategory.category_id == category_id)
+    if tag_id is not None:
+        query = query.join(Photo.tags_rel).filter(PhotoTag.tag_id == tag_id)
+    if camera_id is not None:
+        query = query.filter(Photo.camera_id == camera_id)
+    if is_doc is not None:
+        query = query.filter(Photo.is_doc == is_doc)
+        
+    total = query.count()
+    
+    order_col = Photo.created_at
+    if sort_by == "captured_at":
+        order_col = Photo.captured_at
+    elif sort_by == "file_created_at":
+        order_col = Photo.file_created_at
+    elif sort_by == "id":
+        order_col = Photo.id
+        
+    if sort_order == "desc":
+        query = query.order_by(order_col.desc())
+    else:
+        query = query.order_by(order_col.asc())
+        
+    photos = query.offset(skip).limit(limit).all()
+    return photos, total
 
 def get_photos_by_vector(
     db: Session, request_text: str, k: int
@@ -150,6 +187,15 @@ def get_category_by_id(db: Session, cat_id: int):
 
 def get_all_categories(db: Session) -> List[Category]:
     return db.query(Category).all()
+
+def get_all_tags(db: Session) -> List[Tag]:
+    return db.query(Tag).all()
+
+def get_all_cameras(db: Session) -> List[Camera]:
+    return db.query(Camera).all()
+
+def get_all_geopositions(db: Session) -> List[Geoposition]:
+    return db.query(Geoposition).all()
 
 def add_photo_category_with_score(db: Session, photo_id: int, cat_id: int, score: float):
     photo_cat = db.query(PhotoCategory).filter_by(photo_id=photo_id, category_id=cat_id).first()

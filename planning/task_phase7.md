@@ -1,0 +1,16 @@
+- [x] **Fix Core Imports & Schemas**
+  - [x] Add `Watcher` to `schemas.py`
+  - [x] Import `Watcher` in `main.py`
+  - [x] Fix missing `src.watcher` import in `src/graphs/ingestion.py`
+- [x] **Clean Up Obsolete Tests**
+  - [x] Delete `tests/ai/test_embedder.py`
+  - [x] Delete `tests/ai/test_factory.py`
+  - [x] Delete `tests/test_watcher.py`
+- [x] **Repair Remaining Tests**
+  - [x] Fix `tests/test_config.py` (use new BaseSettings classes)
+  - [x] Fix `tests/ai/test_vision.py` (use ML_Settings)
+  - [x] Fix `tests/test_synthesis.py` (update to LangGraph/Phases logic)
+  - [x] Fix `tests/graphs/test_ingestion_graph.py` (fix imports and logic)
+  - [x] Fix residual test failures in `test_category_scoring.py`, `test_clip_vocabulary.py`, `test_download_task.py`, and `test_bootstrap_integrated.py`
+- [x] **Verify Global Green**
+  - [x] Run test suite using `backend/.venv` -> 52/52 tests passed.

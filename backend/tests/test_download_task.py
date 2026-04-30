@@ -70,4 +70,3 @@ def test_download_task_runs_if_pending(mock_session_class, mock_clip_class, mock
     states = {s.name: s.status for s in db_session.query(ModelState).all()}
     assert states["clip"] == "ready"
     assert states["vision"] == "ready"
-    assert states["embedding"] == "ready"

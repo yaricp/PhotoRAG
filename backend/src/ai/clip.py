@@ -14,6 +14,7 @@ from src.db_service import get_all_categories
 
 from src.config import CLIP_Settings
 
+
 class ClipTagger:
     settings = CLIP_Settings()
     CSV_PATH = settings.CSV_PATH
@@ -25,7 +26,6 @@ class ClipTagger:
     CATEGORIES_HASH_PATH = settings.CATEGORIES_HASH_PATH
     CATEGORIES_CLIP_THRESHOLD = settings.CATEGORIES_CLIP_THRESHOLD
     
-
     def __init__(self):
         self.model_name = self.settings.CLIP_MODEL
         self.pretrained = self.settings.PRETRAINED
@@ -41,7 +41,6 @@ class ClipTagger:
             self.device = "mps"
         else:
             self.device = "cpu"
-
 
     def _normalize_tags(self, tags: list[str]) -> list[str]:
         return list(set(t.lower().strip() for t in tags if t.strip()))

@@ -7,7 +7,9 @@ try:
 except ImportError:
     from sqlalchemy import JSON as Vector
 
+
 Base = declarative_base()
+
 
 class PhotoTag(Base):
     __tablename__ = 'photo_tags'
@@ -17,6 +19,7 @@ class PhotoTag(Base):
     photo = relationship("Photo", back_populates="tags_rel")
     tag = relationship("Tag", back_populates="photos")
 
+
 class PhotoCategory(Base):
     __tablename__ = 'photo_categories'
     photo_id = Column(Integer, ForeignKey('photos.id'), primary_key=True)
@@ -25,11 +28,13 @@ class PhotoCategory(Base):
     photo = relationship("Photo", back_populates="categories_rel")
     category = relationship("Category", back_populates="photos")
 
+
 photo_persons = Table(
     'photo_persons', Base.metadata,
     Column('photo_id', Integer, ForeignKey('photos.id'), primary_key=True),
     Column('person_id', Integer, ForeignKey('persons.id'), primary_key=True)
 )
+
 
 photo_keywords = Table(
     'photo_keywords', Base.metadata,
