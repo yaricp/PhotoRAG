@@ -32,6 +32,7 @@ from src.utils import (
     convert_ocr_result_to_json, parse_datetime
 )
 from src.geo import GeoEnricher
+from src.ai.prompts import build_photo_text_for_embedding
 
 
 def phase_logic(phase:str) ->tuple[str, str]:
@@ -160,12 +161,12 @@ def final_embedding_task(photo_id: int, phase: str):
         logger.info(f"Embedding photo categories: {categories}")
         logger.info(f"Embedding photo geoposition: {location}")
         # 2. Format Synthesis Template
-        photo_text = f"""
-Scene: {photo.description}
-Tags: {", ".join(tags)}
-Category: {main_category}
-Location: {location}
-"""
+        photo_text = build_photo_text_for_embedding(
+            description=photo.description,
+            tags=tags,
+            categories=categories,
+            location=location
+        )
         logger.info(f"Embedding photo text: {photo_text}")
         # 3. Generate Embedding (Using Warm Registry)
         model = registry.nomic_embedder

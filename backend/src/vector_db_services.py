@@ -8,9 +8,11 @@ import numpy as np
 # Save embedding
 # ----------------------------
 def save_embedding(db_session, photo_id: int, embedding: List[float]) -> int:
+    """
+    Saves embedding to the vector DB and return the rowid.
+    """
     try:
-        # list[float] → bytes (little-endian 32-bit floats)
-        embedding_bytes = np.array(embedding, dtype=np.float32).tobytes()
+        embedding_bytes = np.array(embedding, dtype=np.float32).flatten().tobytes()
 
         db_session.execute(text("""
             INSERT INTO photo_embeddings_vss(rowid, embedding)
@@ -19,10 +21,8 @@ def save_embedding(db_session, photo_id: int, embedding: List[float]) -> int:
 
         db_session.commit()
 
-        rowid = db_session.execute(text("SELECT last_insert_rowid()")).scalar()
-        
-        logger.info(f"Embedding saved, rowid={rowid}")
-        return rowid
+        logger.info(f"Embedding saved, rowid={photo_id}")
+        return photo_id
 
     except Exception as e:
         db_session.rollback()
@@ -78,13 +78,13 @@ def search_similar_photos(
     limit: int = 10
 ) -> List[Tuple[int, float]]:
     try:
-        embedding_bytes = np.array(query_embedding, dtype=np.float32).tobytes()
+        embedding_bytes = np.array(query_embedding, dtype=np.float32).flatten().tobytes()
 
         rows = db.execute(text("""
             SELECT m.photo_id, v.distance
             FROM photo_embeddings_vss v
             JOIN photo_embedding_map m ON v.rowid = m.vss_rowid
-            WHERE v.embedding MATCH :embedding
+            WHERE v.embedding MATCH :embedding AND v.distance < 0.89
             AND v.k = :k
             ORDER BY v.distance
         """), {"embedding": embedding_bytes, "k": limit}).fetchall()

@@ -89,7 +89,7 @@ class AIModelRegistry:
         elif purpose == "save":
             text = f"search_document: {text}"
         with self._nomic_inference_lock:
-            return self.nomic_embedder.encode(text)
+            return self.nomic_embedder.encode(text, normalize_embeddings=True)
 
     @property
     def geo_enricher(self):
