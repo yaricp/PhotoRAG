@@ -5,21 +5,9 @@ from watchdog.events import FileSystemEventHandler
 from loguru import logger
 
 from src.utils import generate_file_hash
-from src.tasks import (
-    start_pipeline,
-    metadata_task,
-    auto_tag_clip_task,
-    categorize_photo_task,
-    vision_task, ocr_task,
-    final_embedding_task,
-)
+from src.tasks import start_pipeline
 from src.database import SessionLocal
-from src.db_service import (
-    check_photo_hash_exists, create_photo_record,
-    get_or_create_watcher,
-    update_watcher_status,
-    get_or_create_job
-)
+from src.db_service import check_photo_hash_exists, create_photo_record
 
 
 
