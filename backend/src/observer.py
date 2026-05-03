@@ -16,7 +16,7 @@ class PhotoEventHandler(FileSystemEventHandler):
         # 1. Sync Extension Check
         if not event.is_directory and event.src_path.lower().endswith(('.jpg', '.png', '.jpeg', '.gif', '.tiff')):
             try:
-                logger.info(f"Photo created: {event.src_path}")
+                logger.info(f"Photo appears: {event.src_path}")
                 # 2. Sync Hashing
                 file_hash = generate_file_hash(event.src_path)
                 logger.info(f"File hash: {file_hash}")
@@ -49,7 +49,7 @@ class PhotoEventHandler(FileSystemEventHandler):
                         except Exception as e:
                             logger.error(f"Error starting pipeline for photo {photo.id}: {e}")
                 except Exception as e:
-                    logger.error(f"Error dispatching tasks for photo {photo.id}: {e}")
+                    logger.error(f"Error dispatching tasks for file {event.src_path}: {e}")
                     return
                 finally:
                     db.close()

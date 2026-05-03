@@ -11,5 +11,5 @@ vision_queue = SqliteHuey(
 @vision_queue.on_startup()
 def warm_vision():
     from src.ai.registry import registry
-    from src.tasks import vision_tasks
+    import src.tasks.vision_tasks
     _ = registry.vision_generator

@@ -11,5 +11,5 @@ embedding_queue = SqliteHuey(
 @embedding_queue.on_startup()
 def warm_embedding():
     from src.ai.registry import registry
-    from src.tasks import embedding_tasks
+    import src.tasks.embedding_tasks
     _ = registry.nomic_embedder

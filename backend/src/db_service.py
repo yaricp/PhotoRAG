@@ -16,8 +16,15 @@ from src.vector_db_services import search_similar_photos
 def check_photo_hash_exists(db: Session, hash_str: str) -> Photo:
     return db.query(Photo).filter(Photo.hash == hash_str).first()
 
-def create_photo_record(db: Session, hash_str: str, file_path: str, file_created_at: datetime = None) -> Photo:
-    photo = Photo(hash=hash_str, file_path=file_path, file_created_at=file_created_at)
+def create_photo_record(
+    db: Session, hash_str: str, file_path: str,
+    file_created_at: datetime = None
+) -> Photo:
+    photo = Photo(
+        hash=hash_str,
+        file_path=file_path,
+        file_created_at=file_created_at
+    )
     db.add(photo)
     db.commit()
     db.refresh(photo)

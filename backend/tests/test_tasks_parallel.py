@@ -14,7 +14,7 @@ import sqlalchemy.orm
 import os
 from sqlalchemy import create_engine
 from src.models import Photo, Base
-from src.tasks import metadata_task
+from src.tasks.clip_tasks import metadata_task
 from src.db_service import create_photo_record
 
 TEST_DB_FILE = "test_accuracy.sqlite3"

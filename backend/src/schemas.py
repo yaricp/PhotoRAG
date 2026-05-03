@@ -68,14 +68,25 @@ class Photo(BaseModel):
     id: int
     hash: Optional[str] = None
     file_path: str
+    created_at: Optional[datetime] = None
     captured_at: Optional[datetime] = None
+    file_created_at: Optional[datetime] = None
     description: Optional[str] = None
+    translated_description: Optional[str] = None
     tags_rel: Optional[list[PhotoTag]] = None
     categories_rel: Optional[list[PhotoCategory]] = None
     camera: Optional[Camera] = None
     geoposition: Optional[GeoPosition] = None
     is_doc: Optional[bool] = None
     ocr_text: Optional[str] = None
+    image_width: Optional[int] = None
+    image_height: Optional[int] = None
+    iso: Optional[int] = None
+    aperture: Optional[float] = None
+    focal_length: Optional[float] = None
+    shutter_speed: Optional[float] = None
+    offset_time: Optional[str] = None
+    keywords: Optional[list[str]] = None
 
     model_config = ConfigDict(from_attributes=True)
 

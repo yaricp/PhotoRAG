@@ -3,7 +3,7 @@ from PIL import Image
 from loguru import logger
 
 
-def extract_text_from_image(filepath: str) -> str:
+def extract_text_from_image(filepath: str, lang: str = "auto") -> str:
     """
     Extract text from an image.
     
@@ -15,7 +15,7 @@ def extract_text_from_image(filepath: str) -> str:
     """
     try:
         img = Image.open(filepath)
-        text = pytesseract.image_to_string(img)
+        text = pytesseract.image_to_string(img, lang=lang)
         return text.strip()
     except Exception as e:
         logger.error(f"Failed to extract text from image: {e}")

@@ -16,6 +16,7 @@ def test_reverse_geocode_success(mock_reverse, geo_enricher):
             'country': 'France'
         }
     }
+    mock_location.display_name = "Paris, France"
     mock_reverse.return_value = mock_location
     
     result = geo_enricher.reverse_geocode(48.8584, 2.2945)
@@ -26,7 +27,7 @@ def test_reverse_geocode_fallback(mock_reverse, geo_enricher):
     # Mock behavior for missing specific city/country keys
     mock_location = MagicMock()
     mock_location.raw = {'address': {}}
-    mock_location.address = "Eiffel Tower, Paris"
+    mock_location.display_name = "Eiffel Tower, Paris"
     mock_reverse.return_value = mock_location
     
     result = geo_enricher.reverse_geocode(48.8584, 2.2945)

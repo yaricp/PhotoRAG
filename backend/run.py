@@ -3,7 +3,7 @@ import sys
 import subprocess
 from loguru import logger
 
-from src.config import Api_Settings, ML_Settings
+from src.config import Api_Settings, ML_Settings, CLIP_Settings
 
 
 QUEUE_MODULE = {
@@ -14,6 +14,7 @@ QUEUE_MODULE = {
 
 def start_workers(local_models: list[str]) -> list[subprocess.Popen]:
     procs = []
+    logger.info(f"Starting workers for: {local_models}")
     for model in local_models:
         queue_module = QUEUE_MODULE.get(model, None)
         if queue_module is None:
@@ -44,8 +45,11 @@ def start_api():
 
 if __name__ == "__main__":
     # 1. Воркеры только для local моделей
-    ml = ML_Settings()
-    worker_procs = start_workers(ml.local_models)
+    ml_settings = ML_Settings()
+    clip_settings = CLIP_Settings()
+    worker_procs = start_workers(
+        ml_settings.local_models + clip_settings.local_models
+    )
 
     # 2. API (блокирующий вызов)
     try:

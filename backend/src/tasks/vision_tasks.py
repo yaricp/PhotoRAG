@@ -15,7 +15,8 @@ from src.queues.vision_queue import vision_queue
 @vision_queue.task()
 def vision_task(photo_id: int, phase: str):
     """Vision: сгенерировать текстовое описание фото."""
-    from src.tasks import _finish_task
+    logger.info(f"[vision] Start vision task: photo_id={photo_id}, phase={phase}")
+    from src.tasks.utils import _finish_task
     db = SessionLocal()
     try:
         photo = get_photo_by_id(db, photo_id)
@@ -49,8 +50,9 @@ def vision_task(photo_id: int, phase: str):
 
 @vision_queue.task()
 def is_this_document_task(photo_id: int, phase: str):
-    """Vision: определить является ли фото документом."""
-    from src.tasks import _finish_task
+    """Check if the photo is a document"""
+    logger.info(f"[vision] Start is_document task: photo_id={photo_id}, phase={phase}")
+    from src.tasks.utils import _finish_task
     db = SessionLocal()
     try:
         photo = get_photo_by_id(db, photo_id)
@@ -84,8 +86,9 @@ def is_this_document_task(photo_id: int, phase: str):
 
 @vision_queue.task()
 def ocr_task(photo_id: int, phase: str):
-    """OCR: извлечь текст из фото — не требует GPU, идёт в clip_queue."""
-    from src.tasks import _finish_task
+    """OCR recognition: extract text from image"""
+    logger.info(f"[vision] Start ocr task: photo_id={photo_id}, phase={phase}")
+    from src.tasks.utils import _finish_task
     db = SessionLocal()
     try:
         photo = get_photo_by_id(db, photo_id)
@@ -94,7 +97,10 @@ def ocr_task(photo_id: int, phase: str):
             _finish_task(photo_id=photo_id, phase=phase, name="metadata_task")
             return
 
-        text = extract_text_from_image(photo.file_path)
+        text = extract_text_from_image(
+            photo.file_path,
+            lang="rus+eng"
+        )
         if text and text.strip():
             photo.ocr_text = text
             db.commit()

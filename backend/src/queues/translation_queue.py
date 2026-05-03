@@ -11,5 +11,5 @@ translation_queue = SqliteHuey(
 @translation_queue.on_startup()
 def warm_translator():
     from src.ai.registry import registry
-    from src.tasks import translation_tasks
+    import src.tasks.translation_tasks
     _ = registry.translator

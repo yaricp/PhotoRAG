@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from src.tasks import is_this_document_task, ocr_task
+from src.tasks.vision_tasks import is_this_document_task, ocr_task
 from src.models import Photo
 import sys
 

@@ -11,11 +11,12 @@ from src.queues.embedding_queue import embedding_queue
 @embedding_queue.task()
 def final_embedding_task(photo_id: int, phase: str):
     """
-    Embedding: агрегировать результаты всех предыдущих задач
-    и сохранить 768-мерный вектор для поиска.
-    Запускается в фазе 'second' — после завершения всех задач фазы 'first'.
+    Embedding: aggregate the results of all previous tasks
+    and save a 768-dimensional vector for search.
+    Started in the 'second' phase — after all tasks in the 'first' phase are completed.
     """
-    from src.tasks import _finish_task
+    logger.info(f"[embedding] Start embedding task: photo_id={photo_id}, phase={phase}")
+    from src.tasks.utils import _finish_task
     db = SessionLocal()
     try:
         photo = get_photo_by_id(db, photo_id)

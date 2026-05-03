@@ -11,5 +11,5 @@ clip_queue = SqliteHuey(
 @clip_queue.on_startup()
 def warm_clip():
     from src.ai.registry import registry
-    from src.tasks import clip_tasks
+    import src.tasks.clip_tasks
     _ = registry.clip_tagger

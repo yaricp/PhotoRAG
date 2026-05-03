@@ -65,25 +65,35 @@ class GeoEnricher:
         try:
             # Respect OSM usage policy (max 1 req/sec)
             location = self.geolocator.reverse(f"{latitude}, {longitude}", language='en')
-            if location and 'address' in location.raw:
-                address = location.raw['address']
-                city = address.get('city') or address.get('town') or address.get('village', '')
-                country = address.get('country', '')
+            
+            if location and 'display_name' in location.raw:
+                logger.info(f"Location: {location.raw['display_name']}")
+                return location.raw['display_name']
+                # address = location.raw['address']
+                # city = address.get('city') or address.get('town') or address.get('village', '')
+                # country = address.get('country', '')
                 
-                if city and country:
-                    return f"{city}, {country}"
-                return location.address
+                # logger.info(f"City: {city}, Country: {country}")
+                # if city and country:
+                #     return f"{city}, {country}"
+                # logger.info(f"Location: {location.address}")
+                # return location.address
+            logger.info("Unknown Location")
             return "Unknown Location"
             
         except (GeocoderTimedOut, GeocoderServiceError):
+            logger.error("Geocoding Service Unavailable")
             return "Geocoding Service Unavailable"
         except Exception as e:
-            print(f"Geo Error: {e}")
+            logger.error(f"Geo Error: {e}")
             return f"Error: {latitude}, {longitude}"
 
     def geocode_photo(self, exif_raw):
         self.extract_gps(exif_raw)
-        self.address = self.reverse_geocode(self.lat, self.lon)
+        if self.lat and self.lon:
+            self.address = self.reverse_geocode(self.lat, self.lon)
+        else:
+            self.address = None
 
         return {
             "latitude": self.lat,

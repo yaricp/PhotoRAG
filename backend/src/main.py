@@ -110,8 +110,8 @@ def get_photo(
         raise HTTPException(status_code=404, detail="Photo not found")
     logger.info(f"Photo found in DB: {photo}")
     photo.description = translator.translate(photo.description, backward=False)
-    if photo.ocr_text:
-        photo.ocr_text = translator.translate(photo.ocr_text, backward=False)
+    # if photo.ocr_text:
+    #     photo.ocr_text = translator.translate(photo.ocr_text, backward=False)
     return photo
 
 

@@ -98,9 +98,7 @@ def _is_categories_cache_valid(cfg: CLIP_Settings, model_hash: str, db: Session)
 
 def install_categories(db: Session) -> None:
     """
-    Засеять дефолтные категории в БД.
-    Статус 'categories' означает только что сидирование прошло —
-    не путать с валидностью categories.npy (это проверяется отдельно).
+    Create default categories if not exist
     """
     if get_model_status(db, "categories") == "ready":
         logger.info("[categories] Already seeded, skipping.")
@@ -310,45 +308,48 @@ def run_install(db: Session) -> None:
       1. Категории в БД должны быть засеяны ДО install_clip,
          потому что install_clip читает их для categories.npy
     """
-    ml = ML_Settings()
-    local = ml.local_models
-    logger.info(f"[install] Local models: {local}")
+    ml_settings = ML_Settings()
+    local_ml = ml_settings.local_models
+    clip_settings = CLIP_Settings()
+    local_clip = clip_settings.local_models
+    local_models = local_ml + local_clip
+    logger.info(f"[install] Local models: {local_models}")
 
-    # 1. Всегда — засеять категории в БД
+    # 1. DB init
+    init_db(db)
+
+    # 2. Всегда — засеять категории в БД
     install_categories(db)
 
-    # 2. Всегда — CLIP (теги + категории .npy)
+    # 3. Всегда — CLIP (теги + категории .npy)
     install_clip(db)
 
     # 3. Vision — только если local
-    if "vision" in local:
+    if "vision" in local_models:
         install_vision(db)
     else:
         logger.info("[vision] Mode=remote, skipping download.")
         update_model_status(db, "vision", "ready")
 
     # 4. Embedding — только если local
-    if "embedding" in local:
+    if "embedding" in local_models:
         install_embedding(db)
     else:
         logger.info("[embedding] Mode=remote, skipping download.")
         update_model_status(db, "embedding", "ready")
 
     # 5. Translator — только если local
-    if "translator" in local:
+    if "translator" in local_models:
         install_translator(db)
     else:
         logger.info("[translator] Mode=remote, skipping download.")
         update_model_status(db, "translator", "ready")
 
     # 6. Chat — только если local
-    if "chat" in local:
+    if "chat" in local_models:
         install_chat(db)
     else:
         logger.info("[chat] Mode=remote, skipping download.")
         update_model_status(db, "chat", "ready")
-
-    # 7. DB init
-    init_db(db)
 
     logger.info("[install] All done. System ready ✓")

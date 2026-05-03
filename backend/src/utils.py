@@ -74,10 +74,41 @@ def generate_file_hash(filepath: str) -> str:
 
 
 def parse_datetime(exif_raw):
-    dt = exif_raw.get("DateTimeOriginal") or exif_raw.get("DateTime")
-    if not dt:
+    """
+    Robustly extract and parse datetime from EXIF data.
+    Returns a Python datetime object for compatibility with SQLAlchemy/SQLite.
+    """
+    if not exif_raw:
         return None
 
+    # EXIF date fields in priority order
+    date_keys = ["DateTimeOriginal", "DateTimeDigitized", "DateTime"]
+    dt_str = None
+    
+    for key in date_keys:
+        val = exif_raw.get(key)
+        if val and isinstance(val, str) and val.strip():
+            # Remove null bytes or weird non-printable chars often found in EXIF
+            clean_val = val.strip().replace("\x00", "")
+            if clean_val and clean_val != "0000:00:00 00:00:00":
+                dt_str = clean_val
+                break
+                
+    if not dt_str:
+        return None
+        
+    logger.info(f"[parse_datetime] Attempting to parse: {dt_str}")
+    
+    # Try the standard EXIF format first
+    formats = ["%Y:%m:%d %H:%M:%S", "%Y-%m-%d %H:%M:%S"]
+    for fmt in formats:
+        try:
+            return datetime.strptime(dt_str, fmt)
+        except (ValueError, TypeError):
+            continue
+            
+    logger.warning(f"[parse_datetime] Failed to parse any known format for: {dt_str}")
+    return None
 
 def convert_ocr_result_to_json(result):
     output = []

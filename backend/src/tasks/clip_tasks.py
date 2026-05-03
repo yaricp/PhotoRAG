@@ -10,7 +10,7 @@ from src.db_service import (
     add_photo_tag_with_score,
     get_or_create_category,
     add_photo_category_with_score,
-    delete_job,
+    delete_job
 )
 from src.utils import extract_exif, parse_datetime
 from src.queues.clip_queue import clip_queue
@@ -21,9 +21,10 @@ from src.queues.clip_queue import clip_queue
 
 @clip_queue.task()
 def metadata_task(photo_id: int, phase: str):
-    """Извлечь EXIF, геопозицию, камеру — не требует GPU."""
+    """Extracts EXIF, geolocation, and camera info — does not require GPU."""
+    logger.info(f"[metadata] Start metadata task: photo_id={photo_id}, phase={phase}")
     from src.geo import GeoEnricher
-    from src.tasks import _finish_task
+    from src.tasks.utils import _finish_task
     db = SessionLocal()
     try:
         photo = get_photo_by_id(db, photo_id)
@@ -33,7 +34,9 @@ def metadata_task(photo_id: int, phase: str):
             return
 
         exif_raw = extract_exif(photo.file_path)
+        logger.info(f"[metadata] Photo {photo_id} EXIF: {exif_raw}")
         photo.captured_at = parse_datetime(exif_raw)
+        logger.info(f"[metadata] Photo {photo_id} captured_at: {photo.captured_at}")
 
         make = exif_raw.get("Make")
         model = exif_raw.get("Model")
@@ -49,6 +52,15 @@ def metadata_task(photo_id: int, phase: str):
                 geo_result["longitude"],
                 geo_result["address"],
             )
+
+        photo.image_width = exif_raw.get("ImageWidth")
+        photo.image_height = exif_raw.get("ImageHeight")
+        photo.iso = exif_raw.get("ISO") or exif_raw.get("ISOSpeedRatings")
+        photo.aperture = exif_raw.get("ApertureValue")
+        photo.focal_length = exif_raw.get("FocalLength")
+        photo.shutter_speed = exif_raw.get("ExposureTime")
+        photo.offset_time = exif_raw.get("OffsetTime") or exif_raw.get("OffsetTimeOriginal")
+            
         db.commit()
         logger.info(f"[metadata] Photo {photo_id} metadata saved ✓")
         _finish_task(photo_id=photo_id, phase=phase, name="metadata_task")
@@ -69,8 +81,9 @@ def metadata_task(photo_id: int, phase: str):
 
 @clip_queue.task()
 def auto_tag_clip_task(photo_id: int, phase: str):
-    """CLIP: найти теги для фото."""
-    from src.tasks import _finish_task
+    """CLIP: search the tags for photo"""
+    logger.info(f"[clip/tags] Start auto_tag_clip_task: photo_id={photo_id}, phase={phase}")
+    from src.tasks.utils import _finish_task
     db = SessionLocal()
     try:
         photo = get_photo_by_id(db, photo_id)
@@ -104,8 +117,9 @@ def auto_tag_clip_task(photo_id: int, phase: str):
 
 @clip_queue.task()
 def categorize_photo_task(photo_id: int, phase: str):
-    """CLIP: определить категории фото."""
-    from src.tasks import _finish_task
+    """CLIP: determine categories of photo"""
+    logger.info(f"[clip/categories] Start categorize_photo_task: photo_id={photo_id}, phase={phase}")
+    from src.tasks.utils import _finish_task
     db = SessionLocal()
     try:
         photo = get_photo_by_id(db, photo_id)
