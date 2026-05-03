@@ -75,7 +75,7 @@ class ML_Settings(BaseSettings):
     # Chat
     CHAT_MODEL_MODE: str = "remote"           # local | remote
     CHAT_MODEL: str = "gpt-4o-mini"
-    CHAT_LOCAL_MODEL: str = "Qwen/Qwen2-1.5B-Instruct"
+    CHAT_LOCAL_MODEL: str = "Qwen/Qwen2.5-Coder-3B-Instruct"
     CHAT_API_URL: str = ""
     CHAT_API_KEY: str = ""
 

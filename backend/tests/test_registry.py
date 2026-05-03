@@ -15,7 +15,7 @@ def test_registry_is_singleton():
     reg2 = AIModelRegistry.get_instance()
     assert reg1 is reg2
 
-@patch('src.ai.registry.ClipTagger')
+@patch('src.ai.clip.ClipTagger')
 def test_lazy_loading_clip(mock_clip_class):
     mock_instance = mock_clip_class.return_value
     # Reset registry for clean test

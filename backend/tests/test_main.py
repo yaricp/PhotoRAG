@@ -31,6 +31,14 @@ app.dependency_overrides[get_db] = override_get_db
 
 client = TestClient(app)
 
+@pytest.fixture(autouse=True)
+def mock_translator():
+    from src.ai.registry import registry
+    with patch.object(registry.translator, 'load'), \
+         patch.object(registry.translator, 'translate', side_effect=lambda x, **kwargs: x):
+        registry.translator._loaded = True
+        yield
+
 def test_watch_endpoint():
     response = client.post("/api/watch/", json={"path": "/mock/path"})
     assert response.status_code == 200

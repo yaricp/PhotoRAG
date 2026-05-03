@@ -14,10 +14,10 @@ def mock_db():
     db = MagicMock()
     return db
 
-@patch('src.tasks.registry') 
-@patch('src.tasks.SessionLocal')
-@patch('src.tasks.store_photo_embedding')
-@patch('src.tasks.finish_task')
+@patch('src.tasks.embedding_tasks.registry') 
+@patch('src.tasks.embedding_tasks.SessionLocal')
+@patch('src.tasks.embedding_tasks.store_photo_embedding')
+@patch('src.tasks._finish_task')
 def test_final_embedding_generation_logic(mock_finish_task, mock_store, mock_session, mock_registry):
     db = mock_session.return_value
     photo = Photo(id=1, description="Magnificent Forest")

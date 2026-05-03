@@ -33,7 +33,7 @@ TestSessionLocal = sqlalchemy.orm.sessionmaker(bind=test_engine)
 
 @pytest.fixture(autouse=True)
 def patch_session():
-    with patch('src.tasks.SessionLocal', TestSessionLocal):
+    with patch('src.tasks.clip_tasks.SessionLocal', TestSessionLocal):
         with patch('src.database.SessionLocal', TestSessionLocal):
             yield
 
@@ -52,8 +52,8 @@ def test_atomic_creation_with_file_timestamp(db_session):
     assert photo.file_created_at == file_now
     assert photo.captured_at is None # Should be empty until metadata task runs
 
-@patch('src.tasks.parse_datetime')
-@patch('src.tasks.extract_exif')
+@patch('src.tasks.clip_tasks.parse_datetime')
+@patch('src.tasks.clip_tasks.extract_exif')
 def test_metadata_task_populates_captured_at(mock_extract, mock_parse, db_session):
     file_now = datetime(2020, 1, 1)
     captured_now = datetime(2019, 12, 25, 10, 30) # True camera time

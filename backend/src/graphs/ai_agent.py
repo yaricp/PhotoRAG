@@ -1,4 +1,5 @@
 import os
+from loguru import logger
 from typing import Literal
 from langchain_openai import ChatOpenAI
 from langchain.chat_models import init_chat_model
@@ -26,17 +27,23 @@ def call_model(state: AgentState):
     
     # Optional: Insert System Message if not present
     if not any(isinstance(m, SystemMessage) for m in messages):
-        system_msg = SystemMessage(content=PROMPTS["chat_agent"]["system_message"])
+        system_msg = SystemMessage(
+            content=PROMPTS["chat_agent"]["system_message"]
+        )
         messages = [system_msg] + messages
     
     response = llm_with_tools.invoke(messages)
+    logger.info(f"[ai_agent] response: {response}")
     return {"messages": [response]}
 
 def should_continue(state: AgentState) -> Literal["tools", END]:
     messages = state["messages"]
     last_message = messages[-1]
+    logger.info(f"[ai_agent] should_continue: {last_message}")
     if last_message.tool_calls:
+        logger.info("[ai_agent] should_continue: tools")
         return "tools"
+    logger.info("[ai_agent] should_continue: END")
     return END
 
 # 4. Construct Graph

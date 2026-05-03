@@ -159,33 +159,58 @@ class AIModelRegistry:
                 if self._chat_model is None:
                     if self.settings.CHAT_MODEL_MODE == "local":
                         logger.info(f"[registry] Warming up local Chat Model: {self.settings.CHAT_LOCAL_MODEL}")
-                        from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+                        from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline, BitsAndBytesConfig
                         from langchain_huggingface import HuggingFacePipeline, ChatHuggingFace
+                        import torch
                         
                         model_id = self.settings.CHAT_LOCAL_MODEL
                         tokenizer = AutoTokenizer.from_pretrained(model_id)
-                        model = AutoModelForCausalLM.from_pretrained(
-                            model_id,
-                            device_map="auto",
-                            trust_remote_code=True
+                        
+                        # Use 4-bit quantization if possible to fit larger models and speed up inference
+                        bnb_config = BitsAndBytesConfig(
+                            load_in_4bit=True,
+                            bnb_4bit_compute_dtype=torch.float16,
+                            bnb_4bit_quant_type="nf4",
                         )
+                        
+                        try:
+                            model = AutoModelForCausalLM.from_pretrained(
+                                model_id,
+                                device_map="auto",
+                                quantization_config=bnb_config,
+                                trust_remote_code=True
+                            )
+                        except Exception as e:
+                            logger.warning(f"[registry] Failed to load with quantization: {e}. Falling back to default.")
+                            model = AutoModelForCausalLM.from_pretrained(
+                                model_id,
+                                device_map="auto",
+                                trust_remote_code=True
+                            )
+
                         pipe = pipeline(
                             "text-generation",
                             model=model,
                             tokenizer=tokenizer,
-                            max_new_tokens=512,
-                            temperature=0.7,
-                            do_sample=True,
+                            max_new_tokens=1024,
+                            temperature=0,      # Deterministic for tools
+                            do_sample=False,
+                            return_full_text=False, # IMPORTANT: don't repeat the prompt
                         )
                         hf_pipe = HuggingFacePipeline(pipeline=pipe)
-                        self._chat_model = ChatHuggingFace(llm=hf_pipe)
+                        # Pass tokenizer explicitly to ensure ChatML template is used
+                        self._chat_model = ChatHuggingFace(
+                            llm=hf_pipe,
+                            tokenizer=tokenizer
+                        )
                         logger.info("[registry] Local Chat Model ready ✓")
                     else:
                         logger.info(f"[registry] Using remote Chat Model: {self.settings.CHAT_MODEL}")
                         from langchain.chat_models import init_chat_model
                         self._chat_model = init_chat_model(
                             model=self.settings.CHAT_MODEL,
-                            temperature=0.5
+                            temperature=0.5,
+                            api_key=self.settings.CHAT_API_KEY if self.settings.CHAT_API_KEY else None
                         )
         return self._chat_model
 

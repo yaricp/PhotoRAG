@@ -5,6 +5,7 @@ from src.db_service import get_photos_by_vector, get_all_photos, get_photo_by_id
 from src.database import SessionLocal
 from pydantic import BaseModel, Field
 
+
 class SearchMetadataArgs(BaseModel):
     category_id: Optional[int] = Field(None, description="Filter by category ID")
     tag_id: Optional[int] = Field(None, description="Filter by tag ID")
@@ -12,11 +13,32 @@ class SearchMetadataArgs(BaseModel):
     is_doc: Optional[bool] = Field(None, description="Filter for document photos only")
     limit: int = Field(10, description="Maximum number of photos to return")
 
+
 @tool
 def search_photos_semantic(query: str, k: int = 5) -> str:
     """
-    Search for photos using natural language (semantic search).
-    Example: 'Find photos of cats playing in the garden'
+    Search for photos using natural language descriptions (semantic search).
+
+    Use this tool when:
+    - The user describes a scene, object, or memory in free form
+    - The user does NOT specify exact filters like ID, category, or tag
+    - The query is vague or human-like (e.g., "photos of money", "a dog in the park")
+
+    Do NOT use this tool when:
+    - The user provides a specific photo ID → use get_photo_details
+    - The user asks for filtering by structured fields (category, tag, camera) → use search_photos_metadata
+
+    Input:
+    - query: natural language description of the photo(s)
+    - k: number of results to return (default 5)
+
+    Examples:
+    - "Find photos of money"
+    - "Show me pictures of documents"
+    - "Photos with food on the table"
+
+    Returns:
+    A list of matching photos with ID, file path, and description.
     """
     logger.info(f"[tool] semantic search: {query}")
     db = SessionLocal()
@@ -32,6 +54,7 @@ def search_photos_semantic(query: str, k: int = 5) -> str:
     finally:
         db.close()
 
+
 @tool
 def search_photos_metadata(
     category_id: Optional[int] = None,
@@ -41,8 +64,32 @@ def search_photos_metadata(
     limit: int = 10
 ) -> str:
     """
-    Search for photos using structured filters like category, tags, or camera.
+    Search for photos using structured metadata filters.
+
+    Use this tool when:
+    - The user specifies filters like category, tag, camera, or document type
+    - The request is structured rather than descriptive
+
+    Do NOT use this tool when:
+    - The user describes a scene in natural language → use search_photos_semantic
+    - The user asks about a specific photo ID → use get_photo_details
+
+    Input:
+    - category_id: filter by category
+    - tag_id: filter by tag
+    - camera_id: filter by camera
+    - is_doc: filter document-type photos (True/False)
+    - limit: maximum number of results
+
+    Examples:
+    - "Find document photos"
+    - "Show photos taken with camera 2"
+    - "Photos with tag 5"
+
+    Returns:
+    A list of matching photos with ID, file path, and description, plus total count.
     """
+    logger.info(f"[tool] metadata search: {category_id}, {tag_id}, {camera_id}, {is_doc}, {limit}")
     db = SessionLocal()
     try:
         photos, total = get_all_photos(
@@ -63,11 +110,37 @@ def search_photos_metadata(
     finally:
         db.close()
 
+
 @tool
 def get_photo_details(photo_id: int) -> str:
     """
-    Get detailed information about a specific photo by its ID, including OCR text and technical metadata.
+    Get full details for a specific photo by its ID.
+
+    MUST be used when:
+    - The user mentions a specific photo ID (e.g., "photo 20", "ID 15")
+    - The user asks for details, tags, description, or metadata of a specific photo
+    - The user refers to "this photo" after selecting or referencing an ID
+
+    Do NOT use any other tool if a photo ID is provided — always use this tool.
+
+    Input:
+    - photo_id: unique identifier of the photo
+
+    Examples:
+    - "Tell me about photo 20"
+    - "What is in photo with ID 15?"
+    - "Show tags and description for photo 7"
+
+    Returns:
+    Detailed information including:
+    - file path
+    - description
+    - OCR text (if available)
+    - camera info
+    - tags
+    - categories
     """
+    logger.info(f"[tool] photo details: {photo_id}")
     db = SessionLocal()
     try:
         p = get_photo_by_id(db, photo_id)
