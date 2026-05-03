@@ -7,6 +7,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+class Main_Settings(BaseSettings):
+    LANGUAGES: list[str] = ["en", "ru"]
+    DEFAULT_LANGUAGE: str = "en"
+
+
 class Database_Settings(BaseSettings):
     DATABASE_DIALECT: str = "sqlite"
     DATABASE_NAME: str = "../db.sqlite3"
@@ -20,6 +25,9 @@ class Api_Settings(BaseSettings):
 
 class CLIP_Settings(BaseSettings):
     CLIP_MODEL: str = "ViT-B-32"
+    CLIP_MODE: str = "local"        # local | remote
+    CLIP_API_URL: str = ""
+    CLIP_API_KEY: str = ""
     PRETRAINED: str = "laion2b_s34b_b79k"
     CSV_PATH: str = "data/class-descriptions-boxable.csv"
     NPY_PATH: str = "data/tags_features.npy"
@@ -33,6 +41,14 @@ class CLIP_Settings(BaseSettings):
     CATEGORIES_HASH_PATH: str = "data/categories_hash.txt"
     CATEGORIES_MODEL_HASH_PATH: str = "data/categories_model.hash"
     CATEGORIES_CLIP_THRESHOLD: float = 0.2
+
+    @property
+    def local_models(self) -> list[str]:
+        """Список моделей которые нужно скачать и запустить как процесс"""
+        result = []
+        if self.CLIP_MODE == "local":
+            result.append("clip")
+        return result
 
 
 class ML_Settings(BaseSettings):
@@ -50,12 +66,20 @@ class ML_Settings(BaseSettings):
     EMBEDDING_API_URL: str = ""
     EMBEDDING_API_KEY: str = ""
 
+    # Translator
+    TRANSLATOR_MODEL: str = "facebook/nllb-200-distilled-600M"
+    TRANSLATOR_MODE: str = "local"        # local | remote
+    TRANSLATOR_API_URL: str = ""
+    TRANSLATOR_API_KEY: str = ""
+
     @property
     def local_models(self) -> list[str]:
         """Список моделей которые нужно скачать и запустить как процесс"""
-        result = ["clip"]  # CLIP всегда local
+        result = []
         if self.VISION_MODE == "local":
             result.append("vision")
         if self.EMBEDDING_MODE == "local":
             result.append("embedding")
+        if self.TRANSLATOR_MODE == "local":
+            result.append("translator")
         return result

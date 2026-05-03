@@ -17,7 +17,8 @@ from src.db_service import (
     get_model_status,
     update_model_status,
     get_or_create_category,
-    get_all_categories
+    get_all_categories,
+    get_model_or_none
 )
 from src.utils import load_categories_from_json
 
@@ -242,6 +243,27 @@ def install_embedding(db: Session) -> None:
         raise
 
 
+def install_translator(db: Session) -> None:
+    """Скачать mBART weights в HuggingFace кеш"""
+    if get_model_status(db, "translator") == "ready":
+        logger.info("[translator] Already ready, skipping.")
+        return
+    try:
+        update_model_status(db, "translator", "downloading")
+        import torch
+        from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+        translate_name_model = ML_Settings().TRANSLATOR_MODEL
+        logger.info(f"[translator] Downloading {translate_name_model}...")
+        model = AutoModelForSeq2SeqLM.from_pretrained(translate_name_model).to(torch.float16)
+        tokenizer = AutoTokenizer.from_pretrained(translate_name_model)
+        update_model_status(db, "translator", "ready")
+        logger.info("[translator] Installation complete ✓")
+    except Exception as e:
+        update_model_status(db, "translator", "error")
+        logger.error(f"[translator] Installation failed: {e}")
+        raise
+
+
 def init_db(db: Session):
     logger.info("[db] Creating tables...")
     Base.metadata.create_all(bind=engine)
@@ -250,10 +272,11 @@ def init_db(db: Session):
             CREATE VIRTUAL TABLE IF NOT EXISTS photo_embeddings_vss
             USING vec0(embedding FLOAT[768]);
         """))
-    # Инициализировать ModelState записи если их нет
-    for name in ["clip", "vision", "embedding", "categories"]:
-        if not db.query(ModelState).filter_by(name=name).first():
-            db.add(ModelState(name=name, status="pending"))
+    ml_local_models = ML_Settings().local_models
+    clip_local_models = CLIP_Settings().local_models
+    for local_model_name in ml_local_models + clip_local_models:
+        if not get_model_or_none(db, local_model_name):
+            db.add(ModelState(name=local_model_name, status="pending"))
     db.commit()
     logger.info("[db] Tables ready ✓")
 
@@ -290,5 +313,15 @@ def run_install(db: Session) -> None:
     else:
         logger.info("[embedding] Mode=remote, skipping download.")
         update_model_status(db, "embedding", "ready")
+
+    # 5. Translator — только если local
+    if "translator" in local:
+        install_translator(db)
+    else:
+        logger.info("[translator] Mode=remote, skipping download.")
+        update_model_status(db, "translator", "ready")
+
+    # 6.DB init
+    init_db(db)
 
     logger.info("[install] All done. System ready ✓")

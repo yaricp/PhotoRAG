@@ -22,7 +22,9 @@ class PhotoEventHandler(FileSystemEventHandler):
                 logger.info(f"File hash: {file_hash}")
                 # 3. Get File System creation time (Sync Proxy)
                 stat = os.stat(event.src_path)
-                file_created_at = datetime.fromtimestamp(getattr(stat, 'st_birthtime', stat.st_ctime))
+                file_created_at = datetime.fromtimestamp(
+                    getattr(stat, 'st_birthtime', stat.st_ctime)
+                )
                 logger.info(f"File created at: {file_created_at}")
                 # 4. Sync DB Check & Registration (Atomic)
                 db = SessionLocal()
@@ -33,7 +35,9 @@ class PhotoEventHandler(FileSystemEventHandler):
                         logger.info(f"Photo not found in DB")
                         # 5. Sync Create Record with file_created_at
                         try:
-                            photo = create_photo_record(db, file_hash, event.src_path, file_created_at)
+                            photo = create_photo_record(
+                                db, file_hash, event.src_path, file_created_at
+                            )
                             logger.info(f"Photo created: {photo}")
                         except Exception as e:
                             logger.error(f"Error creating photo record for photo {event.src_path}: {e}")

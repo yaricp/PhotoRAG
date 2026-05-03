@@ -80,6 +80,7 @@ def auto_tag_clip_task(photo_id: int, phase: str):
             return
 
         confident_tags = registry.clip_tagger.find_tags(photo.file_path)
+        # confident_tags = get_tags_from_remote_model(photo.file_path)
         logger.info(f"[clip/tags] Photo {photo_id}: {len(confident_tags)} tags found")
         for tag_name, score in confident_tags:
             add_photo_tag_with_score(db, photo_id, tag_name, score)

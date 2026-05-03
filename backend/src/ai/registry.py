@@ -18,6 +18,7 @@ class AIModelRegistry:
         self._vision_generator = None
         self._nomic_embedder = None
         self._geo_enricher = None
+        self._translator = None
         self._settings = None
 
         self._clip_lock = threading.Lock()
@@ -25,6 +26,7 @@ class AIModelRegistry:
         self._nomic_lock = threading.Lock()
         self._nomic_inference_lock = threading.Lock()
         self._geo_lock = threading.Lock()
+        self._translator_lock = threading.Lock()
 
     @classmethod
     def get_instance(cls) -> "AIModelRegistry":
@@ -137,6 +139,16 @@ class AIModelRegistry:
                     self._geo_enricher = GeoEnricher()
                     logger.info("[registry] Geo Enricher ready ✓")
         return self._geo_enricher
+
+    @property
+    def translator(self):
+        if self._translator is None:
+            with self._translator_lock:
+                if self._translator is None:
+                    from src.ai.translator import Translator
+                    self._translator = Translator()
+                    logger.info("[registry] Translator ready ✓")
+        return self._translator
 
 
 # Global access point

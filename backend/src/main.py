@@ -27,8 +27,11 @@ from src.schemas import (
     Tag as TagSchema,
     Category as CategorySchema,
     Camera as CameraSchema,
-    GeoPosition as GeoPositionSchema
+    GeoPosition as GeoPositionSchema,
+    TranslateRequest
 )
+from src.ai.translator import Translator
+from src.ai.registry import registry
 from src.watcher_service import WatcherService
 
 
@@ -38,6 +41,7 @@ watcher_service = WatcherService()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     db = SessionLocal()
+    registry.translator.load()
     # startup
     watcher_service.start_all(db)
     yield
@@ -52,6 +56,10 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan
 )
+
+
+def get_translator() -> Translator:
+    return registry.translator
 
 
 @app.get("/api/system/status/")
@@ -87,12 +95,19 @@ def sse_event_stream():
 
 
 @app.get("/api/photos/{photo_id}", response_model=PhotoSchema)
-def get_photo(photo_id: int, db: Session = Depends(get_db)) -> PhotoSchema:
+def get_photo(
+    photo_id: int,
+    db: Session = Depends(get_db),
+    translator: Optional[Translator] = Depends(get_translator)
+) -> PhotoSchema:
     logger.info(f"Getting photo: {photo_id}")
     photo = get_photo_by_id(db, photo_id)
     if not photo:
         raise HTTPException(status_code=404, detail="Photo not found")
     logger.info(f"Photo found in DB: {photo}")
+    photo.description = translator.translate(photo.description, backward=False)
+    if photo.ocr_text:
+        photo.ocr_text = translator.translate(photo.ocr_text, backward=False)
     return photo
 
 
@@ -106,13 +121,18 @@ def get_photos(
     tag_id: Optional[int] = None,
     camera_id: Optional[int] = None,
     is_doc: Optional[bool] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    translator: Optional[Translator] = Depends(get_translator)
 ) -> PaginatedResponse[PhotoSchema]:
     logger.info("Getting all photos")
     photos, total = get_all_photos(
         db, skip=skip, limit=limit, sort_by=sort_by, sort_order=sort_order,
         category_id=category_id, tag_id=tag_id, camera_id=camera_id, is_doc=is_doc
     )
+    for photo in photos:
+        photo.description = translator.translate(photo.description, backward=False)
+        if photo.ocr_text:
+            photo.ocr_text = translator.translate(photo.ocr_text, backward=False)
     return PaginatedResponse(
         items=photos,
         total=total,
@@ -124,11 +144,18 @@ def get_photos(
 @app.post("/api/search/", response_model=List[PhotoSchema])
 async def search_photos(
     request: QueryRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    translator: Optional[Translator] = Depends(get_translator)
 ):
     """Search photos by vector"""
     logger.info(f"Received search request for text: {request.text_query}")
+    request.text_query = translator.translate(request.text_query, backward=True)
     photos = get_photos_by_vector(db, request.text_query, request.k)
+    for photo in photos:
+        photo.description = translator.translate(photo.description, backward=False)
+        if photo.ocr_text:
+            photo.ocr_text = translator.translate(photo.ocr_text, backward=False)
+    
     logger.info(f"Found photos: {photos}")
     return photos
 

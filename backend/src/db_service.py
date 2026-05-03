@@ -105,6 +105,9 @@ def update_model_status(db: Session, name: str, status: str):
     db.refresh(state)
     return state
 
+def get_model_or_none(db: Session, name: str):
+    return db.query(ModelState).filter_by(name=name).first()
+
 def get_model_status(db: Session, name: str) -> Optional[str]:
     """Returns the current status string for a model, or None if not found."""
     state = db.query(ModelState).filter_by(name=name).first()

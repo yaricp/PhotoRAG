@@ -53,7 +53,7 @@ def start_pipeline(photo_id: int):
 
 
 def _dispatch_tasks(photo_id: int, phase: str, tasks: str):
-    """Отправить задачи в соответствующие очереди."""
+    """Send tasks to the appropriate queues."""
     for task_name in tasks.split(","):
         task_name = task_name.strip()
         if not task_name:

@@ -15,7 +15,10 @@ QUEUE_MODULE = {
 def start_workers(local_models: list[str]) -> list[subprocess.Popen]:
     procs = []
     for model in local_models:
-        queue_module = QUEUE_MODULE[model]
+        queue_module = QUEUE_MODULE.get(model, None)
+        if queue_module is None:
+            logger.error(f"[workers] Unknown model: {model}")
+            continue
         logger.info(f"[workers] Starting worker for: {model} → {queue_module}")
         proc = subprocess.Popen([
             sys.executable, "-m", "huey.bin.huey_consumer",
