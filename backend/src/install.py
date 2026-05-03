@@ -264,6 +264,26 @@ def install_translator(db: Session) -> None:
         raise
 
 
+def install_chat(db: Session) -> None:
+    """Скачать Chat LLM веса в HuggingFace кеш"""
+    if get_model_status(db, "chat") == "ready":
+        logger.info("[chat] Already ready, skipping.")
+        return
+    try:
+        update_model_status(db, "chat", "downloading")
+        from transformers import AutoModelForCausalLM, AutoTokenizer
+        chat_model_name = ML_Settings().CHAT_LOCAL_MODEL
+        logger.info(f"[chat] Downloading {chat_model_name} (this may take a while)...")
+        AutoTokenizer.from_pretrained(chat_model_name)
+        AutoModelForCausalLM.from_pretrained(chat_model_name)
+        update_model_status(db, "chat", "ready")
+        logger.info("[chat] Installation complete ✓")
+    except Exception as e:
+        update_model_status(db, "chat", "error")
+        logger.error(f"[chat] Installation failed: {e}")
+        raise
+
+
 def init_db(db: Session):
     logger.info("[db] Creating tables...")
     Base.metadata.create_all(bind=engine)
@@ -321,7 +341,14 @@ def run_install(db: Session) -> None:
         logger.info("[translator] Mode=remote, skipping download.")
         update_model_status(db, "translator", "ready")
 
-    # 6.DB init
+    # 6. Chat — только если local
+    if "chat" in local:
+        install_chat(db)
+    else:
+        logger.info("[chat] Mode=remote, skipping download.")
+        update_model_status(db, "chat", "ready")
+
+    # 7. DB init
     init_db(db)
 
     logger.info("[install] All done. System ready ✓")

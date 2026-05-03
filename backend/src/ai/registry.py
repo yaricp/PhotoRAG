@@ -19,6 +19,7 @@ class AIModelRegistry:
         self._nomic_embedder = None
         self._geo_enricher = None
         self._translator = None
+        self._chat_model = None
         self._settings = None
 
         self._clip_lock = threading.Lock()
@@ -27,6 +28,7 @@ class AIModelRegistry:
         self._nomic_inference_lock = threading.Lock()
         self._geo_lock = threading.Lock()
         self._translator_lock = threading.Lock()
+        self._chat_lock = threading.Lock()
 
     @classmethod
     def get_instance(cls) -> "AIModelRegistry":
@@ -149,6 +151,43 @@ class AIModelRegistry:
                     self._translator = Translator()
                     logger.info("[registry] Translator ready ✓")
         return self._translator
+
+    @property
+    def chat_model(self):
+        if self._chat_model is None:
+            with self._chat_lock:
+                if self._chat_model is None:
+                    if self.settings.CHAT_MODEL_MODE == "local":
+                        logger.info(f"[registry] Warming up local Chat Model: {self.settings.CHAT_LOCAL_MODEL}")
+                        from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+                        from langchain_huggingface import HuggingFacePipeline, ChatHuggingFace
+                        
+                        model_id = self.settings.CHAT_LOCAL_MODEL
+                        tokenizer = AutoTokenizer.from_pretrained(model_id)
+                        model = AutoModelForCausalLM.from_pretrained(
+                            model_id,
+                            device_map="auto",
+                            trust_remote_code=True
+                        )
+                        pipe = pipeline(
+                            "text-generation",
+                            model=model,
+                            tokenizer=tokenizer,
+                            max_new_tokens=512,
+                            temperature=0.7,
+                            do_sample=True,
+                        )
+                        hf_pipe = HuggingFacePipeline(pipeline=pipe)
+                        self._chat_model = ChatHuggingFace(llm=hf_pipe)
+                        logger.info("[registry] Local Chat Model ready ✓")
+                    else:
+                        logger.info(f"[registry] Using remote Chat Model: {self.settings.CHAT_MODEL}")
+                        from langchain.chat_models import init_chat_model
+                        self._chat_model = init_chat_model(
+                            model=self.settings.CHAT_MODEL,
+                            temperature=0.5
+                        )
+        return self._chat_model
 
 
 # Global access point

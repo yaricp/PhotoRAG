@@ -28,11 +28,15 @@ from src.schemas import (
     Category as CategorySchema,
     Camera as CameraSchema,
     GeoPosition as GeoPositionSchema,
-    TranslateRequest
+    TranslateRequest,
+    ChatRequest,
+    ChatResponse
 )
 from src.ai.translator import Translator
 from src.ai.registry import registry
 from src.watcher_service import WatcherService
+from src.graphs.ai_agent import app as agent_app
+from langchain_core.messages import HumanMessage
 
 
 watcher_service = WatcherService()
@@ -178,3 +182,23 @@ def get_cameras(db: Session = Depends(get_db)) -> List[CameraSchema]:
 @app.get("/api/geopositions/", tags=["Metadata"], response_model=List[GeoPositionSchema])
 def get_geopositions(db: Session = Depends(get_db)) -> List[GeoPositionSchema]:
     return get_all_geopositions(db)
+
+
+@app.post("/api/chat/", response_model=ChatResponse)
+async def chat_with_agent(request: ChatRequest):
+    """Chat with the AI photo assistant"""
+    logger.info(f"Received chat message: {request.message} (thread_id: {request.thread_id})")
+    
+    config = {"configurable": {"thread_id": request.thread_id}}
+    inputs = {"messages": [HumanMessage(content=request.message)]}
+    
+    # Run the agent graph
+    result = await agent_app.ainvoke(inputs, config)
+    
+    # Get the last AI message
+    last_msg = result["messages"][-1]
+    
+    return ChatResponse(
+        response=last_msg.content,
+        thread_id=request.thread_id
+    )

@@ -23,4 +23,4 @@ einops
 geopy
 loguru
 sentence_transformers
-sqlite-vec
+sqlite-veclangchain-openai

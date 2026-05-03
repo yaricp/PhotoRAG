@@ -97,3 +97,13 @@ class TranslateRequest(BaseModel):
     text: str
     src_lang: str = "eng_Latn"
     tgt_lang: str = "rus_Cyrl"
+
+
+class ChatRequest(BaseModel):
+    message: str
+    thread_id: str = "default"
+
+
+class ChatResponse(BaseModel):
+    response: str
+    thread_id: str

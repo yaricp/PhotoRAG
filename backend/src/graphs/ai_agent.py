@@ -1,38 +1,59 @@
-from langgraph.graph import StateGraph, END, START
-from typing import TypedDict, List
-from loguru import logger
-
+import os
+from typing import Literal
+from langchain_openai import ChatOpenAI
 from langchain.chat_models import init_chat_model
-from langchain.agents import create_react_agent
-from langchain.prompts import PromptTemplate
+from langchain_core.messages import SystemMessage
+from langgraph.graph import StateGraph, END
+from langgraph.prebuilt import ToolNode
+from langgraph.checkpoint.memory import MemorySaver
 
+from src.ai.registry import registry
+from src.ai.prompts import PROMPTS
+from src.graphs.state import AgentState
+from src.graphs.tools import search_photos_semantic, search_photos_metadata, get_photo_details
 
-class AgentState(TypedDict):
-    photo_id: int
-    photo_path: str
-    description: str
-    tags: List[str]
-    rating: int
-    reviews: List[str]
+# 1. Initialize Tools
+tools = [search_photos_semantic, search_photos_metadata, get_photo_details]
+tool_node = ToolNode(tools)
 
-llm = init_chat_model(
-    model="gpt-4o-mini",
-    temperature=0.5,
-    model_kwargs={
-        "image_input_type": "url",
-    }
+# 2. Initialize LLM from Registry
+llm = registry.chat_model
+llm_with_tools = llm.bind_tools(tools)
+
+# 3. Define Nodes
+def call_model(state: AgentState):
+    messages = state["messages"]
+    
+    # Optional: Insert System Message if not present
+    if not any(isinstance(m, SystemMessage) for m in messages):
+        system_msg = SystemMessage(content=PROMPTS["chat_agent"]["system_message"])
+        messages = [system_msg] + messages
+    
+    response = llm_with_tools.invoke(messages)
+    return {"messages": [response]}
+
+def should_continue(state: AgentState) -> Literal["tools", END]:
+    messages = state["messages"]
+    last_message = messages[-1]
+    if last_message.tool_calls:
+        return "tools"
+    return END
+
+# 4. Construct Graph
+workflow = StateGraph(AgentState)
+
+workflow.add_node("agent", call_model)
+workflow.add_node("tools", tool_node)
+
+workflow.set_entry_point("agent")
+
+workflow.add_conditional_edges(
+    "agent",
+    should_continue,
 )
 
-prompt = PromptTemplate(
-    input_variables=["photo_path"],
-    template="""You are an AI assistant that analyzes photos.
-    
-    Input:
-    - photo_path: {photo_path}
-    
-    Output:
-    - description: A detailed description of the photo.
-    - tags: A list of tags describing the photo.
-    - rating: A rating of the photo on a scale of 1-10.
-    """
-)
+workflow.add_edge("tools", "agent")
+
+# 5. Compile with Persistence
+checkpointer = MemorySaver()
+app = workflow.compile(checkpointer=checkpointer)

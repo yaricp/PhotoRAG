@@ -68,9 +68,16 @@ class ML_Settings(BaseSettings):
 
     # Translator
     TRANSLATOR_MODEL: str = "facebook/nllb-200-distilled-600M"
-    TRANSLATOR_MODE: str = "local"        # local | remote
+    TRANSLATOR_MODE: str = "local"
     TRANSLATOR_API_URL: str = ""
     TRANSLATOR_API_KEY: str = ""
+
+    # Chat
+    CHAT_MODEL_MODE: str = "remote"           # local | remote
+    CHAT_MODEL: str = "gpt-4o-mini"
+    CHAT_LOCAL_MODEL: str = "Qwen/Qwen2-1.5B-Instruct"
+    CHAT_API_URL: str = ""
+    CHAT_API_KEY: str = ""
 
     @property
     def local_models(self) -> list[str]:
@@ -82,4 +89,6 @@ class ML_Settings(BaseSettings):
             result.append("embedding")
         if self.TRANSLATOR_MODE == "local":
             result.append("translator")
+        if self.CHAT_MODEL_MODE == "local":
+            result.append("chat")
         return result
