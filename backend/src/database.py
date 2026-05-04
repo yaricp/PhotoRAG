@@ -27,10 +27,3 @@ def load_sqlite_extensions(dbapi_connection, connection_record):
     except Exception as e:
         logger.error(f"Failed to load sqlite-vec: {e}")
 
-
-def get_db() -> Session:
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()

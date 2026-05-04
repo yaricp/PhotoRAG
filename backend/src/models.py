@@ -85,9 +85,6 @@ class PhotoEmbedding(Base):
 
     id = Column(Integer, primary_key=True)
     photo_id = Column(Integer, ForeignKey("photos.id"), index=True)
-
-    vss_rowid = Column(Integer, index=True)
-
     model = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow)
 

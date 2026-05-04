@@ -22,7 +22,7 @@ def vision_task(photo_id: int, phase: str):
         photo = get_photo_by_id(db, photo_id)
         if not photo:
             db.rollback()
-            _finish_task(photo_id=photo_id, phase=phase, name="metadata_task")
+            _finish_task(photo_id=photo_id, phase=phase, name="vision_task")
             return
 
         desc = registry.generate_vision_text(
@@ -58,7 +58,7 @@ def is_this_document_task(photo_id: int, phase: str):
         photo = get_photo_by_id(db, photo_id)
         if not photo:
             db.rollback()
-            _finish_task(photo_id=photo_id, phase=phase, name="metadata_task")
+            _finish_task(photo_id=photo_id, phase=phase, name="is_this_document_task")
             return
 
         result = registry.generate_vision_text(
@@ -94,19 +94,13 @@ def ocr_task(photo_id: int, phase: str):
         photo = get_photo_by_id(db, photo_id)
         if not photo:
             db.rollback()
-            _finish_task(photo_id=photo_id, phase=phase, name="metadata_task")
+            _finish_task(photo_id=photo_id, phase=phase, name="ocr_task")
             return
 
-        text = extract_text_from_image(
-            photo.file_path,
-            lang="rus+eng"
-        )
+        text = extract_text_from_image(photo.file_path)
         if text and text.strip():
             photo.ocr_text = text
-            db.commit()
-            logger.info(f"[ocr] Photo {photo_id}: text extracted, checking if document...")
-            # Запускаем vision-проверку документа асинхронно
-            is_this_document_task(photo_id, phase)
+            logger.info(f"[ocr] Photo {photo_id}: text extracted")
         db.commit()
         _finish_task(photo_id=photo_id, phase=phase, name="ocr_task")
 

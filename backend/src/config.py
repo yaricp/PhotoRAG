@@ -72,6 +72,9 @@ class ML_Settings(BaseSettings):
     TRANSLATOR_API_URL: str = ""
     TRANSLATOR_API_KEY: str = ""
 
+    # OCR
+    OCR_MODE: str = "local"
+
     # Chat
     CHAT_MODEL_MODE: str = "remote"           # local | remote
     CHAT_MODEL: str = "gpt-4o-mini"
@@ -88,7 +91,5 @@ class ML_Settings(BaseSettings):
         if self.EMBEDDING_MODE == "local":
             result.append("embedding")
         if self.TRANSLATOR_MODE == "local":
-            result.append("translator")
-        if self.CHAT_MODEL_MODE == "local":
-            result.append("chat")
+            result.append("translate")
         return result

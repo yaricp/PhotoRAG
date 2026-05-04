@@ -10,6 +10,7 @@ QUEUE_MODULE = {
     "clip":      "src.queues.clip_queue.clip_queue",
     "vision":    "src.queues.vision_queue.vision_queue",
     "embedding": "src.queues.embedding_queue.embedding_queue",
+    "translate": "src.queues.translation_queue.translate_queue"
 }
 
 def start_workers(local_models: list[str]) -> list[subprocess.Popen]:

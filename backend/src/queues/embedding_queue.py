@@ -13,3 +13,4 @@ def warm_embedding():
     from src.ai.registry import registry
     import src.tasks.embedding_tasks
     _ = registry.nomic_embedder
+    _ = registry.translator

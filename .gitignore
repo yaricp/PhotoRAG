@@ -18,3 +18,4 @@ backend/.pytest_cache
 backend/data/*.*
 Pictures/
 test_photo_db
+test_output.txt

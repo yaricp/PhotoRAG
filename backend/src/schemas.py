@@ -118,3 +118,11 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     response: str
     thread_id: str
+
+
+class Job(BaseModel):
+    id: int
+    photo_id: int
+    status: str
+    
+    model_config = ConfigDict(from_attributes=True)

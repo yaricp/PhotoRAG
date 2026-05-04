@@ -2,13 +2,13 @@ import os
 from huey import SqliteHuey
 
 
-translation_queue = SqliteHuey(
-    "translation",
-    filename=os.path.join(os.getcwd(), "../translation.sqlite3")
+translate_queue = SqliteHuey(
+    "translate",
+    filename=os.path.join(os.getcwd(), "../translate.sqlite3")
 )
 
 
-@translation_queue.on_startup()
+@translate_queue.on_startup()
 def warm_translator():
     from src.ai.registry import registry
     import src.tasks.translation_tasks

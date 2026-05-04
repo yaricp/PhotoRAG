@@ -69,7 +69,7 @@ class Translator:
         target_lang_id = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tgt_lang)
         outputs = self.model.generate(**inputs,forced_bos_token_id=target_lang_id)
         result = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-        logger.debug(f"Translator: {result}")
+        logger.debug(f"Translator result: {result}")
         return result
 
     def _build_supported_languages_from_model(self):

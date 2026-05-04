@@ -89,7 +89,7 @@ def auto_tag_clip_task(photo_id: int, phase: str):
         photo = get_photo_by_id(db, photo_id)
         if not photo:
             db.rollback()
-            _finish_task(photo_id=photo_id, phase=phase, name="metadata_task")
+            _finish_task(photo_id=photo_id, phase=phase, name="auto_tag_clip_task")
             return
 
         confident_tags = registry.clip_tagger.find_tags(photo.file_path)
@@ -125,7 +125,7 @@ def categorize_photo_task(photo_id: int, phase: str):
         photo = get_photo_by_id(db, photo_id)
         if not photo:
             db.rollback()
-            _finish_task(photo_id=photo_id, phase=phase, name="metadata_task")
+            _finish_task(photo_id=photo_id, phase=phase, name="categorize_photo_task")
             return
 
         cat_results = registry.clip_tagger.categorize(photo.file_path)

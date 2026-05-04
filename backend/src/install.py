@@ -282,6 +282,25 @@ def install_chat(db: Session) -> None:
         raise
 
 
+def install_ocr(db: Session) -> None:
+    """Скачать EasyOCR веса в кеш"""
+    if get_model_status(db, "ocr") == "ready":
+        logger.info("[ocr] Already ready, skipping.")
+        return
+    try:
+        update_model_status(db, "ocr", "downloading")
+        from src.ai.ocr import EasyOCRReader
+        logger.info("[ocr] Downloading EasyOCR models (ru+en)...")
+        # Initialize singleton to trigger download
+        EasyOCRReader.get_instance(languages=['en', 'ru'])
+        update_model_status(db, "ocr", "ready")
+        logger.info("[ocr] Installation complete ✓")
+    except Exception as e:
+        update_model_status(db, "ocr", "error")
+        logger.error(f"[ocr] Installation failed: {e}")
+        raise
+
+
 def init_db(db: Session):
     logger.info("[db] Creating tables...")
     Base.metadata.create_all(bind=engine)
@@ -345,7 +364,14 @@ def run_install(db: Session) -> None:
         logger.info("[translator] Mode=remote, skipping download.")
         update_model_status(db, "translator", "ready")
 
-    # 6. Chat — только если local
+    # 6. OCR — только если local
+    if "ocr" in local_models:
+        install_ocr(db)
+    else:
+        logger.info("[ocr] Mode=remote, skipping download.")
+        update_model_status(db, "ocr", "ready")
+
+    # 7. Chat — только если local
     if "chat" in local_models:
         install_chat(db)
     else:

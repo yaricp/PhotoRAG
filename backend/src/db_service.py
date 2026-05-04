@@ -2,12 +2,14 @@ from typing import Optional, List
 from datetime import datetime
 from loguru import logger
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 from src.models import (
     Photo, ModelState, Camera, Geoposition, 
     Keyword, Tag, Person, Category, PhotoTag, PhotoCategory,
-    Watcher, ProcessingJob
+    Watcher, ProcessingJob, PhotoEmbedding
 )
+from src.schemas import Photo as PhotoSchema
 from src.utils import generate_file_hash
 from src.vector_db_services import search_similar_photos
 
@@ -284,3 +286,26 @@ def delete_job(db: Session, photo_id: int, phase: str):
         logger.info(f"Job deleted for photo {photo_id} in phase {phase}")
         return True
     return False
+
+
+def delete_photo(db: Session, photo_id: int):
+    photo = get_photo_by_id(db, photo_id)
+    if not photo:
+        return None
+    
+    db.query(PhotoEmbedding).filter_by(photo_id=photo_id).delete()
+    db.query(PhotoTag).filter_by(photo_id=photo_id).delete()
+    db.query(PhotoCategory).filter_by(photo_id=photo_id).delete()
+    db.query(Geoposition).filter_by(photo_id=photo_id).delete()
+    db.query(ProcessingJob).filter_by(photo_id=photo_id).delete()
+    db.execute(text("DELETE FROM photo_embeddings_vss WHERE rowid = :id"), {"id": photo_id})
+    db.delete(photo)
+    
+    db.flush()   # применяет изменения, но не закрывает сессию
+    
+    # photo ещё привязан к сессии, но уже "удалён" из БД
+    # Pydantic может прочитать все атрибуты
+    response = PhotoSchema.model_validate(photo)
+    
+    db.commit()  # теперь коммитим
+    return response  # возвращаем уже готовую схему, не ORM-объект

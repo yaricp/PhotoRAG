@@ -10,7 +10,7 @@ huey==2.5.0
 langchain
 langgraph
 langchain-huggingface
-pytesseract
+easyocr
 Pillow
 open_clip_torch
 torch
@@ -23,4 +23,5 @@ einops
 geopy
 loguru
 sentence_transformers
-sqlite-veclangchain-openai
+sqlite-vec
+langchain-openai
