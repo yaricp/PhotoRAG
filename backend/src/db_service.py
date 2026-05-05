@@ -287,6 +287,8 @@ def delete_job(db: Session, photo_id: int, phase: str):
         return True
     return False
 
+def get_job_by_photo_id(db: Session, photo_id: int):
+    return db.query(ProcessingJob).filter_by(photo_id=photo_id).first()
 
 def delete_photo(db: Session, photo_id: int):
     photo = get_photo_by_id(db, photo_id)
