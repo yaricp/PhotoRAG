@@ -1,45 +1,79 @@
 .sidebar {
-    width: 200px;
-    min-height: 100vh;
+    height: 100vh;
     background: var(--color-surface);
     border-right: 1px solid var(--color-border);
+
     display: flex;
     flex-direction: column;
-    padding: 16px 0;
-    flex-shrink: 0;
+
+    overflow: hidden;
+    transition: width 0.25s ease;
 }
 
-.sidebar__logo {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--color-accent);
-    padding: 0 16px 20px;
-    letter-spacing: 0.02em;
+/* STATES */
+.sidebar--full {
+    width: 200px;
 }
 
+.sidebar--compact {
+    width: 64px;
+}
+
+.sidebar--hidden {
+    width: 0;
+    /* полностью скрыт */
+}
+
+/* TOGGLE ALWAYS VISIBLE */
+.sidebar__toggle {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+/* CONTENT WRAPPER */
+.sidebar__content {
+    margin-top: 32px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* COLLAPSE CONTENT IN HIDDEN */
+.sidebar--hidden .sidebar__content {
+    display: none;
+}
+
+/* NAV */
 .sidebar__nav {
-    list-style: none;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 4px;
     padding: 0 8px;
 }
 
+/* LINK */
 .sidebar__link {
-    display: block;
-    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    padding: 8px;
     border-radius: 6px;
-    font-size: 13px;
-    color: var(--color-text-dim);
-    transition: background 0.15s, color 0.15s;
+
+    text-decoration: none;
 }
 
-.sidebar__link:hover {
-    background: var(--color-surface-2);
-    color: var(--color-text);
+/* ICON */
+.sidebar__icon {
+    width: 24px;
+    text-align: center;
 }
 
+/* ACTIVE */
 .sidebar__link--active {
     background: rgba(124, 111, 255, 0.15);
-    color: var(--color-accent);
 }

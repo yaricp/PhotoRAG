@@ -169,7 +169,7 @@ export function GalleryPage() {
                         setLimit(Number(e.target.value))
                         setPage(0)
                     }}>
-                        {[10, 20, 50, 100].map(v => (
+                        {[5, 10, 20, 50, 100].map(v => (
                             <option key={v} value={v}>{v}</option>
                         ))}
                     </select>
@@ -225,6 +225,24 @@ export function GalleryPage() {
 
                 <div className="divider" />
 
+                {/* TAGS */}
+                <div className="filter-block">
+                    <label>Tags</label>
+                    <div className="tag-cloud">
+                        {tags.map(t => (
+                            <button
+                                key={t.id}
+                                className={selectedTags.includes(t.id) ? 'tag active' : 'tag'}
+                                onClick={() => toggleTag(t.id)}
+                            >
+                                {t.name}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="divider" />
+
                 {/* CAMERAS */}
                 <div className="filter-block">
                     <label>Cameras</label>
@@ -268,24 +286,6 @@ export function GalleryPage() {
                                 onClick={() => setSelectedGeo(g.id)}
                             >
                                 {g.address?.slice(0, 20) ?? `Geo ${g.id}`}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="divider" />
-
-                {/* TAGS */}
-                <div className="filter-block">
-                    <label>Tags</label>
-                    <div className="tag-cloud">
-                        {tags.map(t => (
-                            <button
-                                key={t.id}
-                                className={selectedTags.includes(t.id) ? 'tag active' : 'tag'}
-                                onClick={() => toggleTag(t.id)}
-                            >
-                                {t.name}
                             </button>
                         ))}
                     </div>
