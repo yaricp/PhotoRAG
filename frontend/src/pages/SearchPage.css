@@ -1,0 +1,34 @@
+.search-page {
+    padding: 16px;
+}
+
+.search-page__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
+}
+
+.search-page__bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.search-page__input {
+    flex: 1;
+    padding: 8px;
+}
+
+.search-page__button {
+    padding: 8px 12px;
+}
+
+.search-page__center {
+    display: flex;
+    justify-content: center;
+    margin-top: 40px;
+}
+
+.search-page__error {
+    color: red;
+}
