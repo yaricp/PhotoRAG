@@ -2,7 +2,7 @@ from typing import Optional, List
 from datetime import datetime
 from loguru import logger
 from sqlalchemy.orm import Session
-from sqlalchemy import text
+from sqlalchemy import exists, and_, text
 
 from src.models import (
     Photo, ModelState, Camera, Geoposition, 
@@ -42,45 +42,76 @@ def get_or_create_photo(db: Session, filepath: str, file_created_at: datetime = 
 def get_photo_by_id(db: Session, photo_id: int) -> Photo | None:
     return db.query(Photo).filter(Photo.id == photo_id).first()
 
+
 def get_all_photos(
     db: Session,
     skip: int = 0,
     limit: int = 100,
     sort_by: str = "created_at",
     sort_order: str = "desc",
-    category_id: Optional[int] = None,
-    tag_id: Optional[int] = None,
+    category_ids: Optional[list[int]] = None,
+    tag_ids: Optional[list[int]] = None,
     camera_id: Optional[int] = None,
     is_doc: Optional[bool] = None
-) -> tuple[List[Photo], int]:
-    query = db.query(Photo)
-    
-    if category_id is not None:
-        query = query.join(Photo.categories_rel).filter(PhotoCategory.category_id == category_id)
-    if tag_id is not None:
-        query = query.join(Photo.tags_rel).filter(PhotoTag.tag_id == tag_id)
+):
+
+    base_query = db.query(Photo)
+
+    # 🔹 ВСЕ категории должны присутствовать (AND)
+    if category_ids:
+        for cid in category_ids:
+            base_query = base_query.filter(
+                exists().where(
+                    and_(
+                        PhotoCategory.photo_id == Photo.id,
+                        PhotoCategory.category_id == cid
+                    )
+                )
+            )
+
+    # 🔹 ВСЕ теги должны присутствовать (AND)
+    if tag_ids:
+        for tid in tag_ids:
+            base_query = base_query.filter(
+                exists().where(
+                    and_(
+                        PhotoTag.photo_id == Photo.id,
+                        PhotoTag.tag_id == tid
+                    )
+                )
+            )
+
+    # 🔹 камера
     if camera_id is not None:
-        query = query.filter(Photo.camera_id == camera_id)
+        base_query = base_query.filter(Photo.camera_id == camera_id)
+
+    # 🔹 документ
     if is_doc is not None:
-        query = query.filter(Photo.is_doc == is_doc)
-        
-    total = query.count()
-    
-    order_col = Photo.created_at
-    if sort_by == "captured_at":
-        order_col = Photo.captured_at
-    elif sort_by == "file_created_at":
-        order_col = Photo.file_created_at
-    elif sort_by == "id":
-        order_col = Photo.id
-        
-    if sort_order == "desc":
-        query = query.order_by(order_col.desc())
-    else:
-        query = query.order_by(order_col.asc())
-        
-    photos = query.offset(skip).limit(limit).all()
+        base_query = base_query.filter(Photo.is_doc == is_doc)
+
+    # 🔥 важно: считаем ДО пагинации
+    total = base_query.count()
+
+    # 🔹 сортировка
+    order_col = {
+        "created_at": Photo.created_at,
+        "captured_at": Photo.captured_at,
+        "file_created_at": Photo.file_created_at,
+        "id": Photo.id
+    }.get(sort_by, Photo.created_at)
+
+    order_expr = order_col.desc() if sort_order == "desc" else order_col.asc()
+
+    photos = (
+        base_query
+        .order_by(order_expr)
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+
     return photos, total
+
 
 def get_photos_by_vector(
     db: Session, request_text: str, k: int

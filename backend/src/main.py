@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -128,21 +128,20 @@ def get_photo_endpoint(
 
 @app.get("/api/photos/", tags=["Photos"], response_model=PaginatedResponse[PhotoSchema])
 def get_photos_endpoint(
-    skip: int = 0,
-    limit: int = 100,
-    sort_by: str = "created_at",
-    sort_order: str = "desc",
-    category_id: Optional[int] = None,
-    tag_id: Optional[int] = None,
-    camera_id: Optional[int] = None,
-    is_doc: Optional[bool] = None,
-    db: Session = Depends(get_db),
-    translator: Optional[Translator] = Depends(get_translator)
+    skip: int = Query(0, alias="skip"),
+    limit: int = Query(50, alias="limit"),
+    sort_by: str = Query("created_at", alias="sort_by"),
+    sort_order: str = Query("desc", alias="sort_order"),
+    category_ids: Optional[list[int]] = Query(None, alias="category_ids"),
+    tag_ids: Optional[list[int]] = Query(None, alias="tag_ids"),
+    camera_id: Optional[int] = Query(None, alias="camera_id"),
+    is_doc: Optional[bool] = Query(None, alias="is_doc"),
+    db: Session = Depends(get_db)
 ) -> PaginatedResponse[PhotoSchema]:
     logger.info("Getting all photos")
     photos, total = get_all_photos(
         db, skip=skip, limit=limit, sort_by=sort_by, sort_order=sort_order,
-        category_id=category_id, tag_id=tag_id, camera_id=camera_id, is_doc=is_doc
+        category_ids=category_ids, tag_ids=tag_ids, camera_id=camera_id, is_doc=is_doc
     )
     return PaginatedResponse(
         items=photos,

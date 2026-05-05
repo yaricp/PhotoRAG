@@ -18,9 +18,12 @@ export interface GetPhotosParams {
     skip?: number
     limit?: number
     is_doc?: boolean
-    tag?: string
-    category?: string
+
+    tag_ids?: number[]
+    category_ids?: number[]
     camera_id?: number
+    geoposition_id?: number
+
     sort_by?: string
     sort_order?: 'asc' | 'desc'
 }
@@ -31,13 +34,26 @@ export async function getPhotos(params: GetPhotosParams = {}): Promise<Paginated
     if (params.skip !== undefined) query.set('skip', String(params.skip))
     if (params.limit !== undefined) query.set('limit', String(params.limit))
     if (params.is_doc !== undefined) query.set('is_doc', String(params.is_doc))
-    if (params.tag) query.set('tag', params.tag)
-    if (params.category) query.set('category', params.category)
-    if (params.camera_id) query.set('camera_id', String(params.camera_id))
+
     if (params.sort_by) query.set('sort_by', params.sort_by)
     if (params.sort_order) query.set('sort_order', params.sort_order)
 
+    if (params.camera_id) query.set('camera_id', String(params.camera_id))
+    if (params.geoposition_id) query.set('geoposition_id', String(params.geoposition_id))
+
+    console.log("query1", query)
+    // ✅ MULTI TAGS (ВАЖНО)
+    params.tag_ids?.forEach(id => {
+        query.append('tag_ids', String(id))
+    })
+    console.log("query2", query)
+    // ✅ MULTI CATEGORIES
+    params.category_ids?.forEach(id => {
+        query.append('category_ids', String(id))
+    })
+    console.log("query3", query)
     const qs = query.toString() ? `?${query}` : ''
+    console.log(qs)
     return apiFetch<PaginatedPhotos>(`/api/photos/${qs}`)
 }
 
@@ -107,4 +123,8 @@ export async function getCategories() {
 
 export async function getCameras() {
     return apiFetch<{ id: number; make: string | null; model: string | null }[]>('/api/cameras/')
+}
+
+export async function getGeopositions() {
+    return apiFetch<{ id: number; address: string | null; latitude: number; longitude: number }[]>('/api/geopositions/')
 }

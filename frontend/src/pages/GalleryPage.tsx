@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { getPhotos, getCategories, getTags, getCameras } from '@/api/client'
+import { getPhotos, getCategories, getTags, getCameras, getGeopositions } from '@/api/client'
 import { PhotoCard } from '@/components/photos/PhotoCard'
 import { Spinner } from '@/components/ui/Spinner'
 import { Button } from '@/components/ui/Button'
@@ -9,6 +9,12 @@ import './GalleryPage.css'
 type Category = { id: number; name: string }
 type Tag = { id: number; name: string }
 type Camera = { id: number; make: string | null; model: string | null }
+type Geoposition = {
+    id: number
+    address: string | null
+    latitude: number
+    longitude: number
+}
 
 type SortField = 'created_at' | 'captured_at' | 'image_width'
 type SortOrder = 'asc' | 'desc'
@@ -26,17 +32,21 @@ export function GalleryPage() {
     const [tags, setTags] = useState<Tag[]>([])
     const [cameras, setCameras] = useState<Camera[]>([])
 
-    const [selectedCategory, setSelectedCategory] = useState<number | null>(null)
+    const [selectedCategories, setSelectedCategories] = useState<number[]>([])
     const [selectedTags, setSelectedTags] = useState<number[]>([])
     const [selectedCamera, setSelectedCamera] = useState<number | null>(null)
 
     const [sortBy, setSortBy] = useState<SortField>('created_at')
     const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
 
+    const [geopositions, setGeopositions] = useState<Geoposition[]>([])
+    const [selectedGeoposition, setSelectedGeoposition] = useState<number | null>(null)
+
     useEffect(() => {
         getCategories().then(setCategories)
         getTags().then(setTags)
         getCameras().then(setCameras)
+        getGeopositions().then(setGeopositions)
     }, [])
 
     useEffect(() => {
@@ -47,13 +57,14 @@ export function GalleryPage() {
             limit: limit,
             sort_by: sortBy,
             sort_order: sortOrder,
-            category_id: selectedCategory ?? undefined,
-            tag_id: selectedTags.length ? selectedTags.join(',') : undefined,
+            category_ids: selectedCategories.length ? selectedCategories : undefined,
+            tag_ids: selectedTags.length ? selectedTags : undefined,
             camera_id: selectedCamera ?? undefined,
+            geoposition_id: selectedGeoposition ?? undefined,
         })
             .then(setData)
             .finally(() => setLoading(false))
-    }, [page, limit, selectedCategory, selectedTags, selectedCamera, sortBy, sortOrder])
+    }, [page, limit, selectedCategories, selectedTags, selectedCamera, sortBy, sortOrder])
 
     const toggleTag = (id: number) => {
         setSelectedTags(prev =>
@@ -64,8 +75,23 @@ export function GalleryPage() {
         setPage(0)
     }
 
+    useEffect(() => {
+        fetch('/api/geopositions')
+            .then(r => r.json())
+            .then(setGeopositions)
+    }, [])
+
+    const toggleCategories = (id: number) => {
+        setSelectedCategories(prev =>
+            prev.includes(id)
+                ? prev.filter(t => t !== id)
+                : [...prev, id]
+        )
+        setPage(0)
+    }
+
     const resetFilters = () => {
-        setSelectedCategory(null)
+        setSelectedCategories([])
         setSelectedTags([])
         setSelectedCamera(null)
         setSortBy('created_at')
@@ -121,7 +147,8 @@ export function GalleryPage() {
                     >
                         <option value="created_at">Created</option>
                         <option value="captured_at">Captured</option>
-                        <option value="image_width">Image width</option>
+                        <option value="file_created_at">File created</option>
+                        <option value="id">ID</option>
                     </select>
 
                     <Button onClick={toggleSortOrder}>
@@ -132,27 +159,14 @@ export function GalleryPage() {
 
             {/* CATEGORY FILTER */}
             <div className="gallery-page__categories">
-                <button
-                    className={!selectedCategory ? 'category-chip category-chip--active' : 'category-chip'}
-                    onClick={() => {
-                        setSelectedCategory(null)
-                        setPage(0)
-                    }}
-                >
-                    All
-                </button>
-
                 {categories.map(cat => {
-                    const active = selectedCategory === cat.id
+                    const active = selectedCategories.includes(cat.id)
 
                     return (
                         <button
                             key={cat.id}
                             className={active ? 'category-chip category-chip--active' : 'category-chip'}
-                            onClick={() => {
-                                setSelectedCategory(cat.id)
-                                setPage(0)
-                            }}
+                            onClick={() => toggleCategories(cat.id)}
                         >
                             {cat.name}
                         </button>
@@ -186,6 +200,45 @@ export function GalleryPage() {
                             }}
                         >
                             {label || `Camera ${cam.id}`}
+                        </button>
+                    )
+                })}
+            </div>
+
+            {/* GEO FILTER */}
+            <div className="gallery-page__categories">
+                <button
+                    className={!selectedGeoposition
+                        ? 'category-chip category-chip--active'
+                        : 'category-chip'
+                    }
+                    onClick={() => {
+                        setSelectedGeoposition(null)
+                        setPage(0)
+                    }}
+                >
+                    All locations
+                </button>
+
+                {geopositions.map(pos => {
+                    const active = selectedGeoposition === pos.id
+
+                    return (
+                        <button
+                            key={pos.id}
+                            className={
+                                active
+                                    ? 'category-chip category-chip--active'
+                                    : 'category-chip'
+                            }
+                            onClick={() => {
+                                setSelectedGeoposition(pos.id)
+                                setPage(0)
+                            }}
+                        >
+                            {pos.address
+                                ? pos.address.slice(0, 30) + '...'
+                                : `Location ${pos.id}`}
                         </button>
                     )
                 })}
