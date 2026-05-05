@@ -1,34 +1,86 @@
 .search-page {
-    padding: 16px;
-}
-
-.search-page__grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
     gap: 16px;
 }
 
-.search-page__bar {
+/* ===== TOOLBAR ===== */
+.search-page__toolbar {
     display: flex;
     gap: 8px;
-    margin-bottom: 16px;
+    align-items: center;
+
+    padding: 10px;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    border-radius: 10px;
 }
 
+/* INPUT */
 .search-page__input {
     flex: 1;
-    padding: 8px;
+
+    padding: 10px 12px;
+    border-radius: 8px;
+
+    border: 1px solid var(--color-border);
+    background: var(--color-bg);
+
+    color: var(--color-text);
+    font-size: 14px;
+
+    outline: none;
+    transition: border 0.15s ease, box-shadow 0.15s ease;
 }
 
-.search-page__button {
-    padding: 8px 12px;
+.search-page__input:focus {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 2px rgba(124, 111, 255, 0.15);
 }
 
+/* BUTTON (локально улучшаем если нет глобального стиля) */
+.search-page__toolbar button {
+    padding: 10px 14px;
+    border-radius: 8px;
+
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-2);
+
+    color: var(--color-text);
+    font-size: 13px;
+
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.search-page__toolbar button:hover {
+    background: var(--color-accent);
+    color: white;
+    border-color: var(--color-accent);
+}
+
+/* ===== GRID ===== */
+.search-page__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+/* ===== STATES ===== */
 .search-page__center {
     display: flex;
     justify-content: center;
-    margin-top: 40px;
+    padding: 60px 0;
 }
 
 .search-page__error {
-    color: red;
+    color: #ff4d4f;
+    font-size: 13px;
+    text-align: center;
+}
+
+/* ===== EMPTY OVERRIDE (если EmptyState большой) ===== */
+.search-page .empty-state {
+    margin-top: 40px;
 }

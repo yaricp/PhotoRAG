@@ -1,0 +1,27 @@
+.documents-page {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* GRID (как Gallery) */
+.documents-page__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+/* CENTER STATES */
+.documents-page__center {
+    display: flex;
+    justify-content: center;
+    padding: 60px 0;
+}
+
+/* ERROR */
+.documents-page__error {
+    color: #ff4d4f;
+    font-size: 13px;
+    text-align: center;
+}
