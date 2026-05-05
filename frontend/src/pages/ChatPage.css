@@ -1,0 +1,177 @@
+.chat-page {
+    display: flex;
+    height: 100%;
+    background: var(--color-bg);
+}
+
+/* =======================
+   LEFT: CONTEXT PANEL
+======================= */
+.chat-page__context {
+    width: 40%;
+    min-width: 320px;
+
+    border-right: 1px solid var(--color-border);
+    padding: 16px;
+
+    overflow-y: auto;
+}
+
+.chat-page__context-title {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--color-text-dim);
+}
+
+.chat-page__photos {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+}
+
+/* =======================
+   RIGHT: CHAT
+======================= */
+.chat-page__chat {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* =======================
+   MESSAGES
+======================= */
+.chat-page__messages {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* =======================
+   BUBBLES
+======================= */
+.chat-bubble {
+    max-width: 70%;
+    padding: 10px 12px;
+    border-radius: 10px;
+
+    font-size: 14px;
+    line-height: 1.4;
+
+    white-space: pre-wrap;
+    word-break: break-word;
+
+    user-select: text;
+
+    transition: background 0.15s ease;
+}
+
+/* USER */
+.chat-bubble--user {
+    align-self: flex-end;
+    background: var(--color-accent);
+    color: white;
+}
+
+/* ASSISTANT */
+.chat-bubble--assistant {
+    align-self: flex-start;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+}
+
+/* =======================
+   TEXT SELECTION
+======================= */
+
+/* fallback */
+::selection {
+    background: rgba(124, 111, 255, 0.35);
+    color: inherit;
+}
+
+/* assistant */
+.chat-bubble--assistant::selection {
+    background: rgba(124, 111, 255, 0.45);
+    color: inherit;
+}
+
+/* user */
+.chat-bubble--user::selection {
+    background: rgba(255, 255, 255, 0.35);
+    color: white;
+}
+
+/* =======================
+   TYPING
+======================= */
+.chat-page__typing {
+    padding: 8px;
+}
+
+/* =======================
+   INPUT AREA
+======================= */
+.chat-page__input {
+    display: flex;
+    gap: 8px;
+
+    padding: 12px;
+    border-top: 1px solid var(--color-border);
+    background: var(--color-surface);
+}
+
+.chat-page__input textarea {
+    flex: 1;
+    resize: none;
+
+    height: 44px;
+    max-height: 120px;
+
+    padding: 10px;
+
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
+
+    outline: none;
+    font-size: 14px;
+
+    transition: border 0.15s ease, box-shadow 0.15s ease;
+}
+
+.chat-page__input textarea:focus {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 2px rgba(124, 111, 255, 0.15);
+}
+
+.chat-page__input button {
+    padding: 10px 14px;
+
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
+
+    background: var(--color-accent);
+    color: white;
+
+    cursor: pointer;
+
+    transition: opacity 0.15s ease, transform 0.05s ease;
+}
+
+.chat-page__input button:hover:not(:disabled) {
+    opacity: 0.9;
+}
+
+.chat-page__input button:active:not(:disabled) {
+    transform: scale(0.97);
+}
+
+.chat-page__input button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}

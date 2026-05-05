@@ -7,8 +7,9 @@ from pydantic import BaseModel, Field
 
 
 class SearchMetadataArgs(BaseModel):
-    category_id: Optional[int] = Field(None, description="Filter by category ID")
-    tag_id: Optional[int] = Field(None, description="Filter by tag ID")
+    category_ids: Optional[List[int]] = Field(None, description="Filter by category ID")
+    tag_ids: Optional[List[int]] = Field(None, description="Filter by tag ID")
+    geoposition_id: Optional[int] = Field(None, description="Filter by geoposition ID")
     camera_id: Optional[int] = Field(None, description="Filter by camera ID")
     is_doc: Optional[bool] = Field(None, description="Filter for document photos only")
     limit: int = Field(10, description="Maximum number of photos to return")
@@ -57,8 +58,9 @@ def search_photos_semantic(query: str, k: int = 5) -> str:
 
 @tool
 def search_photos_metadata(
-    category_id: Optional[int] = None,
-    tag_id: Optional[int] = None,
+    category_ids: Optional[List[int]] = None,
+    tag_ids: Optional[List[int]] = None,
+    geoposition_id: Optional[int] = None,
     camera_id: Optional[int] = None,
     is_doc: Optional[bool] = None,
     limit: int = 10
@@ -75,9 +77,10 @@ def search_photos_metadata(
     - The user asks about a specific photo ID → use get_photo_details
 
     Input:
-    - category_id: filter by category
-    - tag_id: filter by tag
-    - camera_id: filter by camera
+    - category_ids: filter by category. Can be a list of category IDs.
+    - tag_ids: filter by tag. Can be a list of tag IDs.
+    - camera_id: filter by camera.
+    - geoposition_id: filter by geoposition.
     - is_doc: filter document-type photos (True/False)
     - limit: maximum number of results
 
@@ -89,13 +92,14 @@ def search_photos_metadata(
     Returns:
     A list of matching photos with ID, file path, and description, plus total count.
     """
-    logger.info(f"[tool] metadata search: {category_id}, {tag_id}, {camera_id}, {is_doc}, {limit}")
+    logger.info(f"[tool] metadata search: {category_ids}, {tag_ids}, {camera_ids}, {is_doc}, {limit}")
     db = SessionLocal()
     try:
         photos, total = get_all_photos(
             db, 
-            category_id=category_id, 
-            tag_id=tag_id, 
+            category_ids=category_ids, 
+            tag_ids=tag_ids, 
+            geoposition_id=geoposition_id,
             camera_id=camera_id, 
             is_doc=is_doc,
             limit=limit
