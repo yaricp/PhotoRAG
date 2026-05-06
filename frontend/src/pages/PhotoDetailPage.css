@@ -1,0 +1,102 @@
+.photo-detail {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* CENTER STATES */
+.photo-detail__center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    height: 100vh;
+    color: var(--color-text-dim);
+}
+
+/* IMAGE */
+.photo-detail__image-wrap {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.photo-detail__image {
+    max-width: 100%;
+    max-height: 70vh;
+
+    border-radius: 10px;
+    border: 1px solid var(--color-border);
+}
+
+/* SECTION */
+.photo-detail__section {
+    padding: 14px;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+
+    background: var(--color-surface);
+}
+
+.photo-detail__section h2 {
+    font-size: 14px;
+    margin-bottom: 10px;
+    color: var(--color-text);
+}
+
+/* GRID INFO */
+.photo-detail__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px;
+}
+
+.photo-detail__item {
+    padding: 8px;
+    border-radius: 8px;
+
+    background: var(--color-surface-2);
+}
+
+.photo-detail__label {
+    font-size: 11px;
+    color: var(--color-text-dim);
+}
+
+.photo-detail__value {
+    font-size: 13px;
+    margin-top: 2px;
+}
+
+/* TEXT */
+.photo-detail__text {
+    font-size: 14px;
+    line-height: 1.5;
+    margin-bottom: 8px;
+}
+
+.photo-detail__text--muted {
+    color: var(--color-text-dim);
+}
+
+/* GEO */
+.photo-detail__address {
+    margin-top: 10px;
+    padding: 10px;
+
+    border-radius: 8px;
+    border: 1px dashed var(--color-border);
+
+    font-size: 12px;
+    color: var(--color-text-dim);
+}
+
+.photo-detail__map-link {
+    display: inline-block;
+    margin-top: 10px;
+
+    font-size: 13px;
+    color: var(--color-accent);
+    text-decoration: underline;
+}
