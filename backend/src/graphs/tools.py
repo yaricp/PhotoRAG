@@ -1,9 +1,14 @@
 from loguru import logger
 from typing import List, Optional
 from langchain_core.tools import tool
-from src.db_service import get_photos_by_vector, get_all_photos, get_photo_by_id
-from src.database import SessionLocal
 from pydantic import BaseModel, Field
+
+from src.db_service import (
+    get_photos_by_vector, get_all_photos, get_photo_by_id,
+    get_all_categories, get_all_tags, get_all_cameras,
+    get_all_geopositions, get_photos_by_category_id
+)
+from src.database import SessionLocal
 
 
 class SearchMetadataArgs(BaseModel):
@@ -57,6 +62,32 @@ def search_photos_semantic(query: str, k: int = 5) -> str:
 
 
 @tool
+def search_photos_by_category_id(category_id: int) -> str:
+    """
+    Search for photos by category id.
+
+    Use this tool when:
+    - The user asks to filter photos by category id
+
+    Returns:
+    A list of matching photos with ID.
+    """
+    logger.info(f"[tool] category search: {category_id}")
+    db = SessionLocal()
+    try:
+        photos = get_photos_by_category_id(db, category_id)
+        if not photos:
+            return "No photos found in this category."
+        
+        results = []
+        for photo in photos:
+            results.append(f"ID: {photo.id}")
+        return "\n".join(results)
+    finally:
+        db.close()
+
+
+@tool
 def search_photos_metadata(
     category_ids: Optional[List[int]] = None,
     tag_ids: Optional[List[int]] = None,
@@ -90,9 +121,9 @@ def search_photos_metadata(
     - "Photos with tag 5"
 
     Returns:
-    A list of matching photos with ID, file path, and description, plus total count.
+    A list of matching photos with ID only.
     """
-    logger.info(f"[tool] metadata search: {category_ids}, {tag_ids}, {camera_ids}, {is_doc}, {limit}")
+    logger.info(f"[tool] metadata search: {category_ids}, {tag_ids}, {geoposition_id}, {camera_id}, {is_doc}, {limit}")
     db = SessionLocal()
     try:
         photos, total = get_all_photos(
@@ -109,7 +140,7 @@ def search_photos_metadata(
         
         results = []
         for p in photos:
-            results.append(f"ID: {p.id} | Path: {p.file_path} | Description: {p.description}")
+            results.append(f"ID: {p.id}")
         return f"Found {total} photos (showing {len(photos)}):\n" + "\n".join(results)
     finally:
         db.close()
@@ -173,3 +204,75 @@ def get_photo_details(photo_id: int) -> str:
         return "\n".join(details)
     finally:
         db.close()
+
+
+@tool
+def get_categories():
+    """
+    Get all categories.
+    """
+    logger.info(f"[tool] categories")
+    db = SessionLocal()
+    try:
+        result = "Available Categories:\n"
+        categories_db = get_all_categories(db)
+        for category in categories_db:
+            result += f"ID: {category.id} | Name: {category.name}\n"
+        logger.info(f"[tool] categories result: {result}")
+        return result
+    finally:
+        db.close()
+
+
+@tool
+def get_tags():
+    """
+    Get all tags.
+    """
+    db = SessionLocal()
+    try:
+        result = "Available Tags:\n"
+        tags_db = get_all_tags(db)
+        for tag in tags_db:
+            result += f"ID: {tag.id} | Name: {tag.name}\n"
+        logger.info(f"[tool] tags result: {result}")
+        return result
+    finally:
+        db.close()
+
+
+@tool
+def get_cameras():
+    """
+    Get all cameras.
+    """
+    logger.info(f"[tool] cameras")
+    db = SessionLocal()
+    try:
+        result = "Available Cameras:\n"
+        cameras_db = get_all_cameras(db)
+        for camera in cameras_db:
+            result += f"ID: {camera.id} | Name: {camera.name}\n"
+        logger.info(f"[tool] cameras result: {result}")
+        return result
+    finally:
+        db.close()
+
+
+@tool
+def get_geopositions():
+    """
+    Get all geoposition.
+    """
+    logger.info(f"[tool] geoposition")
+    db = SessionLocal()
+    try:
+        result = "Available Geoposition:\n"
+        geopositions_db = get_all_geopositions(db)
+        for geoposition in geopositions_db:
+            result += f"ID: {geoposition.id} | Name: {geoposition.name}\n"
+        logger.info(f"[tool] geoposition result: {result}")
+        return result
+    finally:
+        db.close()
+

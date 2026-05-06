@@ -42,7 +42,10 @@ def get_or_create_photo(db: Session, filepath: str, file_created_at: datetime = 
 def get_photo_by_id(db: Session, photo_id: int) -> Photo | None:
     return db.query(Photo).filter(Photo.id == photo_id).first()
 
-
+def get_photos_by_category_id(db: Session, category_id: int) -> List[Photo]:
+    return db.query(Photo).filter(
+        Photo.categories_rel.any(PhotoCategory.category_id == category_id)
+    ).all()
 def get_all_photos(
     db: Session,
     skip: int = 0,
@@ -52,6 +55,7 @@ def get_all_photos(
     category_ids: Optional[list[int]] = None,
     tag_ids: Optional[list[int]] = None,
     camera_id: Optional[int] = None,
+    geoposition_id: Optional[int] = None,
     is_doc: Optional[bool] = None
 ):
 
@@ -84,6 +88,10 @@ def get_all_photos(
     # 🔹 камера
     if camera_id is not None:
         base_query = base_query.filter(Photo.camera_id == camera_id)
+
+    # 🔹 geoposition
+    if geoposition_id is not None:
+        base_query = base_query.filter(Photo.geoposition_id == geoposition_id)
 
     # 🔹 документ
     if is_doc is not None:

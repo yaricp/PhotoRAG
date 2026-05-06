@@ -1,7 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import select
-from sqlalchemy.orm import selectinload
 
 from typing import List, Dict, Any, Optional
 from loguru import logger
@@ -207,8 +205,7 @@ async def chat_with_agent_endpoint(request: ChatRequest) -> ChatResponse:
     last_msg = result["messages"][-1]
     
     return ChatResponse(
-        response=last_msg.content,
-        thread_id=request.thread_id
+        response=last_msg.content
     )
 
 

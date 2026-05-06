@@ -11,10 +11,27 @@ from langgraph.checkpoint.memory import MemorySaver
 from src.ai.registry import registry
 from src.ai.prompts import PROMPTS
 from src.graphs.state import AgentState
-from src.graphs.tools import search_photos_semantic, search_photos_metadata, get_photo_details
+from src.graphs.tools import (
+    get_categories,
+    get_tags,
+    get_cameras,
+    get_geopositions,
+    search_photos_semantic,
+    search_photos_by_category_id,
+    get_photo_details
+)
+
 
 # 1. Initialize Tools
-tools = [search_photos_semantic, search_photos_metadata, get_photo_details]
+tools = [
+    get_categories,
+    get_tags,
+    get_cameras,
+    get_geopositions,
+    search_photos_semantic,
+    search_photos_by_category_id,
+    get_photo_details
+]
 tool_node = ToolNode(tools)
 
 # 2. Initialize LLM from Registry
@@ -23,6 +40,8 @@ llm_with_tools = llm.bind_tools(tools)
 
 # 3. Define Nodes
 def call_model(state: AgentState):
+    """Call the LLM with the current state"""
+    logger.info(f"[ai_agent] state: {state}")
     messages = state["messages"]
     
     # Optional: Insert System Message if not present
@@ -34,9 +53,10 @@ def call_model(state: AgentState):
     
     response = llm_with_tools.invoke(messages)
     logger.info(f"[ai_agent] response: {response}")
-    return {"messages": [response]}
+    return { "messages": [response] }
 
 def should_continue(state: AgentState) -> Literal["tools", END]:
+    """Condition for graph to continue or end"""
     messages = state["messages"]
     last_message = messages[-1]
     logger.info(f"[ai_agent] should_continue: {last_message}")

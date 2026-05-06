@@ -117,7 +117,7 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     response: str
-    thread_id: str
+    photos: List[Photo] = []
 
 
 class Job(BaseModel):
