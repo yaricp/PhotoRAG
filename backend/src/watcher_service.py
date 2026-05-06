@@ -3,7 +3,8 @@ from src.db_service import (
     get_all_active_watchers, 
     update_watcher_status,
     get_or_create_watcher,
-    get_all_watchers
+    get_all_watchers,
+    delete_watcher
 )
 from loguru import logger
 
@@ -60,3 +61,16 @@ class WatcherService:
             logger.info(f"Stopped watcher for path: {active['path']}")
         self.active.clear()
         logger.info("All watchers stopped")
+
+    def stop_watcher(self, watcher_id: int, db):
+        logger.info(f"Stopping watcher: {watcher_id}")
+        logger.info(f"Active watchers: {self.active}")
+        watcher = list(filter(
+            lambda w: w["id"] == watcher_id, self.active
+        ))[0]
+        logger.info(f"Stopping watcher for path: {watcher}")
+        watcher["observer"].stop()
+        watcher["observer"].join()
+        del_watcher = delete_watcher(db, watcher["id"])
+        logger.info(f"Stopped watcher for path: {watcher['path']}")
+        return del_watcher

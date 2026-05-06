@@ -18,6 +18,7 @@ from src.vector_db_services import search_similar_photos
 def check_photo_hash_exists(db: Session, hash_str: str) -> Photo:
     return db.query(Photo).filter(Photo.hash == hash_str).first()
 
+
 def create_photo_record(
     db: Session, hash_str: str, file_path: str,
     file_created_at: datetime = None
@@ -32,12 +33,14 @@ def create_photo_record(
     db.refresh(photo)
     return photo
 
+
 def get_or_create_photo(db: Session, filepath: str, file_created_at: datetime = None):
     file_hash = generate_file_hash(filepath)
     photo = check_photo_hash_exists(db, file_hash)
     if not photo:
         photo = create_photo_record(db, file_hash, filepath, file_created_at)
     return photo
+
 
 def get_photo_by_id(db: Session, photo_id: int) -> Photo | None:
     return db.query(Photo).filter(Photo.id == photo_id).first()
@@ -145,6 +148,7 @@ def get_photos_by_vector(
     logger.info(f"Photos found in DB: {photos}")
     return photos
 
+
 def update_model_status(db: Session, name: str, status: str):
     state = db.query(ModelState).filter_by(name=name).first()
     if not state:
@@ -156,16 +160,20 @@ def update_model_status(db: Session, name: str, status: str):
     db.refresh(state)
     return state
 
+
 def get_model_or_none(db: Session, name: str):
     return db.query(ModelState).filter_by(name=name).first()
+
 
 def get_model_status(db: Session, name: str) -> Optional[str]:
     """Returns the current status string for a model, or None if not found."""
     state = db.query(ModelState).filter_by(name=name).first()
     return state.status if state else None
 
+
 def get_all_model_states(db: Session):
     return db.query(ModelState).all()
+
 
 # Semantic Relational Helpers
 def get_or_create_camera(db: Session, make: str, model: str):
@@ -177,6 +185,7 @@ def get_or_create_camera(db: Session, make: str, model: str):
         db.refresh(camera)
     return camera
 
+
 def get_or_create_keyword(db: Session, name: str):
     kw = db.query(Keyword).filter_by(name=name).first()
     if not kw:
@@ -185,6 +194,7 @@ def get_or_create_keyword(db: Session, name: str):
         db.commit()
         db.refresh(kw)
     return kw
+
 
 def update_photo_geoposition(db: Session, photo_id: int, lat: float, lon: float, address: str = None):
     geo = db.query(Geoposition).filter_by(photo_id=photo_id).first()
@@ -198,6 +208,7 @@ def update_photo_geoposition(db: Session, photo_id: int, lat: float, lon: float,
     db.commit()
     return geo
 
+
 # Quantitative Tagging & Categorization
 def get_or_create_tag(db: Session, name: str):
     tag = db.query(Tag).filter_by(name=name).first()
@@ -207,6 +218,7 @@ def get_or_create_tag(db: Session, name: str):
         db.commit()
         db.refresh(tag)
     return tag
+
 
 def add_photo_tag_with_score(db: Session, photo_id: int, tag_name: str, score: float):
     logger.info(f"Adding tag: {tag_name} with score: {score}")
@@ -227,6 +239,7 @@ def add_photo_tag_with_score(db: Session, photo_id: int, tag_name: str, score: f
     photo_tag = db.query(PhotoTag).filter_by(photo_id=photo_id, tag_id=tag.id).first()
     return photo_tag
 
+
 def get_or_create_category(db: Session, name: str, prompt: str = ""):
     cat = db.query(Category).filter_by(name=name).first()
     if not cat:
@@ -236,20 +249,26 @@ def get_or_create_category(db: Session, name: str, prompt: str = ""):
         db.refresh(cat)
     return cat
 
+
 def get_category_by_id(db: Session, cat_id: int):
     return db.query(Category).filter_by(id=cat_id).first()
+
 
 def get_all_categories(db: Session) -> List[Category]:
     return db.query(Category).all()
 
+
 def get_all_tags(db: Session) -> List[Tag]:
     return db.query(Tag).all()
+
 
 def get_all_cameras(db: Session) -> List[Camera]:
     return db.query(Camera).all()
 
+
 def get_all_geopositions(db: Session) -> List[Geoposition]:
     return db.query(Geoposition).all()
+
 
 def add_photo_category_with_score(db: Session, photo_id: int, cat_id: int, score: float):
     photo_cat = db.query(PhotoCategory).filter_by(photo_id=photo_id, category_id=cat_id).first()
@@ -261,6 +280,7 @@ def add_photo_category_with_score(db: Session, photo_id: int, cat_id: int, score
     db.commit()
     return photo_cat
 
+
 def get_or_create_watcher(db: Session, path: str):
     watcher = db.query(Watcher).filter_by(path=path).first()
     if not watcher:
@@ -270,8 +290,10 @@ def get_or_create_watcher(db: Session, path: str):
         db.refresh(watcher)
     return watcher
 
+
 def get_watcher_by_id(db: Session, watcher_id: int):
     return db.query(Watcher).filter_by(id=watcher_id).first() 
+
 
 def update_watcher_status(db: Session, watcher_id: int, status: str):
     watcher = db.query(Watcher).filter_by(id=watcher_id).first()
@@ -279,11 +301,21 @@ def update_watcher_status(db: Session, watcher_id: int, status: str):
     db.commit()
     return watcher
 
+
+def delete_watcher(db: Session, watcher_id: int):
+    watcher = db.query(Watcher).filter_by(id=watcher_id).first()
+    db.delete(watcher)
+    db.commit()
+    return watcher
+
+
 def get_all_active_watchers(db: Session):
     return db.query(Watcher).filter(Watcher.status == "active").all()
 
+
 def get_all_watchers(db: Session):
     return db.query(Watcher).all()
+
 
 def get_or_create_job(
     db: Session, photo_id: int, phase: str, tasks: str
@@ -297,6 +329,7 @@ def get_or_create_job(
         db.commit()
         db.refresh(job)
     return job
+
 
 def update_job_tasks(
     db: Session,
@@ -320,8 +353,10 @@ def update_job_tasks(
     else:
         return None
 
+
 def get_all_jobs(db: Session):
     return db.query(ProcessingJob).all()
+
 
 def delete_job(db: Session, photo_id: int, phase: str):
     job = db.query(ProcessingJob).filter_by(photo_id=photo_id, phase=phase).first()
@@ -332,8 +367,10 @@ def delete_job(db: Session, photo_id: int, phase: str):
         return True
     return False
 
+
 def get_job_by_photo_id(db: Session, photo_id: int):
     return db.query(ProcessingJob).filter_by(photo_id=photo_id).first()
+
 
 def delete_photo(db: Session, photo_id: int):
     photo = get_photo_by_id(db, photo_id)

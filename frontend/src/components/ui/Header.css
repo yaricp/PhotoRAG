@@ -1,0 +1,95 @@
+.app-header {
+    height: 48px;
+
+    display: flex;
+    align-items: center;
+
+    padding: 0 12px;
+
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+
+    flex-shrink: 0;
+
+    position: relative;
+    /* 🔥 важно для абсолютного центра */
+}
+
+/* LEFT AREA */
+.app-header__left {
+    display: flex;
+    align-items: center;
+    z-index: 2;
+}
+
+/* TOGGLE BUTTON */
+.app-header__toggle {
+    width: 32px;
+    height: 32px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+
+    font-size: 16px;
+    line-height: 1;
+
+    color: var(--color-text);
+
+    cursor: pointer;
+
+    transition: background 0.15s ease, transform 0.1s ease, border-color 0.15s ease;
+}
+
+.app-header__toggle:hover {
+    background: var(--color-surface);
+    border-color: var(--color-accent);
+}
+
+.app-header__toggle:active {
+    transform: scale(0.95);
+}
+
+/* CENTER TITLE (ЖЕЛЕЗОБЕТОННЫЙ ЦЕНТР) */
+.app-header__title {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text);
+    user-select: none;
+
+    white-space: nowrap;
+}
+
+/* RIGHT NAV */
+.app-header__nav {
+    margin-left: auto;
+
+    display: flex;
+    gap: 12px;
+    align-items: center;
+
+    z-index: 2;
+}
+
+.app-header__link {
+    font-size: 13px;
+    color: var(--color-text-dim);
+    transition: color 0.15s ease;
+}
+
+.app-header__link:hover {
+    color: var(--color-text);
+}
+
+.app-header__link.active {
+    color: var(--color-accent);
+    font-weight: 600;
+}

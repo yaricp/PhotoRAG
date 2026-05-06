@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { Sidebar } from './components/ui/Sidebar'
+import { Header } from './components/ui/Header'
 import { AppRoutes } from './pages/AppRoutes'
 import './styles/global.css'
 
@@ -18,17 +19,18 @@ export default function App() {
 
     return (
         <div className="app-layout">
-            <Sidebar
-                state={sidebarState}
-                onCycle={cycleSidebar}
+            <Header
+                sidebarState={sidebarState}
+                onToggleSidebar={cycleSidebar}
             />
 
-            <main
-                data-testid="main-content"
-                className={`app-main app-main--${sidebarState}`}
-            >
-                <AppRoutes />
-            </main>
+            <div className="app-body">
+                <Sidebar state={sidebarState} />
+
+                <main className={`app-main app-main--${sidebarState}`}>
+                    <AppRoutes />
+                </main>
+            </div>
         </div>
     )
 }

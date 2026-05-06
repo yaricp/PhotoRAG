@@ -1,6 +1,8 @@
 @import './tokens.css';
 
-/* RESET */
+/* =========================
+   RESET
+========================= */
 *,
 *::before,
 *::after {
@@ -9,44 +11,98 @@
     padding: 0;
 }
 
-/* ROOT */
+/* =========================
+   ROOT LAYOUT
+========================= */
 html,
 body,
 #root {
     height: 100%;
 }
 
-/* BODY */
+/* =========================
+   DARK BASE THEME
+   (ВАЖНО: это возвращает темный стиль)
+========================= */
 body {
     font-family: var(--font-sans);
     background: var(--color-bg);
     color: var(--color-text);
     font-size: 14px;
     line-height: 1.5;
+
     overflow: hidden;
 }
 
-/* APP LAYOUT */
+/* =========================
+   APP LAYOUT
+   header + body
+========================= */
 .app-layout {
     display: flex;
+    flex-direction: column;
     height: 100vh;
     width: 100%;
+}
+
+/* =========================
+   HEADER
+========================= */
+.app-header {
+    height: 48px;
+    flex-shrink: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 0 12px;
+
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+
+    z-index: 10;
+}
+
+.app-header__left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.app-header__toggle {
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    color: var(--color-text);
+
+    padding: 6px 10px;
+    border-radius: 6px;
+
+    cursor: pointer;
+}
+
+.app-header__title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+/* =========================
+   BODY (sidebar + main)
+========================= */
+.app-body {
+    display: flex;
+    flex: 1;
+    min-height: 0;
     overflow: hidden;
 }
 
-/* MAIN CONTENT */
-.app-main {
-    flex: 1;
-    min-width: 0;
-    /* важно для grid */
-    height: 100%;
-    overflow: auto;
-}
-
-/* SIDEBAR BASE */
+/* =========================
+   SIDEBAR
+========================= */
 .sidebar {
     flex-shrink: 0;
-    height: 100vh;
+    height: 100%;
     width: 200px;
 
     display: flex;
@@ -59,14 +115,27 @@ body {
     overflow: hidden;
 }
 
-/* COMPACT */
+/* compact */
 .sidebar--compact {
-    width: 60px;
+    width: 64px;
 }
 
-/* HIDDEN */
+/* hidden */
 .sidebar--hidden {
     width: 0;
     border-right: none;
     overflow: hidden;
+}
+
+/* =========================
+   MAIN CONTENT
+========================= */
+.app-main {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+
+    overflow: auto;
+
+    background: var(--color-bg);
 }

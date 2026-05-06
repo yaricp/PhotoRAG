@@ -7,6 +7,8 @@ import { ChatPage } from './ChatPage'
 import { SettingsPage } from './SettingsPage'
 import { PhotoDetailPage } from './PhotoDetailPage'
 import { JobProcessingPage } from './JobProcessingPage'
+import { WatchersPage } from './WatchersPage'
+import { ModelsPage } from './ModelsPage'
 
 export function AppRoutes() {
     return (
@@ -15,9 +17,11 @@ export function AppRoutes() {
             <Route path="/search" element={<SearchPage />} />
             <Route path="/documents" element={<DocumentsPage />} />
             <Route path="/chat" element={<ChatPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
             <Route path="/photo/:id" element={<PhotoDetailPage />} />
             <Route path="/processing" element={<JobProcessingPage />} />
+            <Route path="/watchers" element={<WatchersPage />} />
+            <Route path="/models" element={<ModelsPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
         </Routes>
     )
 }

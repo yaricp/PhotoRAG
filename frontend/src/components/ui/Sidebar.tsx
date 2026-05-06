@@ -6,7 +6,6 @@ type SidebarState = 'full' | 'compact' | 'hidden'
 
 type Props = {
     state: SidebarState
-    onCycle: () => void
 }
 
 const links = [
@@ -14,25 +13,19 @@ const links = [
     { to: '/search', label: 'Search', icon: '🔍' },
     { to: '/documents', label: 'Documents', icon: '📄' },
     { to: '/chat', label: 'Chat', icon: '💬' },
-    { to: '/processing', label: 'Job Processing', icon: '⚙️' },
+    { to: '/processing', label: 'Video Processing', icon: '📹' },
+    { to: '/watchers', label: 'Watchers', icon: '👀' },
+    { to: '/models', label: 'Models', icon: '🤖' },
     { to: '/settings', label: 'Settings', icon: '⚙️' },
 ]
 
-export function Sidebar({ state, onCycle }: Props) {
+export function Sidebar({ state }: Props) {
+    if (state === 'hidden') return null
+
     return (
         <nav className={`sidebar sidebar--${state}`}>
 
-            {/* ВСЕГДА ВИДНА */}
-            <button className="sidebar__toggle" onClick={onCycle}>
-                {state === 'hidden' ? '➡️' : '⬅️'}
-            </button>
-
-            {/* СКРЫВАЕМ СОДЕРЖИМОЕ, НО НЕ КОМПОНЕНТ */}
             <div className="sidebar__content">
-                <div className="sidebar__logo">
-                    {state === 'compact' ? 'PD' : 'Photo Describer'}
-                </div>
-
                 <ul className="sidebar__nav">
                     {links.map(({ to, label, icon, end }) => (
                         <li key={to}>

@@ -90,7 +90,7 @@ def get_system_status_endpoint(db: Session = Depends(get_db)):
     }
 
 
-@app.post("/api/watch/", tags=["Watchers"])
+@app.post("/api/watchers/", tags=["Watchers"])
 def trigger_directory_watch_endpoint(request: WatchRequest, db: Session = Depends(get_db)):
     logger.info(f"Received watch request for path: {request.path}")
     watcher = watcher_service.start_watcher(request.path, db)
@@ -104,6 +104,12 @@ def get_watchers_endpoint(db: Session = Depends(get_db)) -> List[Watcher]:
     logger.info(f"Watchers found in DB: {watchers}")
     return watchers
 
+
+@app.delete("/api/watchers/{watcher_id}", tags=["Watchers"])
+def delete_watcher_endpoint(watcher_id: int, db: Session = Depends(get_db)) -> None:
+    logger.info(f"Deleting watcher: {watcher_id}")
+    del_watcher = watcher_service.stop_watcher(watcher_id, db)
+    return del_watcher
 
 @app.get("/api/stream/")
 def sse_event_stream_endpoint():

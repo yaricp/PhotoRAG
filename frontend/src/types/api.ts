@@ -56,8 +56,8 @@ export interface PaginatedPhotos {
 export interface Watcher {
     id: number
     path: string
-    is_active: boolean
-    created_at: string
+    status: string
+    updated_at: string
 }
 
 export interface Job {

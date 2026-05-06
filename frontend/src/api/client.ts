@@ -99,14 +99,14 @@ export async function getWatchers(): Promise<Watcher[]> {
 }
 
 export async function addWatcher(path: string): Promise<Watcher> {
-    return apiFetch<Watcher>('/api/watch/', {
+    return apiFetch<Watcher>('/api/watchers/', {
         method: 'POST',
         body: JSON.stringify({ path }),
     })
 }
 
-export async function deleteWatcher(id: number): Promise<void> {
-    await apiFetch<void>(`/api/watchers/${id}`, { method: 'DELETE' })
+export async function deleteWatcher(id: number): Promise<Watcher> {
+    return apiFetch<Watcher>(`/api/watchers/${id}`, { method: 'DELETE' })
 }
 
 export async function getJob(photoId: number): Promise<Job> {

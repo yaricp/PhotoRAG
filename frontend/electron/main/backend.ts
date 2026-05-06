@@ -32,38 +32,43 @@ async function waitForBackend(port: number, retries = 20): Promise<void> {
     throw new Error(`Backend did not start on port ${port}`)
 }
 
+// export async function startBackend(): Promise<number> {
+//     const port = await findFreePort()
+//     const userData = app.getPath('userData')
+
+//     const backendExe = app.isPackaged
+//         ? path.join(process.resourcesPath, 'backend', 'run')
+//         : 'python'
+
+//     const args = app.isPackaged
+//         ? [`--port=${port}`, `--db-path=${userData}/photos.sqlite3`]
+//         : ['-m', 'uvicorn', 'src.main:app', '--port', String(port), '--reload']
+
+//     backendProcess = spawn(backendExe, args, {
+//         cwd: app.isPackaged
+//             ? undefined
+//             : path.join(__dirname, '../../../backend'),
+//         env: {
+//             ...process.env,
+//             WATCH_DIRECTORY: path.join(userData, 'photos'),
+//         },
+//     })
+
+//     backendProcess.stdout?.on('data', (d) => console.log('[backend]', d.toString()))
+//     backendProcess.stderr?.on('data', (d) => console.error('[backend]', d.toString()))
+
+//     backendProcess.on('exit', (code) => {
+//         console.log(`[backend] exited with code ${code}`)
+//         backendProcess = null
+//     })
+
+//     await waitForBackend(port)
+//     return port
+// }
+
 export async function startBackend(): Promise<number> {
-    const port = await findFreePort()
-    const userData = app.getPath('userData')
-
-    const backendExe = app.isPackaged
-        ? path.join(process.resourcesPath, 'backend', 'run')
-        : 'python'
-
-    const args = app.isPackaged
-        ? [`--port=${port}`, `--db-path=${userData}/photos.sqlite3`]
-        : ['-m', 'uvicorn', 'src.main:app', '--port', String(port), '--reload']
-
-    backendProcess = spawn(backendExe, args, {
-        cwd: app.isPackaged
-            ? undefined
-            : path.join(__dirname, '../../../backend'),
-        env: {
-            ...process.env,
-            WATCH_DIRECTORY: path.join(userData, 'photos'),
-        },
-    })
-
-    backendProcess.stdout?.on('data', (d) => console.log('[backend]', d.toString()))
-    backendProcess.stderr?.on('data', (d) => console.error('[backend]', d.toString()))
-
-    backendProcess.on('exit', (code) => {
-        console.log(`[backend] exited with code ${code}`)
-        backendProcess = null
-    })
-
-    await waitForBackend(port)
-    return port
+    console.log('[backend] using external backend on port 8000')
+    return 8000
 }
 
 export function stopBackend(): void {

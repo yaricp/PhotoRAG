@@ -28,3 +28,16 @@
     font-size: 12px;
     padding: 2px 4px;
 }
+
+.search-bar__input {
+    background: var(--color-surface-2);
+    border-radius: 8px;
+
+    transition: all 0.15s ease;
+}
+
+.search-bar__input:focus {
+    background: var(--color-surface);
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 2px rgba(124, 111, 255, 0.15);
+}

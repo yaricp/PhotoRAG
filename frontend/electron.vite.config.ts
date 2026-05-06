@@ -4,9 +4,13 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
     main: {
-        plugins: [externalizeDepsPlugin()]
+        plugins: [externalizeDepsPlugin()],
+        build: {
+            lib: {
+                entry: resolve(__dirname, 'electron/main/index.ts')
+            }
+        }
     },
-
     preload: {
         plugins: [externalizeDepsPlugin()],
         build: {
@@ -15,9 +19,8 @@ export default defineConfig({
             }
         }
     },
-
     renderer: {
-        root: '.', // 🔥 важно
+        root: '.',
         server: {
             host: '127.0.0.1',
             port: 5173
