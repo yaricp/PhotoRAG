@@ -78,6 +78,7 @@ class Photo(Base):
     
     persons_rel = relationship("Person", secondary=photo_persons, back_populates="photos")
     keywords_rel = relationship("Keyword", secondary=photo_keywords, back_populates="photos")
+    job_rel = relationship("ProcessingJob", back_populates="photo", uselist=False)
 
 
 class PhotoEmbedding(Base):
@@ -156,6 +157,10 @@ class Watcher(Base):
 class ProcessingJob(Base):
     __tablename__ = "processing_jobs"
     id = Column(Integer, primary_key=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
     phase = Column(String)
     photo_id = Column(Integer, ForeignKey('photos.id'), unique=True)
     tasks = Column(String, nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    photo = relationship("Photo", back_populates="job_rel")

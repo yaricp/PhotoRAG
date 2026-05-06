@@ -42,10 +42,13 @@ def get_or_create_photo(db: Session, filepath: str, file_created_at: datetime = 
 def get_photo_by_id(db: Session, photo_id: int) -> Photo | None:
     return db.query(Photo).filter(Photo.id == photo_id).first()
 
+
 def get_photos_by_category_id(db: Session, category_id: int) -> List[Photo]:
     return db.query(Photo).filter(
         Photo.categories_rel.any(PhotoCategory.category_id == category_id)
     ).all()
+
+
 def get_all_photos(
     db: Session,
     skip: int = 0,
@@ -316,6 +319,9 @@ def update_job_tasks(
         return job
     else:
         return None
+
+def get_all_jobs(db: Session):
+    return db.query(ProcessingJob).all()
 
 def delete_job(db: Session, photo_id: int, phase: str):
     job = db.query(ProcessingJob).filter_by(photo_id=photo_id, phase=phase).first()

@@ -1,0 +1,104 @@
+.jobs-page {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* HEADER */
+.jobs-page__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* GRID (как gallery) */
+.jobs-page__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+/* TILE */
+.job-tile {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* META BLOCK */
+.job-tile__meta {
+    padding: 8px;
+    border-radius: 8px;
+
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+}
+
+/* TITLE */
+.job-tile__title {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* TASKS */
+.job-tile__tasks {
+    font-size: 12px;
+    margin-top: 4px;
+
+    font-family: monospace;
+
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+
+    padding: 6px;
+    border-radius: 6px;
+
+    word-break: break-word;
+}
+
+/* DATE */
+.job-tile__date {
+    font-size: 11px;
+    color: var(--color-text-dim);
+    margin-top: 4px;
+}
+
+/* CENTER */
+.jobs-page__center {
+    display: flex;
+    justify-content: center;
+    padding: 40px 0;
+}
+
+.job-tile__phase {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 6px;
+
+    font-size: 11px;
+    font-weight: 600;
+
+    text-transform: uppercase;
+}
+
+/* состояния */
+.job-tile__phase--pending {
+    background: #eee;
+    color: #555;
+}
+
+.job-tile__phase--first {
+    background: #ffe58f;
+    color: #8a6d00;
+}
+
+.job-tile__phase--second {
+    background: #d3f9d8;
+    color: #1b7f3b;
+}
+
+.job-tile__phase--third {
+    background: #ffd6d6;
+    color: #a40000;
+}

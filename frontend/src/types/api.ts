@@ -63,8 +63,11 @@ export interface Watcher {
 export interface Job {
     id: number
     photo_id: number
-    status: 'pending' | 'processing' | 'done' | 'error'
+    phase: string
+    tasks: string
     created_at: string
+    updated_at: string
+    file_path: string
 }
 
 export interface ModelStatus {

@@ -18,7 +18,8 @@ from src.graphs.tools import (
     get_geopositions,
     search_photos_semantic,
     search_photos_by_category_id,
-    get_photo_details
+    get_photo_details,
+    resize_photo,
 )
 
 
@@ -32,7 +33,17 @@ tools = [
     search_photos_by_category_id,
     get_photo_details
 ]
+metadata_tools = [
+    
+]
+editing_tools = [
+    resize_photo,
+    
+]
+
 tool_node = ToolNode(tools)
+metedata_tool_node = ToolNode(metadata_tools)
+editing_tool_node = ToolNode(editing_tools)
 
 # 2. Initialize LLM from Registry
 llm = registry.chat_model

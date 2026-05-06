@@ -6,6 +6,7 @@ import { DocumentsPage } from './DocumentsPage'
 import { ChatPage } from './ChatPage'
 import { SettingsPage } from './SettingsPage'
 import { PhotoDetailPage } from './PhotoDetailPage'
+import { JobProcessingPage } from './JobProcessingPage'
 
 export function AppRoutes() {
     return (
@@ -16,6 +17,7 @@ export function AppRoutes() {
             <Route path="/chat" element={<ChatPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/photo/:id" element={<PhotoDetailPage />} />
+            <Route path="/processing" element={<JobProcessingPage />} />
         </Routes>
     )
 }

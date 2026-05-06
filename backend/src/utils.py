@@ -110,6 +110,7 @@ def parse_datetime(exif_raw):
     logger.warning(f"[parse_datetime] Failed to parse any known format for: {dt_str}")
     return None
 
+
 def convert_ocr_result_to_json(result):
     output = []
     for box, text, conf in result:
@@ -119,3 +120,16 @@ def convert_ocr_result_to_json(result):
             "confidence": float(conf)
         })
     return output
+
+
+def resize_image(image_path: str, width: int, height: int) -> str:
+    try:
+        with Image.open(image_path) as image:
+            image = image.resize((width, height))
+            new_path = image_path.replace(".jpg", "_resized.jpg")
+            image.save(new_path)
+            logger.info(f"Image resized: {new_path}")
+            return new_path
+    except Exception as err:
+        logger.warning(f"Failed to resize image: {err}")
+        return ""

@@ -9,6 +9,7 @@ from src.db_service import (
     get_all_geopositions, get_photos_by_category_id
 )
 from src.database import SessionLocal
+from src.utils import extract_exif, resize_image
 
 
 class SearchMetadataArgs(BaseModel):
@@ -276,3 +277,62 @@ def get_geopositions():
     finally:
         db.close()
 
+
+@tool
+def resize_photo(photo_id: int, width: int, height: int) -> str:
+    """
+    Resize a photo to the specified width and height.
+
+    Use this tool when:
+    - The user wants to resize a photo
+    - The user provides photo ID, width, and height
+
+    Input:
+    - photo_id: unique identifier of the photo
+    - width: new width in pixels
+    - height: new height in pixels
+
+    Returns:
+    Status message with the new dimensions.
+    """
+    logger.info(f"[tool] resize photo: {photo_id} {width}x{height}")
+    db = SessionLocal()
+    try:
+        p = get_photo_by_id(db, photo_id)
+        if not p:
+            return f"Photo with ID {photo_id} not found."
+        
+        new_path = resize_image(p.file_path, width, height)
+        
+        return f"Photo resized successfully. New path: {new_path}"
+    finally:
+        db.close()
+
+
+@tool
+def get_exif_data(photo_id: int) -> str:
+    """
+    Get EXIF data for a photo.
+
+    Use this tool when:
+    - The user wants to get EXIF data for a photo
+    - The user provides photo ID
+
+    Input:
+    - photo_id: unique identifier of the photo
+
+    Returns:
+    Status message with the EXIF data.
+    """
+    logger.info(f"[tool] exif data: {photo_id}")
+    db = SessionLocal()
+    try:
+        p = get_photo_by_id(db, photo_id)
+        if not p:
+            return f"Photo with ID {photo_id} not found."
+        
+        exif_data = extract_exif(p.file_path)
+        
+        return f"EXIF data for photo {photo_id}: {exif_data}"
+    finally:
+        db.close()

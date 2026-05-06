@@ -16,7 +16,8 @@ from src.db_service import (
     get_all_cameras,
     get_all_geopositions,
     delete_photo,
-    get_job_by_photo_id
+    get_job_by_photo_id,
+    get_all_jobs
 )
 from src.database import Session, SessionLocal
 from src.deps import get_db, get_translator
@@ -209,8 +210,33 @@ async def chat_with_agent_endpoint(request: ChatRequest) -> ChatResponse:
     )
 
 
-@app.get("/api/job/{photo_id}", tags=["Jobs"], response_model=JobSchema)
+@app.get("/api/jobs/", tags=["Jobs"], response_model=List[JobSchema])
+def get_jobs_endpoint(db: Session = Depends(get_db)) -> List[JobSchema]:
+    """Get all jobs"""
+    results = get_all_jobs(db)
+    logger.info(f"Jobs found in DB: {results}")
+    output = []
+    for res in results:
+        logger.info(f"Job found in DB: {res}")
+        output.append(
+            JobSchema(
+                id=res.id,
+                updated_at=res.updated_at,
+                created_at=res.created_at,
+                photo_id=res.photo_id,
+                phase=res.phase,
+                tasks=res.tasks,
+                file_path=res.photo.file_path
+            )
+        )
+
+    logger.info(f"Jobs translated: {output}")
+    return output
+
+
+@app.get("/api/jobs/{photo_id}", tags=["Jobs"], response_model=JobSchema)
 def get_job_endpoint(photo_id: int, db: Session = Depends(get_db)) -> JobSchema:
     """Get job status for a photo"""
     job = get_job_by_photo_id(db, photo_id)
+
     return job

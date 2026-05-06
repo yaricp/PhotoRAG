@@ -110,7 +110,11 @@ export async function deleteWatcher(id: number): Promise<void> {
 }
 
 export async function getJob(photoId: number): Promise<Job> {
-    return apiFetch<Job>(`/api/job/${photoId}`)
+    return apiFetch<Job>(`/api/jobs/${photoId}`)
+}
+
+export async function getJobs(): Promise<Job[]> {
+    return apiFetch<Job[]>(`/api/jobs/`)
 }
 
 export async function getTags() {

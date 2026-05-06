@@ -122,7 +122,11 @@ class ChatResponse(BaseModel):
 
 class Job(BaseModel):
     id: int
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    phase: Optional[str] = None
+    tasks: Optional[str] = None
     photo_id: int
-    status: str
+    file_path: str
     
     model_config = ConfigDict(from_attributes=True)

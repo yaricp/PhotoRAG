@@ -14,6 +14,7 @@ const links = [
     { to: '/search', label: 'Search', icon: '🔍' },
     { to: '/documents', label: 'Documents', icon: '📄' },
     { to: '/chat', label: 'Chat', icon: '💬' },
+    { to: '/processing', label: 'Job Processing', icon: '⚙️' },
     { to: '/settings', label: 'Settings', icon: '⚙️' },
 ]
 
