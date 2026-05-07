@@ -30,9 +30,9 @@ class WatcherService:
         logger.info(f"All watchers started")
         return {"message": "watchers started"}
 
-    def start_watcher(self, path: str, db) -> dict:
+    def start_watcher(self, db, path: str, destination_path: str) -> dict:
         logger.info(f"Starting watcher for path: {path}")
-        watcher_db = get_or_create_watcher(db, path)
+        watcher_db = get_or_create_watcher(db, path, destination_path)
         if watcher_db.status == "active":
             logger.info(f"Watcher for path {path} is already active")
             return watcher_db

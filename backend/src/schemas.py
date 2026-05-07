@@ -9,12 +9,14 @@ class Watcher(BaseModel):
     id: int
     path: str
     status: str
+    destination_path: str
     
     model_config = ConfigDict(from_attributes=True)
 
 
 class WatchRequest(BaseModel):
     path: str
+    destination_path: str
 
 
 class Camera(BaseModel):
@@ -130,3 +132,22 @@ class Job(BaseModel):
     file_path: str
     
     model_config = ConfigDict(from_attributes=True)
+
+
+class FolderScannerProgress(BaseModel):
+    id: int
+    path: str
+    progress: Optional[int] = None
+
+
+class FolderScanner(BaseModel):
+    id: int
+    path: str
+    total_files: Optional[int] = None
+    scanned_files: Optional[int] = None
+    
+    model_config = ConfigDict(from_attributes=True)
+
+
+class FolderScannerRequest(BaseModel):
+    path: str

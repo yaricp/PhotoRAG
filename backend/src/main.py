@@ -17,7 +17,9 @@ from src.db_service import (
     get_all_geopositions,
     delete_photo,
     get_job_by_photo_id,
-    get_all_jobs
+    get_all_jobs,
+    get_all_folder_scanners,
+    delete_folder_scanner
 )
 from src.database import Session, SessionLocal
 from src.deps import get_db, get_translator
@@ -36,13 +38,17 @@ from src.schemas import (
     TranslateRequest,
     ChatRequest,
     ChatResponse,
-    Job as JobSchema
+    Job as JobSchema,
+    FolderScannerProgress as FolderScannerProgressSchema,
+    FolderScanner as FolderScannerSchema,
+    FolderScannerRequest
 )
 from src.ai.translator import Translator
 from src.ai.registry import registry
 from src.watcher_service import WatcherService
 from src.graphs.ai_agent import app as agent_app
 from langchain_core.messages import HumanMessage
+from src.tasks.folder_scanners import start_folder_scanner_task
 
 
 watcher_service = WatcherService()
@@ -93,7 +99,7 @@ def get_system_status_endpoint(db: Session = Depends(get_db)):
 @app.post("/api/watchers/", tags=["Watchers"])
 def trigger_directory_watch_endpoint(request: WatchRequest, db: Session = Depends(get_db)):
     logger.info(f"Received watch request for path: {request.path}")
-    watcher = watcher_service.start_watcher(request.path, db)
+    watcher = watcher_service.start_watcher(db, request.path, request.destination_path)
     return watcher
 
 
@@ -246,3 +252,68 @@ def get_job_endpoint(photo_id: int, db: Session = Depends(get_db)) -> JobSchema:
     job = get_job_by_photo_id(db, photo_id)
 
     return job
+
+
+@app.get(
+    "/api/folder_scanners/progress/",
+    tags=["Folder Scanners"],
+    response_model=List[FolderScannerProgressSchema]
+)
+def get_folder_scanners_progress_endpoint(
+    db: Session = Depends(get_db)
+) -> List[FolderScannerProgressSchema]:
+    """Get all folder scanners"""
+    folders = get_all_folder_scanners(db)
+    logger.info(f"Folders found in DB: {folders}")
+    output = []
+    for folder in folders:
+        # if folder.scanned_files == folder.total_files:
+        #     delete_folder_scanner(db, folder.id)
+        #     continue
+        progress = int((folder.scanned_files / folder.total_files)*100)
+        logger.info(f"Folder {folder.id} progress: {progress}")
+        output.append(
+            FolderScannerProgressSchema(
+                id=folder.id,
+                path=folder.path,
+                progress=progress
+            )
+        )
+    return output
+
+
+@app.get(
+    "/api/folder_scanners/",
+    tags=["Folder Scanners"],
+    response_model=List[FolderScannerSchema]
+)
+def get_folder_scanners_endpoint(
+    db: Session = Depends(get_db)
+) -> List[FolderScannerSchema]:
+    """Get all folder scanners"""
+    folders = get_all_folder_scanners(db)
+    return folders
+
+
+@app.post("/api/folder_scanners/", tags=["Folder Scanners"])
+def start_folder_scanner_endpoint(request: FolderScannerRequest, db: Session = Depends(get_db)) -> dict[str, str]:
+    """Start a new folder scanner"""
+    result = start_folder_scanner_task(request.path)
+    if result:
+        return {"status": "started"}
+    else:
+        raise HTTPException(status_code=400, detail="Folder scanner could not be started")
+
+
+@app.delete("/api/folder_scanners/{folder_scanner_id}", tags=["Folder Scanners"])
+def delete_folder_scanner_endpoint(folder_scanner_id: int, db: Session = Depends(get_db)) -> dict[str, str]:
+    """Delete a folder scanner"""
+    result = delete_folder_scanner(db, folder_scanner_id)
+    if result:
+        return FolderScannerSchema(
+            id=result.id,
+            path=result.path,
+            progress=100
+        )
+    else:
+        raise HTTPException(status_code=400, detail="Folder scanner could not be deleted")

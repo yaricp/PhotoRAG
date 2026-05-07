@@ -7,7 +7,7 @@ from sqlalchemy import exists, and_, text
 from src.models import (
     Photo, ModelState, Camera, Geoposition, 
     Keyword, Tag, Person, Category, PhotoTag, PhotoCategory,
-    Watcher, ProcessingJob, PhotoEmbedding
+    Watcher, ProcessingJob, PhotoEmbedding, FolderScanner
 )
 from src.schemas import Photo as PhotoSchema
 from src.utils import generate_file_hash
@@ -281,10 +281,10 @@ def add_photo_category_with_score(db: Session, photo_id: int, cat_id: int, score
     return photo_cat
 
 
-def get_or_create_watcher(db: Session, path: str):
+def get_or_create_watcher(db: Session, path: str, destination_path: str):
     watcher = db.query(Watcher).filter_by(path=path).first()
     if not watcher:
-        watcher = Watcher(path=path)
+        watcher = Watcher(path=path, destination_path=destination_path)
         db.add(watcher)
         db.commit()
         db.refresh(watcher)
@@ -393,3 +393,61 @@ def delete_photo(db: Session, photo_id: int):
     
     db.commit()  # теперь коммитим
     return response  # возвращаем уже готовую схему, не ORM-объект
+
+
+def get_all_folder_scanners(db: Session):
+    return db.query(FolderScanner).all()
+
+
+def create_folder_scanner(db: Session, path: str):
+    folder_scanner = FolderScanner(
+        path=path, progress_percentage=0
+    )
+    db.add(folder_scanner)
+    db.commit()
+    db.refresh(folder_scanner)
+    return folder_scanner
+
+
+def get_folder_scanner(db: Session, id: int):
+    return db.query(FolderScanner).filter_by(id=id).first()
+
+
+def get_folder_scanner_by_path(db: Session, path: str):
+    return db.query(FolderScanner).filter_by(path=path).first()
+
+
+def get_or_create_folder_scanner(db: Session, path: str, total_files: int):
+    folder_scanner = db.query(FolderScanner).filter_by(path=path).first()
+    if not folder_scanner:
+        folder_scanner = FolderScanner(
+            path=path, total_files=total_files, scanned_files=0
+        )
+        db.add(folder_scanner)
+        db.commit()
+        db.refresh(folder_scanner)
+    return folder_scanner
+
+
+def update_folder_scanner_progress(db: Session, folder_scanner_id: int):
+    """Update folder scanner progress"""
+    logger.info(f"Updating folder scanner progress for folder scanner {folder_scanner_id}")
+    scanner = db.query(FolderScanner).filter_by(id=folder_scanner_id).first()
+    if scanner:
+        scanner.scanned_files += 1
+        db.commit()
+        logger.info(f"scanned files: {scanner.scanned_files}")
+        return scanner
+    else:
+        return "STOP"
+
+
+def delete_folder_scanner(db: Session, id: int):
+    folder_scanner = db.query(FolderScanner).filter_by(id=id).first()
+    if folder_scanner:
+        db.delete(folder_scanner)
+        db.commit()
+        logger.info(f"Folder scanner with ID {id} deleted")
+        return folder_scanner
+    logger.info(f"Folder scanner with ID {id} not found")
+    return None

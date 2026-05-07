@@ -9,7 +9,7 @@ from src.queues.embedding_queue import embedding_queue
 
 
 @embedding_queue.task()
-def final_embedding_task(photo_id: int, phase: str):
+def final_embedding_task(photo_id: int, phase: str, folder_scanner_id: int = None):
     """
     Embedding: aggregate the results of all previous tasks
     and save a 768-dimensional vector for search.
@@ -23,7 +23,12 @@ def final_embedding_task(photo_id: int, phase: str):
         if not photo:
             db.rollback()
             db.close()
-            _finish_task(photo_id=photo_id, phase=phase, name="final_embedding_task")
+            _finish_task(
+                photo_id=photo_id,
+                phase=phase,
+                name="final_embedding_task",
+                folder_scanner_id=folder_scanner_id
+            )
             return
 
         tags = [pt.tag.name for pt in photo.tags_rel]
@@ -44,7 +49,12 @@ def final_embedding_task(photo_id: int, phase: str):
         store_photo_embedding(db, photo.id, embedding, registry.nomic_embedder.name)
         db.commit()
         logger.info(f"[embedding] Photo {photo_id}: vector saved ✓")
-        _finish_task(photo_id=photo_id, phase=phase, name="final_embedding_task")
+        _finish_task(
+            photo_id=photo_id,
+            phase=phase,
+            name="final_embedding_task",
+            folder_scanner_id=folder_scanner_id
+        )
     except Exception as e:
         logger.error(f"[embedding] Error for photo {photo_id}: {e}")
         db.rollback()  # ✅ ОБЯЗАТЕЛЬНО
@@ -61,7 +71,7 @@ def final_embedding_task(photo_id: int, phase: str):
 
 
 @embedding_queue.task()
-def embedding_document_text_task(photo_id: int, phase: str):
+def embedding_document_text_task(photo_id: int, phase: str, folder_scanner_id: int = None):
     """
     Embedding: aggregate the results of all previous tasks
     and save a 768-dimensional vector for search.
@@ -77,21 +87,36 @@ def embedding_document_text_task(photo_id: int, phase: str):
             logger.info(f"[embedding] Document {photo_id}: photo not found")
             db.rollback()
             db.close()
-            _finish_task(photo_id=photo_id, phase=phase, name="embedding_document_text_task")
+            _finish_task(
+                photo_id=photo_id,
+                phase=phase,
+                name="embedding_document_text_task",
+                folder_scanner_id=folder_scanner_id
+            )
             return
         logger.debug(f"[embedding] type of photo.is_doc: {type(photo.is_doc)}, value {photo.is_doc}")
         if not photo.is_doc:
             logger.info(f"[embedding] Document {photo_id}: not a document")
             db.rollback()
             db.close()
-            _finish_task(photo_id=photo_id, phase=phase, name="embedding_document_text_task")
+            _finish_task(
+                photo_id=photo_id,
+                phase=phase,
+                name="embedding_document_text_task",
+                folder_scanner_id=folder_scanner_id
+            )
             return
         doc_text = photo.ocr_text
         if not doc_text:
             logger.info(f"[embedding] Document {photo_id}: no ocr text")
             db.rollback()
             db.close()
-            _finish_task(photo_id=photo_id, phase=phase, name="embedding_document_text_task")
+            _finish_task(
+                photo_id=photo_id,
+                phase=phase,
+                name="embedding_document_text_task",
+                folder_scanner_id=folder_scanner_id
+            )
             return
         logger.info(f"[embedding] Document {photo_id}: embedding text ready")
         logger.info(f"[embedding] Text for embedding: {doc_text}")
@@ -108,7 +133,12 @@ def embedding_document_text_task(photo_id: int, phase: str):
         db.commit()
         logger.info(f"[embedding] Document {photo_id}: transaction committed")
         logger.info(f"[embedding] Photo {photo_id}: vector saved ✓")
-        _finish_task(photo_id=photo_id, phase=phase, name="embedding_document_text_task")
+        _finish_task(
+            photo_id=photo_id,
+            phase=phase,
+            name="embedding_document_text_task",
+            folder_scanner_id=folder_scanner_id
+        )
     except Exception as e:
         logger.error(f"[embedding] Error for photo {photo_id}: {e}")
         db.rollback()  # ✅ ОБЯЗАТЕЛЬНО

@@ -13,7 +13,7 @@ from src.queues.vision_queue import vision_queue
 # ---------------------------------------------------------------------------
 
 @vision_queue.task()
-def vision_task(photo_id: int, phase: str):
+def vision_task(photo_id: int, phase: str, folder_scanner_id: int = None):
     """Vision: сгенерировать текстовое описание фото."""
     logger.info(f"[vision] Start vision task: photo_id={photo_id}, phase={phase}")
     from src.tasks.utils import _finish_task
@@ -22,7 +22,12 @@ def vision_task(photo_id: int, phase: str):
         photo = get_photo_by_id(db, photo_id)
         if not photo:
             db.rollback()
-            _finish_task(photo_id=photo_id, phase=phase, name="vision_task")
+            _finish_task(
+                photo_id=photo_id,
+                phase=phase,
+                name="vision_task",
+                folder_scanner_id=folder_scanner_id
+            )
             return
 
         desc = registry.generate_vision_text(
@@ -32,7 +37,12 @@ def vision_task(photo_id: int, phase: str):
         photo.description = desc
         db.commit()
         logger.info(f"[vision] Photo {photo_id}: description saved ✓")
-        _finish_task(photo_id=photo_id, phase=phase, name="vision_task")
+        _finish_task(
+            photo_id=photo_id,
+            phase=phase,
+            name="vision_task",
+            folder_scanner_id=folder_scanner_id
+        )
     except Exception as e:
         logger.error(f"[vision] Error for photo {photo_id}: {e}")
         db.rollback()  # ✅ ОБЯЗАТЕЛЬНО
@@ -49,7 +59,7 @@ def vision_task(photo_id: int, phase: str):
 
 
 @vision_queue.task()
-def is_this_document_task(photo_id: int, phase: str):
+def is_this_document_task(photo_id: int, phase: str, folder_scanner_id: int = None):
     """Check if the photo is a document"""
     logger.info(f"[vision] Start is_document task: photo_id={photo_id}, phase={phase}")
     from src.tasks.utils import _finish_task
@@ -58,7 +68,12 @@ def is_this_document_task(photo_id: int, phase: str):
         photo = get_photo_by_id(db, photo_id)
         if not photo:
             db.rollback()
-            _finish_task(photo_id=photo_id, phase=phase, name="is_this_document_task")
+            _finish_task(
+                photo_id=photo_id,
+                phase=phase,
+                name="is_this_document_task",
+                folder_scanner_id=folder_scanner_id
+            )
             return
 
         result = registry.generate_vision_text(
@@ -68,7 +83,12 @@ def is_this_document_task(photo_id: int, phase: str):
         photo.is_doc = "yes" in result.lower()
         db.commit()
         logger.info(f"[vision] Photo {photo_id}: is_doc={photo.is_doc} ✓")
-        _finish_task(photo_id=photo_id, phase=phase, name="is_this_document_task")
+        _finish_task(
+            photo_id=photo_id,
+            phase=phase,
+            name="is_this_document_task",
+            folder_scanner_id=folder_scanner_id
+        )
     except Exception as e:
         logger.error(f"[vision] Error for photo {photo_id}: {e}")
         db.rollback()  # ✅ ОБЯЗАТЕЛЬНО
@@ -85,7 +105,7 @@ def is_this_document_task(photo_id: int, phase: str):
 
 
 @vision_queue.task()
-def ocr_task(photo_id: int, phase: str):
+def ocr_task(photo_id: int, phase: str, folder_scanner_id: int = None):
     """OCR recognition: extract text from image"""
     logger.info(f"[vision] Start ocr task: photo_id={photo_id}, phase={phase}")
     from src.tasks.utils import _finish_task
@@ -94,7 +114,12 @@ def ocr_task(photo_id: int, phase: str):
         photo = get_photo_by_id(db, photo_id)
         if not photo:
             db.rollback()
-            _finish_task(photo_id=photo_id, phase=phase, name="ocr_task")
+            _finish_task(
+                photo_id=photo_id,
+                phase=phase,
+                name="ocr_task",
+                folder_scanner_id=folder_scanner_id
+            )
             return
 
         text = extract_text_from_image(photo.file_path)
@@ -102,7 +127,12 @@ def ocr_task(photo_id: int, phase: str):
             photo.ocr_text = text
             logger.info(f"[ocr] Photo {photo_id}: text extracted")
         db.commit()
-        _finish_task(photo_id=photo_id, phase=phase, name="ocr_task")
+        _finish_task(
+            photo_id=photo_id,
+            phase=phase,
+            name="ocr_task",
+            folder_scanner_id=folder_scanner_id
+        )
 
     except Exception as e:
         logger.error(f"[ocr] Error for photo {photo_id}: {e}")

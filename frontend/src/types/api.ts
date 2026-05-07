@@ -2,6 +2,7 @@ export interface Photo {
     id: number
     file_path: string
     description: string | null
+    translated_description: string | null
     is_doc: boolean
     ocr_text: string | null
     created_at: string
@@ -58,7 +59,15 @@ export interface Watcher {
     path: string
     status: string
     updated_at: string
+    destination_path: string
 }
+
+export interface FolderScanner {
+    id: number
+    path: string
+    progress: number
+}
+
 
 export interface Job {
     id: number

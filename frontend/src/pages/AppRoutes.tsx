@@ -7,7 +7,7 @@ import { ChatPage } from './ChatPage'
 import { SettingsPage } from './SettingsPage'
 import { PhotoDetailPage } from './PhotoDetailPage'
 import { JobProcessingPage } from './JobProcessingPage'
-import { WatchersPage } from './WatchersPage'
+import { FoldersPage } from './FoldersPage'
 import { ModelsPage } from './ModelsPage'
 
 export function AppRoutes() {
@@ -19,7 +19,7 @@ export function AppRoutes() {
             <Route path="/chat" element={<ChatPage />} />
             <Route path="/photo/:id" element={<PhotoDetailPage />} />
             <Route path="/processing" element={<JobProcessingPage />} />
-            <Route path="/watchers" element={<WatchersPage />} />
+            <Route path="/folders" element={<FoldersPage />} />
             <Route path="/models" element={<ModelsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
         </Routes>

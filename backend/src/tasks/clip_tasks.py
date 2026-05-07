@@ -20,7 +20,7 @@ from src.queues.clip_queue import clip_queue
 # ---------------------------------------------------------------------------
 
 @clip_queue.task()
-def metadata_task(photo_id: int, phase: str):
+def metadata_task(photo_id: int, phase: str, folder_scanner_id: int = None):
     """Extracts EXIF, geolocation, and camera info — does not require GPU."""
     logger.info(f"[metadata] Start metadata task: photo_id={photo_id}, phase={phase}")
     from src.geo import GeoEnricher
@@ -30,7 +30,12 @@ def metadata_task(photo_id: int, phase: str):
         photo = get_photo_by_id(db, photo_id)
         if not photo:
             db.rollback()
-            _finish_task(photo_id=photo_id, phase=phase, name="metadata_task")
+            _finish_task(
+                photo_id=photo_id,
+                phase=phase,
+                name="metadata_task",
+                folder_scanner_id=folder_scanner_id
+            )
             return
 
         exif_raw = extract_exif(photo.file_path)
@@ -63,7 +68,12 @@ def metadata_task(photo_id: int, phase: str):
             
         db.commit()
         logger.info(f"[metadata] Photo {photo_id} metadata saved ✓")
-        _finish_task(photo_id=photo_id, phase=phase, name="metadata_task")
+        _finish_task(
+            photo_id=photo_id,
+            phase=phase,
+            name="metadata_task",
+            folder_scanner_id=folder_scanner_id
+        )
     except Exception as e:
         logger.error(f"[metadata] Error for photo {photo_id}: {e}")
         db.rollback()  # ✅ ОБЯЗАТЕЛЬНО
@@ -80,7 +90,7 @@ def metadata_task(photo_id: int, phase: str):
 
 
 @clip_queue.task()
-def auto_tag_clip_task(photo_id: int, phase: str):
+def auto_tag_clip_task(photo_id: int, phase: str, folder_scanner_id: int = None):
     """CLIP: search the tags for photo"""
     logger.info(f"[clip/tags] Start auto_tag_clip_task: photo_id={photo_id}, phase={phase}")
     from src.tasks.utils import _finish_task
@@ -89,7 +99,12 @@ def auto_tag_clip_task(photo_id: int, phase: str):
         photo = get_photo_by_id(db, photo_id)
         if not photo:
             db.rollback()
-            _finish_task(photo_id=photo_id, phase=phase, name="auto_tag_clip_task")
+            _finish_task(
+                photo_id=photo_id,
+                phase=phase,
+                name="auto_tag_clip_task",
+                folder_scanner_id=folder_scanner_id
+            )
             return
 
         confident_tags = registry.clip_tagger.find_tags(photo.file_path)
@@ -99,7 +114,12 @@ def auto_tag_clip_task(photo_id: int, phase: str):
             add_photo_tag_with_score(db, photo_id, tag_name, score)
 
         db.commit()
-        _finish_task(photo_id=photo_id, phase=phase, name="auto_tag_clip_task")
+        _finish_task(
+            photo_id=photo_id,
+            phase=phase,
+            name="auto_tag_clip_task",
+            folder_scanner_id=folder_scanner_id
+        )
     except Exception as e:
         logger.error(f"[clip/tags] Error for photo {photo_id}: {e}")
         db.rollback()  # ✅ ОБЯЗАТЕЛЬНО
@@ -116,7 +136,7 @@ def auto_tag_clip_task(photo_id: int, phase: str):
 
 
 @clip_queue.task()
-def categorize_photo_task(photo_id: int, phase: str):
+def categorize_photo_task(photo_id: int, phase: str, folder_scanner_id: int = None):
     """CLIP: determine categories of photo"""
     logger.info(f"[clip/categories] Start categorize_photo_task: photo_id={photo_id}, phase={phase}")
     from src.tasks.utils import _finish_task
@@ -125,7 +145,12 @@ def categorize_photo_task(photo_id: int, phase: str):
         photo = get_photo_by_id(db, photo_id)
         if not photo:
             db.rollback()
-            _finish_task(photo_id=photo_id, phase=phase, name="categorize_photo_task")
+            _finish_task(
+                photo_id=photo_id,
+                phase=phase,
+                name="categorize_photo_task",
+                folder_scanner_id=folder_scanner_id
+            )
             return
 
         cat_results = registry.clip_tagger.categorize(photo.file_path)
@@ -134,7 +159,12 @@ def categorize_photo_task(photo_id: int, phase: str):
             add_photo_category_with_score(db, photo_id, cat_id, score)
 
         db.commit()
-        _finish_task(photo_id=photo_id, phase=phase, name="categorize_photo_task")
+        _finish_task(
+            photo_id=photo_id,
+            phase=phase,
+            name="categorize_photo_task",
+            folder_scanner_id=folder_scanner_id
+        )
     except Exception as e:
         logger.error(f"[clip/categories] Error for photo {photo_id}: {e}")
         db.rollback()  # ✅ ОБЯЗАТЕЛЬНО

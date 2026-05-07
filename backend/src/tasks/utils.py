@@ -2,8 +2,9 @@ from loguru import logger
 from sqlalchemy import text
 
 from src.database import SessionLocal
-from src.db_service import delete_job, get_or_create_job
-
+from src.db_service import (
+    delete_job, get_or_create_job, get_folder_scanner, update_folder_scanner_progress
+)
 
 
 def phase_logic(phase: str) -> tuple[str, str]:
@@ -22,7 +23,9 @@ def phase_logic(phase: str) -> tuple[str, str]:
     return "", ""
 
 
-def _dispatch_tasks(photo_id: int, phase: str, tasks: str):
+def _dispatch_tasks(
+    photo_id: int, phase: str, tasks: str, folder_scanner_id: int = None
+):
     """Send tasks to the appropriate queues."""
     from .clip_tasks import auto_tag_clip_task, metadata_task, categorize_photo_task
     from .vision_tasks import vision_task, ocr_task, is_this_document_task
@@ -35,28 +38,30 @@ def _dispatch_tasks(photo_id: int, phase: str, tasks: str):
             continue
 
         if task_name == "metadata_task":
-            metadata_task(photo_id, phase=phase)
+            metadata_task(photo_id, phase=phase, folder_scanner_id=folder_scanner_id)
         elif task_name == "auto_tag_clip_task":
-            auto_tag_clip_task(photo_id, phase=phase)
+            auto_tag_clip_task(photo_id, phase=phase, folder_scanner_id=folder_scanner_id)
         elif task_name == "categorize_photo_task":
-            categorize_photo_task(photo_id, phase=phase)
+            categorize_photo_task(photo_id, phase=phase, folder_scanner_id=folder_scanner_id)
         elif task_name == "vision_task":
-            vision_task(photo_id, phase=phase)
+            vision_task(photo_id, phase=phase, folder_scanner_id=folder_scanner_id)
         elif task_name == "final_embedding_task":
-            final_embedding_task(photo_id, phase=phase)
+            final_embedding_task(photo_id, phase=phase, folder_scanner_id=folder_scanner_id)
         elif task_name == "ocr_task":
-            ocr_task(photo_id, phase=phase)
+            ocr_task(photo_id, phase=phase, folder_scanner_id=folder_scanner_id)
         elif task_name == "is_this_document_task":
-            is_this_document_task(photo_id, phase=phase)
+            is_this_document_task(photo_id, phase=phase, folder_scanner_id=folder_scanner_id)
         elif task_name == "embedding_document_text_task":
-            embedding_document_text_task(photo_id, phase=phase)
+            embedding_document_text_task(photo_id, phase=phase, folder_scanner_id=folder_scanner_id)
         elif task_name == "translate_description_task":
-            translate_description_task(photo_id, phase=phase)
+            translate_description_task(photo_id, phase=phase, folder_scanner_id=folder_scanner_id)
 
         logger.info(f"[pipeline] Dispatched {task_name} for photo {photo_id}")
 
 
-def _finish_task(photo_id: int, phase: str, name: str):
+def _finish_task(
+    photo_id: int, phase: str, name: str, folder_scanner_id: int = None
+):
     """
     Finish task in phase and start next phase if needed
     """
@@ -101,7 +106,7 @@ def _finish_task(photo_id: int, phase: str, name: str):
 
         if remaining == "":
             delete_job(db, photo_id, phase)
-            _start_next_phase(photo_id, phase)
+            _start_next_phase(photo_id, phase, folder_scanner_id)
 
     except Exception as e:
         logger.error(f"[pipeline] _finish_task failed: {e}")
@@ -111,21 +116,33 @@ def _finish_task(photo_id: int, phase: str, name: str):
         db.close()
 
 
-def _start_next_phase(photo_id: int, phase: str):
+def _start_next_phase(
+    photo_id: int, phase: str, folder_scanner_id: int = None
+):
     """
     Start next phase if needed
     """
+    logger.info(f"[pipeline] Next phase for folder scanner {folder_scanner_id}")
     db = SessionLocal()
     try:
         next_phase, new_tasks = phase_logic(phase)
+        if folder_scanner_id:
+            
+            folder_scanner = get_folder_scanner(db, folder_scanner_id)
+            logger.info(f"[pipeline] Folder scanner {folder_scanner.id}")
+            if folder_scanner:
+                update_folder_scanner_progress(db, folder_scanner_id)
+                logger.info(f"[pipeline] Folder scanner {folder_scanner_id} progress updated")
         if not next_phase:
-            logger.info(f"[pipeline] No next phase for photo {photo_id} and phase {phase}")
+            logger.info(f"[pipeline] FINISHED processing for photo {photo_id}")   
+            db.commit()
+            db.close()
             return
         
         get_or_create_job(db, photo_id=photo_id, phase=next_phase, tasks=new_tasks)
         db.commit()
         logger.info(f"[pipeline] New JOB created: {next_phase} for photo {photo_id}")
-        _dispatch_tasks(photo_id, next_phase, new_tasks)
+        _dispatch_tasks(photo_id, next_phase, new_tasks, folder_scanner_id)
 
     except Exception as e:
         db.rollback()
@@ -135,27 +152,27 @@ def _start_next_phase(photo_id: int, phase: str):
         db.close()
 
 
-def run_task_logic(fn, photo_id, phase, task_name):
-    """
-    Run task logic
-    """
-    db = SessionLocal()
-    try:
-        result = fn(db, photo_id)
+# def run_task_logic(fn, photo_id, phase, task_name):
+#     """
+#     Run task logic
+#     """
+#     db = SessionLocal()
+#     try:
+#         result = fn(db, photo_id)
 
-        db.commit()
+#         db.commit()
 
-        _finish_task(photo_id=photo_id, phase=phase, name=task_name)
+#         _finish_task(photo_id=photo_id, phase=phase, name=task_name)
 
-    except Exception as e:
-        logger.error(f"[{task_name}] Error for photo {photo_id}: {e}")
-        db.rollback()
+#     except Exception as e:
+#         logger.error(f"[{task_name}] Error for photo {photo_id}: {e}")
+#         db.rollback()
 
-        try:
-            delete_job(db, photo_id, phase)
-            db.commit()
-        except Exception:
-            db.rollback()
-            raise
-    finally:
-        db.close()
+#         try:
+#             delete_job(db, photo_id, phase)
+#             db.commit()
+#         except Exception:
+#             db.rollback()
+#             raise
+#     finally:
+#         db.close()

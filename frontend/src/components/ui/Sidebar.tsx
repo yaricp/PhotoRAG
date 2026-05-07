@@ -14,7 +14,7 @@ const links = [
     { to: '/documents', label: 'Documents', icon: '📄' },
     { to: '/chat', label: 'Chat', icon: '💬' },
     { to: '/processing', label: 'Video Processing', icon: '📹' },
-    { to: '/watchers', label: 'Watchers', icon: '👀' },
+    { to: '/folders', label: 'Folders', icon: '📁' },
     { to: '/models', label: 'Models', icon: '🤖' },
     { to: '/settings', label: 'Settings', icon: '⚙️' },
 ]

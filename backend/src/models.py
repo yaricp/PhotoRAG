@@ -150,6 +150,7 @@ class Watcher(Base):
     __tablename__ = "watchers"
     id = Column(Integer, primary_key=True)
     path = Column(String, unique=True)
+    destination_path = Column(String, nullable=True)
     status = Column(String, default="pending")
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -164,3 +165,12 @@ class ProcessingJob(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     photo = relationship("Photo", back_populates="job_rel")
+
+
+class FolderScanner(Base):
+    __tablename__ = "folder_scanners"
+    id = Column(Integer, primary_key=True)
+    path = Column(String, unique=True)
+    total_files = Column(Integer, default=0)
+    scanned_files = Column(Integer, default=0)
+    

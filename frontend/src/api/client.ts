@@ -1,7 +1,7 @@
 import { getBaseUrl } from './base'
 import type {
     Photo, PaginatedPhotos, Watcher, Job,
-    SystemStatus, SearchResult, ChatResponse
+    SystemStatus, SearchResult, ChatResponse, FolderScanner
 } from '@/types/api'
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -98,15 +98,30 @@ export async function getWatchers(): Promise<Watcher[]> {
     return apiFetch<Watcher[]>('/api/watchers/')
 }
 
-export async function addWatcher(path: string): Promise<Watcher> {
+export async function addWatcher(path: string, destination_path: string): Promise<Watcher> {
     return apiFetch<Watcher>('/api/watchers/', {
         method: 'POST',
-        body: JSON.stringify({ path }),
+        body: JSON.stringify({ path, destination_path }),
     })
 }
 
 export async function deleteWatcher(id: number): Promise<Watcher> {
     return apiFetch<Watcher>(`/api/watchers/${id}`, { method: 'DELETE' })
+}
+
+export async function getFolderScanners(): Promise<FolderScanner[]> {
+    return apiFetch<FolderScanner[]>('/api/folder_scanners/progress/')
+}
+
+export async function addFolderScanner(path: string): Promise<FolderScanner> {
+    return apiFetch<FolderScanner>('/api/folder_scanners/progress/', {
+        method: 'POST',
+        body: JSON.stringify({ path }),
+    })
+}
+
+export async function deleteFolderScanner(id: number): Promise<FolderScanner> {
+    return apiFetch<FolderScanner>(`/api/scanners/${id}`, { method: 'DELETE' })
 }
 
 export async function getJob(photoId: number): Promise<Job> {

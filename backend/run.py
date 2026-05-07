@@ -10,11 +10,13 @@ QUEUE_MODULE = {
     "clip":      "src.queues.clip_queue.clip_queue",
     "vision":    "src.queues.vision_queue.vision_queue",
     "embedding": "src.queues.embedding_queue.embedding_queue",
-    "translate": "src.queues.translation_queue.translate_queue"
+    "translate": "src.queues.translation_queue.translate_queue",
+    "folder_scan": "src.queues.folder_scan_queue.folder_scan_queue"
 }
 
 def start_workers(local_models: list[str]) -> list[subprocess.Popen]:
     procs = []
+    local_models.append("folder_scan")
     logger.info(f"Starting workers for: {local_models}")
     for model in local_models:
         queue_module = QUEUE_MODULE.get(model, None)
