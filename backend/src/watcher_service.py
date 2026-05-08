@@ -23,7 +23,10 @@ class WatcherService:
             self.active.append({
                 "id": watcher.id,
                 "path": watcher.path,
-                "observer": self._start_observer(watcher.path)
+                "observer": self._start_observer(
+                    watcher.path,
+                    watcher.destination_path
+                )
             })
             watcher_db = update_watcher_status(db, watcher.id, "active")
             logger.info(f"Watcher {watcher.id} started")
@@ -39,16 +42,19 @@ class WatcherService:
         new_watcher = {
             "id": watcher_db.id,
             "path": watcher_db.path,
-            "observer": self._start_observer(watcher_db.path)
+            "observer": self._start_observer(
+                watcher_db.path,
+                watcher_db.destination_path
+            )
         }
         self.active.append(new_watcher)
         watcher_db = update_watcher_status(db, watcher_db.id, "active")
         logger.info(f"Watcher started for path: {path}")
         return {"status": "watching", "target": path, "id": watcher_db.id}
 
-    def _start_observer(self, path: str):
+    def _start_observer(self, path: str, destination_path: str):
         logger.info(f"Starting observer for path: {path}")
-        observer = start_observer(path)
+        observer = start_observer(path, destination_path)
         logger.info(f"Observer started: {observer}")
         return observer
         

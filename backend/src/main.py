@@ -270,7 +270,7 @@ def get_folder_scanners_progress_endpoint(
         # if folder.scanned_files == folder.total_files:
         #     delete_folder_scanner(db, folder.id)
         #     continue
-        progress = int((folder.scanned_files / folder.total_files)*100)
+        progress = int((folder.scanned_steps / folder.total_steps)*100)
         logger.info(f"Folder {folder.id} progress: {progress}")
         output.append(
             FolderScannerProgressSchema(

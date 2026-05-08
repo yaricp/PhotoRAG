@@ -20,3 +20,5 @@ Pictures/
 test_photo_db
 test_output.txt
 **/node_modules/
+**/Pictures
+**/data

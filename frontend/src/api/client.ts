@@ -114,7 +114,7 @@ export async function getFolderScanners(): Promise<FolderScanner[]> {
 }
 
 export async function addFolderScanner(path: string): Promise<FolderScanner> {
-    return apiFetch<FolderScanner>('/api/folder_scanners/progress/', {
+    return apiFetch<FolderScanner>('/api/folder_scanners/', {
         method: 'POST',
         body: JSON.stringify({ path }),
     })

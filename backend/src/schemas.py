@@ -143,8 +143,8 @@ class FolderScannerProgress(BaseModel):
 class FolderScanner(BaseModel):
     id: int
     path: str
-    total_files: Optional[int] = None
-    scanned_files: Optional[int] = None
+    total_steps: Optional[int] = None
+    scanned_steps: Optional[int] = None
     
     model_config = ConfigDict(from_attributes=True)
 

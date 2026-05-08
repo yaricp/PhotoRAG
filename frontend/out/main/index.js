@@ -14,13 +14,16 @@ function registerIpcHandlers(backendPort) {
   electron.ipcMain.handle("get-backend-port", () => backendPort);
   console.log("[IPC] done");
 }
+function registerAppProtocol() {
+  electron.protocol.handle("app", (request) => {
+    const url = new URL(request.url);
+    const filePath = url.searchParams.get("path") ?? "";
+    return electron.net.fetch(`file://${filePath}`);
+  });
+}
 let mainWindow = null;
 async function createWindow() {
-  console.log("[main] createWindow");
-  const backendPort = 8e3;
-  console.log("[MAIN] BEFORE IPC");
-  registerIpcHandlers(backendPort);
-  console.log("[MAIN] AFTER IPC");
+  registerIpcHandlers(8e3);
   mainWindow = new electron.BrowserWindow({
     width: 1200,
     height: 800,
@@ -31,10 +34,16 @@ async function createWindow() {
     }
   });
   if (!electron.app.isPackaged) {
-    await mainWindow.loadURL("http://localhost:5173");
+    await mainWindow.loadURL("http://127.0.0.1:5173");
     mainWindow.webContents.openDevTools();
   } else {
     await mainWindow.loadFile("dist/index.html");
   }
 }
-electron.app.whenReady().then(createWindow);
+electron.app.whenReady().then(() => {
+  registerAppProtocol();
+  createWindow();
+});
+electron.app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") electron.app.quit();
+});

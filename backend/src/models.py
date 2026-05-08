@@ -171,6 +171,6 @@ class FolderScanner(Base):
     __tablename__ = "folder_scanners"
     id = Column(Integer, primary_key=True)
     path = Column(String, unique=True)
-    total_files = Column(Integer, default=0)
-    scanned_files = Column(Integer, default=0)
+    total_steps = Column(Integer, default=0)
+    scanned_steps = Column(Integer, default=0)
     

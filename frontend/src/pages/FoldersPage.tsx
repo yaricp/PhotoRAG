@@ -1,37 +1,32 @@
 import React, { useEffect, useState } from 'react'
 import {
-    getWatchers,
-    addWatcher,
-    deleteWatcher,
-    getFolderScanners,
-    addFolderScanner,
-    deleteFolderScanner,
+    getWatchers, addWatcher, deleteWatcher,
+    getFolderScanners, addFolderScanner, deleteFolderScanner,
 } from '@/api/client'
 import { Spinner } from '@/components/ui/Spinner'
 import { Button } from '@/components/ui/Button'
+import { Badge } from '@/components/ui/Badge'
 import { FolderSelector } from '@/components/ui/FolderSelector'
 import type { FolderScanner, Watcher } from '@/types/api'
 import './FoldersPage.css'
-
 
 export function FoldersPage() {
     const [watchers, setWatchers] = useState<Watcher[]>([])
     const [scanners, setScanners] = useState<FolderScanner[]>([])
     const [loading, setLoading] = useState(true)
 
-    const [newPathWatcher, setNewPathWatcher] = useState('')
-    const [newDestinationPathWatcher, setNewDestinationPathWatcher] = useState('')
+    const [newWatchSrc, setNewWatchSrc] = useState('')
+    const [newWatchDst, setNewWatchDst] = useState('')
     const [addingWatcher, setAddingWatcher] = useState(false)
 
-    const [newPathScanner, setNewPathScanner] = useState('')
+    const [newScanPath, setNewScanPath] = useState('')
     const [addingScanner, setAddingScanner] = useState(false)
 
     const load = async () => {
         try {
-            const data_watchers = await getWatchers()
-            const data_scanners = await getFolderScanners()
-            setWatchers(data_watchers)
-            setScanners(data_scanners)
+            const [w, s] = await Promise.all([getWatchers(), getFolderScanners()])
+            setWatchers(w)
+            setScanners(s)
         } finally {
             setLoading(false)
         }
@@ -44,210 +39,208 @@ export function FoldersPage() {
     }, [])
 
     const handleAddWatcher = async () => {
-        if (!newPathWatcher.trim()) return
-
+        if (!newWatchSrc.trim()) return
         setAddingWatcher(true)
         try {
-            const watcher = await addWatcher(
-                newPathWatcher.trim(),
-                newDestinationPathWatcher.trim()
-            )
-            setWatchers(prev => [...prev, watcher])
-            setNewPathWatcher('')
-            setNewDestinationPathWatcher('')
+            const w = await addWatcher(newWatchSrc.trim(), newWatchDst.trim())
+            setWatchers(prev => [...prev, w])
+            setNewWatchSrc('')
+            setNewWatchDst('')
         } finally {
             setAddingWatcher(false)
         }
     }
 
     const handleAddScanner = async () => {
-        if (!newPathScanner.trim()) return
-
+        if (!newScanPath.trim()) return
         setAddingScanner(true)
         try {
-            const scanner = await addFolderScanner(newPathScanner.trim())
-            setScanners(prev => [...prev, scanner])
-            setNewPathScanner('')
+            const s = await addFolderScanner(newScanPath.trim())
+            setScanners(prev => [...prev, s])
+            setNewScanPath('')
         } finally {
             setAddingScanner(false)
         }
     }
 
-    const handleDelete = async (id: number) => {
-        await deleteWatcher(id)
-        setWatchers(prev => prev.filter(w => w.id !== id))
-    }
+    return (
+        <div className="folders-page">
 
-    const handleDeleteScanner = async (id: number) => {
-        await deleteFolderScanner(id)
-        setScanners(prev => prev.filter(s => s.id !== id))
-    }
+            {/* ── WATCHERS ─────────────────────────────── */}
+            <section className="folders-section">
+                <div className="folders-section__header">
+                    <div>
+                        <h2 className="folders-section__title">Watchers</h2>
+                        <p className="folders-section__desc">
+                            Следит за новыми фото в папке и перекладывает их в структурированную целевую папку.
+                        </p>
+                    </div>
+                    <span className="folders-section__count">{watchers.length} active</span>
+                </div>
 
-    // 📁 folder picker
-    // const handleFolderSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    //     const files = e.target.files
-    //     if (!files || files.length === 0) return
+                <div className="folders-add-form">
+                    <div className="folders-add-form__row">
+                        <div className="folders-add-form__field">
+                            <label className="folders-add-form__label">Исходная папка</label>
+                            <FolderSelector onSelect={setNewWatchSrc} />
+                            {newWatchSrc && <p className="folders-add-form__path">{newWatchSrc}</p>}
+                        </div>
+                        <div className="folders-add-form__arrow">→</div>
+                        <div className="folders-add-form__field">
+                            <label className="folders-add-form__label">Целевая папка</label>
+                            <FolderSelector onSelect={setNewWatchDst} />
+                            {newWatchDst && <p className="folders-add-form__path">{newWatchDst}</p>}
+                        </div>
+                        <Button
+                            onClick={handleAddWatcher}
+                            disabled={addingWatcher || !newWatchSrc || !newWatchDst}
+                            loading={addingWatcher}
+                        >
+                            Добавить
+                        </Button>
+                    </div>
+                </div>
 
-    //     const firstFile = files[0] as any
+                {loading && <div className="folders-center"><Spinner size="lg" /></div>}
 
-    //     const relativePath = firstFile.webkitRelativePath || ''
-    //     const rootFolder = relativePath.split('/')[0]
+                {!loading && watchers.length === 0 && (
+                    <div className="folders-empty">Нет активных вотчеров</div>
+                )}
 
-    //     setNewPath(rootFolder)
-    //     setFolderPreview(relativePath)
-    // }
+                {!loading && watchers.length > 0 && (
+                    <div className="folders-list">
+                        {watchers.map(w => (
+                            <WatcherCard
+                                key={w.id}
+                                watcher={w}
+                                onDelete={() => {
+                                    deleteWatcher(w.id)
+                                    setWatchers(prev => prev.filter(x => x.id !== w.id))
+                                }}
+                            />
+                        ))}
+                    </div>
+                )}
+            </section>
 
-    const getStatusClass = (status: string) => {
-        switch (status.toLowerCase()) {
-            case 'active':
-                return 'status status--active'
-            case 'error':
-                return 'status status--error'
-            case 'paused':
-                return 'status status--paused'
-            default:
-                return 'status'
-        }
-    }
+            <div className="folders-divider" />
+
+            {/* ── SCANNERS ─────────────────────────────── */}
+            <section className="folders-section">
+                <div className="folders-section__header">
+                    <div>
+                        <h2 className="folders-section__title">Scanners</h2>
+                        <p className="folders-section__desc">
+                            Однократно обходит все подпапки и обрабатывает найденные фото. Показывает прогресс.
+                        </p>
+                    </div>
+                    <span className="folders-section__count">{scanners.length} active</span>
+                </div>
+
+                <div className="folders-add-form">
+                    <div className="folders-add-form__row">
+                        <div className="folders-add-form__field">
+                            <label className="folders-add-form__label">Папка для сканирования</label>
+                            <FolderSelector onSelect={setNewScanPath} />
+                            {newScanPath && <p className="folders-add-form__path">{newScanPath}</p>}
+                        </div>
+                        <Button
+                            onClick={handleAddScanner}
+                            disabled={addingScanner || !newScanPath}
+                            loading={addingScanner}
+                        >
+                            Запустить сканирование
+                        </Button>
+                    </div>
+                </div>
+
+                {loading && <div className="folders-center"><Spinner size="lg" /></div>}
+
+                {!loading && scanners.length === 0 && (
+                    <div className="folders-empty">Нет активных сканирований</div>
+                )}
+
+                {!loading && scanners.length > 0 && (
+                    <div className="folders-list">
+                        {scanners.map(s => (
+                            <ScannerCard
+                                key={s.id}
+                                scanner={s}
+                                onDelete={() => {
+                                    deleteFolderScanner(s.id)
+                                    setScanners(prev => prev.filter(x => x.id !== s.id))
+                                }}
+                            />
+                        ))}
+                    </div>
+                )}
+            </section>
+
+        </div>
+    )
+}
+
+function WatcherCard({ watcher: w, onDelete }: { watcher: Watcher; onDelete: () => void }) {
+    const statusVariant = w.status === 'active' ? 'success'
+        : w.status === 'error' ? 'error'
+            : 'processing'
 
     return (
-        <div className="watchers-page">
-
-            {/* HEADER */}
-            <div className="watchers-page__header">
-                <h2>Watchers</h2>
-                <span>{watchers.length} running</span>
-            </div>
-
-            {/* ADD SECTION */}
-            <div className="watchers-page__add">
-
-                {/* hidden file input */}
-                <FolderSelector onSelect={setNewPathWatcher} />
-                <FolderSelector onSelect={setNewDestinationPathWatcher} />
-
-                <Button onClick={handleAddWatcher} disabled={addingWatcher || !newPathWatcher}>
-                    {addingWatcher ? 'Adding...' : 'Add Watcher'}
-                </Button>
-
-            </div>
-
-            {/* LOADING */}
-            {loading && (
-                <div className="watchers-page__center">
-                    <Spinner size="lg" />
+        <div className="folder-card">
+            <div className="folder-card__body">
+                <div className="folder-card__paths">
+                    <div className="folder-card__path-item">
+                        <span className="folder-card__path-label">Исходная</span>
+                        <span className="folder-card__path-value">📁 {w.path}</span>
+                    </div>
+                    <div className="folder-card__path-arrow">→</div>
+                    <div className="folder-card__path-item">
+                        <span className="folder-card__path-label">Целевая</span>
+                        <span className="folder-card__path-value">📁 {w.destination_path}</span>
+                    </div>
                 </div>
-            )}
-
-            {/* LIST */}
-            {!loading && (
-                <div className="watchers-page__list">
-
-                    {watchers.map(w => (
-                        <div key={w.id} className="watcher-card">
-
-                            <div className="watcher-card__main">
-
-                                <div className="watcher-card__path">
-                                    📁 Watched folder: {w.path}
-                                </div>
-
-                                <div className="watcher-card__meta">
-
-                                    <span className={getStatusClass(w.status)}>
-                                        {w.status}
-                                    </span>
-
-                                    <span className="watcher-card__time">
-                                        {new Date(w.updated_at).toLocaleString()}
-                                    </span>
-
-                                </div>
-
-                                <div className="watcher-card__path">
-                                    📁 Destination: {w.destination_path}
-                                </div>
-
-                            </div>
-
-                            <div className="watcher-card__actions">
-                                <Button onClick={() => handleDelete(w.id)}>
-                                    Delete
-                                </Button>
-                            </div>
-
-                        </div>
-                    ))}
-
+                <div className="folder-card__meta">
+                    <Badge variant={statusVariant}>{w.status}</Badge>
+                    <span className="folder-card__time">
+                        Обновлён: {new Date(w.updated_at).toLocaleString()}
+                    </span>
                 </div>
-            )}
-
-            {/* EMPTY */}
-            {!loading && watchers.length === 0 && (
-                <div className="watchers-page__center">
-                    No watchers
-                </div>
-            )}
-
-            {/* HEADER */}
-            <div className="watchers-page__header">
-                <h2>Scanners</h2>
-                <span>{scanners.length} running</span>
             </div>
+            <Button variant="danger" onClick={onDelete}>Удалить</Button>
+        </div>
+    )
+}
 
-            {/* ADD SECTION */}
-            <div className="watchers-page__add">
+function ScannerCard({ scanner: s, onDelete }: { scanner: FolderScanner; onDelete: () => void }) {
+    const progress = typeof s.progress === 'number' ? s.progress : 0
+    const isDone = progress >= 100
 
-                {/* hidden file input */}
-                <FolderSelector onSelect={setNewPathScanner} />
+    return (
+        <div className="folder-card">
+            <div className="folder-card__body">
 
-                <Button onClick={handleAddScanner} disabled={addingScanner || !newPathScanner}>
-                    {addingScanner ? 'Adding...' : 'Add Scanner'}
-                </Button>
+                <div className="folder-card__path-item">
+                    <span className="folder-card__path-label">Сканируемая папка</span>
+                    <span className="folder-card__path-value">📁 {s.path}</span>
+                </div>
+
+                <div className="scanner-progress">
+                    <div className="scanner-progress__header">
+                        <span className="scanner-progress__label">
+                            {isDone ? 'Завершено' : 'Сканирование...'}
+                        </span>
+                        <span className="scanner-progress__pct">{Math.round(progress)}%</span>
+                    </div>
+                    <div className="scanner-progress__track">
+                        <div
+                            className={`scanner-progress__bar${isDone ? ' scanner-progress__bar--done' : ''}`}
+                            style={{ width: `${Math.min(progress, 100)}%` }}
+                        />
+                    </div>
+                </div>
 
             </div>
-
-            {!loading && (
-                <div className="watchers-page__list">
-
-                    {scanners.map(s => (
-                        <div key={s.id} className="watcher-card">
-
-                            <div className="watcher-card__main">
-
-                                <div className="watcher-card__path">
-                                    📁 Scanned folder: {s.path}
-                                </div>
-
-                                <div className="watcher-card__meta">
-
-                                    <span>
-                                        Progress: {s.progress}
-                                    </span>
-
-                                </div>
-
-                            </div>
-
-                            <div className="watcher-card__actions">
-                                <Button onClick={() => handleDelete(w.id)}>
-                                    Delete
-                                </Button>
-                            </div>
-
-                        </div>
-                    ))}
-
-                </div>
-            )}
-
-            {/* LOADING */}
-            {loading && (
-                <div className="watchers-page__center">
-                    <Spinner size="lg" />
-                </div>
-            )}
-
+            <Button variant="danger" onClick={onDelete}>Удалить</Button>
         </div>
     )
 }
