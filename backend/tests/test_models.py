@@ -1,4 +1,4 @@
-from src.models import Photo, Tag, Person, Keyword, Category, Camera, Geoposition
+from src.models import Photo, Tag, Person, Keyword, Category, Camera, Geoposition, AIModelConfig
 
 def test_photo_model_basic():
     photo = Photo(file_path="/test/path.jpg", hash="12345")
@@ -32,3 +32,16 @@ def test_geoposition_model_basic():
     assert geo.latitude == 45.523062
     assert geo.longitude == -122.676482
     assert geo.address == "Portland, OR"
+
+def test_ai_model_config_basic():
+    config = AIModelConfig(
+        type="vision",
+        mode="remote",
+        model_name="gpt-4o",
+        url="https://api.openai.com",
+        api_key="secret"
+    )
+    assert config.type == "vision"
+    assert config.mode == "remote"
+    assert config.model_name == "gpt-4o"
+    assert config.api_key == "secret"

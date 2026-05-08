@@ -3,7 +3,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from src.main import app
-from src.database import get_db
+from src.deps import get_db
 from src.models import Base, Photo, Tag, Category, Camera, Geoposition, ModelState
 from datetime import datetime
 import pytest
@@ -39,10 +39,10 @@ def mock_translator():
         registry.translator._loaded = True
         yield
 
-def test_watch_endpoint():
-    response = client.post("/api/watch/", json={"path": "/mock/path"})
+def test_folder_scanners_endpoint():
+    response = client.post("/api/folder_scanners/", json={"path": "/mock/path"})
     assert response.status_code == 200
-    assert response.json()["status"] == "watching"
+    assert response.json()["status"] == "started"
 
 @pytest.fixture(autouse=True)
 def setup_data():
@@ -87,10 +87,43 @@ def test_get_system_status():
     assert "ready" in response.json()
 
 
-def test_get_watchers():
-    response = client.get("/api/watchers/")
+def test_get_folder_scanners():
+    response = client.get("/api/folder_scanners/")
     assert response.status_code == 200
     assert isinstance(response.json(), list)
+
+
+def test_models_endpoints():
+    # init defaults
+    from src.db_service import init_default_model_configs
+    db = TestingSessionLocal()
+    init_default_model_configs(db)
+    db.close()
+    
+    # get models
+    response = client.get("/api/models/")
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) >= 6
+    
+    # update model
+    update_data = {
+        "mode": "remote",
+        "model_name": "test-model",
+        "url": "http://test",
+        "api_key": "123"
+    }
+    
+    # Mock registry.reset_model
+    with patch("src.main.registry.reset_model") as mock_reset:
+        response = client.put("/api/models/vision", json=update_data)
+        assert response.status_code == 200
+        result = response.json()
+        assert result["mode"] == "remote"
+        assert result["url"] == "http://test"
+        
+        mock_reset.assert_called_once_with("vision")
 
 
 def test_get_photo_by_id():

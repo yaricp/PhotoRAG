@@ -18,8 +18,13 @@ from src.db_service import (
     delete_photo,
     get_job_by_photo_id,
     get_all_jobs,
+    get_or_create_folder_scanner,
+    update_folder_scanner_progress,
     get_all_folder_scanners,
-    delete_folder_scanner
+    delete_folder_scanner,
+    get_all_model_configs,
+    get_model_config,
+    update_model_config
 )
 from src.database import Session, SessionLocal
 from src.deps import get_db, get_translator
@@ -41,7 +46,9 @@ from src.schemas import (
     Job as JobSchema,
     FolderScannerProgress as FolderScannerProgressSchema,
     FolderScanner as FolderScannerSchema,
-    FolderScannerRequest
+    FolderScannerRequest,
+    AIModelConfigResponse,
+    AIModelConfigUpdate
 )
 from src.ai.translator import Translator
 from src.ai.registry import registry
@@ -319,3 +326,25 @@ def delete_folder_scanner_endpoint(folder_scanner_id: int, db: Session = Depends
         )
     else:
         raise HTTPException(status_code=400, detail="Folder scanner could not be deleted")
+
+
+@app.get("/api/models/", tags=["Models"], response_model=List[AIModelConfigResponse])
+def get_all_models_endpoint(db: Session = Depends(get_db)):
+    """Get all AI model configurations"""
+    return get_all_model_configs(db)
+
+
+@app.put("/api/models/{config_type}", tags=["Models"], response_model=AIModelConfigResponse)
+def update_model_endpoint(
+    config_type: str, 
+    request: AIModelConfigUpdate, 
+    db: Session = Depends(get_db)
+):
+    """Update AI model configuration and reload it in the registry"""
+    config = update_model_config(db, config_type, request)
+    if not config:
+        raise HTTPException(status_code=404, detail="Model config not found")
+        
+    # Invalidate cache so it reloads with new settings
+    registry.reset_model(config_type)
+    return config

@@ -15,8 +15,10 @@ def test_registry_is_singleton():
     reg2 = AIModelRegistry.get_instance()
     assert reg1 is reg2
 
+@patch('src.ai.registry.AIModelRegistry.get_model_config')
 @patch('src.ai.clip.ClipTagger')
-def test_lazy_loading_clip(mock_clip_class):
+def test_lazy_loading_clip(mock_clip_class, mock_get_config):
+    mock_get_config.return_value = None # Fallback to settings
     mock_instance = mock_clip_class.return_value
     # Reset registry for clean test
     AIModelRegistry._instance = None
@@ -31,8 +33,10 @@ def test_lazy_loading_clip(mock_clip_class):
     assert mock_clip_class.call_count == 1
     assert tagger1 is tagger2
 
+@patch('src.ai.registry.AIModelRegistry.get_model_config')
 @patch('sentence_transformers.SentenceTransformer')
-def test_lazy_loading_nomic(mock_st_class):
+def test_lazy_loading_nomic(mock_st_class, mock_get_config):
+    mock_get_config.return_value = None # Fallback to settings
     AIModelRegistry._instance = None
     reg = AIModelRegistry.get_instance()
     

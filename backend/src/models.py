@@ -173,4 +173,12 @@ class FolderScanner(Base):
     path = Column(String, unique=True)
     total_steps = Column(Integer, default=0)
     scanned_steps = Column(Integer, default=0)
-    
+
+class AIModelConfig(Base):
+    __tablename__ = "ai_model_configs"
+    id = Column(Integer, primary_key=True, index=True)
+    type = Column(String, unique=True, index=True) # e.g. 'vision', 'clip', 'embedding', 'translator', 'chat', 'ocr'
+    mode = Column(String, default="local") # "local" or "remote"
+    model_name = Column(String) # e.g. "Qwen/Qwen2-VL-2B-Instruct"
+    url = Column(String, nullable=True)
+    api_key = Column(String, nullable=True)

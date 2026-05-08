@@ -1,7 +1,8 @@
 import { getBaseUrl } from './base'
 import type {
     Photo, PaginatedPhotos, Watcher, Job,
-    SystemStatus, SearchResult, ChatResponse, FolderScanner
+    SystemStatus, SearchResult, ChatResponse, FolderScanner,
+    AIModelConfig, AIModelConfigUpdate
 } from '@/types/api'
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -146,4 +147,15 @@ export async function getCameras() {
 
 export async function getGeopositions() {
     return apiFetch<{ id: number; address: string | null; latitude: number; longitude: number }[]>('/api/geopositions/')
+}
+
+export async function getModelConfigs(): Promise<AIModelConfig[]> {
+    return apiFetch<AIModelConfig[]>('/api/models/')
+}
+
+export async function updateModelConfig(type: string, config: AIModelConfigUpdate): Promise<AIModelConfig> {
+    return apiFetch<AIModelConfig>(`/api/models/${type}`, {
+        method: 'PUT',
+        body: JSON.stringify(config),
+    })
 }

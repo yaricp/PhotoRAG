@@ -151,3 +151,21 @@ class FolderScanner(BaseModel):
 
 class FolderScannerRequest(BaseModel):
     path: str
+
+
+class AIModelConfigBase(BaseModel):
+    mode: str
+    model_name: str
+    url: Optional[str] = None
+    api_key: Optional[str] = None
+
+
+class AIModelConfigUpdate(AIModelConfigBase):
+    pass
+
+
+class AIModelConfigResponse(AIModelConfigBase):
+    id: int
+    type: str
+
+    model_config = ConfigDict(from_attributes=True)

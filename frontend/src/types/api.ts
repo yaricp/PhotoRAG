@@ -104,3 +104,19 @@ export interface ChatResponse {
     thread_id: string
     photos: Photo[]
 }
+
+export interface AIModelConfig {
+    id: number
+    type: string
+    mode: 'local' | 'remote'
+    model_name: string
+    url?: string
+    api_key?: string
+}
+
+export interface AIModelConfigUpdate {
+    mode: 'local' | 'remote'
+    model_name: string
+    url?: string
+    api_key?: string
+}

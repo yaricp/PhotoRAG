@@ -5,11 +5,11 @@ from sqlalchemy.orm import Session
 from sqlalchemy import exists, and_, text
 
 from src.models import (
-    Photo, ModelState, Camera, Geoposition, 
-    Keyword, Tag, Person, Category, PhotoTag, PhotoCategory,
-    Watcher, ProcessingJob, PhotoEmbedding, FolderScanner
+    Photo, Tag, Person, Keyword, Category, PhotoTag, PhotoCategory, Camera, Geoposition, 
+    ModelState, Watcher, ProcessingJob, FolderScanner, AIModelConfig
 )
 from src.schemas import Photo as PhotoSchema
+from src.schemas import AIModelConfigUpdate
 from src.utils import generate_file_hash
 from src.vector_db_services import search_similar_photos
 from src.config  import Main_Settings
@@ -458,3 +458,42 @@ def delete_folder_scanner(db: Session, id: int):
         return folder_scanner
     logger.info(f"Folder scanner with ID {id} not found")
     return None
+
+
+def get_all_model_configs(db: Session):
+    return db.query(AIModelConfig).all()
+
+
+def get_model_config(db: Session, config_type: str):
+    return db.query(AIModelConfig).filter_by(type=config_type).first()
+
+
+def update_model_config(db: Session, config_type: str, schema: AIModelConfigUpdate):
+    config = db.query(AIModelConfig).filter_by(type=config_type).first()
+    if config:
+        config.mode = schema.mode
+        config.model_name = schema.model_name
+        config.url = schema.url
+        config.api_key = schema.api_key
+        db.commit()
+        db.refresh(config)
+    return config
+
+
+def init_default_model_configs(db: Session):
+    defaults = [
+        {"type": "vision", "mode": "local", "model_name": "Qwen/Qwen2-VL-2B-Instruct"},
+        {"type": "clip", "mode": "local", "model_name": "ViT-B-32"},
+        {"type": "embedding", "mode": "local", "model_name": "nomic-ai/nomic-embed-text-v1.5"},
+        {"type": "translator", "mode": "local", "model_name": "facebook/nllb-200-distilled-600M"},
+        {"type": "chat", "mode": "remote", "model_name": "gpt-4o-mini"},
+        {"type": "ocr", "mode": "local", "model_name": "easyocr"},
+    ]
+    
+    for d in defaults:
+        config = db.query(AIModelConfig).filter_by(type=d["type"]).first()
+        if not config:
+            config = AIModelConfig(**d)
+            db.add(config)
+            
+    db.commit()

@@ -18,7 +18,8 @@ from src.db_service import (
     update_model_status,
     get_or_create_category,
     get_all_categories,
-    get_model_or_none
+    get_model_or_none,
+    init_default_model_configs
 )
 from src.utils import load_categories_from_json
 
@@ -314,6 +315,10 @@ def init_db(db: Session):
     for local_model_name in ml_local_models + clip_local_models:
         if not get_model_or_none(db, local_model_name):
             db.add(ModelState(name=local_model_name, status="pending"))
+            
+    # Initialize default model configurations
+    init_default_model_configs(db)
+    
     db.commit()
     logger.info("[db] Tables ready ✓")
 

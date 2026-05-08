@@ -21,8 +21,13 @@ from src.db_service import (
     get_all_model_states,
     get_or_create_camera,
     get_or_create_keyword,
-    update_photo_geoposition
+    update_photo_geoposition,
+    get_all_model_configs,
+    get_model_config,
+    update_model_config,
+    init_default_model_configs
 )
+from src.schemas import AIModelConfigUpdate
 
 TEST_DB_FILE = "test_db_service_final.sqlite3"
 test_engine = create_engine(f"sqlite:///{TEST_DB_FILE}")
@@ -90,3 +95,33 @@ def test_semantic_upserts(db_session):
     geo = update_photo_geoposition(db_session, photo.id, 10.0, 20.0, "The Moon")
     assert geo.latitude == 10.0
     assert geo.address == "The Moon"
+
+def test_model_configs_crud(db_session):
+    # Test initialization
+    init_default_model_configs(db_session)
+    configs = get_all_model_configs(db_session)
+    assert len(configs) >= 6
+    
+    # Test get by type
+    vision_config = get_model_config(db_session, "vision")
+    assert vision_config is not None
+    assert vision_config.type == "vision"
+    assert vision_config.mode == "local"
+    
+    # Test update
+    update_schema = AIModelConfigUpdate(
+        mode="remote",
+        model_name="new-vision",
+        url="http://api.com",
+        api_key="123"
+    )
+    updated = update_model_config(db_session, "vision", update_schema)
+    assert updated.mode == "remote"
+    assert updated.model_name == "new-vision"
+    assert updated.url == "http://api.com"
+    assert updated.api_key == "123"
+    
+    # Verify via get
+    re_fetched = get_model_config(db_session, "vision")
+    assert re_fetched.mode == "remote"
+    assert re_fetched.url == "http://api.com"

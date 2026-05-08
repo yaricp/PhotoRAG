@@ -44,6 +44,16 @@ class AIModelRegistry:
             self._settings = ML_Settings()
         return self._settings
 
+    def get_model_config(self, model_type: str):
+        from src.database import SessionLocal
+        from src.db_service import get_model_config as db_get_model_config
+        
+        db = SessionLocal()
+        try:
+            return db_get_model_config(db, model_type)
+        finally:
+            db.close()
+
     # ------------------------------------------------------------------
     # CLIP — всегда local
     # ------------------------------------------------------------------
@@ -72,7 +82,10 @@ class AIModelRegistry:
         if self._vision_generator is None:
             with self._vision_lock:
                 if self._vision_generator is None:
-                    if self.settings.VISION_MODE == "local":
+                    config = self.get_model_config("vision")
+                    mode = config.mode if config else self.settings.VISION_MODE
+                    
+                    if mode == "local":
                         logger.info("[registry] Warming up Qwen-VL Vision Generator...")
                         from src.ai.vision import QwenVisionGenerator
                         self._vision_generator = QwenVisionGenerator()
@@ -80,7 +93,16 @@ class AIModelRegistry:
                     else:
                         logger.info("[registry] Vision mode=remote, using API client.")
                         from src.ai.vision_remote import RemoteVisionGenerator
-                        self._vision_generator = RemoteVisionGenerator()
+                        
+                        api_key = config.api_key if config and config.api_key else self.settings.VISION_API_KEY
+                        api_url = config.url if config and config.url else self.settings.VISION_API_URL
+                        model_name = config.model_name if config and config.model_name else self.settings.VISION_DESCRIBER_MODEL
+                        
+                        self._vision_generator = RemoteVisionGenerator(
+                            api_key=api_key,
+                            api_url=api_url,
+                            model_name=model_name
+                        )
         return self._vision_generator
 
     def generate_vision_text(self, file_path: str, prompt_key: str) -> str:
@@ -99,26 +121,42 @@ class AIModelRegistry:
         if self._nomic_embedder is None:
             with self._nomic_lock:
                 if self._nomic_embedder is None:
-                    if self.settings.EMBEDDING_MODE == "local":
+                    config = self.get_model_config("embedding")
+                    mode = config.mode if config else self.settings.EMBEDDING_MODE
+                    
+                    if mode == "local":
                         logger.info("[registry] Warming up Nomic Embedder...")
+                        model_name = config.model_name if config and config.model_name else self.settings.PHOTO_EMBEDDER_MODEL
                         from sentence_transformers import SentenceTransformer
                         model = SentenceTransformer(
-                            self.settings.PHOTO_EMBEDDER_MODEL,
+                            model_name,
                             trust_remote_code=True,
                         )
                         model.max_seq_length = 512
-                        model.name = self.settings.PHOTO_EMBEDDER_MODEL
+                        model.name = model_name
                         self._nomic_embedder = model
                         logger.info("[registry] Nomic Embedder ready ✓")
                     else:
                         logger.info("[registry] Embedding mode=remote, using API client.")
                         from src.ai.embedding_remote import RemoteEmbedder
-                        self._nomic_embedder = RemoteEmbedder()
+                        
+                        api_key = config.api_key if config and config.api_key else self.settings.EMBEDDING_API_KEY
+                        api_url = config.url if config and config.url else self.settings.EMBEDDING_API_URL
+                        model_name = config.model_name if config and config.model_name else self.settings.PHOTO_EMBEDDER_MODEL
+                        
+                        self._nomic_embedder = RemoteEmbedder(
+                            api_key=api_key,
+                            api_url=api_url,
+                            model_name=model_name
+                        )
         return self._nomic_embedder
 
     def embedder_encode_text(self, text: str, purpose: str = "save") -> list:
         """Единая точка входа — local или remote прозрачно для tasks.py"""
-        if self.settings.EMBEDDING_MODE == "local":
+        config = self.get_model_config("embedding")
+        mode = config.mode if config else self.settings.EMBEDDING_MODE
+        
+        if mode == "local":
             if purpose == "search":
                 text = f"search_query: {text}"
             elif purpose == "save":
@@ -157,13 +195,16 @@ class AIModelRegistry:
         if self._chat_model is None:
             with self._chat_lock:
                 if self._chat_model is None:
-                    if self.settings.CHAT_MODEL_MODE == "local":
-                        logger.info(f"[registry] Warming up local Chat Model: {self.settings.CHAT_LOCAL_MODEL}")
+                    config = self.get_model_config("chat")
+                    mode = config.mode if config else self.settings.CHAT_MODEL_MODE
+                    
+                    if mode == "local":
+                        model_id = config.model_name if config and config.model_name else self.settings.CHAT_LOCAL_MODEL
+                        logger.info(f"[registry] Warming up local Chat Model: {model_id}")
                         from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline, BitsAndBytesConfig
                         from langchain_huggingface import HuggingFacePipeline, ChatHuggingFace
                         import torch
                         
-                        model_id = self.settings.CHAT_LOCAL_MODEL
                         tokenizer = AutoTokenizer.from_pretrained(model_id)
                         
                         # Use 4-bit quantization if possible to fit larger models and speed up inference
@@ -205,14 +246,50 @@ class AIModelRegistry:
                         )
                         logger.info("[registry] Local Chat Model ready ✓")
                     else:
-                        logger.info(f"[registry] Using remote Chat Model: {self.settings.CHAT_MODEL}")
+                        model_name = config.model_name if config and config.model_name else self.settings.CHAT_MODEL
+                        logger.info(f"[registry] Using remote Chat Model: {model_name}")
                         from langchain.chat_models import init_chat_model
-                        self._chat_model = init_chat_model(
-                            model=self.settings.CHAT_MODEL,
-                            temperature=0.5,
-                            api_key=self.settings.CHAT_API_KEY if self.settings.CHAT_API_KEY else None
-                        )
+                        
+                        api_key = config.api_key if config and config.api_key else self.settings.CHAT_API_KEY
+                        api_url = config.url if config and config.url else self.settings.CHAT_API_URL
+                        
+                        kwargs = {
+                            "model": model_name,
+                            "temperature": 0.5,
+                        }
+                        if api_key:
+                            kwargs["api_key"] = api_key
+                        if api_url:
+                            kwargs["base_url"] = api_url
+                            
+                        self._chat_model = init_chat_model(**kwargs)
         return self._chat_model
+
+    def reset_model(self, model_type: str) -> None:
+        """
+        Clears the cached instance of a model so it will be reloaded
+        with new settings on the next access.
+        """
+        if model_type == "vision":
+            with self._vision_lock:
+                self._vision_generator = None
+        elif model_type == "clip":
+            with self._clip_lock:
+                self._clip_tagger = None
+        elif model_type == "embedding":
+            with self._nomic_lock:
+                self._nomic_embedder = None
+        elif model_type == "translator":
+            with self._translator_lock:
+                self._translator = None
+        elif model_type == "chat":
+            with self._chat_lock:
+                self._chat_model = None
+        elif model_type == "ocr":
+            # OCR is a singleton by itself in EasyOCRReader, but we can clear its instance
+            from src.ai.ocr import EasyOCRReader
+            EasyOCRReader._instance = None
+        logger.info(f"[registry] Reset model cache for: {model_type}")
 
 
 # Global access point
