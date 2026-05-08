@@ -18,6 +18,9 @@ from src.graphs.tools import (
     search_photos_by_category_id,
     get_photo_details,
     resize_photo,
+    get_exif_data,
+    describe_photo
+
 )
 from src.schemas import Photo
 
@@ -31,6 +34,8 @@ tools = [
     search_photos_semantic,
     search_photos_by_category_id,
     get_photo_details,
+    get_exif_data,
+    describe_photo
 ]
 editing_tools = [
     resize_photo,

@@ -9,6 +9,7 @@ from src.db_service import (
     get_all_geopositions, get_photos_by_category_id
 )
 from src.database import SessionLocal
+from src.ai.registry import registry
 from src.utils import extract_exif, resize_image
 from src.schemas import Photo
 
@@ -181,6 +182,8 @@ def get_photo_details(photo_id: int) -> str:
 def get_categories() -> str:
     """
     Get all categories.
+    Results format:
+    ID: {category.id} | Name: {category.name}
     """
     logger.info("[tool] categories")
     db = SessionLocal()
@@ -198,6 +201,8 @@ def get_categories() -> str:
 def get_tags() -> str:
     """
     Get all tags.
+    Results format:
+    ID: {tag.id} | Name: {tag.name}
     """
     db = SessionLocal()
     try:
@@ -214,13 +219,18 @@ def get_tags() -> str:
 def get_cameras() -> str:
     """
     Get all cameras.
+    Results format:
+    ID: {camera.id} | Make: {camera.make} |
+    Model: {camera.model} | Serial Number: {camera.serial_number}
     """
     logger.info("[tool] cameras")
     db = SessionLocal()
     try:
         result = "Available Cameras:\n"
         for camera in get_all_cameras(db):
-            result += f"ID: {camera.id} | Name: {camera.name}\n"
+            result += f"ID: {camera.id} | Make: {camera.make} |"
+            result += f" Model: {camera.model} |"
+            result += f" Serial Number: {camera.serial_number}\n"
         logger.info(f"[tool] cameras result: {result}")
         return result
     finally:
@@ -231,13 +241,19 @@ def get_cameras() -> str:
 def get_geopositions() -> str:
     """
     Get all geopositions.
+    Results format:
+    ID: {geoposition.id} | Address: {geoposition.address} |
+    Latitude: {geoposition.latitude} | Longitude: {geoposition.longitude}
     """
     logger.info("[tool] geoposition")
     db = SessionLocal()
     try:
         result = "Available Geopositions:\n"
         for geoposition in get_all_geopositions(db):
-            result += f"ID: {geoposition.id} | Name: {geoposition.name}\n"
+            result += f"ID: {geoposition.id} | "
+            result += f"Address: {geoposition.address}\n"
+            result += f"Latitude: {geoposition.latitude} | "
+            result += f"Longitude: {geoposition.longitude}\n"
         logger.info(f"[tool] geoposition result: {result}")
         return result
     finally:
@@ -295,6 +311,38 @@ def get_exif_data(photo_id: int) -> str:
         if not p:
             return f"Photo with ID {photo_id} not found."
         exif_data = extract_exif(p.file_path)
+        logger.info(f"[tool] exif data result: {exif_data}")
         return f"EXIF data for photo {photo_id}: {exif_data}"
+    finally:
+        db.close()
+
+
+@tool
+def describe_photo(photo_id: int) -> str:
+    """
+    Get description for a photo.
+
+    Use this tool when:
+    - The user wants to get description for a photo
+    - The user provides photo ID
+
+    Input:
+    - photo_id: unique identifier of the photo
+
+    Returns:
+    Status message with the description.
+    """
+    logger.info(f"[tool] description: {photo_id}")
+    db = SessionLocal()
+    try:
+        p = get_photo_by_id(db, photo_id)
+        if not p:
+            return f"Photo with ID {photo_id} not found."
+        desc = registry.generate_vision_text(
+            file_path=p.file_path,
+            prompt_key="describe_scene",
+        )
+        logger.info(f"[tool] description result: {desc}")
+        return f"Description for photo {photo_id}: {desc}"
     finally:
         db.close()

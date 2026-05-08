@@ -12,6 +12,7 @@ from src.models import (
 from src.schemas import Photo as PhotoSchema
 from src.utils import generate_file_hash
 from src.vector_db_services import search_similar_photos
+from src.config  import Main_Settings
 
 
 # Registration & Status Helpers (Existing)
@@ -132,9 +133,15 @@ def get_photos_by_vector(
 ) -> List[Photo]:
     """Returns a list of photos that are similar to the query vector."""
     logger.info("Getting photos by vector")
+    # pyrefly: ignore [missing-import]
     from src.ai.registry import registry
+    settings = Main_Settings()
 
-    model = registry.nomic_embedder
+    if settings.DEFAULT_LANGUAGE != "en":
+        logger.info("Translating request text to English")
+        request_text = registry.translator.translate(request_text, backward=True)
+
+    _ = registry.nomic_embedder
     embedding = registry.embedder_encode_text(
         text=request_text, purpose="search"
     )

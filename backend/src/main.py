@@ -57,7 +57,9 @@ watcher_service = WatcherService()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     db = SessionLocal()
+    # load models in memory
     registry.translator.load()
+    registry.vision_generator.load()
     # startup
     watcher_service.start_all(db)
     yield
@@ -178,7 +180,6 @@ async def search_photos_endpoint(
 ) -> List[PhotoSchema]:
     """Search photos by vector"""
     logger.info(f"Received search request for text: {request.text_query}")
-    request.text_query = translator.translate(request.text_query, backward=True)
     photos = get_photos_by_vector(db, request.text_query, request.k)
     return photos
 
