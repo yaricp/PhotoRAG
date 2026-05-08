@@ -67,6 +67,7 @@ export function FoldersPage() {
         <div className="folders-page">
 
             {/* ── WATCHERS ─────────────────────────────── */}
+            <hr className="border border-gray-700" />
             <section className="folders-section">
                 <div className="folders-section__header">
                     <div>
@@ -126,6 +127,8 @@ export function FoldersPage() {
             <div className="folders-divider" />
 
             {/* ── SCANNERS ─────────────────────────────── */}
+
+            <hr className="border border-gray-700" />
             <section className="folders-section">
                 <div className="folders-section__header">
                     <div>

@@ -59,7 +59,7 @@ export function ModelsPage() {
                 </div>
                 <h1 className="models-page-title">AI Models Configuration</h1>
             </div>
-            
+
             <p className="models-page-description">
                 Configure your AI models here. Changes take effect immediately without restarting the server.
                 Local models will be downloaded automatically when used for the first time.
@@ -74,6 +74,7 @@ export function ModelsPage() {
             <div className="models-grid">
                 {configs.map(config => (
                     <div key={config.id} className="model-card">
+                        <hr className="border border-gray-700" />
                         <div className="model-card-header">
                             <h2 className="model-card-title">
                                 {config.mode === 'local' ? (
@@ -83,9 +84,8 @@ export function ModelsPage() {
                                 )}
                                 {config.type}
                             </h2>
-                            <span className={`model-card-badge ${
-                                config.mode === 'local' ? 'model-card-badge--local' : 'model-card-badge--remote'
-                            }`}>
+                            <span className={`model-card-badge ${config.mode === 'local' ? 'model-card-badge--local' : 'model-card-badge--remote'
+                                }`}>
                                 {config.mode}
                             </span>
                         </div>
@@ -93,10 +93,10 @@ export function ModelsPage() {
                         <div className="model-card-form">
                             <div className="form-group">
                                 <label className="form-label">Processing Mode</label>
-                                <select 
+                                <select
                                     className="form-input"
                                     value={config.mode}
-                                    onChange={(e) => handleChange(config.type, 'mode', e.target.value as 'local'|'remote')}
+                                    onChange={(e) => handleChange(config.type, 'mode', e.target.value as 'local' | 'remote')}
                                 >
                                     <option value="local">Local execution (GPU/CPU)</option>
                                     <option value="remote">Remote execution (API)</option>
@@ -105,7 +105,7 @@ export function ModelsPage() {
 
                             <div className="form-group">
                                 <label className="form-label">Model Name / HuggingFace ID</label>
-                                <input 
+                                <input
                                     className="form-input"
                                     value={config.model_name}
                                     onChange={(e) => handleChange(config.type, 'model_name', e.target.value)}
@@ -117,7 +117,7 @@ export function ModelsPage() {
                                 <div className="remote-config-container">
                                     <div className="form-group">
                                         <label className="form-label form-label--remote">API Base URL (Optional)</label>
-                                        <input 
+                                        <input
                                             className="form-input form-input--remote"
                                             value={config.url || ''}
                                             onChange={(e) => handleChange(config.type, 'url', e.target.value)}
@@ -126,7 +126,7 @@ export function ModelsPage() {
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label form-label--remote">API Key</label>
-                                        <input 
+                                        <input
                                             className="form-input form-input--remote"
                                             type="password"
                                             value={config.api_key || ''}
@@ -137,7 +137,7 @@ export function ModelsPage() {
                                 </div>
                             )}
                         </div>
-                        
+
                         <div className="model-card-footer">
                             <button
                                 onClick={() => handleSave(config)}
