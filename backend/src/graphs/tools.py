@@ -10,6 +10,7 @@ from src.db_service import (
 )
 from src.database import SessionLocal
 from src.utils import extract_exif, resize_image
+from src.schemas import Photo
 
 
 class SearchMetadataArgs(BaseModel):
@@ -19,6 +20,12 @@ class SearchMetadataArgs(BaseModel):
     camera_id: Optional[int] = Field(None, description="Filter by camera ID")
     is_doc: Optional[bool] = Field(None, description="Filter for document photos only")
     limit: int = Field(10, description="Maximum number of photos to return")
+
+
+def _serialize_photos(photos: list) -> str:
+    """Serialize a list of ORM Photo objects to a JSON string."""
+    result = [Photo.model_validate(p).model_dump_json() for p in photos]
+    return "[" + ",".join(result) + "]"
 
 
 @tool
@@ -45,7 +52,7 @@ def search_photos_semantic(query: str, k: int = 5) -> str:
     - "Photos with food on the table"
 
     Returns:
-    A list of matching photos with ID, file path, and description.
+    A JSON string with a list of Photo objects.
     """
     logger.info(f"[tool] semantic search: {query}")
     db = SessionLocal()
@@ -53,11 +60,7 @@ def search_photos_semantic(query: str, k: int = 5) -> str:
         photos = get_photos_by_vector(db, query, k)
         if not photos:
             return "No photos found matching that description."
-        
-        results = []
-        for p in photos:
-            results.append(f"ID: {p.id} | Path: {p.file_path} | Description: {p.description}")
-        return "\n".join(results)
+        return _serialize_photos(photos)
     finally:
         db.close()
 
@@ -71,7 +74,7 @@ def search_photos_by_category_id(category_id: int) -> str:
     - The user asks to filter photos by category id
 
     Returns:
-    A list of matching photos with ID.
+    A JSON string with a list of Photo objects.
     """
     logger.info(f"[tool] category search: {category_id}")
     db = SessionLocal()
@@ -79,11 +82,7 @@ def search_photos_by_category_id(category_id: int) -> str:
         photos = get_photos_by_category_id(db, category_id)
         if not photos:
             return "No photos found in this category."
-        
-        results = []
-        for photo in photos:
-            results.append(f"ID: {photo.id}")
-        return "\n".join(results)
+        return _serialize_photos(photos)
     finally:
         db.close()
 
@@ -122,27 +121,23 @@ def search_photos_metadata(
     - "Photos with tag 5"
 
     Returns:
-    A list of matching photos with ID only.
+    A JSON string with a list of Photo objects.
     """
     logger.info(f"[tool] metadata search: {category_ids}, {tag_ids}, {geoposition_id}, {camera_id}, {is_doc}, {limit}")
     db = SessionLocal()
     try:
         photos, total = get_all_photos(
-            db, 
-            category_ids=category_ids, 
-            tag_ids=tag_ids, 
+            db,
+            category_ids=category_ids,
+            tag_ids=tag_ids,
             geoposition_id=geoposition_id,
-            camera_id=camera_id, 
+            camera_id=camera_id,
             is_doc=is_doc,
             limit=limit
         )
         if not photos:
             return "No photos found matching these criteria."
-        
-        results = []
-        for p in photos:
-            results.append(f"ID: {p.id}")
-        return f"Found {total} photos (showing {len(photos)}):\n" + "\n".join(results)
+        return _serialize_photos(photos)
     finally:
         db.close()
 
@@ -168,13 +163,7 @@ def get_photo_details(photo_id: int) -> str:
     - "Show tags and description for photo 7"
 
     Returns:
-    Detailed information including:
-    - file path
-    - description
-    - OCR text (if available)
-    - camera info
-    - tags
-    - categories
+    A JSON string with a list containing one Photo object.
     """
     logger.info(f"[tool] photo details: {photo_id}")
     db = SessionLocal()
@@ -182,42 +171,22 @@ def get_photo_details(photo_id: int) -> str:
         p = get_photo_by_id(db, photo_id)
         if not p:
             return f"Photo with ID {photo_id} not found."
-        
-        details = [
-            f"ID: {p.id}",
-            f"File Path: {p.file_path}",
-            f"Captured At: {p.captured_at}",
-            f"Description: {p.description}",
-            f"OCR Text: {p.ocr_text or 'None'}",
-            f"Is Document: {p.is_doc}",
-            f"Camera Make: {p.camera.make if p.camera else 'Unknown'}",
-            f"Camera Model: {p.camera.model if p.camera else 'Unknown'}"
-        ]
-        
-        tags = [pt.tag.name for pt in p.tags_rel]
-        if tags:
-            details.append(f"Tags: {', '.join(tags)}")
-            
-        categories = [pc.category.name for pc in p.categories_rel]
-        if categories:
-            details.append(f"Categories: {', '.join(categories)}")
-            
-        return "\n".join(details)
+        photo_schema = Photo.model_validate(p)
+        return "[" + photo_schema.model_dump_json() + "]"
     finally:
         db.close()
 
 
 @tool
-def get_categories():
+def get_categories() -> str:
     """
     Get all categories.
     """
-    logger.info(f"[tool] categories")
+    logger.info("[tool] categories")
     db = SessionLocal()
     try:
         result = "Available Categories:\n"
-        categories_db = get_all_categories(db)
-        for category in categories_db:
+        for category in get_all_categories(db):
             result += f"ID: {category.id} | Name: {category.name}\n"
         logger.info(f"[tool] categories result: {result}")
         return result
@@ -226,15 +195,14 @@ def get_categories():
 
 
 @tool
-def get_tags():
+def get_tags() -> str:
     """
     Get all tags.
     """
     db = SessionLocal()
     try:
         result = "Available Tags:\n"
-        tags_db = get_all_tags(db)
-        for tag in tags_db:
+        for tag in get_all_tags(db):
             result += f"ID: {tag.id} | Name: {tag.name}\n"
         logger.info(f"[tool] tags result: {result}")
         return result
@@ -243,16 +211,15 @@ def get_tags():
 
 
 @tool
-def get_cameras():
+def get_cameras() -> str:
     """
     Get all cameras.
     """
-    logger.info(f"[tool] cameras")
+    logger.info("[tool] cameras")
     db = SessionLocal()
     try:
         result = "Available Cameras:\n"
-        cameras_db = get_all_cameras(db)
-        for camera in cameras_db:
+        for camera in get_all_cameras(db):
             result += f"ID: {camera.id} | Name: {camera.name}\n"
         logger.info(f"[tool] cameras result: {result}")
         return result
@@ -261,16 +228,15 @@ def get_cameras():
 
 
 @tool
-def get_geopositions():
+def get_geopositions() -> str:
     """
-    Get all geoposition.
+    Get all geopositions.
     """
-    logger.info(f"[tool] geoposition")
+    logger.info("[tool] geoposition")
     db = SessionLocal()
     try:
-        result = "Available Geoposition:\n"
-        geopositions_db = get_all_geopositions(db)
-        for geoposition in geopositions_db:
+        result = "Available Geopositions:\n"
+        for geoposition in get_all_geopositions(db):
             result += f"ID: {geoposition.id} | Name: {geoposition.name}\n"
         logger.info(f"[tool] geoposition result: {result}")
         return result
@@ -301,9 +267,7 @@ def resize_photo(photo_id: int, width: int, height: int) -> str:
         p = get_photo_by_id(db, photo_id)
         if not p:
             return f"Photo with ID {photo_id} not found."
-        
         new_path = resize_image(p.file_path, width, height)
-        
         return f"Photo resized successfully. New path: {new_path}"
     finally:
         db.close()
@@ -330,9 +294,7 @@ def get_exif_data(photo_id: int) -> str:
         p = get_photo_by_id(db, photo_id)
         if not p:
             return f"Photo with ID {photo_id} not found."
-        
         exif_data = extract_exif(p.file_path)
-        
         return f"EXIF data for photo {photo_id}: {exif_data}"
     finally:
         db.close()

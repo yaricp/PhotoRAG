@@ -213,12 +213,13 @@ async def chat_with_agent_endpoint(request: ChatRequest) -> ChatResponse:
     
     # Run the agent graph
     result = await agent_app.ainvoke(inputs, config)
-    
+    logger.info(f"Agent result: {result}")
     # Get the last AI message
     last_msg = result["messages"][-1]
     
     return ChatResponse(
-        response=last_msg.content
+        response=last_msg.content,
+        photos=result["photos"]
     )
 
 

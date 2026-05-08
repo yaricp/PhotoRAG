@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { getPhoto } from '@/api/client'
 import { Spinner } from '@/components/ui/Spinner'
 import type { Photo } from '@/types/api'
+import { photoImageUrl } from '@/api/images'
 import './PhotoDetailPage.css'
 
 function Item({ label, value }: { label: string; value?: any }) {
@@ -20,6 +21,9 @@ export function PhotoDetailPage() {
     const { id } = useParams()
     const [photo, setPhoto] = useState<Photo | null>(null)
     const [loading, setLoading] = useState(true)
+
+    const filename =
+        photo?.file_path?.split('/').pop() ?? photo?.file_path ?? 'Unknown file'
 
     useEffect(() => {
         if (!id) return
@@ -54,8 +58,8 @@ export function PhotoDetailPage() {
             <div className="photo-detail__image-wrap">
                 <img
                     className="photo-detail__image"
-                    src={photo.file_path}
-                    alt="photo"
+                    src={photoImageUrl(photo.file_path)}
+                    alt={filename}
                 />
             </div>
 
