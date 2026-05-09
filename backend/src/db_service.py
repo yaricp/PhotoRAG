@@ -5,8 +5,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy import exists, and_, text, extract
 
 from src.models import (
-    Photo, Tag, Person, Keyword, Category, PhotoTag, PhotoCategory, Camera, Geoposition, 
-    ModelState, Watcher, ProcessingJob, FolderScanner, AIModelConfig
+    Photo, Tag, Person, Keyword, Category, PhotoTag, PhotoCategory, Camera, Geoposition,
+    ModelState, Watcher, ProcessingJob, FolderScanner, AIModelConfig,
+    PhotoEmbedding, PhotoHash, PhotoDuplicate,
 )
 from src.schemas import Photo as PhotoSchema
 from src.schemas import AIModelConfigUpdate
@@ -436,7 +437,10 @@ def delete_photo(db: Session, photo_id: int):
     db.query(PhotoCategory).filter_by(photo_id=photo_id).delete()
     db.query(ProcessingJob).filter_by(photo_id=photo_id).delete()
     photo.geoposition_id = None
-    db.execute(text("DELETE FROM photo_embeddings_vss WHERE rowid = :id"), {"id": photo_id})
+    try:
+        db.execute(text("DELETE FROM photo_embeddings_vss WHERE rowid = :id"), {"id": photo_id})
+    except Exception:
+        pass  # virtual table may not exist in all environments (e.g. tests)
     db.delete(photo)
     
     db.flush()   # применяет изменения, но не закрывает сессию
@@ -542,5 +546,149 @@ def init_default_model_configs(db: Session):
         if not config:
             config = AIModelConfig(**d)
             db.add(config)
-            
+
     db.commit()
+
+
+# ── Duplicate helpers ──────────────────────────────────────────────────────────
+
+def record_exact_duplicate(db: Session, original_id: int, duplicate_file_path: str) -> PhotoDuplicate | None:
+    original = db.query(Photo).filter(Photo.id == original_id).first()
+    if original and original.file_path == duplicate_file_path:
+        return None  # same file scanned twice — not a duplicate
+    existing = db.query(PhotoDuplicate).filter_by(
+        original_photo_id=original_id,
+        duplicate_file_path=duplicate_file_path,
+        match_type="exact",
+    ).first()
+    if existing:
+        return existing
+    record = PhotoDuplicate(
+        original_photo_id=original_id,
+        duplicate_file_path=duplicate_file_path,
+        match_type="exact",
+        hash_distance=None,
+    )
+    db.add(record)
+    db.commit()
+    return record
+
+
+def record_perceptual_duplicate(db: Session, original_id: int, duplicate_id: int, distance: int) -> PhotoDuplicate:
+    existing = db.query(PhotoDuplicate).filter_by(
+        original_photo_id=original_id,
+        duplicate_photo_id=duplicate_id,
+        match_type="perceptual",
+    ).first()
+    if existing:
+        return existing
+    record = PhotoDuplicate(
+        original_photo_id=original_id,
+        duplicate_photo_id=duplicate_id,
+        match_type="perceptual",
+        hash_distance=distance,
+    )
+    db.add(record)
+    db.commit()
+    return record
+
+
+def get_or_create_photo_hash(
+    db: Session, photo_id: int, dhash: str, ahash: str, phash: str
+) -> PhotoHash:
+    ph = db.query(PhotoHash).filter_by(photo_id=photo_id).first()
+    if ph:
+        return ph
+    ph = PhotoHash(photo_id=photo_id, dhash=dhash, ahash=ahash, phash=phash)
+    db.add(ph)
+    db.commit()
+    db.refresh(ph)
+    return ph
+
+
+def _hamming_distance(hex_a: str, hex_b: str) -> int:
+    """Hamming distance between two hex-encoded hash strings."""
+    try:
+        a = int(hex_a, 16)
+        b = int(hex_b, 16)
+    except (ValueError, TypeError):
+        return 999
+    return bin(a ^ b).count("1")
+
+
+def find_perceptual_duplicates(
+    db: Session, photo_id: int, threshold: int = 10
+) -> list[dict]:
+    """
+    Return list of {photo_id, hash_distance} for all photos whose dhash is
+    within `threshold` hamming distance of the given photo's dhash.
+    Excludes the photo itself.
+    """
+    source = db.query(PhotoHash).filter_by(photo_id=photo_id).first()
+    if not source or not source.dhash:
+        return []
+
+    candidates = db.query(PhotoHash).filter(PhotoHash.photo_id != photo_id).all()
+    results = []
+    for candidate in candidates:
+        dist = _hamming_distance(source.dhash, candidate.dhash)
+        if dist <= threshold:
+            results.append({"photo_id": candidate.photo_id, "hash_distance": dist})
+    return results
+
+
+def get_duplicate_groups(db: Session) -> dict:
+    """
+    Return all duplicate relationships grouped by match_type.
+    Shape: {"exact": [...], "perceptual": [...]}
+    exact item:      {"original": {id, file_path}, "duplicates": [{file_path}]}
+    perceptual item: {"original": {id, file_path}, "duplicates": [{id, file_path, hash_distance}]}
+    """
+    rows = db.query(PhotoDuplicate).all()
+
+    exact: dict[int, dict] = {}
+    perceptual: dict[int, dict] = {}
+
+    for row in rows:
+        orig = row.original_photo
+        orig_data = {"id": orig.id, "file_path": orig.file_path}
+
+        if row.match_type == "exact":
+            dup_data = {"id": row.id, "file_path": row.duplicate_file_path}
+            if orig.id not in exact:
+                exact[orig.id] = {"original": orig_data, "duplicates": []}
+            exact[orig.id]["duplicates"].append(dup_data)
+        else:
+            dup = row.duplicate_photo
+            dup_data = {
+                "id": dup.id,
+                "file_path": dup.file_path,
+                "hash_distance": row.hash_distance,
+            }
+            if orig.id not in perceptual:
+                perceptual[orig.id] = {"original": orig_data, "duplicates": []}
+            perceptual[orig.id]["duplicates"].append(dup_data)
+
+    return {
+        "exact": list(exact.values()),
+        "perceptual": list(perceptual.values()),
+    }
+
+
+def archive_photo(db: Session, photo_id: int) -> Photo | None:
+    photo = db.query(Photo).filter(Photo.id == photo_id).first()
+    if not photo:
+        return None
+    photo.is_archived = True
+    db.commit()
+    db.refresh(photo)
+    return photo
+
+
+def delete_duplicate_record(db: Session, record_id: int) -> PhotoDuplicate | None:
+    record = db.query(PhotoDuplicate).filter(PhotoDuplicate.id == record_id).first()
+    if not record:
+        return None
+    db.delete(record)
+    db.commit()
+    return record

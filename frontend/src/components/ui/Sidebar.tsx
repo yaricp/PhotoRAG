@@ -12,6 +12,7 @@ const links = [
     { to: '/', label: 'Gallery', icon: '🖼️', end: true },
     { to: '/search', label: 'Search', icon: '🔍' },
     { to: '/documents', label: 'Documents', icon: '📄' },
+    { to: '/duplicates', label: 'Duplicates', icon: '⊕' },
     { to: '/chat', label: 'Agent AI(Chat)', icon: '💬' },
     { to: '/processing', label: 'Video Processing', icon: '📹' },
     { to: '/folders', label: 'Folders', icon: '📁' },

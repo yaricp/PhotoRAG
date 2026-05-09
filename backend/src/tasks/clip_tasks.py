@@ -10,7 +10,10 @@ from src.db_service import (
     add_photo_tag_with_score,
     get_or_create_category,
     add_photo_category_with_score,
-    delete_job
+    delete_job,
+    get_or_create_photo_hash,
+    find_perceptual_duplicates,
+    record_perceptual_duplicate,
 )
 from src.utils import extract_exif, parse_datetime
 from src.queues.clip_queue import clip_queue
@@ -175,6 +178,77 @@ def categorize_photo_task(photo_id: int, phase: str, folder_scanner_id: int = No
         except Exception:
             db.rollback()
             logger.error(f"[clip/categories] Failed to delete job for photo {photo_id}")
+            raise
+    finally:
+        db.close()
+
+
+@clip_queue.task()
+def compute_perceptual_hashes_task(photo_id: int, phase: str, folder_scanner_id: int = None):
+    """
+    Phase 1 task: compute dHash/aHash/pHash, store them, and record any
+    near-duplicate photos (hamming distance ≤ 10 on dHash).
+
+    Hash failure (corrupt image, missing file) is treated as non-fatal:
+    the task still calls _finish_task so the phase can advance.
+    """
+    logger.info(f"[perceptual] Start hashing photo_id={photo_id}, phase={phase}")
+    import imagehash
+    from PIL import Image
+    from src.tasks.utils import _finish_task
+
+    db = SessionLocal()
+    try:
+        photo = get_photo_by_id(db, photo_id)
+        if not photo:
+            logger.warning(f"[perceptual] Photo {photo_id} not found, skipping")
+            db.rollback()
+            _finish_task(
+                photo_id=photo_id,
+                phase=phase,
+                name="compute_perceptual_hashes_task",
+                folder_scanner_id=folder_scanner_id,
+            )
+            return
+
+        try:
+            img = Image.open(photo.file_path)
+            dhash_val = str(imagehash.dhash(img))
+            ahash_val = str(imagehash.average_hash(img))
+            phash_val = str(imagehash.phash(img))
+
+            get_or_create_photo_hash(db, photo_id, dhash=dhash_val, ahash=ahash_val, phash=phash_val)
+            logger.info(f"[perceptual] Photo {photo_id}: hashes stored")
+
+            near_dupes = find_perceptual_duplicates(db, photo_id, threshold=10)
+            for match in near_dupes:
+                record_perceptual_duplicate(db, photo_id, match["photo_id"], match["hash_distance"])
+                logger.info(
+                    f"[perceptual] Photo {photo_id}: near-duplicate {match['photo_id']} "
+                    f"(dist={match['hash_distance']})"
+                )
+            db.commit()
+            logger.info(f"[perceptual] Photo {photo_id}: hashes and duplicates saved ✓")
+
+        except Exception as hash_err:
+            logger.warning(f"[perceptual] Hash computation failed for photo {photo_id}: {hash_err} — skipping")
+            db.rollback()
+
+        _finish_task(
+            photo_id=photo_id,
+            phase=phase,
+            name="compute_perceptual_hashes_task",
+            folder_scanner_id=folder_scanner_id,
+        )
+
+    except Exception as e:
+        logger.error(f"[perceptual] Fatal error for photo {photo_id}: {e}")
+        db.rollback()
+        try:
+            delete_job(db, photo_id, phase)
+            db.commit()
+        except Exception:
+            db.rollback()
             raise
     finally:
         db.close()

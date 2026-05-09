@@ -9,6 +9,7 @@ import { PhotoDetailPage } from './PhotoDetailPage'
 import { JobProcessingPage } from './JobProcessingPage'
 import { FoldersPage } from './FoldersPage'
 import { ModelsPage } from './ModelsPage'
+import { DuplicatesPage } from './DuplicatesPage'
 
 export function AppRoutes() {
     return (
@@ -16,6 +17,7 @@ export function AppRoutes() {
             <Route path="/" element={<GalleryPage />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/documents" element={<DocumentsPage />} />
+            <Route path="/duplicates" element={<DuplicatesPage />} />
             <Route path="/chat" element={<ChatPage />} />
             <Route path="/photo/:id" element={<PhotoDetailPage />} />
             <Route path="/processing" element={<JobProcessingPage />} />

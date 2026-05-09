@@ -56,6 +56,7 @@ class Photo(Base):
     description = Column(String, nullable=True)
     translated_description = Column(String, nullable=True)
     is_doc = Column(Boolean, default=False)
+    is_archived = Column(Boolean, default=False)
     image_width = Column(Integer, nullable=True)
     image_height = Column(Integer, nullable=True)
     iso = Column(Integer, nullable=True)
@@ -76,10 +77,14 @@ class Photo(Base):
     
     tags_rel = relationship("PhotoTag", back_populates="photo", cascade="all, delete-orphan")
     categories_rel = relationship("PhotoCategory", back_populates="photo", cascade="all, delete-orphan")
-    
+
     persons_rel = relationship("Person", secondary=photo_persons, back_populates="photos")
     keywords_rel = relationship("Keyword", secondary=photo_keywords, back_populates="photos")
     job_rel = relationship("ProcessingJob", back_populates="photo", uselist=False)
+
+    photo_hash = relationship("PhotoHash", back_populates="photo", uselist=False, cascade="all, delete-orphan")
+    duplicates_as_original = relationship("PhotoDuplicate", foreign_keys="PhotoDuplicate.original_photo_id", back_populates="original_photo", cascade="all, delete-orphan")
+    duplicates_as_duplicate = relationship("PhotoDuplicate", foreign_keys="PhotoDuplicate.duplicate_photo_id", back_populates="duplicate_photo", cascade="all, delete-orphan")
 
 
 class PhotoEmbedding(Base):
@@ -183,3 +188,29 @@ class AIModelConfig(Base):
     model_name = Column(String) # e.g. "Qwen/Qwen2-VL-2B-Instruct"
     url = Column(String, nullable=True)
     api_key = Column(String, nullable=True)
+
+
+class PhotoHash(Base):
+    __tablename__ = "photo_hashes"
+    id = Column(Integer, primary_key=True)
+    photo_id = Column(Integer, ForeignKey("photos.id", ondelete="CASCADE"), unique=True, nullable=False)
+    dhash = Column(String(16), nullable=True)
+    ahash = Column(String(16), nullable=True)
+    phash = Column(String(16), nullable=True)
+
+    photo = relationship("Photo", back_populates="photo_hash")
+
+
+class PhotoDuplicate(Base):
+    __tablename__ = "photo_duplicates"
+    id = Column(Integer, primary_key=True)
+    original_photo_id = Column(Integer, ForeignKey("photos.id", ondelete="CASCADE"), nullable=False)
+    # exact duplicates: same SHA256, file was never ingested → store path only
+    duplicate_file_path = Column(String, nullable=True)
+    # perceptual duplicates: both photos are ingested → store photo_id reference
+    duplicate_photo_id = Column(Integer, ForeignKey("photos.id", ondelete="CASCADE"), nullable=True)
+    match_type = Column(String, nullable=False)  # 'exact' or 'perceptual'
+    hash_distance = Column(Integer, nullable=True)
+
+    original_photo = relationship("Photo", foreign_keys=[original_photo_id], back_populates="duplicates_as_original")
+    duplicate_photo = relationship("Photo", foreign_keys=[duplicate_photo_id], back_populates="duplicates_as_duplicate")

@@ -10,7 +10,7 @@ from src.utils import (
 )
 from src.tasks import start_pipeline
 from src.database import SessionLocal
-from src.db_service import check_photo_hash_exists, create_photo_record
+from src.db_service import check_photo_hash_exists, create_photo_record, record_exact_duplicate
 
 
 
@@ -35,6 +35,9 @@ class PhotoEventHandler(FileSystemEventHandler):
                 try:
                     photo = check_photo_hash_exists(db, file_hash)
                     logger.info(f"Photo found in DB: {photo}")
+                    if photo:
+                        logger.info(f"Exact duplicate detected: {event.src_path}")
+                        record_exact_duplicate(db, photo.id, event.src_path)
                     if not photo:
                         logger.info(f"Photo not found in DB")
                         photo_capture_date = get_photo_capture_date(event.src_path)

@@ -25,12 +25,15 @@ from src.db_service import (
     delete_folder_scanner,
     get_all_model_configs,
     get_model_config,
-    update_model_config
+    update_model_config,
+    get_duplicate_groups,
+    archive_photo,
+    delete_duplicate_record,
 )
 from src.database import Session, SessionLocal
 from src.deps import get_db, get_translator
 from src.config import Api_Settings
-from src.models import Photo, Category, Tag, Camera, Geoposition
+from src.models import Photo, Category, Tag, Camera, Geoposition, PhotoDuplicate
 from src.schemas import (
     Photo as PhotoSchema,
     WatchRequest,
@@ -195,11 +198,46 @@ def get_available_dates_endpoint(
     )
 
 
+@app.get("/api/duplicates/", tags=["Photos"])
+def get_duplicates_endpoint(db: Session = Depends(get_db)) -> dict:
+    return get_duplicate_groups(db)
+
+
+@app.post("/api/photos/{photo_id}/archive", tags=["Photos"])
+def archive_photo_endpoint(photo_id: int, db: Session = Depends(get_db)) -> dict:
+    photo = archive_photo(db, photo_id)
+    if not photo:
+        raise HTTPException(status_code=404)
+    return {"id": photo.id, "is_archived": photo.is_archived}
+
+
+@app.delete("/api/duplicates/{record_id}", tags=["Photos"])
+def delete_duplicate_record_endpoint(record_id: int, db: Session = Depends(get_db)) -> dict:
+    import os
+    record = db.query(PhotoDuplicate).filter_by(id=record_id).first()
+    if not record:
+        raise HTTPException(status_code=404)
+    if record.match_type == "exact" and record.duplicate_file_path:
+        if os.path.exists(record.duplicate_file_path):
+            os.remove(record.duplicate_file_path)
+            logger.info(f"Deleted duplicate file from disk: {record.duplicate_file_path}")
+    deleted = delete_duplicate_record(db, record_id)
+    return {"id": record_id}
+
+
 @app.delete("/api/photos/{photo_id}", tags=["Photos"], response_model=PhotoSchema)
 def delete_photo_endpoint(photo_id: int, db: Session = Depends(get_db)) -> PhotoSchema:
+    import os
+    photo = get_photo_by_id(db, photo_id)
+    if not photo:
+        raise HTTPException(status_code=404)
+    file_path = photo.file_path
     deleted_photo = delete_photo(db, photo_id)
     if not deleted_photo:
         raise HTTPException(status_code=404)
+    if file_path and os.path.exists(file_path):
+        os.remove(file_path)
+        logger.info(f"Deleted file from disk: {file_path}")
     return deleted_photo
 
 

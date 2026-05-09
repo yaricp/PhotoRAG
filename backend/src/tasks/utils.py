@@ -15,7 +15,7 @@ def phase_logic(phase: str) -> tuple[str, str]:
       second → third:  OCR (опционально)
     """
     if phase == "init":
-        return "first", "metadata_task,auto_tag_clip_task,categorize_photo_task,vision_task,ocr_task,"
+        return "first", "metadata_task,auto_tag_clip_task,categorize_photo_task,vision_task,ocr_task,compute_perceptual_hashes_task,"
     elif phase == "first":
         return "second", "final_embedding_task,translate_description_task,is_this_document_task,"
     elif phase == "second":
@@ -27,7 +27,7 @@ def _dispatch_tasks(
     photo_id: int, phase: str, tasks: str, folder_scanner_id: int = None
 ):
     """Send tasks to the appropriate queues."""
-    from .clip_tasks import auto_tag_clip_task, metadata_task, categorize_photo_task
+    from .clip_tasks import auto_tag_clip_task, metadata_task, categorize_photo_task, compute_perceptual_hashes_task
     from .vision_tasks import vision_task, ocr_task, is_this_document_task
     from .embedding_tasks import final_embedding_task, embedding_document_text_task
     from .translation_tasks import translate_description_task
@@ -55,6 +55,8 @@ def _dispatch_tasks(
             embedding_document_text_task(photo_id, phase=phase, folder_scanner_id=folder_scanner_id)
         elif task_name == "translate_description_task":
             translate_description_task(photo_id, phase=phase, folder_scanner_id=folder_scanner_id)
+        elif task_name == "compute_perceptual_hashes_task":
+            compute_perceptual_hashes_task(photo_id, phase=phase, folder_scanner_id=folder_scanner_id)
 
         logger.info(f"[pipeline] Dispatched {task_name} for photo {photo_id}")
 

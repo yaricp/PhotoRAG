@@ -11,6 +11,7 @@ dependencies = [
     "fastapi>=0.136.1",
     "geopy>=2.4.1",
     "huey==2.5.0",
+    "imagehash>=4.3.2",
     "langchain>=1.2.15",
     "langchain-huggingface>=1.2.2",
     "langgraph>=1.1.9",

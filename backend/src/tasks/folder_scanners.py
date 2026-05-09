@@ -9,7 +9,8 @@ from src.db_service import (
     check_photo_hash_exists,
     create_photo_record,
     delete_folder_scanner,
-    get_or_create_folder_scanner
+    get_or_create_folder_scanner,
+    record_exact_duplicate,
 )
 from src.tasks import start_pipeline
 from src.utils import generate_file_hash, check_if_file_is_image
@@ -50,11 +51,11 @@ def start_folder_scanner_task(path: str) -> bool:
             try:
                 photo = check_photo_hash_exists(db, file_hash)
                 if photo:
-                    logger.info(f"Photo {file_path} already exists in DB")
+                    logger.info(f"Photo {file_path} already exists in DB — recording as exact duplicate")
+                    record_exact_duplicate(db, photo.id, file_path)
                     update_folder_scanner_progress(db, folder_scanner.id)
                     db.commit()
                     db.refresh(folder_scanner)
-                    
                     logger.info(f"Folder scanner scanned_steps: {folder_scanner.scanned_steps}")
                     continue
                 photo = create_photo_record(db, file_hash, file_path, file_created_at)

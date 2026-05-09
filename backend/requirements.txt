@@ -25,3 +25,4 @@ loguru
 sentence_transformers
 sqlite-vec
 langchain-openai
+imagehash

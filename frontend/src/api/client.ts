@@ -183,3 +183,37 @@ export async function updateModelConfig(type: string, config: AIModelConfigUpdat
         body: JSON.stringify(config),
     })
 }
+
+export interface ExactDuplicateEntry {
+    id: number
+    file_path: string
+}
+
+export interface PerceptualDuplicateEntry {
+    id: number
+    file_path: string
+    hash_distance: number
+}
+
+export interface DuplicateGroup<T> {
+    original: { id: number; file_path: string }
+    duplicates: T[]
+}
+
+export interface DuplicatesResponse {
+    exact: DuplicateGroup<ExactDuplicateEntry>[]
+    perceptual: DuplicateGroup<PerceptualDuplicateEntry>[]
+}
+
+export async function getDuplicates(): Promise<DuplicatesResponse> {
+    return apiFetch<DuplicatesResponse>('/api/duplicates/')
+}
+
+export async function archivePhoto(id: number): Promise<{ id: number; is_archived: boolean }> {
+    return apiFetch(`/api/photos/${id}/archive`, { method: 'POST' })
+}
+
+export async function deleteDuplicateRecord(recordId: number): Promise<{ id: number }> {
+    return apiFetch(`/api/duplicates/${recordId}`, { method: 'DELETE' })
+}
+
