@@ -23,7 +23,6 @@
     "devDependencies": {
         "@electron-toolkit/preload": "^3.0.0",
         "@electron-toolkit/utils": "^3.0.0",
-        "@mswjs/interceptors": "^0.41.8",
         "@playwright/test": "^1.44.1",
         "@testing-library/jest-dom": "^6.4.6",
         "@testing-library/react": "^16.0.0",
@@ -38,7 +37,6 @@
         "electron-builder": "^24.13.3",
         "electron-vite": "^2.3.0",
         "jsdom": "^24.1.0",
-        "msw": "^2.3.1",
         "typescript": "^5.5.2",
         "vite": "^5.3.1",
         "vitest": "^1.6.0"
