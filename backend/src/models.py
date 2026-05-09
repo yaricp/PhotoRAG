@@ -174,6 +174,7 @@ class FolderScanner(Base):
     total_steps = Column(Integer, default=0)
     scanned_steps = Column(Integer, default=0)
 
+
 class AIModelConfig(Base):
     __tablename__ = "ai_model_configs"
     id = Column(Integer, primary_key=True, index=True)

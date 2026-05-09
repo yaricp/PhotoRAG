@@ -424,11 +424,11 @@ def get_folder_scanner_by_path(db: Session, path: str):
     return db.query(FolderScanner).filter_by(path=path).first()
 
 
-def get_or_create_folder_scanner(db: Session, path: str, total_files: int):
+def get_or_create_folder_scanner(db: Session, path: str, total_steps: int):
     folder_scanner = db.query(FolderScanner).filter_by(path=path).first()
     if not folder_scanner:
         folder_scanner = FolderScanner(
-            path=path, total_files=total_files, scanned_files=0
+            path=path, total_steps=total_steps, scanned_steps=0
         )
         db.add(folder_scanner)
         db.commit()
@@ -441,9 +441,9 @@ def update_folder_scanner_progress(db: Session, folder_scanner_id: int):
     logger.info(f"Updating folder scanner progress for folder scanner {folder_scanner_id}")
     scanner = db.query(FolderScanner).filter_by(id=folder_scanner_id).first()
     if scanner:
-        scanner.scanned_files += 1
+        scanner.scanned_steps += 1
         db.commit()
-        logger.info(f"scanned files: {scanner.scanned_files}")
+        logger.info(f"scanned steps: {scanner.scanned_steps}")
         return scanner
     else:
         return "STOP"
