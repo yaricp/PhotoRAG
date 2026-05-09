@@ -25,6 +25,10 @@ export interface GetPhotosParams {
     camera_id?: number
     geoposition_id?: number
 
+    year?: number
+    month?: number
+    day?: number
+
     sort_by?: string
     sort_order?: 'asc' | 'desc'
 }
@@ -42,6 +46,10 @@ export async function getPhotos(params: GetPhotosParams = {}): Promise<Paginated
     if (params.camera_id) query.set('camera_id', String(params.camera_id))
     if (params.geoposition_id) query.set('geoposition_id', String(params.geoposition_id))
 
+    if (params.year !== undefined) query.set('year', String(params.year))
+    if (params.month !== undefined) query.set('month', String(params.month))
+    if (params.day !== undefined) query.set('day', String(params.day))
+
     console.log("query1", query)
     // ✅ MULTI TAGS (ВАЖНО)
     params.tag_ids?.forEach(id => {
@@ -56,6 +64,22 @@ export async function getPhotos(params: GetPhotosParams = {}): Promise<Paginated
     const qs = query.toString() ? `?${query}` : ''
     console.log(qs)
     return apiFetch<PaginatedPhotos>(`/api/photos/${qs}`)
+}
+
+export interface AvailableDate {
+    year: number
+    month: number
+    day: number
+}
+
+export async function getAvailableDates(params: Omit<GetPhotosParams, 'skip' | 'limit' | 'sort_by' | 'sort_order' | 'is_doc' | 'year' | 'month' | 'day'> = {}): Promise<AvailableDate[]> {
+    const query = new URLSearchParams()
+    if (params.camera_id) query.set('camera_id', String(params.camera_id))
+    if (params.geoposition_id) query.set('geoposition_id', String(params.geoposition_id))
+    params.tag_ids?.forEach(id => query.append('tag_ids', String(id)))
+    params.category_ids?.forEach(id => query.append('category_ids', String(id)))
+    const qs = query.toString() ? `?${query}` : ''
+    return apiFetch<AvailableDate[]>(`/api/photos/available-dates/${qs}`)
 }
 
 export async function getPhoto(id: number): Promise<Photo> {

@@ -9,6 +9,7 @@ from src.db_service import (
     get_all_model_states,
     get_photo_by_id,
     get_all_photos,
+    get_available_dates,
     get_photos_by_vector,
     get_all_watchers,
     get_all_tags,
@@ -155,19 +156,42 @@ def get_photos_endpoint(
     category_ids: Optional[list[int]] = Query(None, alias="category_ids"),
     tag_ids: Optional[list[int]] = Query(None, alias="tag_ids"),
     camera_id: Optional[int] = Query(None, alias="camera_id"),
+    geoposition_id: Optional[int] = Query(None, alias="geoposition_id"),
     is_doc: Optional[bool] = Query(None, alias="is_doc"),
+    year: Optional[int] = Query(None, alias="year"),
+    month: Optional[int] = Query(None, alias="month"),
+    day: Optional[int] = Query(None, alias="day"),
     db: Session = Depends(get_db)
 ) -> PaginatedResponse[PhotoSchema]:
     logger.info("Getting all photos")
     photos, total = get_all_photos(
         db, skip=skip, limit=limit, sort_by=sort_by, sort_order=sort_order,
-        category_ids=category_ids, tag_ids=tag_ids, camera_id=camera_id, is_doc=is_doc
+        category_ids=category_ids, tag_ids=tag_ids, camera_id=camera_id,
+        geoposition_id=geoposition_id, is_doc=is_doc,
+        year=year, month=month, day=day,
     )
     return PaginatedResponse(
         items=photos,
         total=total,
         page=(skip // limit) + 1 if limit > 0 else 1,
         size=limit
+    )
+
+
+@app.get("/api/photos/available-dates/", tags=["Photos"])
+def get_available_dates_endpoint(
+    category_ids: Optional[list[int]] = Query(None),
+    tag_ids: Optional[list[int]] = Query(None),
+    camera_id: Optional[int] = Query(None),
+    geoposition_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db)
+) -> List[Dict[str, int]]:
+    return get_available_dates(
+        db,
+        category_ids=category_ids,
+        tag_ids=tag_ids,
+        camera_id=camera_id,
+        geoposition_id=geoposition_id,
     )
 
 

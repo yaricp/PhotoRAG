@@ -2,7 +2,7 @@ from typing import Optional, List
 from datetime import datetime
 from loguru import logger
 from sqlalchemy.orm import Session
-from sqlalchemy import exists, and_, text
+from sqlalchemy import exists, and_, text, extract
 
 from src.models import (
     Photo, Tag, Person, Keyword, Category, PhotoTag, PhotoCategory, Camera, Geoposition, 
@@ -63,7 +63,10 @@ def get_all_photos(
     tag_ids: Optional[list[int]] = None,
     camera_id: Optional[int] = None,
     geoposition_id: Optional[int] = None,
-    is_doc: Optional[bool] = None
+    is_doc: Optional[bool] = None,
+    year: Optional[int] = None,
+    month: Optional[int] = None,
+    day: Optional[int] = None,
 ):
 
     base_query = db.query(Photo)
@@ -96,13 +99,24 @@ def get_all_photos(
     if camera_id is not None:
         base_query = base_query.filter(Photo.camera_id == camera_id)
 
-    # 🔹 geoposition
+    # 🔹 geoposition (FK lives on Geoposition side)
     if geoposition_id is not None:
-        base_query = base_query.filter(Photo.geoposition_id == geoposition_id)
+        base_query = base_query.filter(
+            exists().where(
+                and_(Geoposition.photo_id == Photo.id, Geoposition.id == geoposition_id)
+            )
+        )
 
     # 🔹 документ
     if is_doc is not None:
         base_query = base_query.filter(Photo.is_doc == is_doc)
+
+    if year is not None:
+        base_query = base_query.filter(extract('year', Photo.captured_at) == year)
+    if month is not None:
+        base_query = base_query.filter(extract('month', Photo.captured_at) == month)
+    if day is not None:
+        base_query = base_query.filter(extract('day', Photo.captured_at) == day)
 
     # 🔥 важно: считаем ДО пагинации
     total = base_query.count()
@@ -126,6 +140,43 @@ def get_all_photos(
     )
 
     return photos, total
+
+
+def get_available_dates(
+    db: Session,
+    category_ids: Optional[list[int]] = None,
+    tag_ids: Optional[list[int]] = None,
+    camera_id: Optional[int] = None,
+    geoposition_id: Optional[int] = None,
+) -> list[dict]:
+    from sqlalchemy import func
+    base_query = db.query(
+        extract('year', Photo.captured_at).label('year'),
+        extract('month', Photo.captured_at).label('month'),
+        extract('day', Photo.captured_at).label('day'),
+    ).filter(Photo.captured_at.isnot(None))
+
+    if category_ids:
+        for cid in category_ids:
+            base_query = base_query.filter(
+                exists().where(and_(PhotoCategory.photo_id == Photo.id, PhotoCategory.category_id == cid))
+            )
+    if tag_ids:
+        for tid in tag_ids:
+            base_query = base_query.filter(
+                exists().where(and_(PhotoTag.photo_id == Photo.id, PhotoTag.tag_id == tid))
+            )
+    if camera_id is not None:
+        base_query = base_query.filter(Photo.camera_id == camera_id)
+    if geoposition_id is not None:
+        base_query = base_query.filter(
+            exists().where(
+                and_(Geoposition.photo_id == Photo.id, Geoposition.id == geoposition_id)
+            )
+        )
+
+    rows = base_query.distinct().all()
+    return [{'year': int(r.year), 'month': int(r.month), 'day': int(r.day)} for r in rows]
 
 
 def get_photos_by_vector(

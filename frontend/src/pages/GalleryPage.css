@@ -1,88 +1,223 @@
 .gallery-layout {
-    display: grid;
-    grid-template-columns: 1fr 320px;
-    gap: 16px;
-    padding: 16px;
-}
-
-.gallery-main {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    padding: 16px;
 }
 
+/* ── Filter bar ── */
+.filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 8px 12px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+}
+
+.filter-bar__filters {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    flex: 1;
+}
+
+.filter-bar__controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+}
+
+.filter-bar__select {
+    font-size: 12px;
+    padding: 4px 8px;
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    color: var(--color-text);
+    cursor: pointer;
+    font-family: var(--font-sans);
+    transition: border-color 0.15s;
+}
+
+.filter-bar__select:hover {
+    border-color: var(--color-accent);
+}
+
+.filter-bar__sort-order {
+    font-size: 14px;
+    padding: 4px 8px;
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    color: var(--color-text);
+    cursor: pointer;
+    transition: border-color 0.15s;
+}
+
+.filter-bar__sort-order:hover {
+    border-color: var(--color-accent);
+}
+
+/* ── Filter buttons ── */
+.filter-btn {
+    font-size: 12px;
+    font-family: var(--font-sans);
+    padding: 5px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-2);
+    color: var(--color-text-dim);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.filter-btn:hover {
+    border-color: var(--color-accent);
+    color: var(--color-text);
+}
+
+.filter-btn--active {
+    background: rgba(124, 111, 255, 0.15);
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+}
+
+/* ── Filter modal contents ── */
+.filter-modal__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    max-height: 320px;
+    overflow-y: auto;
+    padding: 4px 0;
+}
+
+.filter-modal__list--days {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+    gap: 6px;
+}
+
+.filter-modal__item {
+    font-size: 12px;
+    font-family: var(--font-sans);
+    padding: 5px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-2);
+    color: var(--color-text-dim);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.12s, color 0.12s, background 0.12s;
+}
+
+.filter-modal__item:hover {
+    border-color: var(--color-accent);
+    color: var(--color-text);
+}
+
+.filter-modal__item--active {
+    background: rgba(124, 111, 255, 0.15);
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+}
+
+.filter-modal__footer {
+    margin-top: 14px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.filter-modal__done {
+    font-size: 13px;
+    font-family: var(--font-sans);
+    padding: 6px 18px;
+    border-radius: 6px;
+    border: 1px solid var(--color-accent);
+    background: var(--color-accent);
+    color: #fff;
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+
+.filter-modal__done:hover {
+    opacity: 0.85;
+}
+
+.filter-modal__nav-btn {
+    font-size: 12px;
+    font-family: var(--font-sans);
+    padding: 5px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--color-accent);
+    background: transparent;
+    color: var(--color-accent);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.12s;
+}
+
+.filter-modal__nav-btn:hover {
+    background: rgba(124, 111, 255, 0.1);
+}
+
+.filter-modal__date-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    min-height: 28px;
+}
+
+.filter-modal__back {
+    font-size: 12px;
+    font-family: var(--font-sans);
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-2);
+    color: var(--color-text-dim);
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+}
+
+.filter-modal__back:hover {
+    border-color: var(--color-accent);
+    color: var(--color-text);
+}
+
+.filter-modal__clear {
+    font-size: 12px;
+    font-family: var(--font-sans);
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(248, 113, 113, 0.3);
+    background: transparent;
+    color: var(--color-error);
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.filter-modal__clear:hover {
+    background: rgba(248, 113, 113, 0.1);
+}
+
+/* ── Gallery grid ── */
 .gallery-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 12px;
 }
 
-.gallery-sidebar {
-    position: sticky;
-    top: 12px;
-    height: fit-content;
+.gallery-center {
     display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 12px;
-    border-left: 1px solid #eee;
-}
-
-.filter-block {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.divider {
-    height: 1px;
-    background: #eee;
-    margin: 6px 0;
-}
-
-.chip-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-}
-
-.chip {
-    font-size: 11px;
-    padding: 4px 8px;
-    border-radius: 999px;
-    border: 1px solid #ddd;
-    background: #f7f7f7;
-    cursor: pointer;
-}
-
-.chip.active {
-    background: #111;
-    color: white;
-}
-
-.tag-cloud {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-}
-
-.tag {
-    font-size: 11px;
-    padding: 3px 6px;
-    border-radius: 999px;
-    border: 1px dashed #ccc;
-    background: #fafafa;
-}
-
-.tag.active {
-    background: #4a90e2;
-    color: white;
-    border: none;
-}
-
-.mini-btn {
-    font-size: 11px;
-    padding: 4px;
+    justify-content: center;
+    padding: 40px 0;
 }
 
 .gallery-pagination {
