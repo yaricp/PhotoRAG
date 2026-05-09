@@ -63,14 +63,15 @@ def test_photo_keyword_many_to_many(db_session):
     assert len(photo.keywords_rel) == 2
     assert photo.keywords_rel[0].name == "mountain"
 
-def test_photo_geoposition_one_to_one(db_session):
-    photo = Photo(hash="hash3", file_path="gps.jpg")
+def test_photo_geoposition_relationship(db_session):
+    geo = Geoposition(latitude=48.8566, longitude=2.3522, address="Paris")
+    db_session.add(geo)
+    db_session.flush()
+
+    photo = Photo(hash="hash3", file_path="gps.jpg", geoposition_id=geo.id)
     db_session.add(photo)
     db_session.commit()
-    
-    geo = Geoposition(photo_id=photo.id, latitude=48.8566, longitude=2.3522)
-    db_session.add(geo)
-    db_session.commit()
-    
+
     assert photo.geoposition.latitude == 48.8566
-    assert geo.photo.hash == "hash3"
+    assert photo.geoposition.address == "Paris"
+    assert any(p.hash == "hash3" for p in geo.photos)

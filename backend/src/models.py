@@ -70,8 +70,9 @@ class Photo(Base):
 
     camera_id = Column(Integer, ForeignKey('cameras.id'), nullable=True)
     camera = relationship("Camera", back_populates="photos")
-    
-    geoposition = relationship("Geoposition", back_populates="photo", uselist=False)
+
+    geoposition_id = Column(Integer, ForeignKey('geopositions.id'), nullable=True)
+    geoposition = relationship("Geoposition", back_populates="photos")
     
     tags_rel = relationship("PhotoTag", back_populates="photo", cascade="all, delete-orphan")
     categories_rel = relationship("PhotoCategory", back_populates="photo", cascade="all, delete-orphan")
@@ -117,11 +118,10 @@ class Camera(Base):
 class Geoposition(Base):
     __tablename__ = "geopositions"
     id = Column(Integer, primary_key=True)
-    photo_id = Column(Integer, ForeignKey('photos.id'), unique=True)
     latitude = Column(Float)
     longitude = Column(Float)
     address = Column(String, nullable=True)
-    photo = relationship("Photo", back_populates="geoposition")
+    photos = relationship("Photo", back_populates="geoposition")
 
 
 class Person(Base):

@@ -3,7 +3,7 @@ from src.ai.registry import registry
 from src.database import SessionLocal
 from src.db_service import get_photo_by_id, delete_job
 from src.vector_db_services import store_photo_embedding
-from src.models import Photo, Geoposition
+from src.models import Photo
 from src.ai.prompts import build_photo_text_for_embedding
 from src.queues.embedding_queue import embedding_queue
 
@@ -33,8 +33,7 @@ def final_embedding_task(photo_id: int, phase: str, folder_scanner_id: int = Non
 
         tags = [pt.tag.name for pt in photo.tags_rel]
         categories = [pc.category.name for pc in photo.categories_rel]
-        geo = db.query(Geoposition).filter_by(photo_id=photo_id).first()
-        location = geo.address if geo and geo.address else "Unknown Location"
+        location = photo.geoposition.address if photo.geoposition and photo.geoposition.address else "Unknown Location"
 
         photo_text = build_photo_text_for_embedding(
             description=photo.description,

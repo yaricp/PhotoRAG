@@ -58,7 +58,6 @@ class PhotoTag(BaseModel):
 
 class GeoPosition(BaseModel):
     id: int
-    photo_id: int
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     address: Optional[str] = None

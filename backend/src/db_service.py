@@ -99,13 +99,8 @@ def get_all_photos(
     if camera_id is not None:
         base_query = base_query.filter(Photo.camera_id == camera_id)
 
-    # 🔹 geoposition (FK lives on Geoposition side)
     if geoposition_id is not None:
-        base_query = base_query.filter(
-            exists().where(
-                and_(Geoposition.photo_id == Photo.id, Geoposition.id == geoposition_id)
-            )
-        )
+        base_query = base_query.filter(Photo.geoposition_id == geoposition_id)
 
     # 🔹 документ
     if is_doc is not None:
@@ -169,11 +164,7 @@ def get_available_dates(
     if camera_id is not None:
         base_query = base_query.filter(Photo.camera_id == camera_id)
     if geoposition_id is not None:
-        base_query = base_query.filter(
-            exists().where(
-                and_(Geoposition.photo_id == Photo.id, Geoposition.id == geoposition_id)
-            )
-        )
+        base_query = base_query.filter(Photo.geoposition_id == geoposition_id)
 
     rows = base_query.distinct().all()
     return [{'year': int(r.year), 'month': int(r.month), 'day': int(r.day)} for r in rows]
@@ -255,14 +246,19 @@ def get_or_create_keyword(db: Session, name: str):
 
 
 def update_photo_geoposition(db: Session, photo_id: int, lat: float, lon: float, address: str = None):
-    geo = db.query(Geoposition).filter_by(photo_id=photo_id).first()
+    lat = round(lat, 3)
+    lon = round(lon, 3)
+
+    geo = db.query(Geoposition).filter_by(latitude=lat, longitude=lon, address=address).first()
     if not geo:
-        geo = Geoposition(photo_id=photo_id, latitude=lat, longitude=lon, address=address)
+        geo = Geoposition(latitude=lat, longitude=lon, address=address)
         db.add(geo)
-    else:
-        geo.latitude = lat
-        geo.longitude = lon
-        geo.address = address
+        db.flush()
+
+    photo = db.query(Photo).filter_by(id=photo_id).first()
+    if photo:
+        photo.geoposition_id = geo.id
+
     db.commit()
     return geo
 
@@ -438,8 +434,8 @@ def delete_photo(db: Session, photo_id: int):
     db.query(PhotoEmbedding).filter_by(photo_id=photo_id).delete()
     db.query(PhotoTag).filter_by(photo_id=photo_id).delete()
     db.query(PhotoCategory).filter_by(photo_id=photo_id).delete()
-    db.query(Geoposition).filter_by(photo_id=photo_id).delete()
     db.query(ProcessingJob).filter_by(photo_id=photo_id).delete()
+    photo.geoposition_id = None
     db.execute(text("DELETE FROM photo_embeddings_vss WHERE rowid = :id"), {"id": photo_id})
     db.delete(photo)
     
