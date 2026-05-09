@@ -33,8 +33,8 @@ def start_folder_scanner_task(path: str) -> bool:
         db.commit()
         db.refresh(folder_scanner)
         logger.info(f"Folder scanner created: {folder_scanner.id}")
-        logger.info(f"Folder scanner total_files: {folder_scanner.total_files}")
-        logger.info(f"Folder scanner scanned_files: {folder_scanner.scanned_files}")
+        logger.info(f"Folder scanner total_steps: {folder_scanner.total_steps}")
+        logger.info(f"Folder scanner scanned_steps: {folder_scanner.scanned_steps}")
         for file_path in list_of_photo_paths:
             logger.info(f"Photo appears: {file_path}")
             # 2. Sync Hashing
@@ -55,7 +55,7 @@ def start_folder_scanner_task(path: str) -> bool:
                     db.commit()
                     db.refresh(folder_scanner)
                     
-                    logger.info(f"Folder scanner scanned_files: {folder_scanner.scanned_files}")
+                    logger.info(f"Folder scanner scanned_steps: {folder_scanner.scanned_steps}")
                     continue
                 photo = create_photo_record(db, file_hash, file_path, file_created_at)
                 logger.info(f"Photo {file_path} created in DB with ID: {photo.id}")
@@ -69,7 +69,7 @@ def start_folder_scanner_task(path: str) -> bool:
         db.close()
         return True
     else:
-        total_files = 0
+        total_steps = 0
         logger.error(f"Folder '{path}' does not exist")
         db.close()
         return False
@@ -79,7 +79,7 @@ def start_existing_folder_scanners():
     db = SessionLocal()
     folder_scanners = db.query(FolderScanner).all()
     for folder_scanner in folder_scanners:
-        if folder_scanner.scanned_files < folder_scanner.total_files:
+        if folder_scanner.scanned_steps < folder_scanner.total_steps:
             logger.info(f"Folder scanner with ID {folder_scanner.id} is active")
             start_folder_scanner_task(folder_scanner.path)
         else:
