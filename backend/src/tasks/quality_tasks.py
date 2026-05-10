@@ -14,7 +14,14 @@ from src.quality_checks import (
 from src.queues.clip_queue import clip_queue
 
 
-def _run_quality_check(photo_id: int, phase: str, task_name: str, check_fn, issue_type: str, folder_scanner_id=None):
+def _run_quality_check(
+    photo_id: int,
+    phase: str,
+    task_name: str,
+    check_fn,
+    issue_type: str,
+    folder_scanner_id=None
+):
     """Shared runner: open photo, run check_fn, flag if needed, finish task."""
     from src.tasks.utils import _finish_task
     db = SessionLocal()
@@ -27,6 +34,7 @@ def _run_quality_check(photo_id: int, phase: str, task_name: str, check_fn, issu
 
         try:
             flagged, score = check_fn(photo.file_path)
+            logger.debug(f"[quality] {task_name} for photo {photo_id}: flagged={flagged}, score={score}")
             if flagged:
                 create_quality_issue(db, photo.id, issue_type, score)
                 logger.info(f"[quality] Photo {photo_id} flagged as '{issue_type}' (score={score})")

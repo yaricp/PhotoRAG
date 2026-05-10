@@ -3,6 +3,7 @@ import json
 import shutil
 import hashlib
 from datetime import datetime
+from typing import Optional
 from PIL import Image, ExifTags
 from PIL.TiffImagePlugin import IFDRational
 from loguru import logger
@@ -185,7 +186,7 @@ def move_photo(path:str, destination_root_folder:str):
         return ""
 
 
-def get_photo_capture_date(photo_path: str) -> datetime | None:
+def get_photo_capture_date(photo_path: str) -> Optional[datetime]:
     """ Gets photo capture date from EXIF data. """
     try:
         exif_raw = extract_exif(photo_path)

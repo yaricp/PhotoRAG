@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { getPhotos, getAvailableDates } from '@/api/client'
+import { getPhotos, getAvailableDates, archivePhoto, deletePhoto } from '@/api/client'
 import type { AvailableDate } from '@/api/client'
 import { PhotoCard } from '@/components/photos/PhotoCard'
 import { Spinner } from '@/components/ui/Spinner'
@@ -32,6 +32,21 @@ export function GalleryPage() {
     const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
 
     const [availableDates, setAvailableDates] = useState<AvailableDate[]>([])
+    const [removedIds, setRemovedIds] = useState<Set<number>>(new Set())
+
+    function removeFromGallery(id: number) {
+        setRemovedIds(prev => { const next = new Set(prev); next.add(id); return next })
+    }
+
+    async function handleArchive(id: number) {
+        await archivePhoto(id)
+        removeFromGallery(id)
+    }
+
+    async function handleDelete(id: number) {
+        await deletePhoto(id)
+        removeFromGallery(id)
+    }
 
     // Load available dates once on mount
     useEffect(() => {
@@ -41,6 +56,7 @@ export function GalleryPage() {
     // Main query
     useEffect(() => {
         setLoading(true)
+        setRemovedIds(new Set())
         getPhotos({
             skip: page * limit,
             limit,
@@ -126,10 +142,12 @@ export function GalleryPage() {
 
             {!loading && data && (
                 <div className="gallery-grid">
-                    {data.items.map(photo => (
+                    {data.items.filter(p => !removedIds.has(p.id)).map(photo => (
                         <PhotoCard
                             key={photo.id}
                             photo={photo}
+                            onArchive={() => handleArchive(photo.id)}
+                            onDelete={() => handleDelete(photo.id)}
                         />
                     ))}
                 </div>

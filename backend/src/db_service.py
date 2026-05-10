@@ -44,7 +44,7 @@ def get_or_create_photo(db: Session, filepath: str, file_created_at: datetime = 
     return photo
 
 
-def get_photo_by_id(db: Session, photo_id: int) -> Photo | None:
+def get_photo_by_id(db: Session, photo_id: int) -> Optional[Photo]:
     return db.query(Photo).filter(Photo.id == photo_id).first()
 
 
@@ -552,7 +552,7 @@ def init_default_model_configs(db: Session):
 
 # ── Duplicate helpers ──────────────────────────────────────────────────────────
 
-def record_exact_duplicate(db: Session, original_id: int, duplicate_file_path: str) -> PhotoDuplicate | None:
+def record_exact_duplicate(db: Session, original_id: int, duplicate_file_path: str) -> Optional[PhotoDuplicate]:
     original = db.query(Photo).filter(Photo.id == original_id).first()
     if original and original.file_path == duplicate_file_path:
         return None  # same file scanned twice — not a duplicate
@@ -675,7 +675,7 @@ def get_duplicate_groups(db: Session) -> dict:
     }
 
 
-def archive_photo(db: Session, photo_id: int) -> Photo | None:
+def archive_photo(db: Session, photo_id: int) -> Optional[Photo]:
     photo = db.query(Photo).filter(Photo.id == photo_id).first()
     if not photo:
         return None
@@ -685,7 +685,7 @@ def archive_photo(db: Session, photo_id: int) -> Photo | None:
     return photo
 
 
-def delete_duplicate_record(db: Session, record_id: int) -> PhotoDuplicate | None:
+def delete_duplicate_record(db: Session, record_id: int) -> Optional[PhotoDuplicate]:
     record = db.query(PhotoDuplicate).filter(PhotoDuplicate.id == record_id).first()
     if not record:
         return None
@@ -697,7 +697,7 @@ def delete_duplicate_record(db: Session, record_id: int) -> PhotoDuplicate | Non
 # ── Quality issue helpers ──────────────────────────────────────────────────
 
 def create_quality_issue(
-    db: Session, photo_id: int, issue_type: str, score: float | None
+    db: Session, photo_id: int, issue_type: str, score: Optional[float]
 ) -> PhotoQualityIssue:
     issue = PhotoQualityIssue(photo_id=photo_id, issue_type=issue_type, score=score)
     db.add(issue)

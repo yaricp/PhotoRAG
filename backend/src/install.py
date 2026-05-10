@@ -6,6 +6,7 @@
 
 import os
 import hashlib
+from typing import Optional
 from loguru import logger
 from sqlalchemy.orm import Session
 
@@ -39,7 +40,7 @@ def _save_hash(hash_path: str, hash_value: str) -> None:
         f.write(hash_value)
 
 
-def _read_hash(hash_path: str) -> str | None:
+def _read_hash(hash_path: str) -> Optional[str]:
     if not os.path.exists(hash_path):
         return None
     with open(hash_path) as f:
