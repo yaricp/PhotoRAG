@@ -115,6 +115,23 @@ export async function sendChat(params: ChatParams): Promise<ChatResponse> {
     })
 }
 
+export interface AppSettings { [key: string]: string }
+
+export async function getSettings(): Promise<AppSettings> {
+    return apiFetch<AppSettings>('/api/settings/')
+}
+
+export async function updateSetting(key: string, value: string): Promise<void> {
+    await apiFetch(`/api/settings/${key}`, {
+        method: 'PUT',
+        body: JSON.stringify({ value }),
+    })
+}
+
+export async function undoLastAction(): Promise<{ status: string; detail: string }> {
+    return apiFetch('/api/history/undo/', { method: 'POST' })
+}
+
 export async function getSystemStatus(): Promise<SystemStatus> {
     return apiFetch<SystemStatus>('/api/system/status/')
 }

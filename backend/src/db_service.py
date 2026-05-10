@@ -8,6 +8,7 @@ from src.models import (
     Photo, Tag, Person, Keyword, Category, PhotoTag, PhotoCategory, Camera, Geoposition,
     ModelState, Watcher, ProcessingJob, FolderScanner, AIModelConfig,
     PhotoEmbedding, PhotoHash, PhotoDuplicate, PhotoQualityIssue,
+    AppSetting, HistoryAction,
 )
 from src.schemas import Photo as PhotoSchema
 from src.schemas import AIModelConfigUpdate
@@ -727,3 +728,136 @@ def get_photos_by_issue_type(
     total = query.count()
     photos = query.offset(skip).limit(limit).all()
     return photos, total
+
+
+# ---------------------------------------------------------------------------
+# AppSetting helpers
+# ---------------------------------------------------------------------------
+
+def get_setting(db: Session, key: str) -> Optional[str]:
+    row = db.query(AppSetting).filter(AppSetting.key == key).first()
+    return row.value if row else None
+
+
+def set_setting(db: Session, key: str, value: str) -> AppSetting:
+    row = db.query(AppSetting).filter(AppSetting.key == key).first()
+    if row:
+        row.value = value
+    else:
+        row = AppSetting(key=key, value=value)
+        db.add(row)
+    db.commit()
+    db.refresh(row)
+    return row
+
+
+def get_all_settings(db: Session) -> dict:
+    rows = db.query(AppSetting).all()
+    return {r.key: r.value for r in rows}
+
+
+# ---------------------------------------------------------------------------
+# HistoryAction helpers
+# ---------------------------------------------------------------------------
+
+def create_history_action(
+    db: Session,
+    action_type: str,
+    photo_ids: Optional[List[int]],
+    params: dict,
+    undo_data: dict,
+) -> HistoryAction:
+    import json
+    action = HistoryAction(
+        action_type=action_type,
+        photo_ids=json.dumps(photo_ids) if photo_ids is not None else None,
+        params=json.dumps(params),
+        undo_data=json.dumps(undo_data),
+    )
+    db.add(action)
+    db.commit()
+    db.refresh(action)
+    return action
+
+
+def get_history_actions(db: Session, limit: int = 20) -> List[HistoryAction]:
+    return (
+        db.query(HistoryAction)
+        .order_by(HistoryAction.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+
+def get_last_history_action(db: Session) -> Optional[HistoryAction]:
+    return (
+        db.query(HistoryAction)
+        .order_by(HistoryAction.created_at.desc())
+        .first()
+    )
+
+
+def delete_history_action(db: Session, action_id: int) -> None:
+    action = db.query(HistoryAction).filter(HistoryAction.id == action_id).first()
+    if action:
+        db.delete(action)
+        db.commit()
+
+
+def perform_undo(db: Session) -> str:
+    import json
+    import os
+    import shutil
+    import zipfile
+    from pathlib import Path
+
+    action = get_last_history_action(db)
+    if not action:
+        return "No action to undo."
+
+    undo_data = json.loads(action.undo_data)
+
+    if action.action_type == "create_folder":
+        path = Path(undo_data["path"])
+        if path.exists():
+            try:
+                path.rmdir()
+            except OSError:
+                return f"Cannot undo: folder '{path}' is not empty."
+
+    elif action.action_type == "move_photos":
+        original_paths = undo_data.get("original_paths", {})
+        for photo_id_str, original_path in original_paths.items():
+            photo = get_photo_by_id(db, int(photo_id_str))
+            if photo and os.path.exists(photo.file_path):
+                dest_dir = os.path.dirname(original_path)
+                os.makedirs(dest_dir, exist_ok=True)
+                shutil.move(photo.file_path, original_path)
+                photo.file_path = original_path
+        db.commit()
+
+    elif action.action_type == "archive_photos":
+        zip_path = Path(undo_data["zip_path"])
+        added_names = set(undo_data.get("added_names", []))
+        newly_archived_ids = undo_data.get("newly_archived_ids", [])
+        if zip_path.exists() and added_names:
+            with zipfile.ZipFile(zip_path) as zf:
+                all_names = set(zf.namelist())
+            remaining = all_names - added_names
+            if not remaining:
+                zip_path.unlink()
+            else:
+                tmp = zip_path.with_suffix(".tmp.zip")
+                with zipfile.ZipFile(zip_path) as src, zipfile.ZipFile(tmp, "w") as dst:
+                    for name in src.namelist():
+                        if name not in added_names:
+                            dst.writestr(name, src.read(name))
+                tmp.replace(zip_path)
+        for pid in newly_archived_ids:
+            photo = get_photo_by_id(db, pid)
+            if photo:
+                photo.is_archived = False
+        db.commit()
+
+    delete_history_action(db, action.id)
+    return f"Undone: {action.action_type}"

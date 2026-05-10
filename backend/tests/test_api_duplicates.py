@@ -20,7 +20,7 @@ for _mod in [
     'sqlite_vec', 'langgraph', 'langgraph.graph',
     'src.database', 'src.vector_db_services', 'src.config',
     'src.ai', 'src.ai.registry', 'src.ai.prompts', 'src.ai.translator',
-    'src.graphs', 'src.graphs.ai_agent',
+    'src.graphs.ai_agent',
     'src.queues', 'src.queues.folder_scan_queue', 'src.queues.clip_queue',
     'src.queues.vision_queue', 'src.queues.embedding_queue',
     'src.queues.translation_queue',

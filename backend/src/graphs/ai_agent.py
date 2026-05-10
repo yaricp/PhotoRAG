@@ -19,8 +19,12 @@ from src.graphs.tools import (
     get_photo_details,
     resize_photo,
     get_exif_data,
-    describe_photo
-
+    describe_photo,
+    get_action_history,
+    undo_last_action,
+    create_folder,
+    move_photos,
+    archive_photos,
 )
 from src.schemas import Photo
 
@@ -35,7 +39,12 @@ tools = [
     search_photos_by_category_id,
     get_photo_details,
     get_exif_data,
-    describe_photo
+    describe_photo,
+    get_action_history,
+    undo_last_action,
+    create_folder,
+    move_photos,
+    archive_photos,
 ]
 editing_tools = [
     resize_photo,

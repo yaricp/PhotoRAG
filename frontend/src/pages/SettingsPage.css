@@ -1,0 +1,121 @@
+.settings-page {
+    padding: 24px;
+    max-width: 640px;
+    margin: 0 auto;
+}
+
+.settings-page__title {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--color-text);
+    margin: 0 0 28px;
+}
+
+/* ── Section ── */
+.settings-section {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.settings-section__heading {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-text-dim);
+    margin: 0 0 4px;
+}
+
+/* ── Form row ── */
+.settings-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.settings-row__label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text);
+}
+
+.settings-row__hint {
+    font-size: 11px;
+    color: var(--color-text-dim);
+    margin-top: 2px;
+}
+
+/* ── Inputs ── */
+.settings-input,
+.settings-select {
+    width: 100%;
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    border-radius: 7px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-family: var(--font-sans);
+    color: var(--color-text);
+    outline: none;
+    transition: border-color 0.15s;
+    box-sizing: border-box;
+}
+
+.settings-input:focus,
+.settings-select:focus {
+    border-color: var(--color-accent);
+}
+
+.settings-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%237878a0' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+    cursor: pointer;
+}
+
+.settings-select option {
+    background: var(--color-surface-2);
+    color: var(--color-text);
+}
+
+/* ── Save button + feedback ── */
+.settings-footer {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.settings-save-btn {
+    font-size: 13px;
+    font-weight: 500;
+    padding: 8px 22px;
+    background: var(--color-accent);
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    cursor: pointer;
+    font-family: var(--font-sans);
+    transition: opacity 0.15s;
+}
+
+.settings-save-btn:hover:not(:disabled) {
+    opacity: 0.85;
+}
+
+.settings-save-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.settings-saved {
+    font-size: 13px;
+    color: var(--color-success);
+}

@@ -1,5 +1,97 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
+import { getSettings, updateSetting } from '@/api/client'
+import './SettingsPage.css'
+
+const LANGUAGES = [
+    { value: 'en', label: 'English' },
+    { value: 'ru', label: 'Русский' },
+]
 
 export function SettingsPage() {
-    return <div data-testid="page-settings">Settings</div>
+    const [defaultFolder, setDefaultFolder] = useState('')
+    const [language, setLanguage] = useState('en')
+    const [saving, setSaving] = useState(false)
+    const [saved, setSaved] = useState(false)
+
+    useEffect(() => {
+        getSettings().then(s => {
+            setDefaultFolder(s['default_folder'] ?? '')
+            setLanguage(s['default_language'] ?? 'en')
+        }).catch(() => {
+            // fallback to localStorage if API not available
+            const stored = localStorage.getItem('settings')
+            if (stored) {
+                const s = JSON.parse(stored)
+                setDefaultFolder(s.default_folder ?? '')
+                setLanguage(s.default_language ?? 'en')
+            }
+        })
+    }, [])
+
+    async function handleSave() {
+        setSaving(true)
+        setSaved(false)
+        try {
+            await updateSetting('default_folder', defaultFolder)
+            await updateSetting('default_language', language)
+            setSaved(true)
+            setTimeout(() => setSaved(false), 2500)
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    return (
+        <div className="settings-page">
+            <h1 className="settings-page__title">Settings</h1>
+
+            <div className="settings-section">
+                <p className="settings-section__heading">General</p>
+
+                <div className="settings-row">
+                    <label className="settings-row__label" htmlFor="default-language">
+                        Default language
+                    </label>
+                    <select
+                        id="default-language"
+                        className="settings-select"
+                        value={language}
+                        onChange={e => setLanguage(e.target.value)}
+                    >
+                        {LANGUAGES.map(l => (
+                            <option key={l.value} value={l.value}>{l.label}</option>
+                        ))}
+                    </select>
+                </div>
+
+                <div className="settings-row">
+                    <label className="settings-row__label" htmlFor="default-folder">
+                        Default folder
+                    </label>
+                    <input
+                        id="default-folder"
+                        type="text"
+                        className="settings-input"
+                        value={defaultFolder}
+                        onChange={e => setDefaultFolder(e.target.value)}
+                        placeholder="/Users/you/Photos"
+                    />
+                    <span className="settings-row__hint">
+                        Used by agent tools (create folder, move photos, archive). Falls back to home directory if empty.
+                    </span>
+                </div>
+            </div>
+
+            <div className="settings-footer">
+                <button
+                    className="settings-save-btn"
+                    onClick={handleSave}
+                    disabled={saving}
+                >
+                    {saving ? 'Saving…' : 'Save'}
+                </button>
+                {saved && <span className="settings-saved">Saved</span>}
+            </div>
+        </div>
+    )
 }

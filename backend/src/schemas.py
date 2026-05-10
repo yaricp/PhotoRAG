@@ -168,3 +168,33 @@ class AIModelConfigResponse(AIModelConfigBase):
     type: str
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class AppSettingSchema(BaseModel):
+    key: str
+    value: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class HistoryActionSchema(BaseModel):
+    id: int
+    action_type: str
+    photo_ids: Optional[List[int]] = None
+    params: dict
+    undo_data: dict
+    created_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+    @classmethod
+    def from_orm_model(cls, action: "HistoryAction") -> "HistoryActionSchema":
+        import json
+        return cls(
+            id=action.id,
+            action_type=action.action_type,
+            photo_ids=json.loads(action.photo_ids) if action.photo_ids else None,
+            params=json.loads(action.params),
+            undo_data=json.loads(action.undo_data),
+            created_at=action.created_at,
+        )

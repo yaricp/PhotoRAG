@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, Query
+from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
 from typing import List, Dict, Any, Optional
@@ -31,6 +32,10 @@ from src.db_service import (
     delete_duplicate_record,
     get_quality_summary,
     get_photos_by_issue_type,
+    get_all_settings,
+    set_setting,
+    get_history_actions,
+    perform_undo,
 )
 from src.database import Session, SessionLocal
 from src.deps import get_db, get_translator
@@ -54,7 +59,9 @@ from src.schemas import (
     FolderScanner as FolderScannerSchema,
     FolderScannerRequest,
     AIModelConfigResponse,
-    AIModelConfigUpdate
+    AIModelConfigUpdate,
+    AppSettingSchema,
+    HistoryActionSchema,
 )
 from src.ai.translator import Translator
 from src.ai.registry import registry
@@ -421,15 +428,54 @@ def get_all_models_endpoint(db: Session = Depends(get_db)):
 
 @app.put("/api/models/{config_type}", tags=["Models"], response_model=AIModelConfigResponse)
 def update_model_endpoint(
-    config_type: str, 
-    request: AIModelConfigUpdate, 
+    config_type: str,
+    request: AIModelConfigUpdate,
     db: Session = Depends(get_db)
 ):
     """Update AI model configuration and reload it in the registry"""
     config = update_model_config(db, config_type, request)
     if not config:
         raise HTTPException(status_code=404, detail="Model config not found")
-        
+
     # Invalidate cache so it reloads with new settings
     registry.reset_model(config_type)
     return config
+
+
+# ---------------------------------------------------------------------------
+# Settings endpoints
+# ---------------------------------------------------------------------------
+
+class SettingUpdateRequest(BaseModel):
+    value: str
+
+
+@app.get("/api/settings/", tags=["Settings"])
+def get_settings_endpoint(db: Session = Depends(get_db)) -> Dict[str, str]:
+    return get_all_settings(db)
+
+
+@app.put("/api/settings/{key}", tags=["Settings"], response_model=AppSettingSchema)
+def update_setting_endpoint(
+    key: str,
+    request: SettingUpdateRequest,
+    db: Session = Depends(get_db),
+) -> AppSettingSchema:
+    setting = set_setting(db, key, request.value)
+    return AppSettingSchema(key=setting.key, value=setting.value)
+
+
+# ---------------------------------------------------------------------------
+# History endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/api/history/", tags=["History"], response_model=List[HistoryActionSchema])
+def get_history_endpoint(db: Session = Depends(get_db)) -> List[HistoryActionSchema]:
+    actions = get_history_actions(db, limit=20)
+    return [HistoryActionSchema.from_orm_model(a) for a in actions]
+
+
+@app.post("/api/history/undo/", tags=["History"])
+def undo_last_action_endpoint(db: Session = Depends(get_db)) -> Dict[str, str]:
+    detail = perform_undo(db)
+    return {"status": "ok", "detail": detail}

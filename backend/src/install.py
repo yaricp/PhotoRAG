@@ -20,7 +20,9 @@ from src.db_service import (
     get_or_create_category,
     get_all_categories,
     get_model_or_none,
-    init_default_model_configs
+    init_default_model_configs,
+    get_setting,
+    set_setting,
 )
 from src.utils import load_categories_from_json
 
@@ -319,7 +321,11 @@ def init_db(db: Session):
             
     # Initialize default model configurations
     init_default_model_configs(db)
-    
+
+    # Seed default app settings
+    if get_setting(db, "default_folder") is None:
+        set_setting(db, "default_folder", "")
+
     db.commit()
     logger.info("[db] Tables ready ✓")
 

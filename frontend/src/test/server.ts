@@ -72,6 +72,18 @@ export const handlers = [
     http.get(`${BASE}/api/stream/`, () =>
         new HttpResponse(null, { status: 200 })
     ),
+
+    http.get(`${BASE}/api/settings/`, () =>
+        HttpResponse.json({ default_folder: '', default_language: 'en' })
+    ),
+
+    http.put(`${BASE}/api/settings/:key`, () =>
+        HttpResponse.json({ key: 'default_folder', value: '' })
+    ),
+
+    http.post(`${BASE}/api/history/undo/`, () =>
+        HttpResponse.json({ status: 'ok', detail: 'No action to undo.' })
+    ),
 ]
 
 export const server = setupServer(...handlers)

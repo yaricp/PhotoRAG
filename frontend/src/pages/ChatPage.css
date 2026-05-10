@@ -175,3 +175,42 @@
     opacity: 0.6;
     cursor: not-allowed;
 }
+
+/* =======================
+   UNDO BUTTON
+======================= */
+.chat-page__undo-btn {
+    background: var(--color-surface-2);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+}
+
+.chat-page__undo-btn:hover:not(:disabled) {
+    background: var(--color-surface);
+    opacity: 1;
+}
+
+/* =======================
+   PHOTO SELECTION
+======================= */
+.chat-photo-item {
+    display: block;
+    position: relative;
+    cursor: pointer;
+}
+
+.chat-photo-item__checkbox {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    z-index: 2;
+    width: 16px;
+    height: 16px;
+    accent-color: var(--color-accent);
+    cursor: pointer;
+}
+
+.chat-photo-item:has(.chat-photo-item__checkbox:checked) {
+    outline: 2px solid var(--color-accent);
+    border-radius: 8px;
+}

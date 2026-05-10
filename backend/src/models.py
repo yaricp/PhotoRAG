@@ -227,3 +227,21 @@ class PhotoQualityIssue(Base):
     detected_at = Column(DateTime, default=datetime.utcnow)
 
     photo = relationship("Photo", back_populates="quality_issues")
+
+
+class AppSetting(Base):
+    __tablename__ = "app_settings"
+
+    key = Column(String, primary_key=True)
+    value = Column(String, nullable=False, default="")
+
+
+class HistoryAction(Base):
+    __tablename__ = "history_actions"
+
+    id = Column(Integer, primary_key=True)
+    action_type = Column(String, nullable=False)
+    photo_ids = Column(String, nullable=True)    # JSON list[int]
+    params = Column(String, nullable=False)      # JSON dict
+    undo_data = Column(String, nullable=False)   # JSON dict
+    created_at = Column(DateTime, default=datetime.utcnow)
