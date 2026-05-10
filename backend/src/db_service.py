@@ -2,7 +2,7 @@ from typing import Optional, List
 from datetime import datetime
 from loguru import logger
 from sqlalchemy.orm import Session
-from sqlalchemy import exists, and_, text, extract
+from sqlalchemy import exists, and_, text, extract, func
 
 from src.models import (
     Photo, Tag, Person, Keyword, Category, PhotoTag, PhotoCategory, Camera, Geoposition,
@@ -706,7 +706,6 @@ def create_quality_issue(
 
 def get_quality_summary(db: Session) -> dict[str, int]:
     """Return count of distinct photos flagged per issue_type."""
-    from sqlalchemy import func
     rows = (
         db.query(PhotoQualityIssue.issue_type, func.count(PhotoQualityIssue.photo_id.distinct()))
         .group_by(PhotoQualityIssue.issue_type)

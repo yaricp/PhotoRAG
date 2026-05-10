@@ -99,6 +99,7 @@ def test_create_quality_issue_service(db):
     db.commit()
     assert issue.id is not None
     assert issue.photo_id == photo.id
+    assert issue.issue_type == "brightness"
 
 
 def test_get_quality_summary_counts(db):
@@ -133,3 +134,12 @@ def test_get_photos_by_issue_type_pagination(db):
     photos, total = get_photos_by_issue_type(db, "entropy", skip=0, limit=3)
     assert total == 5
     assert len(photos) == 3
+
+
+def test_get_quality_summary_deduplicates_same_photo(db):
+    p = _make_photo(db)
+    create_quality_issue(db, p.id, "blur", 1.0)
+    create_quality_issue(db, p.id, "blur", 2.0)  # second record, same photo
+    db.commit()
+    summary = get_quality_summary(db)
+    assert summary["blur"] == 1  # one distinct photo, not two
