@@ -15,7 +15,7 @@ const links = [
     { to: '/duplicates', label: 'Duplicates', icon: '⊕' },
     { to: '/garbage', label: 'Garbage', icon: '🗑️' },
     { to: '/chat', label: 'Agent AI(Chat)', icon: '💬' },
-    { to: '/processing', label: 'Video Processing', icon: '📹' },
+    { to: '/processing', label: 'Processing', icon: '📹' },
     { to: '/folders', label: 'Folders', icon: '📁' },
     { to: '/models', label: 'Models', icon: '🤖' },
     { to: '/settings', label: 'Settings', icon: '⚙️' },
