@@ -1,14 +1,10 @@
-import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { server } from '@/test/server'
 import { http, HttpResponse } from 'msw'
 
 vi.mock('../base', () => ({
     getBaseUrl: async () => 'http://localhost:8000'
 }))
-
-beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
-afterEach(() => server.resetHandlers())
-afterAll(() => server.close())
 
 describe('api client', () => {
     describe('photos', () => {
@@ -113,5 +109,32 @@ describe('api client', () => {
             const job = await getJob(42)
             expect(job.photo_id).toBe(42)
         })
+    })
+})
+
+import { makePaginatedPhotos } from '@/test/factories'
+
+describe('garbage API client', () => {
+    it('getGarbageSummary returns counts', async () => {
+        server.use(
+            http.get('http://localhost:8000/api/garbage/', () =>
+                HttpResponse.json({ counts: { blur: 3, no_exif: 1 } })
+            )
+        )
+        const { getGarbageSummary } = await import('../client')
+        const result = await getGarbageSummary()
+        expect(result.counts.blur).toBe(3)
+        expect(result.counts.no_exif).toBe(1)
+    })
+
+    it('getGarbagePhotos returns paginated photos', async () => {
+        server.use(
+            http.get('http://localhost:8000/api/garbage/blur/photos/', () =>
+                HttpResponse.json(makePaginatedPhotos())
+            )
+        )
+        const { getGarbagePhotos } = await import('../client')
+        const result = await getGarbagePhotos('blur')
+        expect(result.total).toBeGreaterThanOrEqual(1)
     })
 })

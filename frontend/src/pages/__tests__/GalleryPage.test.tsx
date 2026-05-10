@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll, afterAll, afterEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
@@ -6,10 +6,6 @@ import { server } from '@/test/server'
 import { http, HttpResponse } from 'msw'
 import { makePaginatedPhotos, makePhoto } from '@/test/factories'
 import { GalleryPage } from '../GalleryPage'
-
-beforeAll(() => server.listen({ onUnhandledRequest: 'warn' }))
-afterEach(() => server.resetHandlers())
-afterAll(() => server.close())
 
 vi.mock('@/api/base', () => ({ getBaseUrl: async () => 'http://localhost:8000' }))
 

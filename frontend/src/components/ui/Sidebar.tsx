@@ -5,7 +5,7 @@ import './Sidebar.css'
 type SidebarState = 'full' | 'compact' | 'hidden'
 
 type Props = {
-    state: SidebarState
+    state?: SidebarState
 }
 
 const links = [
@@ -20,7 +20,7 @@ const links = [
     { to: '/settings', label: 'Settings', icon: '⚙️' },
 ]
 
-export function Sidebar({ state }: Props) {
+export function Sidebar({ state = 'full' }: Props) {
     if (state === 'hidden') return null
 
     return (

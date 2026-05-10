@@ -217,3 +217,20 @@ export async function deleteDuplicateRecord(recordId: number): Promise<{ id: num
     return apiFetch(`/api/duplicates/${recordId}`, { method: 'DELETE' })
 }
 
+export interface GarbageSummary {
+    counts: Record<string, number>
+}
+
+export async function getGarbageSummary(): Promise<GarbageSummary> {
+    return apiFetch<GarbageSummary>('/api/garbage/')
+}
+
+export async function getGarbagePhotos(
+    issueType: string,
+    skip = 0,
+    limit = 20,
+): Promise<PaginatedPhotos> {
+    const qs = `?skip=${skip}&limit=${limit}`
+    return apiFetch<PaginatedPhotos>(`/api/garbage/${issueType}/photos/${qs}`)
+}
+
