@@ -1,15 +1,9 @@
-import { describe, it, expect, vi, beforeAll, afterAll, afterEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest'
+import { render, screen, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { PhotoCard } from '../PhotoCard'
 import { makePhoto, makePhotoTag, makeJob } from '@/test/factories'
-import { server } from '@/test/server'
-import { http, HttpResponse } from 'msw'
-
-beforeAll(() => server.listen({ onUnhandledRequest: 'warn' }))
-afterEach(() => server.resetHandlers())
-afterAll(() => server.close())
 
 const renderCard = (photo = makePhoto()) =>
     render(
@@ -84,5 +78,37 @@ describe('PhotoCard', () => {
 
         await userEvent.click(screen.getByRole('article'))
         expect(pathname).toBe('/photo/7')
+    })
+})
+
+describe('PhotoCard action buttons', () => {
+    it('shows no action buttons when no handlers provided', () => {
+        render(<MemoryRouter><PhotoCard photo={makePhoto()} /></MemoryRouter>)
+        expect(screen.queryByRole('button', { name: /archive/i })).toBeNull()
+        expect(screen.queryByRole('button', { name: /delete/i })).toBeNull()
+    })
+
+    it('shows Archive button when onArchive provided', () => {
+        render(<MemoryRouter><PhotoCard photo={makePhoto()} onArchive={vi.fn()} /></MemoryRouter>)
+        expect(screen.getByRole('button', { name: /archive/i })).toBeInTheDocument()
+    })
+
+    it('shows Delete button when onDelete provided', () => {
+        render(<MemoryRouter><PhotoCard photo={makePhoto()} onDelete={vi.fn()} /></MemoryRouter>)
+        expect(screen.getByRole('button', { name: /delete/i })).toBeInTheDocument()
+    })
+
+    it('calls onArchive when Archive button clicked', () => {
+        const onArchive = vi.fn()
+        render(<MemoryRouter><PhotoCard photo={makePhoto()} onArchive={onArchive} /></MemoryRouter>)
+        fireEvent.click(screen.getByRole('button', { name: /archive/i }))
+        expect(onArchive).toHaveBeenCalledOnce()
+    })
+
+    it('calls onDelete when Delete button clicked', () => {
+        const onDelete = vi.fn()
+        render(<MemoryRouter><PhotoCard photo={makePhoto()} onDelete={onDelete} /></MemoryRouter>)
+        fireEvent.click(screen.getByRole('button', { name: /delete/i }))
+        expect(onDelete).toHaveBeenCalledOnce()
     })
 })

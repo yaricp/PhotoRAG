@@ -57,3 +57,47 @@
     background: var(--color-accent);
     border-radius: 2px;
 }
+
+.photo-card__actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.photo-card__action-btn {
+    flex: 1;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 4px 6px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    font-family: var(--font-sans);
+}
+
+.photo-card__action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.photo-card__action-btn--archive {
+    background: rgba(124, 111, 255, 0.12);
+    color: var(--color-accent);
+    border: 1px solid rgba(124, 111, 255, 0.3);
+}
+
+.photo-card__action-btn--archive:hover:not(:disabled) {
+    background: rgba(124, 111, 255, 0.22);
+    border-color: rgba(124, 111, 255, 0.5);
+}
+
+.photo-card__action-btn--delete {
+    background: rgba(239, 68, 68, 0.12);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.photo-card__action-btn--delete:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.22);
+    border-color: rgba(239, 68, 68, 0.5);
+}

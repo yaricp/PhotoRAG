@@ -8,15 +8,19 @@ import './PhotoCard.css'
 interface PhotoCardProps {
     photo: Photo
     job?: Job | null
+    onArchive?: () => void
+    onDelete?: () => void
 }
 
-export function PhotoCard({ photo, job }: PhotoCardProps) {
+export function PhotoCard({ photo, job, onArchive, onDelete }: PhotoCardProps) {
     const navigate = useNavigate()
 
     const filename =
         photo?.file_path?.split('/').pop() ?? photo?.file_path ?? 'Unknown file'
 
     const topTag = photo?.tags?.[0]
+
+    const hasActions = onArchive !== undefined || onDelete !== undefined
 
     return (
         <article
@@ -53,6 +57,27 @@ export function PhotoCard({ photo, job }: PhotoCardProps) {
                                 )}%`,
                             }}
                         />
+                    </div>
+                )}
+
+                {hasActions && (
+                    <div className="photo-card__actions">
+                        {onArchive && (
+                            <button
+                                className="photo-card__action-btn photo-card__action-btn--archive"
+                                onClick={(e) => { e.stopPropagation(); onArchive() }}
+                            >
+                                Archive
+                            </button>
+                        )}
+                        {onDelete && (
+                            <button
+                                className="photo-card__action-btn photo-card__action-btn--delete"
+                                onClick={(e) => { e.stopPropagation(); onDelete() }}
+                            >
+                                Delete
+                            </button>
+                        )}
                     </div>
                 )}
             </div>
