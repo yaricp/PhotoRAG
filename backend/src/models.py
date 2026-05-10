@@ -85,6 +85,7 @@ class Photo(Base):
     photo_hash = relationship("PhotoHash", back_populates="photo", uselist=False, cascade="all, delete-orphan")
     duplicates_as_original = relationship("PhotoDuplicate", foreign_keys="PhotoDuplicate.original_photo_id", back_populates="original_photo", cascade="all, delete-orphan")
     duplicates_as_duplicate = relationship("PhotoDuplicate", foreign_keys="PhotoDuplicate.duplicate_photo_id", back_populates="duplicate_photo", cascade="all, delete-orphan")
+    quality_issues = relationship("PhotoQualityIssue", back_populates="photo", cascade="all, delete-orphan")
 
 
 class PhotoEmbedding(Base):
@@ -214,3 +215,15 @@ class PhotoDuplicate(Base):
 
     original_photo = relationship("Photo", foreign_keys=[original_photo_id], back_populates="duplicates_as_original")
     duplicate_photo = relationship("Photo", foreign_keys=[duplicate_photo_id], back_populates="duplicates_as_duplicate")
+
+
+class PhotoQualityIssue(Base):
+    __tablename__ = "photo_quality_issues"
+
+    id = Column(Integer, primary_key=True)
+    photo_id = Column(Integer, ForeignKey("photos.id", ondelete="CASCADE"), nullable=False, index=True)
+    issue_type = Column(String, nullable=False)
+    score = Column(Float, nullable=True)
+    detected_at = Column(DateTime, default=datetime.utcnow)
+
+    photo = relationship("Photo", back_populates="quality_issues")
