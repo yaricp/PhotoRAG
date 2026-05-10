@@ -39,4 +39,13 @@ describe('Sidebar', () => {
         renderSidebar('/search')
         expect(screen.getByText('Gallery').closest('a')).not.toHaveClass('sidebar__link--active')
     })
+
+    it('renders garbage link', () => {
+        render(
+            <MemoryRouter>
+                <Sidebar state="full" />
+            </MemoryRouter>
+        )
+        expect(screen.getByText('Garbage')).toBeInTheDocument()
+    })
 })
