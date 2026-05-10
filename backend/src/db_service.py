@@ -7,7 +7,7 @@ from sqlalchemy import exists, and_, text, extract
 from src.models import (
     Photo, Tag, Person, Keyword, Category, PhotoTag, PhotoCategory, Camera, Geoposition,
     ModelState, Watcher, ProcessingJob, FolderScanner, AIModelConfig,
-    PhotoEmbedding, PhotoHash, PhotoDuplicate,
+    PhotoEmbedding, PhotoHash, PhotoDuplicate, PhotoQualityIssue,
 )
 from src.schemas import Photo as PhotoSchema
 from src.schemas import AIModelConfigUpdate
@@ -692,3 +692,39 @@ def delete_duplicate_record(db: Session, record_id: int) -> PhotoDuplicate | Non
     db.delete(record)
     db.commit()
     return record
+
+
+# ── Quality issue helpers ──────────────────────────────────────────────────
+
+def create_quality_issue(
+    db: Session, photo_id: int, issue_type: str, score: float | None
+) -> PhotoQualityIssue:
+    issue = PhotoQualityIssue(photo_id=photo_id, issue_type=issue_type, score=score)
+    db.add(issue)
+    return issue
+
+
+def get_quality_summary(db: Session) -> dict[str, int]:
+    """Return count of distinct photos flagged per issue_type."""
+    from sqlalchemy import func
+    rows = (
+        db.query(PhotoQualityIssue.issue_type, func.count(PhotoQualityIssue.photo_id.distinct()))
+        .group_by(PhotoQualityIssue.issue_type)
+        .all()
+    )
+    return {issue_type: count for issue_type, count in rows}
+
+
+def get_photos_by_issue_type(
+    db: Session, issue_type: str, skip: int = 0, limit: int = 20
+) -> tuple[list[Photo], int]:
+    """Return paginated photos that have been flagged with the given issue_type."""
+    query = (
+        db.query(Photo)
+        .join(PhotoQualityIssue, Photo.id == PhotoQualityIssue.photo_id)
+        .filter(PhotoQualityIssue.issue_type == issue_type)
+        .distinct()
+    )
+    total = query.count()
+    photos = query.offset(skip).limit(limit).all()
+    return photos, total
