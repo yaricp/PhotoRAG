@@ -76,3 +76,12 @@ def test_cascade_delete_removes_issues(db):
     db.commit()
     remaining = db.query(PhotoQualityIssue).filter_by(photo_id=photo_id).all()
     assert remaining == []
+
+
+def test_quality_issue_score_is_optional(db):
+    photo = _make_photo(db)
+    issue = PhotoQualityIssue(photo_id=photo.id, issue_type="no_exif")
+    db.add(issue)
+    db.commit()
+    db.refresh(issue)
+    assert issue.score is None
