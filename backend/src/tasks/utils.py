@@ -15,11 +15,15 @@ def phase_logic(phase: str) -> tuple[str, str]:
       second → third:  OCR (опционально)
     """
     if phase == "init":
-        return "first", "metadata_task,auto_tag_clip_task,categorize_photo_task,vision_task,ocr_task,compute_perceptual_hashes_task,"
+        return "first", (
+            "metadata_task,auto_tag_clip_task,categorize_photo_task,"
+            "vision_task,ocr_task,compute_perceptual_hashes_task,"
+            "brightness_task,edge_density_task,blur_task,entropy_task,"
+        )
     elif phase == "first":
         return "second", "final_embedding_task,translate_description_task,is_this_document_task,"
     elif phase == "second":
-        return "third", "embedding_document_text_task,"
+        return "third", "embedding_document_text_task,screenshot_detect_task,"
     return "", ""
 
 
@@ -31,6 +35,7 @@ def _dispatch_tasks(
     from .vision_tasks import vision_task, ocr_task, is_this_document_task
     from .embedding_tasks import final_embedding_task, embedding_document_text_task
     from .translation_tasks import translate_description_task
+    from .quality_tasks import brightness_task, edge_density_task, blur_task, entropy_task, screenshot_detect_task
     
     for task_name in tasks.split(","):
         task_name = task_name.strip()
@@ -57,6 +62,16 @@ def _dispatch_tasks(
             translate_description_task(photo_id, phase=phase, folder_scanner_id=folder_scanner_id)
         elif task_name == "compute_perceptual_hashes_task":
             compute_perceptual_hashes_task(photo_id, phase=phase, folder_scanner_id=folder_scanner_id)
+        elif task_name == "brightness_task":
+            brightness_task(photo_id, phase=phase, folder_scanner_id=folder_scanner_id)
+        elif task_name == "edge_density_task":
+            edge_density_task(photo_id, phase=phase, folder_scanner_id=folder_scanner_id)
+        elif task_name == "blur_task":
+            blur_task(photo_id, phase=phase, folder_scanner_id=folder_scanner_id)
+        elif task_name == "entropy_task":
+            entropy_task(photo_id, phase=phase, folder_scanner_id=folder_scanner_id)
+        elif task_name == "screenshot_detect_task":
+            screenshot_detect_task(photo_id, phase=phase, folder_scanner_id=folder_scanner_id)
 
         logger.info(f"[pipeline] Dispatched {task_name} for photo {photo_id}")
 

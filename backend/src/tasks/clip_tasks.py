@@ -14,8 +14,10 @@ from src.db_service import (
     get_or_create_photo_hash,
     find_perceptual_duplicates,
     record_perceptual_duplicate,
+    create_quality_issue,
 )
 from src.utils import extract_exif, parse_datetime
+from src.quality_checks import check_resolution, check_exif
 from src.queues.clip_queue import clip_queue
 
 # ---------------------------------------------------------------------------
@@ -71,6 +73,18 @@ def metadata_task(photo_id: int, phase: str, folder_scanner_id: int = None):
             
         db.commit()
         logger.info(f"[metadata] Photo {photo_id} metadata saved ✓")
+
+        # Quality checks: resolution + EXIF (CPU-only, no GPU required)
+        is_thumbnail, px_count = check_resolution(photo.file_path)
+        if is_thumbnail:
+            create_quality_issue(db, photo.id, "thumbnail", px_count)
+
+        is_no_exif, _ = check_exif(exif_raw)
+        if is_no_exif:
+            create_quality_issue(db, photo.id, "no_exif", 0.0)
+
+        db.commit()
+
         _finish_task(
             photo_id=photo_id,
             phase=phase,
