@@ -29,6 +29,8 @@ from src.db_service import (
     get_duplicate_groups,
     archive_photo,
     delete_duplicate_record,
+    get_quality_summary,
+    get_photos_by_issue_type,
 )
 from src.database import Session, SessionLocal
 from src.deps import get_db, get_translator
@@ -223,6 +225,27 @@ def delete_duplicate_record_endpoint(record_id: int, db: Session = Depends(get_d
             logger.info(f"Deleted duplicate file from disk: {record.duplicate_file_path}")
     deleted = delete_duplicate_record(db, record_id)
     return {"id": record_id}
+
+
+@app.get("/api/garbage/", tags=["Garbage"])
+def get_garbage_summary_endpoint(db: Session = Depends(get_db)) -> dict:
+    return {"counts": get_quality_summary(db)}
+
+
+@app.get("/api/garbage/{issue_type}/photos/", tags=["Garbage"])
+def get_garbage_photos_endpoint(
+    issue_type: str,
+    skip: int = Query(0),
+    limit: int = Query(20),
+    db: Session = Depends(get_db),
+) -> PaginatedResponse[PhotoSchema]:
+    photos, total = get_photos_by_issue_type(db, issue_type, skip=skip, limit=limit)
+    return PaginatedResponse(
+        items=photos,
+        total=total,
+        page=(skip // limit) + 1 if limit > 0 else 1,
+        size=limit,
+    )
 
 
 @app.delete("/api/photos/{photo_id}", tags=["Photos"], response_model=PhotoSchema)
