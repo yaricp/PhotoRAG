@@ -109,3 +109,29 @@
     margin: 0;
     grid-column: 1 / -1;
 }
+
+/* ── Per-card wrapper with "Not garbage" button ── */
+.gbp-card-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.gbp-not-garbage-btn {
+    width: 100%;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 5px 8px;
+    border-radius: 6px;
+    border: 1px solid rgba(74, 222, 128, 0.35);
+    background: rgba(74, 222, 128, 0.1);
+    color: #4ade80;
+    cursor: pointer;
+    font-family: var(--font-sans);
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.gbp-not-garbage-btn:hover {
+    background: rgba(74, 222, 128, 0.2);
+    border-color: rgba(74, 222, 128, 0.55);
+}

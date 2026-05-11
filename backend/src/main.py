@@ -255,6 +255,14 @@ def get_garbage_photos_endpoint(
     )
 
 
+@app.delete("/api/garbage/{photo_id}/issues", tags=["Garbage"])
+def unmark_garbage_endpoint(photo_id: int, db: Session = Depends(get_db)) -> dict:
+    from src.models import PhotoQualityIssue
+    db.query(PhotoQualityIssue).filter(PhotoQualityIssue.photo_id == photo_id).delete()
+    db.commit()
+    return {"photo_id": photo_id, "removed": True}
+
+
 @app.delete("/api/photos/{photo_id}", tags=["Photos"], response_model=PhotoSchema)
 def delete_photo_endpoint(photo_id: int, db: Session = Depends(get_db)) -> PhotoSchema:
     import os

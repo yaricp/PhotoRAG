@@ -9,6 +9,67 @@ function basename(path: string): string {
     return path.split('/').pop() ?? path
 }
 
+// ─── Shared photo card used in both sections ────────────────────────────────
+
+function DupPhotoCard({
+    filePath,
+    badge,
+    onArchive,
+    onDelete,
+    checked,
+    onCheck,
+}: {
+    filePath: string
+    badge?: React.ReactNode
+    onArchive?: () => void
+    onDelete?: () => void
+    checked?: boolean
+    onCheck?: () => void
+}) {
+    return (
+        <div className={`dup-card${checked ? ' dup-card--selected' : ''}`}>
+            <div className="dup-card__image-wrap">
+                <img
+                    src={photoImageUrl(filePath)}
+                    alt={basename(filePath)}
+                    className="dup-card__image"
+                    loading="lazy"
+                />
+                {badge}
+                {onCheck !== undefined && (
+                    <input
+                        type="checkbox"
+                        className="dup-card__checkbox"
+                        checked={checked ?? false}
+                        onChange={onCheck}
+                    />
+                )}
+            </div>
+            <div className="dup-card__body">
+                <span className="dup-card__name" title={filePath}>
+                    {basename(filePath)}
+                </span>
+                {(onArchive || onDelete) && (
+                    <div className="dup-card__actions">
+                        {onArchive && (
+                            <button className="dup-card__btn dup-card__btn--archive" onClick={onArchive}>
+                                Archive
+                            </button>
+                        )}
+                        {onDelete && (
+                            <button className="dup-card__btn dup-card__btn--delete" onClick={onDelete}>
+                                Delete
+                            </button>
+                        )}
+                    </div>
+                )}
+            </div>
+        </div>
+    )
+}
+
+// ─── Exact duplicates group ─────────────────────────────────────────────────
+
 function ExactGroup({ group, onReload }: {
     group: DuplicateGroup<ExactDuplicateEntry>
     onReload: () => void
@@ -35,29 +96,21 @@ function ExactGroup({ group, onReload }: {
         }
     }
 
+    const originalBadge = (
+        <span className="dup-card__badge dup-card__badge--original">Original</span>
+    )
+
     return (
         <div className="dup-group">
-            <div className="dup-group__original">
-                <span className="dup-group__badge dup-group__badge--original">Original</span>
-                <span className="dup-group__path" title={group.original.file_path}>
-                    {basename(group.original.file_path)}
-                </span>
-                <span className="dup-group__full-path">{group.original.file_path}</span>
-            </div>
-            <div className="dup-group__duplicates">
+            <div className="dup-cards">
+                <DupPhotoCard filePath={group.original.file_path} badge={originalBadge} />
                 {group.duplicates.map((d) => (
-                    <label key={d.id} className="dup-group__item">
-                        <input
-                            type="checkbox"
-                            checked={selected.has(d.id)}
-                            onChange={() => toggle(d.id)}
-                            className="dup-group__checkbox"
-                        />
-                        <span className="dup-group__path" title={d.file_path}>
-                            {basename(d.file_path)}
-                        </span>
-                        <span className="dup-group__full-path">{d.file_path}</span>
-                    </label>
+                    <DupPhotoCard
+                        key={d.id}
+                        filePath={d.file_path}
+                        checked={selected.has(d.id)}
+                        onCheck={() => toggle(d.id)}
+                    />
                 ))}
             </div>
             <div className="dup-group__actions">
@@ -73,105 +126,49 @@ function ExactGroup({ group, onReload }: {
     )
 }
 
-function PerceptualCard({ dup, onDeleted, onArchived }: {
-    dup: PerceptualDuplicateEntry
-    onDeleted: () => void
-    onArchived: () => void
-}) {
-    const [busy, setBusy] = useState<'delete' | 'archive' | null>(null)
-
-    async function handleDelete() {
-        setBusy('delete')
-        try {
-            await deletePhoto(dup.id)
-            onDeleted()
-        } finally {
-            setBusy(null)
-        }
-    }
-
-    async function handleArchive() {
-        setBusy('archive')
-        try {
-            await archivePhoto(dup.id)
-            onArchived()
-        } finally {
-            setBusy(null)
-        }
-    }
-
-    return (
-        <div className="dup-card">
-            <div className="dup-card__image-wrap">
-                <img
-                    src={photoImageUrl(dup.file_path)}
-                    alt={basename(dup.file_path)}
-                    className="dup-card__image"
-                    loading="lazy"
-                />
-                <span className="dup-card__dist">dist {dup.hash_distance}</span>
-            </div>
-            <div className="dup-card__body">
-                <span className="dup-card__name" title={dup.file_path}>
-                    {basename(dup.file_path)}
-                </span>
-                <div className="dup-card__actions">
-                    <button
-                        className="dup-card__btn dup-card__btn--archive"
-                        onClick={handleArchive}
-                        disabled={busy !== null}
-                    >
-                        {busy === 'archive' ? '…' : 'Archive'}
-                    </button>
-                    <button
-                        className="dup-card__btn dup-card__btn--delete"
-                        onClick={handleDelete}
-                        disabled={busy !== null}
-                    >
-                        {busy === 'delete' ? '…' : 'Delete'}
-                    </button>
-                </div>
-            </div>
-        </div>
-    )
-}
+// ─── Perceptual duplicates group ────────────────────────────────────────────
 
 function PerceptualGroup({ group, onReload }: {
     group: DuplicateGroup<PerceptualDuplicateEntry>
     onReload: () => void
 }) {
+    const [busy, setBusy] = useState<Record<number, 'delete' | 'archive'>>({})
+
+    async function handleDelete(id: number) {
+        setBusy(prev => ({ ...prev, [id]: 'delete' }))
+        try { await deletePhoto(id); onReload() }
+        finally { setBusy(prev => { const next = { ...prev }; delete next[id]; return next }) }
+    }
+
+    async function handleArchive(id: number) {
+        setBusy(prev => ({ ...prev, [id]: 'archive' }))
+        try { await archivePhoto(id); onReload() }
+        finally { setBusy(prev => { const next = { ...prev }; delete next[id]; return next }) }
+    }
+
+    const originalBadge = (
+        <span className="dup-card__badge dup-card__badge--original">Original</span>
+    )
+
     return (
         <div className="dup-group">
-            <div className="dup-group__original">
-                <span className="dup-group__badge dup-group__badge--original">Original</span>
-                <div className="dup-group__original-preview">
-                    <img
-                        src={photoImageUrl(group.original.file_path)}
-                        alt={basename(group.original.file_path)}
-                        className="dup-group__original-thumb"
-                        loading="lazy"
-                    />
-                    <div>
-                        <span className="dup-group__path" title={group.original.file_path}>
-                            {basename(group.original.file_path)}
-                        </span>
-                        <span className="dup-group__full-path">{group.original.file_path}</span>
-                    </div>
-                </div>
-            </div>
             <div className="dup-cards">
+                <DupPhotoCard filePath={group.original.file_path} badge={originalBadge} />
                 {group.duplicates.map((d) => (
-                    <PerceptualCard
+                    <DupPhotoCard
                         key={d.id}
-                        dup={d}
-                        onDeleted={onReload}
-                        onArchived={onReload}
+                        filePath={d.file_path}
+                        badge={<span className="dup-card__dist">dist {d.hash_distance}</span>}
+                        onArchive={busy[d.id] ? undefined : () => handleArchive(d.id)}
+                        onDelete={busy[d.id] ? undefined : () => handleDelete(d.id)}
                     />
                 ))}
             </div>
         </div>
     )
 }
+
+// ─── Page ───────────────────────────────────────────────────────────────────
 
 export function DuplicatesPage() {
     const [data, setData] = useState<DuplicatesResponse | null>(null)

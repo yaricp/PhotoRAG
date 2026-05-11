@@ -63,132 +63,7 @@
     overflow: hidden;
 }
 
-.dup-group__original {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 14px;
-    background: var(--color-surface-2);
-    border-bottom: 1px solid var(--color-border);
-}
-
-.dup-group__original-preview {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-width: 0;
-}
-
-.dup-group__original-thumb {
-    width: 40px;
-    height: 40px;
-    object-fit: cover;
-    border-radius: 4px;
-    flex-shrink: 0;
-    background: var(--color-surface);
-}
-
-.dup-group__badge {
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    padding: 2px 7px;
-    border-radius: 4px;
-    flex-shrink: 0;
-}
-
-.dup-group__badge--original {
-    background: rgba(124, 111, 255, 0.15);
-    color: var(--color-accent);
-    border: 1px solid rgba(124, 111, 255, 0.3);
-}
-
-.dup-group__path {
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--color-text);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 260px;
-}
-
-.dup-group__full-path {
-    font-size: 11px;
-    color: var(--color-text-dim, #9999b5);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    flex: 1;
-}
-
-/* ── Exact dup list ── */
-.dup-group__duplicates {
-    display: flex;
-    flex-direction: column;
-}
-
-.dup-group__item {
-    display: flex;
-    align-items: baseline;
-    gap: 10px;
-    padding: 8px 14px;
-    border-bottom: 1px solid var(--color-border);
-    cursor: pointer;
-    transition: background 0.12s;
-}
-
-.dup-group__item:last-child {
-    border-bottom: none;
-}
-
-.dup-group__item:hover {
-    background: rgba(255, 255, 255, 0.03);
-}
-
-.dup-group__checkbox {
-    flex-shrink: 0;
-    accent-color: var(--color-accent);
-    width: 14px;
-    height: 14px;
-    cursor: pointer;
-}
-
-/* ── Group actions bar ── */
-.dup-group__actions {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 8px 14px;
-    background: var(--color-surface-2);
-    border-top: 1px solid var(--color-border);
-}
-
-.dup-group__delete-btn {
-    font-size: 12px;
-    font-weight: 500;
-    padding: 5px 14px;
-    background: rgba(239, 68, 68, 0.12);
-    color: #f87171;
-    border: 1px solid rgba(239, 68, 68, 0.3);
-    border-radius: 6px;
-    cursor: pointer;
-    transition: background 0.15s, border-color 0.15s;
-    font-family: var(--font-sans);
-}
-
-.dup-group__delete-btn:hover:not(:disabled) {
-    background: rgba(239, 68, 68, 0.22);
-    border-color: rgba(239, 68, 68, 0.5);
-}
-
-.dup-group__delete-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-/* ── Perceptual duplicate cards ── */
+/* ── Card grid (shared by both sections) ── */
 .dup-cards {
     display: flex;
     flex-wrap: wrap;
@@ -196,6 +71,7 @@
     padding: 14px;
 }
 
+/* ── Photo card ── */
 .dup-card {
     width: 160px;
     background: var(--color-surface-2);
@@ -205,6 +81,12 @@
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
+    transition: border-color 0.15s;
+}
+
+.dup-card--selected {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 2px rgba(124, 111, 255, 0.2);
 }
 
 .dup-card__image-wrap {
@@ -222,6 +104,19 @@
     display: block;
 }
 
+/* Checkbox overlay (exact section) */
+.dup-card__checkbox {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    width: 16px;
+    height: 16px;
+    accent-color: var(--color-accent);
+    cursor: pointer;
+    z-index: 2;
+}
+
+/* Distance badge (perceptual section) */
 .dup-card__dist {
     position: absolute;
     bottom: 4px;
@@ -231,6 +126,26 @@
     color: #fff;
     padding: 2px 5px;
     border-radius: 4px;
+}
+
+/* Original badge */
+.dup-card__badge {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 4px;
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    z-index: 2;
+}
+
+.dup-card__badge--original {
+    background: rgba(124, 111, 255, 0.85);
+    color: #fff;
+    border: 1px solid rgba(124, 111, 255, 0.5);
 }
 
 .dup-card__body {
@@ -291,4 +206,37 @@
 .dup-card__btn--delete:hover:not(:disabled) {
     background: rgba(239, 68, 68, 0.22);
     border-color: rgba(239, 68, 68, 0.5);
+}
+
+/* ── Group actions bar (exact section) ── */
+.dup-group__actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 14px;
+    background: var(--color-surface-2);
+    border-top: 1px solid var(--color-border);
+}
+
+.dup-group__delete-btn {
+    font-size: 12px;
+    font-weight: 500;
+    padding: 5px 14px;
+    background: rgba(239, 68, 68, 0.12);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    font-family: var(--font-sans);
+}
+
+.dup-group__delete-btn:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.22);
+    border-color: rgba(239, 68, 68, 0.5);
+}
+
+.dup-group__delete-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }

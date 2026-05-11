@@ -234,6 +234,10 @@ export async function deleteDuplicateRecord(recordId: number): Promise<{ id: num
     return apiFetch(`/api/duplicates/${recordId}`, { method: 'DELETE' })
 }
 
+export async function unmarkGarbage(photoId: number): Promise<{ photo_id: number; removed: boolean }> {
+    return apiFetch(`/api/garbage/${photoId}/issues`, { method: 'DELETE' })
+}
+
 export interface GarbageSummary {
     counts: Record<string, number>
 }

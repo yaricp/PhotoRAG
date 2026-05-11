@@ -17,11 +17,79 @@
     overflow-y: auto;
 }
 
-.chat-page__context-title {
-    font-size: 13px;
-    font-weight: 600;
-    margin-bottom: 12px;
+/* =======================
+   CONTEXT TOOLBAR
+======================= */
+.chat-page__context-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    min-height: 28px;
+}
+
+.chat-page__select-all {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-size: 12px;
     color: var(--color-text-dim);
+    flex: 1;
+}
+
+.chat-page__select-all input[type="checkbox"] {
+    accent-color: var(--color-accent);
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+}
+
+.chat-page__select-all:has(input:disabled) {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.chat-page__context-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.chat-page__ctx-btn {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: var(--font-sans);
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.chat-page__ctx-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.chat-page__ctx-btn--archive {
+    background: rgba(124, 111, 255, 0.12);
+    color: var(--color-accent);
+    border: 1px solid rgba(124, 111, 255, 0.3);
+}
+
+.chat-page__ctx-btn--archive:hover:not(:disabled) {
+    background: rgba(124, 111, 255, 0.22);
+    border-color: rgba(124, 111, 255, 0.5);
+}
+
+.chat-page__ctx-btn--delete {
+    background: rgba(239, 68, 68, 0.12);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.chat-page__ctx-btn--delete:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.22);
+    border-color: rgba(239, 68, 68, 0.5);
 }
 
 .chat-page__photos {
@@ -230,4 +298,9 @@
 .chat-photo-item:has(.chat-photo-item__checkbox:checked) {
     outline: 2px solid var(--color-accent);
     border-radius: 8px;
+}
+
+.chat-photo-item--busy {
+    opacity: 0.4;
+    pointer-events: none;
 }

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { sendChat, undoLastAction } from '@/api/client'
+import { sendChat, undoLastAction, archivePhoto, deletePhoto } from '@/api/client'
 import { PhotoCard } from '@/components/photos/PhotoCard'
 import { Spinner } from '@/components/ui/Spinner'
 import { useChatStore } from '@/stores/useChatStore'
@@ -12,6 +12,7 @@ export function ChatPage() {
     const [input, setInput] = useState('')
     const [loading, setLoading] = useState(false)
     const [selectedPhotoIds, setSelectedPhotoIds] = useState<Set<number>>(new Set())
+    const [busyPhotoIds, setBusyPhotoIds] = useState<Set<number>>(new Set())
 
     const messagesEndRef = useRef<HTMLDivElement | null>(null)
 
@@ -24,12 +25,55 @@ export function ChatPage() {
         setSelectedPhotoIds(new Set())
     }, [contextPhotos])
 
+    const allIds = contextPhotos.map(p => p.id)
+    const allSelected = allIds.length > 0 && allIds.every(id => selectedPhotoIds.has(id))
+    const someSelected = selectedPhotoIds.size > 0
+
+    function toggleSelectAll() {
+        if (allSelected) {
+            setSelectedPhotoIds(new Set())
+        } else {
+            setSelectedPhotoIds(new Set(allIds))
+        }
+    }
+
     function togglePhoto(id: number) {
         setSelectedPhotoIds(prev => {
             const next = new Set(prev)
             next.has(id) ? next.delete(id) : next.add(id)
             return next
         })
+    }
+
+    function removeFromContext(ids: number[]) {
+        setContextPhotos(contextPhotos.filter(p => !ids.includes(p.id)))
+        setSelectedPhotoIds(prev => {
+            const next = new Set(prev)
+            ids.forEach(id => next.delete(id))
+            return next
+        })
+    }
+
+    async function handleArchiveSelected() {
+        const ids = [...selectedPhotoIds]
+        setBusyPhotoIds(new Set(ids))
+        try {
+            await Promise.all(ids.map(id => archivePhoto(id)))
+            removeFromContext(ids)
+        } finally {
+            setBusyPhotoIds(new Set())
+        }
+    }
+
+    async function handleDeleteSelected() {
+        const ids = [...selectedPhotoIds]
+        setBusyPhotoIds(new Set(ids))
+        try {
+            await Promise.all(ids.map(id => deletePhoto(id)))
+            removeFromContext(ids)
+        } finally {
+            setBusyPhotoIds(new Set())
+        }
     }
 
     const onSend = async () => {
@@ -70,18 +114,54 @@ export function ChatPage() {
         }
     }
 
+    const isBusy = busyPhotoIds.size > 0
+
     return (
         <div className="chat-page">
 
             {/* LEFT */}
             <div className="chat-page__context">
-                <div className="chat-page__context-title">
-                    Related photos
+
+                {/* Context panel toolbar */}
+                <div className="chat-page__context-toolbar">
+                    <label className="chat-page__select-all">
+                        <input
+                            type="checkbox"
+                            checked={allSelected}
+                            ref={el => { if (el) el.indeterminate = someSelected && !allSelected }}
+                            onChange={toggleSelectAll}
+                            disabled={contextPhotos.length === 0}
+                        />
+                        <span>
+                            {someSelected
+                                ? `${selectedPhotoIds.size} of ${contextPhotos.length} selected`
+                                : 'Select all'}
+                        </span>
+                    </label>
+
+                    {someSelected && (
+                        <div className="chat-page__context-actions">
+                            <button
+                                className="chat-page__ctx-btn chat-page__ctx-btn--archive"
+                                onClick={handleArchiveSelected}
+                                disabled={isBusy}
+                            >
+                                {isBusy ? '…' : 'Archive'}
+                            </button>
+                            <button
+                                className="chat-page__ctx-btn chat-page__ctx-btn--delete"
+                                onClick={handleDeleteSelected}
+                                disabled={isBusy}
+                            >
+                                {isBusy ? '…' : 'Delete'}
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 <div className="chat-page__photos">
                     {contextPhotos.map(photo => (
-                        <label key={photo.id} className="chat-photo-item">
+                        <label key={photo.id} className={`chat-photo-item${busyPhotoIds.has(photo.id) ? ' chat-photo-item--busy' : ''}`}>
                             <input
                                 type="checkbox"
                                 className="chat-photo-item__checkbox"

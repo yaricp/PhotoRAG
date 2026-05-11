@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { getGarbageSummary, getGarbagePhotos, archivePhoto, deletePhoto } from '@/api/client'
+import { getGarbageSummary, getGarbagePhotos, archivePhoto, deletePhoto, unmarkGarbage } from '@/api/client'
 import type { GarbageSummary } from '@/api/client'
 import type { PaginatedPhotos } from '@/types/api'
 import { PhotoCard } from '@/components/photos/PhotoCard'
@@ -55,6 +55,11 @@ function IssueSection({ issue, count }: { issue: IssueRow; count: number }) {
         removeCard(id)
     }
 
+    async function handleNotGarbage(id: number) {
+        await unmarkGarbage(id)
+        removeCard(id)
+    }
+
     const visiblePhotos = data?.items.filter(p => ids.has(p.id)) ?? []
 
     return (
@@ -74,12 +79,20 @@ function IssueSection({ issue, count }: { issue: IssueRow; count: number }) {
                         <p className="gbp-issue__empty">No photos flagged.</p>
                     )}
                     {!loading && visiblePhotos.map(photo => (
-                        <PhotoCard
-                            key={photo.id}
-                            photo={photo}
-                            onArchive={() => handleArchive(photo.id)}
-                            onDelete={() => handleDelete(photo.id)}
-                        />
+                        <div key={photo.id} className="gbp-card-wrap">
+                            <PhotoCard
+                                photo={photo}
+                                onArchive={() => handleArchive(photo.id)}
+                                onDelete={() => handleDelete(photo.id)}
+                            />
+                            <button
+                                className="gbp-not-garbage-btn"
+                                onClick={() => handleNotGarbage(photo.id)}
+                                title="Remove all garbage flags from this photo"
+                            >
+                                Not garbage
+                            </button>
+                        </div>
                     ))}
                 </div>
             )}
