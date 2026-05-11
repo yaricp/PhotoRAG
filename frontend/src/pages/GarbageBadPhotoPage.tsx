@@ -4,7 +4,10 @@ import type { GarbageSummary } from '@/api/client'
 import type { PaginatedPhotos } from '@/types/api'
 import { PhotoCard } from '@/components/photos/PhotoCard'
 import { Spinner } from '@/components/ui/Spinner'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import './GarbageBadPhotoPage.css'
+
+type PendingAction = { id: number; type: 'archive' | 'delete' } | null
 
 interface IssueRow {
     type: string
@@ -13,12 +16,12 @@ interface IssueRow {
 
 const TECHNICAL_ISSUES: IssueRow[] = [
     { type: 'thumbnail',     label: 'Thumbnails (resolution too small)' },
-    { type: 'no_exif',      label: 'No EXIF (possible internet copy)' },
-    { type: 'brightness',   label: 'Abnormal brightness' },
-    { type: 'edge_density', label: 'Low edge density (featureless)' },
-    { type: 'blur',         label: 'Blurry (Laplacian)' },
-    { type: 'entropy',      label: 'Low entropy (low information)' },
-    { type: 'screenshot',   label: 'Screenshots (UI detected)' },
+    { type: 'no_exif',       label: 'No EXIF (possible internet copy)' },
+    { type: 'brightness',    label: 'Abnormal brightness' },
+    { type: 'edge_density',  label: 'Low edge density (featureless)' },
+    { type: 'blur',          label: 'Blurry (Laplacian)' },
+    { type: 'entropy',       label: 'Low entropy (low information)' },
+    { type: 'screenshot',    label: 'Screenshots (UI detected)' },
 ]
 
 function IssueSection({ issue, count }: { issue: IssueRow; count: number }) {
@@ -26,6 +29,7 @@ function IssueSection({ issue, count }: { issue: IssueRow; count: number }) {
     const [data, setData] = useState<PaginatedPhotos | null>(null)
     const [loading, setLoading] = useState(false)
     const [ids, setIds] = useState<Set<number>>(new Set())
+    const [pending, setPending] = useState<PendingAction>(null)
 
     async function expand() {
         if (expanded) { setExpanded(false); return }
@@ -45,13 +49,11 @@ function IssueSection({ issue, count }: { issue: IssueRow; count: number }) {
         setIds(prev => { const next = new Set(prev); next.delete(id); return next })
     }
 
-    async function handleArchive(id: number) {
-        await archivePhoto(id)
-        removeCard(id)
-    }
-
-    async function handleDelete(id: number) {
-        await deletePhoto(id)
+    async function executeAction() {
+        if (!pending) return
+        const { id, type } = pending
+        if (type === 'archive') await archivePhoto(id)
+        else await deletePhoto(id)
         removeCard(id)
     }
 
@@ -62,13 +64,16 @@ function IssueSection({ issue, count }: { issue: IssueRow; count: number }) {
 
     const visiblePhotos = data?.items.filter(p => ids.has(p.id)) ?? []
 
+    const confirmTitle = pending?.type === 'delete' ? 'Delete photo?' : 'Archive photo?'
+    const confirmMessage = pending?.type === 'delete'
+        ? 'This file will be permanently removed from disk.'
+        : 'This photo will be marked as archived.'
+
     return (
         <div className="gbp-issue">
             <button className="gbp-issue__row" onClick={expand}>
                 <span className="gbp-issue__label">{issue.label}</span>
-                {count > 0 && (
-                    <span className="gbp-issue__count">{count}</span>
-                )}
+                {count > 0 && <span className="gbp-issue__count">{count}</span>}
                 <span className="gbp-issue__chevron">{expanded ? '▲' : '▼'}</span>
             </button>
 
@@ -82,8 +87,8 @@ function IssueSection({ issue, count }: { issue: IssueRow; count: number }) {
                         <div key={photo.id} className="gbp-card-wrap">
                             <PhotoCard
                                 photo={photo}
-                                onArchive={() => handleArchive(photo.id)}
-                                onDelete={() => handleDelete(photo.id)}
+                                onArchive={() => setPending({ id: photo.id, type: 'archive' })}
+                                onDelete={() => setPending({ id: photo.id, type: 'delete' })}
                             />
                             <button
                                 className="gbp-not-garbage-btn"
@@ -96,13 +101,21 @@ function IssueSection({ issue, count }: { issue: IssueRow; count: number }) {
                     ))}
                 </div>
             )}
+
+            <ConfirmModal
+                open={pending !== null}
+                title={confirmTitle}
+                message={confirmMessage}
+                confirmLabel={pending?.type === 'delete' ? 'Delete' : 'Archive'}
+                variant={pending?.type === 'delete' ? 'danger' : 'warning'}
+                onConfirm={executeAction}
+                onClose={() => setPending(null)}
+            />
         </div>
     )
 }
 
-interface PlaceholderSectionProps { title: string }
-
-function PlaceholderSection({ title }: PlaceholderSectionProps) {
+function PlaceholderSection({ title }: { title: string }) {
     return (
         <section className="gbp-section">
             <h2 className="gbp-section__heading">{title}</h2>

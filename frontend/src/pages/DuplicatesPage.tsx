@@ -3,13 +3,14 @@ import { getDuplicates, deletePhoto, archivePhoto, deleteDuplicateRecord } from 
 import type { DuplicatesResponse, DuplicateGroup, ExactDuplicateEntry, PerceptualDuplicateEntry } from '@/api/client'
 import { photoImageUrl } from '@/api/images'
 import { Spinner } from '@/components/ui/Spinner'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import './DuplicatesPage.css'
 
 function basename(path: string): string {
     return path.split('/').pop() ?? path
 }
 
-// ─── Shared photo card used in both sections ────────────────────────────────
+// ─── Shared photo card ───────────────────────────────────────────────────────
 
 function DupPhotoCard({
     filePath,
@@ -68,14 +69,16 @@ function DupPhotoCard({
     )
 }
 
-// ─── Exact duplicates group ─────────────────────────────────────────────────
+// ─── Exact duplicates section (selection lifted here) ────────────────────────
 
-function ExactGroup({ group, onReload }: {
-    group: DuplicateGroup<ExactDuplicateEntry>
+function ExactDuplicatesSection({ groups, onReload }: {
+    groups: DuplicateGroup<ExactDuplicateEntry>[]
     onReload: () => void
 }) {
+    // Flat set of all selected duplicate record IDs across all groups
     const [selected, setSelected] = useState<Set<number>>(new Set())
     const [deleting, setDeleting] = useState(false)
+    const [confirmOpen, setConfirmOpen] = useState(false)
 
     function toggle(id: number) {
         setSelected(prev => {
@@ -93,6 +96,84 @@ function ExactGroup({ group, onReload }: {
             onReload()
         } finally {
             setDeleting(false)
+            setSelected(new Set())
+        }
+    }
+
+    const originalBadge = (
+        <span className="dup-card__badge dup-card__badge--original">Original</span>
+    )
+
+    const totalExact = groups.reduce((s, g) => s + g.duplicates.length, 0)
+
+    return (
+        <section className="dup-section">
+            <h2 className="dup-section__heading">
+                Exact duplicates
+                <span className="dup-section__count">{totalExact}</span>
+                <button
+                    className="dup-section__delete-btn"
+                    onClick={() => setConfirmOpen(true)}
+                    disabled={deleting || selected.size === 0}
+                >
+                    {deleting
+                        ? 'Deleting…'
+                        : `Delete selected${selected.size > 0 ? ` (${selected.size})` : ''}`}
+                </button>
+            </h2>
+
+            {groups.length === 0 ? (
+                <p className="dup-section__empty">No exact duplicates found.</p>
+            ) : (
+                groups.map((g, i) => (
+                    <div key={i} className="dup-group">
+                        <div className="dup-cards">
+                            <DupPhotoCard filePath={g.original.file_path} badge={originalBadge} />
+                            {g.duplicates.map((d) => (
+                                <DupPhotoCard
+                                    key={d.id}
+                                    filePath={d.file_path}
+                                    checked={selected.has(d.id)}
+                                    onCheck={() => toggle(d.id)}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                ))
+            )}
+
+            <ConfirmModal
+                open={confirmOpen}
+                title={`Delete ${selected.size} duplicate${selected.size !== 1 ? 's' : ''}?`}
+                message="The selected duplicate records will be permanently deleted from disk."
+                confirmLabel="Delete"
+                variant="danger"
+                onConfirm={handleDeleteSelected}
+                onClose={() => setConfirmOpen(false)}
+            />
+        </section>
+    )
+}
+
+// ─── Perceptual duplicates group ─────────────────────────────────────────────
+
+function PerceptualGroup({ group, onReload }: {
+    group: DuplicateGroup<PerceptualDuplicateEntry>
+    onReload: () => void
+}) {
+    const [busy, setBusy] = useState<Record<number, 'delete' | 'archive'>>({})
+    const [pending, setPending] = useState<{ id: number; type: 'delete' | 'archive' } | null>(null)
+
+    async function executeAction() {
+        if (!pending) return
+        const { id, type } = pending
+        setBusy(prev => ({ ...prev, [id]: type }))
+        try {
+            if (type === 'delete') await deletePhoto(id)
+            else await archivePhoto(id)
+            onReload()
+        } finally {
+            setBusy(prev => { const next = { ...prev }; delete next[id]; return next })
         }
     }
 
@@ -108,67 +189,29 @@ function ExactGroup({ group, onReload }: {
                     <DupPhotoCard
                         key={d.id}
                         filePath={d.file_path}
-                        checked={selected.has(d.id)}
-                        onCheck={() => toggle(d.id)}
-                    />
-                ))}
-            </div>
-            <div className="dup-group__actions">
-                <button
-                    className="dup-group__delete-btn"
-                    onClick={handleDeleteSelected}
-                    disabled={deleting || selected.size === 0}
-                >
-                    {deleting ? 'Deleting…' : `Delete selected${selected.size > 0 ? ` (${selected.size})` : ''}`}
-                </button>
-            </div>
-        </div>
-    )
-}
-
-// ─── Perceptual duplicates group ────────────────────────────────────────────
-
-function PerceptualGroup({ group, onReload }: {
-    group: DuplicateGroup<PerceptualDuplicateEntry>
-    onReload: () => void
-}) {
-    const [busy, setBusy] = useState<Record<number, 'delete' | 'archive'>>({})
-
-    async function handleDelete(id: number) {
-        setBusy(prev => ({ ...prev, [id]: 'delete' }))
-        try { await deletePhoto(id); onReload() }
-        finally { setBusy(prev => { const next = { ...prev }; delete next[id]; return next }) }
-    }
-
-    async function handleArchive(id: number) {
-        setBusy(prev => ({ ...prev, [id]: 'archive' }))
-        try { await archivePhoto(id); onReload() }
-        finally { setBusy(prev => { const next = { ...prev }; delete next[id]; return next }) }
-    }
-
-    const originalBadge = (
-        <span className="dup-card__badge dup-card__badge--original">Original</span>
-    )
-
-    return (
-        <div className="dup-group">
-            <div className="dup-cards">
-                <DupPhotoCard filePath={group.original.file_path} badge={originalBadge} />
-                {group.duplicates.map((d) => (
-                    <DupPhotoCard
-                        key={d.id}
-                        filePath={d.file_path}
                         badge={<span className="dup-card__dist">dist {d.hash_distance}</span>}
-                        onArchive={busy[d.id] ? undefined : () => handleArchive(d.id)}
-                        onDelete={busy[d.id] ? undefined : () => handleDelete(d.id)}
+                        onArchive={busy[d.id] ? undefined : () => setPending({ id: d.id, type: 'archive' })}
+                        onDelete={busy[d.id] ? undefined : () => setPending({ id: d.id, type: 'delete' })}
                     />
                 ))}
             </div>
+
+            <ConfirmModal
+                open={pending !== null}
+                title={pending?.type === 'delete' ? 'Delete photo?' : 'Archive photo?'}
+                message={pending?.type === 'delete'
+                    ? 'This file will be permanently removed from disk.'
+                    : 'This photo will be marked as archived.'}
+                confirmLabel={pending?.type === 'delete' ? 'Delete' : 'Archive'}
+                variant={pending?.type === 'delete' ? 'danger' : 'warning'}
+                onConfirm={executeAction}
+                onClose={() => setPending(null)}
+            />
         </div>
     )
 }
 
-// ─── Page ───────────────────────────────────────────────────────────────────
+// ─── Page ────────────────────────────────────────────────────────────────────
 
 export function DuplicatesPage() {
     const [data, setData] = useState<DuplicatesResponse | null>(null)
@@ -193,26 +236,13 @@ export function DuplicatesPage() {
     if (error) return <div className="dup-page dup-page--error">{error}</div>
     if (!data) return null
 
-    const totalExact = data.exact.reduce((s, g) => s + g.duplicates.length, 0)
     const totalPerceptual = data.perceptual.reduce((s, g) => s + g.duplicates.length, 0)
 
     return (
         <div className="dup-page">
             <h1 className="dup-page__title">Duplicates</h1>
 
-            <section className="dup-section">
-                <h2 className="dup-section__heading">
-                    Exact duplicates
-                    <span className="dup-section__count">{totalExact}</span>
-                </h2>
-                {data.exact.length === 0 ? (
-                    <p className="dup-section__empty">No exact duplicates found.</p>
-                ) : (
-                    data.exact.map((g, i) => (
-                        <ExactGroup key={i} group={g} onReload={load} />
-                    ))
-                )}
-            </section>
+            <ExactDuplicatesSection groups={data.exact} onReload={load} />
 
             <div className="dup-divider" />
 

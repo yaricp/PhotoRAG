@@ -12,20 +12,23 @@
     min-width: 320px;
 
     border-right: 1px solid var(--color-border);
-    padding: 16px;
 
-    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;       /* panel itself does NOT scroll */
 }
 
 /* =======================
-   CONTEXT TOOLBAR
+   CONTEXT TOOLBAR  (sticky — never scrolls)
 ======================= */
 .chat-page__context-toolbar {
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 10px;
-    min-height: 28px;
+    padding: 12px 16px 10px;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-surface);
 }
 
 .chat-page__select-all {
@@ -93,9 +96,14 @@
 }
 
 .chat-page__photos {
+    flex: 1;
+    overflow-y: auto;       /* only the photos grid scrolls */
+    padding: 12px 16px 16px;
+
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     gap: 10px;
+    align-content: start;
 }
 
 /* =======================

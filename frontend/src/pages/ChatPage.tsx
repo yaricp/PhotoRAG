@@ -2,8 +2,11 @@ import React, { useState, useRef, useEffect } from 'react'
 import { sendChat, undoLastAction, archivePhoto, deletePhoto } from '@/api/client'
 import { PhotoCard } from '@/components/photos/PhotoCard'
 import { Spinner } from '@/components/ui/Spinner'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { useChatStore } from '@/stores/useChatStore'
 import './ChatPage.css'
+
+type PendingAction = { type: 'archive' | 'delete'; ids: number[] } | null
 
 export function ChatPage() {
     const { messages, threadId, contextPhotos, addMessage, setThreadId, setContextPhotos, clearConversation } =
@@ -13,6 +16,7 @@ export function ChatPage() {
     const [loading, setLoading] = useState(false)
     const [selectedPhotoIds, setSelectedPhotoIds] = useState<Set<number>>(new Set())
     const [busyPhotoIds, setBusyPhotoIds] = useState<Set<number>>(new Set())
+    const [pending, setPending] = useState<PendingAction>(null)
 
     const messagesEndRef = useRef<HTMLDivElement | null>(null)
 
@@ -20,7 +24,6 @@ export function ChatPage() {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
     }, [messages, loading])
 
-    // Reset selections when agent returns new context photos
     useEffect(() => {
         setSelectedPhotoIds(new Set())
     }, [contextPhotos])
@@ -30,11 +33,7 @@ export function ChatPage() {
     const someSelected = selectedPhotoIds.size > 0
 
     function toggleSelectAll() {
-        if (allSelected) {
-            setSelectedPhotoIds(new Set())
-        } else {
-            setSelectedPhotoIds(new Set(allIds))
-        }
+        setSelectedPhotoIds(allSelected ? new Set() : new Set(allIds))
     }
 
     function togglePhoto(id: number) {
@@ -54,22 +53,13 @@ export function ChatPage() {
         })
     }
 
-    async function handleArchiveSelected() {
-        const ids = [...selectedPhotoIds]
+    async function executeAction(action: PendingAction) {
+        if (!action) return
+        const { type, ids } = action
         setBusyPhotoIds(new Set(ids))
         try {
-            await Promise.all(ids.map(id => archivePhoto(id)))
-            removeFromContext(ids)
-        } finally {
-            setBusyPhotoIds(new Set())
-        }
-    }
-
-    async function handleDeleteSelected() {
-        const ids = [...selectedPhotoIds]
-        setBusyPhotoIds(new Set(ids))
-        try {
-            await Promise.all(ids.map(id => deletePhoto(id)))
+            if (type === 'archive') await Promise.all(ids.map(id => archivePhoto(id)))
+            else await Promise.all(ids.map(id => deletePhoto(id)))
             removeFromContext(ids)
         } finally {
             setBusyPhotoIds(new Set())
@@ -88,18 +78,10 @@ export function ChatPage() {
         setLoading(true)
 
         try {
-            const res = await sendChat({
-                message: finalMessage,
-                thread_id: threadId ?? undefined,
-            })
-
+            const res = await sendChat({ message: finalMessage, thread_id: threadId ?? undefined })
             addMessage({ role: 'assistant', content: res.response })
             setThreadId(res.thread_id)
-
-            if ((res as any).photos) {
-                setContextPhotos((res as any).photos)
-            }
-
+            if ((res as any).photos) setContextPhotos((res as any).photos)
         } finally {
             setLoading(false)
         }
@@ -115,14 +97,22 @@ export function ChatPage() {
     }
 
     const isBusy = busyPhotoIds.size > 0
+    const selCount = selectedPhotoIds.size
+
+    const confirmTitle = pending?.type === 'delete'
+        ? `Delete ${selCount} photo${selCount !== 1 ? 's' : ''}?`
+        : `Archive ${selCount} photo${selCount !== 1 ? 's' : ''}?`
+    const confirmMessage = pending?.type === 'delete'
+        ? 'The files will be permanently removed from disk.'
+        : 'The photos will be marked as archived.'
 
     return (
         <div className="chat-page">
 
-            {/* LEFT */}
+            {/* LEFT — context panel */}
             <div className="chat-page__context">
 
-                {/* Context panel toolbar */}
+                {/* Sticky toolbar */}
                 <div className="chat-page__context-toolbar">
                     <label className="chat-page__select-all">
                         <input
@@ -134,7 +124,7 @@ export function ChatPage() {
                         />
                         <span>
                             {someSelected
-                                ? `${selectedPhotoIds.size} of ${contextPhotos.length} selected`
+                                ? `${selCount} of ${contextPhotos.length} selected`
                                 : 'Select all'}
                         </span>
                     </label>
@@ -143,25 +133,29 @@ export function ChatPage() {
                         <div className="chat-page__context-actions">
                             <button
                                 className="chat-page__ctx-btn chat-page__ctx-btn--archive"
-                                onClick={handleArchiveSelected}
+                                onClick={() => setPending({ type: 'archive', ids: [...selectedPhotoIds] })}
                                 disabled={isBusy}
                             >
-                                {isBusy ? '…' : 'Archive'}
+                                Archive
                             </button>
                             <button
                                 className="chat-page__ctx-btn chat-page__ctx-btn--delete"
-                                onClick={handleDeleteSelected}
+                                onClick={() => setPending({ type: 'delete', ids: [...selectedPhotoIds] })}
                                 disabled={isBusy}
                             >
-                                {isBusy ? '…' : 'Delete'}
+                                Delete
                             </button>
                         </div>
                     )}
                 </div>
 
+                {/* Scrollable photos */}
                 <div className="chat-page__photos">
                     {contextPhotos.map(photo => (
-                        <label key={photo.id} className={`chat-photo-item${busyPhotoIds.has(photo.id) ? ' chat-photo-item--busy' : ''}`}>
+                        <label
+                            key={photo.id}
+                            className={`chat-photo-item${busyPhotoIds.has(photo.id) ? ' chat-photo-item--busy' : ''}`}
+                        >
                             <input
                                 type="checkbox"
                                 className="chat-photo-item__checkbox"
@@ -174,68 +168,48 @@ export function ChatPage() {
                 </div>
             </div>
 
-            {/* RIGHT */}
+            {/* RIGHT — chat */}
             <div className="chat-page__chat">
-
-                {/* MESSAGES */}
                 <div className="chat-page__messages">
                     {messages.map((m, i) => (
-                        <div
-                            key={i}
-                            className={`chat-bubble chat-bubble--${m.role}`}
-                        >
+                        <div key={i} className={`chat-bubble chat-bubble--${m.role}`}>
                             {m.content}
                         </div>
                     ))}
-
-                    {loading && (
-                        <div className="chat-page__typing">
-                            <Spinner size="sm" />
-                        </div>
-                    )}
-
+                    {loading && <div className="chat-page__typing"><Spinner size="sm" /></div>}
                     <div ref={messagesEndRef} />
                 </div>
 
-                {/* INPUT */}
                 <div className="chat-page__input">
                     <textarea
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                                e.preventDefault()
-                                onSend()
-                            }
+                            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSend() }
                         }}
                         placeholder="Ask something about your photos..."
                     />
-
-                    <button
-                        className="chat-page__undo-btn"
-                        onClick={onUndo}
-                        disabled={loading}
-                        title="Undo last action"
-                    >
+                    <button className="chat-page__undo-btn" onClick={onUndo} disabled={loading} title="Undo last action">
                         ↩ Undo
                     </button>
-
-                    <button onClick={onSend} disabled={loading}>
-                        Send
-                    </button>
-
+                    <button onClick={onSend} disabled={loading}>Send</button>
                     {messages.length > 0 && (
-                        <button
-                            className="chat-page__clear-btn"
-                            onClick={clearConversation}
-                            disabled={loading}
-                            title="Start a new conversation"
-                        >
+                        <button className="chat-page__clear-btn" onClick={clearConversation} disabled={loading} title="Start a new conversation">
                             New chat
                         </button>
                     )}
                 </div>
             </div>
+
+            <ConfirmModal
+                open={pending !== null}
+                title={confirmTitle}
+                message={confirmMessage}
+                confirmLabel={pending?.type === 'delete' ? 'Delete' : 'Archive'}
+                variant={pending?.type === 'delete' ? 'danger' : 'warning'}
+                onConfirm={() => executeAction(pending)}
+                onClose={() => setPending(null)}
+            />
         </div>
     )
 }

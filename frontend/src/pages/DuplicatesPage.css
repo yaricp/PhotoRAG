@@ -49,6 +49,31 @@
     margin: 0;
 }
 
+/* Delete-all button in the "Exact duplicates" heading */
+.dup-section__delete-btn {
+    margin-left: auto;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 14px;
+    background: rgba(239, 68, 68, 0.12);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: var(--font-sans);
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.dup-section__delete-btn:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.22);
+    border-color: rgba(239, 68, 68, 0.5);
+}
+
+.dup-section__delete-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
 .dup-divider {
     height: 1px;
     background: var(--color-border);
@@ -208,35 +233,3 @@
     border-color: rgba(239, 68, 68, 0.5);
 }
 
-/* ── Group actions bar (exact section) ── */
-.dup-group__actions {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 8px 14px;
-    background: var(--color-surface-2);
-    border-top: 1px solid var(--color-border);
-}
-
-.dup-group__delete-btn {
-    font-size: 12px;
-    font-weight: 500;
-    padding: 5px 14px;
-    background: rgba(239, 68, 68, 0.12);
-    color: #f87171;
-    border: 1px solid rgba(239, 68, 68, 0.3);
-    border-radius: 6px;
-    cursor: pointer;
-    transition: background 0.15s, border-color 0.15s;
-    font-family: var(--font-sans);
-}
-
-.dup-group__delete-btn:hover:not(:disabled) {
-    background: rgba(239, 68, 68, 0.22);
-    border-color: rgba(239, 68, 68, 0.5);
-}
-
-.dup-group__delete-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
