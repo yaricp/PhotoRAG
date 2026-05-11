@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { getGarbageSummary, getGarbagePhotos, archivePhotos, deletePhoto, unmarkGarbage } from '@/api/client'
-import type { GarbageSummary } from '@/api/client'
 import type { PaginatedPhotos } from '@/types/api'
 import { PhotoCard } from '@/components/photos/PhotoCard'
 import { Spinner } from '@/components/ui/Spinner'
@@ -24,7 +23,15 @@ const TECHNICAL_ISSUES: IssueRow[] = [
     { type: 'screenshot',    label: 'Screenshots (UI detected)' },
 ]
 
-function IssueSection({ issue, count }: { issue: IssueRow; count: number }) {
+function IssueSection({
+    issue,
+    count,
+    onPhotoRemoved,
+}: {
+    issue: IssueRow
+    count: number
+    onPhotoRemoved: () => void
+}) {
     const [expanded, setExpanded] = useState(false)
     const [data, setData] = useState<PaginatedPhotos | null>(null)
     const [loading, setLoading] = useState(false)
@@ -47,6 +54,7 @@ function IssueSection({ issue, count }: { issue: IssueRow; count: number }) {
 
     function removeCard(id: number) {
         setIds(prev => { const next = new Set(prev); next.delete(id); return next })
+        onPhotoRemoved()
     }
 
     async function executeAction() {
@@ -125,7 +133,7 @@ function PlaceholderSection({ title }: { title: string }) {
 }
 
 export function GarbageBadPhotoPage() {
-    const [summary, setSummary] = useState<GarbageSummary | null>(null)
+    const [counts, setCounts] = useState<Record<string, number>>({})
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
 
@@ -133,7 +141,8 @@ export function GarbageBadPhotoPage() {
         setLoading(true)
         setError(null)
         try {
-            setSummary(await getGarbageSummary())
+            const summary = await getGarbageSummary()
+            setCounts(summary.counts ?? {})
         } catch {
             setError('Failed to load garbage summary')
         } finally {
@@ -145,8 +154,6 @@ export function GarbageBadPhotoPage() {
 
     if (loading) return <div className="gbp-page"><Spinner /></div>
     if (error) return <div className="gbp-page gbp-page--error">{error}</div>
-
-    const counts = summary?.counts ?? {}
 
     return (
         <div className="gbp-page">
@@ -160,6 +167,12 @@ export function GarbageBadPhotoPage() {
                             key={issue.type}
                             issue={issue}
                             count={counts[issue.type] ?? 0}
+                            onPhotoRemoved={() =>
+                                setCounts(prev => ({
+                                    ...prev,
+                                    [issue.type]: Math.max(0, (prev[issue.type] ?? 0) - 1),
+                                }))
+                            }
                         />
                     ))}
                 </div>
