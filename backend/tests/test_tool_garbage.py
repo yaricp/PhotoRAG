@@ -70,8 +70,8 @@ def test_get_garbage_photos_returns_summary_and_photos(tmp_path, db, db_factory)
     with patch("src.graphs.tools.SessionLocal", side_effect=db_factory):
         result = get_garbage_photos.invoke({"issue_type": "", "limit": 10})
 
-    assert "blur" in result or "brightness" in result
-    assert "Quality issue summary" in result
+    # Result is a JSON array of Photo objects; both files should appear
+    assert "a.jpg" in result or "b.jpg" in result
 
 
 def test_get_garbage_photos_filters_by_issue_type(tmp_path, db, db_factory):

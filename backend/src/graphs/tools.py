@@ -697,14 +697,9 @@ def get_garbage_photos(issue_type: str = "", limit: int = 20) -> str:
     try:
         summary = get_quality_summary(db)
         photos, total = get_garbage_photos_with_issues(db, issue_type=issue_type, limit=limit)
-        header = f"Quality issue summary: {summary}\n"
-        if issue_type:
-            header += f"Photos with issue '{issue_type}' (total {total}, showing {len(photos)}):\n"
-        else:
-            header += f"Sample of flagged photos (total {total}, showing {len(photos)}):\n"
         if not photos:
-            return header + "No flagged photos found."
-        return header + _serialize_photos(photos)
+            return f"Quality issue summary: {summary}. No flagged photos found."
+        return _serialize_photos(photos)
     finally:
         db.close()
 
@@ -1399,7 +1394,6 @@ def filter_photos(
         )
         if not photos:
             return "No photos found matching those filters."
-        header = f"Found {total} photo(s) total, showing {len(photos)}:\n"
-        return header + _serialize_photos(photos)
+        return _serialize_photos(photos)
     finally:
         db.close()
