@@ -19,7 +19,7 @@ from src.db_service import (
 )
 from src.database import SessionLocal
 from src.ai.registry import registry
-from src.utils import extract_exif, resize_image
+from src.utils import extract_exif, resize_image, archive_photos_to_zip
 from src.schemas import Photo
 
 
@@ -512,30 +512,30 @@ def archive_photos(photo_ids: List[int]) -> str:
     - "Добавь эти фотографии в архив"
     - "Заархивируй снимки 2 и 7"
     """
-    import zipfile
     logger.info(f"[tool] archive_photos: {photo_ids}")
     db = SessionLocal()
     try:
         root = _get_allowed_root(db)
         zip_path = root / "MyPhotoArchive.zip"
-        added_names: list = []
-        newly_archived_ids: list = []
+        file_paths = []
+        found_ids = []
         skipped = []
-        with zipfile.ZipFile(zip_path, "a") as zf:
-            for pid in photo_ids:
-                photo = get_photo_by_id(db, pid)
-                if not photo:
-                    skipped.append(f"ID {pid} not found")
-                    continue
-                if not Path(photo.file_path).exists():
-                    skipped.append(f"ID {pid} file missing")
-                    continue
-                arcname = Path(photo.file_path).name
-                zf.write(photo.file_path, arcname)
-                added_names.append(arcname)
-                if not photo.is_archived:
-                    photo.is_archived = True
-                    newly_archived_ids.append(pid)
+        for pid in photo_ids:
+            photo = get_photo_by_id(db, pid)
+            if not photo:
+                skipped.append(f"ID {pid} not found")
+                continue
+            file_paths.append(photo.file_path)
+            found_ids.append(pid)
+        added_names, missing = archive_photos_to_zip(file_paths, str(zip_path))
+        for fp in missing:
+            skipped.append(f"missing: {fp}")
+        newly_archived_ids = []
+        for pid in found_ids:
+            photo = get_photo_by_id(db, pid)
+            if photo and not photo.is_archived:
+                photo.is_archived = True
+                newly_archived_ids.append(pid)
         db.commit()
         if added_names:
             create_history_action(

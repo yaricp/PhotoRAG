@@ -226,8 +226,11 @@ export async function getDuplicates(): Promise<DuplicatesResponse> {
     return apiFetch<DuplicatesResponse>('/api/duplicates/')
 }
 
-export async function archivePhoto(id: number): Promise<{ id: number; is_archived: boolean }> {
-    return apiFetch(`/api/photos/${id}/archive`, { method: 'POST' })
+export async function archivePhotos(ids: number[]): Promise<{ archived: number; skipped: number; zip_path: string }> {
+    return apiFetch(`/api/photos/archive`, {
+        method: 'POST',
+        body: JSON.stringify({ photo_ids: ids }),
+    })
 }
 
 export async function deleteDuplicateRecord(recordId: number): Promise<{ id: number }> {

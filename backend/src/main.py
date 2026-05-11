@@ -37,6 +37,7 @@ from src.db_service import (
     get_history_actions,
     perform_undo,
 )
+from src.utils import archive_photos_to_zip
 from src.database import Session, SessionLocal
 from src.deps import get_db, get_translator
 from src.config import Api_Settings
@@ -145,6 +146,44 @@ def sse_event_stream_endpoint():
     return {"status": "stream_placeholder"}
 
 
+@app.post("/api/photos/archive", tags=["Photos"])
+def archive_photos_endpoint(
+    body: dict,
+    db: Session = Depends(get_db),
+) -> dict:
+    photo_ids: list = body.get("photo_ids", [])
+    if not photo_ids:
+        raise HTTPException(status_code=422, detail="photo_ids is required")
+    from src.config import Api_Settings
+    from pathlib import Path
+    from src.models import PhotoQualityIssue
+    settings = Api_Settings()
+    root = Path(settings.DEFAULT_FOLDER) if hasattr(settings, "DEFAULT_FOLDER") else Path.home()
+    zip_path = str(root / "MyPhotoArchive.zip")
+    file_paths = []
+    found_ids = []
+    skipped_ids = []
+    for pid in photo_ids:
+        photo = get_photo_by_id(db, pid)
+        if not photo:
+            skipped_ids.append(pid)
+            continue
+        file_paths.append(photo.file_path)
+        found_ids.append(pid)
+    added_names, _ = archive_photos_to_zip(file_paths, zip_path)
+    # mark as archived in DB
+    for pid in found_ids:
+        photo = get_photo_by_id(db, pid)
+        if photo and not photo.is_archived:
+            photo.is_archived = True
+    db.commit()
+    return {
+        "archived": len(added_names),
+        "skipped": len(skipped_ids),
+        "zip_path": zip_path,
+    }
+
+
 @app.get("/api/photos/{photo_id}", tags=["Photos"], response_model=PhotoSchema)
 def get_photo_endpoint(
     photo_id: int,
@@ -212,13 +251,6 @@ def get_duplicates_endpoint(db: Session = Depends(get_db)) -> dict:
     return get_duplicate_groups(db)
 
 
-@app.post("/api/photos/{photo_id}/archive", tags=["Photos"])
-def archive_photo_endpoint(photo_id: int, db: Session = Depends(get_db)) -> dict:
-    photo = archive_photo(db, photo_id)
-    if not photo:
-        raise HTTPException(status_code=404)
-    return {"id": photo.id, "is_archived": photo.is_archived}
-
 
 @app.delete("/api/duplicates/{record_id}", tags=["Photos"])
 def delete_duplicate_record_endpoint(record_id: int, db: Session = Depends(get_db)) -> dict:
@@ -257,10 +289,10 @@ def get_garbage_photos_endpoint(
 
 @app.delete("/api/garbage/{photo_id}/issues", tags=["Garbage"])
 def unmark_garbage_endpoint(photo_id: int, db: Session = Depends(get_db)) -> dict:
-    from src.models import PhotoQualityIssue
-    db.query(PhotoQualityIssue).filter(PhotoQualityIssue.photo_id == photo_id).delete()
+    from src.models import PhotoQualityIssue as QI
+    deleted = db.query(QI).filter(QI.photo_id == photo_id).delete(synchronize_session=False)
     db.commit()
-    return {"photo_id": photo_id, "removed": True}
+    return {"photo_id": photo_id, "removed": deleted > 0}
 
 
 @app.delete("/api/photos/{photo_id}", tags=["Photos"], response_model=PhotoSchema)

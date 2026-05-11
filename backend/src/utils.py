@@ -125,6 +125,27 @@ def convert_ocr_result_to_json(result):
     return output
 
 
+def archive_photos_to_zip(file_paths: list, zip_path: str) -> tuple:
+    """
+    Append files to a zip archive. Returns (added_arcnames, skipped_paths).
+    Pure file operation — no DB access.
+    """
+    import zipfile
+    added: list = []
+    skipped: list = []
+    import os as _os
+    with zipfile.ZipFile(zip_path, "a") as zf:
+        for fp in file_paths:
+            if not _os.path.exists(fp):
+                skipped.append(fp)
+                continue
+            arcname = _os.path.basename(fp)
+            zf.write(fp, arcname)
+            added.append(arcname)
+    logger.info(f"archive_photos_to_zip: added {len(added)}, skipped {len(skipped)}")
+    return added, skipped
+
+
 def resize_image(image_path: str, width: int, height: int) -> str:
     try:
         with Image.open(image_path) as image:

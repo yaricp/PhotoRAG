@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { sendChat, undoLastAction, archivePhoto, deletePhoto } from '@/api/client'
+import { sendChat, undoLastAction, archivePhotos, deletePhoto } from '@/api/client'
 import { PhotoCard } from '@/components/photos/PhotoCard'
 import { Spinner } from '@/components/ui/Spinner'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
@@ -58,7 +58,7 @@ export function ChatPage() {
         const { type, ids } = action
         setBusyPhotoIds(new Set(ids))
         try {
-            if (type === 'archive') await Promise.all(ids.map(id => archivePhoto(id)))
+            if (type === 'archive') await archivePhotos(ids)
             else await Promise.all(ids.map(id => deletePhoto(id)))
             removeFromContext(ids)
         } finally {

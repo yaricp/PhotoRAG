@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { getDuplicates, deletePhoto, archivePhoto, deleteDuplicateRecord } from '@/api/client'
+import { getDuplicates, deletePhoto, archivePhotos, deleteDuplicateRecord } from '@/api/client'
 import type { DuplicatesResponse, DuplicateGroup, ExactDuplicateEntry, PerceptualDuplicateEntry } from '@/api/client'
 import { photoImageUrl } from '@/api/images'
 import { Spinner } from '@/components/ui/Spinner'
@@ -170,7 +170,7 @@ function PerceptualGroup({ group, onReload }: {
         setBusy(prev => ({ ...prev, [id]: type }))
         try {
             if (type === 'delete') await deletePhoto(id)
-            else await archivePhoto(id)
+            else await archivePhotos([id])
             onReload()
         } finally {
             setBusy(prev => { const next = { ...prev }; delete next[id]; return next })

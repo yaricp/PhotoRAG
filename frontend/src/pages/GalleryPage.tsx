@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { getPhotos, getAvailableDates, archivePhoto, deletePhoto } from '@/api/client'
+import { getPhotos, getAvailableDates, archivePhotos, deletePhoto } from '@/api/client'
 import type { AvailableDate } from '@/api/client'
 import { PhotoCard } from '@/components/photos/PhotoCard'
 import { Spinner } from '@/components/ui/Spinner'
@@ -39,7 +39,7 @@ export function GalleryPage() {
     }
 
     async function handleArchive(id: number) {
-        await archivePhoto(id)
+        await archivePhotos([id])
         removeFromGallery(id)
     }
 

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { getGarbageSummary, getGarbagePhotos, archivePhoto, deletePhoto, unmarkGarbage } from '@/api/client'
+import { getGarbageSummary, getGarbagePhotos, archivePhotos, deletePhoto, unmarkGarbage } from '@/api/client'
 import type { GarbageSummary } from '@/api/client'
 import type { PaginatedPhotos } from '@/types/api'
 import { PhotoCard } from '@/components/photos/PhotoCard'
@@ -52,7 +52,7 @@ function IssueSection({ issue, count }: { issue: IssueRow; count: number }) {
     async function executeAction() {
         if (!pending) return
         const { id, type } = pending
-        if (type === 'archive') await archivePhoto(id)
+        if (type === 'archive') await archivePhotos([id])
         else await deletePhoto(id)
         removeCard(id)
     }
