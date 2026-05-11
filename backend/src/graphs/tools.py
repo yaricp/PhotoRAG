@@ -545,7 +545,7 @@ def archive_photos(photo_ids: List[int]) -> str:
                 params={"zip_path": str(zip_path)},
                 undo_data={
                     "zip_path": str(zip_path),
-                    "added_names": added_names,
+                    "original_paths": added_names,  # dict: arcname → original_file_path
                     "newly_archived_ids": newly_archived_ids,
                 },
             )

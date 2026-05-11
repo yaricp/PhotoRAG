@@ -51,6 +51,7 @@ def get_photo_by_id(db: Session, photo_id: int) -> Optional[Photo]:
 
 def get_photos_by_category_id(db: Session, category_id: int) -> List[Photo]:
     return db.query(Photo).filter(
+        Photo.is_archived == False,
         Photo.categories_rel.any(PhotoCategory.category_id == category_id)
     ).all()
 
@@ -71,7 +72,7 @@ def get_all_photos(
     day: Optional[int] = None,
 ):
 
-    base_query = db.query(Photo)
+    base_query = db.query(Photo).filter(Photo.is_archived == False)
 
     # 🔹 ВСЕ категории должны присутствовать (AND)
     if category_ids:
@@ -151,7 +152,7 @@ def get_available_dates(
         extract('year', Photo.captured_at).label('year'),
         extract('month', Photo.captured_at).label('month'),
         extract('day', Photo.captured_at).label('day'),
-    ).filter(Photo.captured_at.isnot(None))
+    ).filter(Photo.captured_at.isnot(None), Photo.is_archived == False)
 
     if category_ids:
         for cid in category_ids:
@@ -195,7 +196,8 @@ def get_photos_by_vector(
     photos = []
     for photo_id in photo_ids:
         photo = get_photo_by_id(db, photo_id)
-        photos.append(photo)
+        if photo and not photo.is_archived:
+            photos.append(photo)
     logger.info(f"Photos found in DB: {photos}")
     return photos
 
@@ -652,6 +654,8 @@ def get_duplicate_groups(db: Session) -> dict:
 
     for row in rows:
         orig = row.original_photo
+        if orig.is_archived:
+            continue
         orig_data = {"id": orig.id, "file_path": orig.file_path}
 
         if row.match_type == "exact":
@@ -661,6 +665,8 @@ def get_duplicate_groups(db: Session) -> dict:
             exact[orig.id]["duplicates"].append(dup_data)
         else:
             dup = row.duplicate_photo
+            if dup.is_archived:
+                continue
             dup_data = {
                 "id": dup.id,
                 "file_path": dup.file_path,
@@ -722,7 +728,7 @@ def get_photos_by_issue_type(
     query = (
         db.query(Photo)
         .join(PhotoQualityIssue, Photo.id == PhotoQualityIssue.photo_id)
-        .filter(PhotoQualityIssue.issue_type == issue_type)
+        .filter(PhotoQualityIssue.issue_type == issue_type, Photo.is_archived == False)
         .distinct()
     )
     total = query.count()
@@ -741,6 +747,7 @@ def get_garbage_photos_with_issues(
     query = (
         db.query(Photo)
         .join(PhotoQualityIssue, Photo.id == PhotoQualityIssue.photo_id)
+        .filter(Photo.is_archived == False)
         .distinct()
     )
     if issue_type:
@@ -755,6 +762,7 @@ def get_garbage_photo_paths(db: Session, issue_type: str = "") -> list[str]:
     query = (
         db.query(Photo.file_path)
         .join(PhotoQualityIssue, Photo.id == PhotoQualityIssue.photo_id)
+        .filter(Photo.is_archived == False)
         .distinct()
     )
     if issue_type:
@@ -771,7 +779,7 @@ def get_photos_by_tag_id(db: Session, tag_id: int) -> List[Photo]:
     return (
         db.query(Photo)
         .join(PhotoTag, Photo.id == PhotoTag.photo_id)
-        .filter(PhotoTag.tag_id == tag_id)
+        .filter(PhotoTag.tag_id == tag_id, Photo.is_archived == False)
         .all()
     )
 
@@ -796,7 +804,7 @@ def search_photos_by_exif_params(
     camera_model: Optional[str] = None,
     limit: int = 50,
 ) -> List[Photo]:
-    query = db.query(Photo)
+    query = db.query(Photo).filter(Photo.is_archived == False)
     if camera_make or camera_model:
         query = query.join(Camera, Photo.camera_id == Camera.id, isouter=True)
     if width_min is not None:
@@ -934,9 +942,23 @@ def perform_undo(db: Session) -> str:
 
     elif action.action_type == "archive_photos":
         zip_path = Path(undo_data["zip_path"])
-        added_names = set(undo_data.get("added_names", []))
+        # original_paths: dict[arcname → original_file_path] (new format)
+        # added_names: list[arcname] (legacy format — no file restoration possible)
+        original_paths: dict = undo_data.get("original_paths", {})
+        added_names = set(original_paths.keys()) if original_paths else set(undo_data.get("added_names", []))
         newly_archived_ids = undo_data.get("newly_archived_ids", [])
         if zip_path.exists() and added_names:
+            # Restore files to their original locations
+            if original_paths:
+                with zipfile.ZipFile(zip_path) as zf:
+                    names_in_zip = set(zf.namelist())
+                    for arcname, orig_path in original_paths.items():
+                        if arcname in names_in_zip:
+                            os.makedirs(os.path.dirname(orig_path), exist_ok=True)
+                            with open(orig_path, "wb") as fout:
+                                fout.write(zf.read(arcname))
+                            logger.info(f"Restored {arcname} → {orig_path}")
+            # Remove restored entries from zip
             with zipfile.ZipFile(zip_path) as zf:
                 all_names = set(zf.namelist())
             remaining = all_names - added_names

@@ -127,21 +127,30 @@ def convert_ocr_result_to_json(result):
 
 def archive_photos_to_zip(file_paths: list, zip_path: str) -> tuple:
     """
-    Append files to a zip archive. Returns (added_arcnames, skipped_paths).
-    Pure file operation — no DB access.
+    Append files to a zip archive and delete the originals from disk.
+
+    Returns:
+        added   — dict mapping arcname (filename in zip) → original absolute path
+        skipped — list of original paths that were missing and not archived
     """
     import zipfile
-    added: list = []
+    added: dict = {}   # arcname → original_path
     skipped: list = []
-    import os as _os
     with zipfile.ZipFile(zip_path, "a") as zf:
         for fp in file_paths:
-            if not _os.path.exists(fp):
+            if not os.path.exists(fp):
                 skipped.append(fp)
                 continue
-            arcname = _os.path.basename(fp)
+            arcname = os.path.basename(fp)
             zf.write(fp, arcname)
-            added.append(arcname)
+            added[arcname] = fp
+    # Delete originals only after the zip is safely closed and flushed
+    for fp in added.values():
+        try:
+            os.remove(fp)
+            logger.info(f"Deleted original after archiving: {fp}")
+        except OSError as e:
+            logger.warning(f"Could not delete original {fp}: {e}")
     logger.info(f"archive_photos_to_zip: added {len(added)}, skipped {len(skipped)}")
     return added, skipped
 

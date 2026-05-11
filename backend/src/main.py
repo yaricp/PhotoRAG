@@ -36,6 +36,7 @@ from src.db_service import (
     set_setting,
     get_history_actions,
     perform_undo,
+    create_history_action,
 )
 from src.utils import archive_photos_to_zip
 from src.database import Session, SessionLocal
@@ -170,15 +171,29 @@ def archive_photos_endpoint(
             continue
         file_paths.append(photo.file_path)
         found_ids.append(pid)
-    added_names, _ = archive_photos_to_zip(file_paths, zip_path)
+    original_paths, _ = archive_photos_to_zip(file_paths, zip_path)
     # mark as archived in DB
+    newly_archived_ids = []
     for pid in found_ids:
         photo = get_photo_by_id(db, pid)
         if photo and not photo.is_archived:
             photo.is_archived = True
+            newly_archived_ids.append(pid)
     db.commit()
+    if original_paths:
+        create_history_action(
+            db,
+            action_type="archive_photos",
+            photo_ids=found_ids,
+            params={"zip_path": zip_path},
+            undo_data={
+                "zip_path": zip_path,
+                "original_paths": original_paths,
+                "newly_archived_ids": newly_archived_ids,
+            },
+        )
     return {
-        "archived": len(added_names),
+        "archived": len(original_paths),
         "skipped": len(skipped_ids),
         "zip_path": zip_path,
     }
