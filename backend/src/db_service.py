@@ -731,6 +731,102 @@ def get_photos_by_issue_type(
 
 
 # ---------------------------------------------------------------------------
+# Garbage / quality-issue helpers
+# ---------------------------------------------------------------------------
+
+def get_garbage_photos_with_issues(
+    db: Session, issue_type: str = "", skip: int = 0, limit: int = 20
+) -> tuple[list[Photo], int]:
+    """Return paginated photos that have any quality issue, or a specific one."""
+    query = (
+        db.query(Photo)
+        .join(PhotoQualityIssue, Photo.id == PhotoQualityIssue.photo_id)
+        .distinct()
+    )
+    if issue_type:
+        query = query.filter(PhotoQualityIssue.issue_type == issue_type)
+    total = query.count()
+    photos = query.offset(skip).limit(limit).all()
+    return photos, total
+
+
+def get_garbage_photo_paths(db: Session, issue_type: str = "") -> list[str]:
+    """Return file_path for all photos flagged with any (or a specific) quality issue."""
+    query = (
+        db.query(Photo.file_path)
+        .join(PhotoQualityIssue, Photo.id == PhotoQualityIssue.photo_id)
+        .distinct()
+    )
+    if issue_type:
+        query = query.filter(PhotoQualityIssue.issue_type == issue_type)
+    return [row[0] for row in query.all()]
+
+
+# ---------------------------------------------------------------------------
+# Tag / category lookup by ID
+# ---------------------------------------------------------------------------
+
+def get_photos_by_tag_id(db: Session, tag_id: int) -> List[Photo]:
+    """Return all photos that have a given tag."""
+    return (
+        db.query(Photo)
+        .join(PhotoTag, Photo.id == PhotoTag.photo_id)
+        .filter(PhotoTag.tag_id == tag_id)
+        .all()
+    )
+
+
+# ---------------------------------------------------------------------------
+# EXIF-parameter search
+# ---------------------------------------------------------------------------
+
+def search_photos_by_exif_params(
+    db: Session,
+    width_min: Optional[int] = None,
+    width_max: Optional[int] = None,
+    height_min: Optional[int] = None,
+    height_max: Optional[int] = None,
+    focal_length_min: Optional[float] = None,
+    focal_length_max: Optional[float] = None,
+    aperture_min: Optional[float] = None,
+    aperture_max: Optional[float] = None,
+    iso_min: Optional[int] = None,
+    iso_max: Optional[int] = None,
+    camera_make: Optional[str] = None,
+    camera_model: Optional[str] = None,
+    limit: int = 50,
+) -> List[Photo]:
+    query = db.query(Photo)
+    if camera_make or camera_model:
+        query = query.join(Camera, Photo.camera_id == Camera.id, isouter=True)
+    if width_min is not None:
+        query = query.filter(Photo.image_width >= width_min)
+    if width_max is not None:
+        query = query.filter(Photo.image_width <= width_max)
+    if height_min is not None:
+        query = query.filter(Photo.image_height >= height_min)
+    if height_max is not None:
+        query = query.filter(Photo.image_height <= height_max)
+    if focal_length_min is not None:
+        query = query.filter(Photo.focal_length >= focal_length_min)
+    if focal_length_max is not None:
+        query = query.filter(Photo.focal_length <= focal_length_max)
+    if aperture_min is not None:
+        query = query.filter(Photo.aperture >= aperture_min)
+    if aperture_max is not None:
+        query = query.filter(Photo.aperture <= aperture_max)
+    if iso_min is not None:
+        query = query.filter(Photo.iso >= iso_min)
+    if iso_max is not None:
+        query = query.filter(Photo.iso <= iso_max)
+    if camera_make:
+        query = query.filter(Camera.make.ilike(f"%{camera_make}%"))
+    if camera_model:
+        query = query.filter(Camera.model.ilike(f"%{camera_model}%"))
+    return query.limit(limit).all()
+
+
+# ---------------------------------------------------------------------------
 # AppSetting helpers
 # ---------------------------------------------------------------------------
 
@@ -857,6 +953,34 @@ def perform_undo(db: Session) -> str:
             photo = get_photo_by_id(db, pid)
             if photo:
                 photo.is_archived = False
+        db.commit()
+
+    elif action.action_type == "add_tag":
+        tag_id = undo_data.get("tag_id")
+        tagged_ids = undo_data.get("photo_ids", [])
+        if tag_id and tagged_ids:
+            db.query(PhotoTag).filter(
+                PhotoTag.tag_id == tag_id,
+                PhotoTag.photo_id.in_(tagged_ids),
+            ).delete(synchronize_session=False)
+            db.commit()
+
+    elif action.action_type == "add_category":
+        category_id = undo_data.get("category_id")
+        cat_ids = undo_data.get("photo_ids", [])
+        if category_id and cat_ids:
+            db.query(PhotoCategory).filter(
+                PhotoCategory.category_id == category_id,
+                PhotoCategory.photo_id.in_(cat_ids),
+            ).delete(synchronize_session=False)
+            db.commit()
+
+    elif action.action_type == "add_geoposition":
+        original_geo_ids = undo_data.get("original_geoposition_ids", {})
+        for photo_id_str, original_geo_id in original_geo_ids.items():
+            photo = get_photo_by_id(db, int(photo_id_str))
+            if photo:
+                photo.geoposition_id = original_geo_id
         db.commit()
 
     delete_history_action(db, action.id)

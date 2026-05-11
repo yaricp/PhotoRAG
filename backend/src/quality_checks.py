@@ -74,6 +74,59 @@ def check_entropy(file_path: str) -> tuple[bool, float]:
     return entropy < 3.0, round(entropy, 4)
 
 
+def compute_colorfulness(file_path: str) -> float:
+    """Mean HSV saturation across all pixels, returned on a 0–255 scale."""
+    with Image.open(file_path) as img:
+        arr = np.array(img.convert("HSV").resize((256, 256)), dtype=np.float32)
+    return round(float(arr[:, :, 1].mean()), 2)
+
+
+def get_visual_metrics(file_path: str) -> dict:
+    """Return all raw visual metric values without any garbage judgment."""
+    with Image.open(file_path) as img:
+        w, h = img.size
+        gray = img.convert("L").resize((512, 512))
+        gray_arr = np.array(gray, dtype=np.float64)
+        small_rgb = img.convert("RGB").resize((256, 256))
+
+    brightness = round(float(np.mean(gray_arr)), 2)
+
+    lap = (
+        gray_arr[:-2, 1:-1] + gray_arr[2:, 1:-1] +
+        gray_arr[1:-1, :-2] + gray_arr[1:-1, 2:] -
+        4 * gray_arr[1:-1, 1:-1]
+    )
+    blur_variance = round(float(lap.var()), 2)
+
+    from PIL import ImageFilter
+    edges = np.array(gray.filter(ImageFilter.FIND_EDGES))
+    edge_density = round(float((edges > 10).sum()) / edges.size, 4)
+
+    from PIL import ImageFilter as IF
+    blurred = gray.filter(IF.GaussianBlur(radius=2))
+    blurred_arr = np.array(blurred)
+    patch_size = 64
+    entropies = []
+    for i in range(0, blurred_arr.shape[0] - patch_size, patch_size):
+        for j in range(0, blurred_arr.shape[1] - patch_size, patch_size):
+            entropies.append(Image.fromarray(blurred_arr[i:i+patch_size, j:j+patch_size]).entropy())
+    entropy = round(float(np.median(entropies)), 4) if entropies else 0.0
+
+    hsv_arr = np.array(Image.fromarray(np.array(small_rgb)).convert("HSV"), dtype=np.float32)
+    colorfulness = round(float(hsv_arr[:, :, 1].mean()), 2)
+
+    return {
+        "width": w,
+        "height": h,
+        "resolution_mpx": round(w * h / 1_000_000, 3),
+        "brightness": brightness,
+        "blur_variance": blur_variance,
+        "edge_density": edge_density,
+        "entropy": entropy,
+        "colorfulness": colorfulness,
+    }
+
+
 def check_screenshot(file_path: str) -> tuple[bool, float]:
     """True if > 45% of pixels fall in the top-10 colors of a 64-color quantization.
     Screenshots have large flat-color regions (menus, toolbars, backgrounds)."""

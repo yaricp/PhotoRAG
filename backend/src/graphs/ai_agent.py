@@ -16,6 +16,7 @@ from src.graphs.tools import (
     get_geopositions,
     search_photos_semantic,
     search_photos_by_category_id,
+    search_photos_metadata,
     get_photo_details,
     resize_photo,
     get_exif_data,
@@ -25,26 +26,66 @@ from src.graphs.tools import (
     create_folder,
     move_photos,
     archive_photos,
+    # Group A — garbage / quality
+    get_garbage_photos,
+    get_garbage_total_size,
+    estimate_photo_quality_quick,
+    estimate_photo_quality_deep,
+    get_photo_visual_metrics,
+    # Group B — duplicate comparison
+    compare_photos_quick,
+    compare_photos_deep,
+    # Group C — annotation
+    add_tag_to_photos,
+    add_category_to_photos,
+    add_geoposition_to_photos,
+    geocode_photo_from_exif,
+    # Group D — search / filter
+    get_photos_by_tag_id,
+    search_photos_by_exif,
+    filter_photos,
 )
 from src.schemas import Photo
 
 
 # 1. Initialize Tools
 tools = [
+    # Lookup helpers
     get_categories,
     get_tags,
     get_cameras,
     get_geopositions,
+    # Photo search / retrieval
     search_photos_semantic,
     search_photos_by_category_id,
+    search_photos_metadata,
     get_photo_details,
     get_exif_data,
     describe_photo,
-    get_action_history,
-    undo_last_action,
+    filter_photos,
+    get_photos_by_tag_id,
+    search_photos_by_exif,
+    # Garbage / quality
+    get_garbage_photos,
+    get_garbage_total_size,
+    estimate_photo_quality_quick,
+    estimate_photo_quality_deep,
+    get_photo_visual_metrics,
+    # Duplicate comparison
+    compare_photos_quick,
+    compare_photos_deep,
+    # Annotation (write)
+    add_tag_to_photos,
+    add_category_to_photos,
+    add_geoposition_to_photos,
+    geocode_photo_from_exif,
+    # File operations (write)
     create_folder,
     move_photos,
     archive_photos,
+    # History
+    get_action_history,
+    undo_last_action,
 ]
 editing_tools = [
     resize_photo,
