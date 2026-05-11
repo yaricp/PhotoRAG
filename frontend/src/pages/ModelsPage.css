@@ -1,99 +1,209 @@
-.models-page-container {
-    @apply p-4 max-w-4xl mx-auto space-y-6;
+.models-page {
+    padding: 24px;
+    max-width: 860px;
+    margin: 0 auto;
 }
 
-.models-page-header {
-    @apply flex items-center gap-3 mb-6 border-b border-white/10 pb-4;
+.models-page__title {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--color-text);
+    margin: 0 0 6px;
 }
 
-.models-page-header-icon-wrapper {
-    @apply p-2 bg-blue-500/10 rounded-lg border border-blue-500/20;
+.models-page__desc {
+    font-size: 13px;
+    color: var(--color-text-dim);
+    margin: 0 0 24px;
 }
 
-.models-page-title {
-    @apply text-2xl font-bold text-white;
+.models-page__error {
+    background: rgba(248, 113, 113, 0.12);
+    border: 1px solid rgba(248, 113, 113, 0.3);
+    color: var(--color-error);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 13px;
+    margin-bottom: 20px;
 }
 
-.models-page-description {
-    @apply text-gray-400 text-sm mb-6;
-}
-
-.models-page-error {
-    @apply bg-red-500/20 text-red-400 p-4 rounded-xl mb-6 border border-red-500/50;
-}
-
+/* ── Grid ── */
 .models-grid {
-    @apply grid grid-cols-1 md:grid-cols-2 gap-6;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 16px;
 }
 
+/* ── Card ── */
 .model-card {
-    @apply bg-[#1A1A1A] rounded-xl border border-white/5 p-6 space-y-4 hover:border-white/10 transition-colors;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    transition: border-color 0.15s;
 }
 
-.model-card-header {
-    @apply flex items-center justify-between;
+.model-card:hover {
+    border-color: rgba(255, 255, 255, 0.14);
 }
 
-.model-card-title {
-    @apply text-xl font-semibold capitalize text-white flex items-center gap-1.5;
+/* ── Card header ── */
+.model-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
-.model-card-badge {
-    @apply px-2 py-1 text-xs rounded-full font-medium;
+.model-card__title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-text);
+    text-transform: capitalize;
+    margin: 0;
 }
 
-.model-card-badge--local {
-    @apply bg-blue-500/20 text-blue-400 border border-blue-500/30;
+.model-card__icon {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
 }
 
-.model-card-badge--remote {
-    @apply bg-purple-500/20 text-purple-400 border border-purple-500/30;
+.model-card__icon--local  { color: #60a5fa; }
+.model-card__icon--remote { color: #a78bfa; }
+
+.model-card__badge {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 2px 10px;
+    border-radius: 12px;
 }
 
-.model-card-form {
-    @apply space-y-4 pt-2;
+.model-card__badge--local {
+    background: rgba(96, 165, 250, 0.12);
+    color: #60a5fa;
+    border: 1px solid rgba(96, 165, 250, 0.25);
 }
 
-.form-group {
-    @apply space-y-1;
+.model-card__badge--remote {
+    background: rgba(167, 139, 250, 0.12);
+    color: #a78bfa;
+    border: 1px solid rgba(167, 139, 250, 0.25);
 }
 
-.form-label {
-    @apply text-sm font-medium text-gray-400;
+/* ── Form fields ── */
+.model-card__form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
-.form-label--remote {
-    @apply text-purple-300/70;
+.model-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
 }
 
-.form-input {
-    @apply w-full bg-[#252525] text-white rounded-lg p-2.5 border border-white/10 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 outline-none transition-all;
+.model-field__label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-text-dim);
 }
 
-.form-input--remote {
-    @apply focus:border-purple-500/50 focus:ring-purple-500/50 placeholder-gray-600;
+.model-field__input,
+.model-field__select {
+    width: 100%;
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    border-radius: 7px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-family: var(--font-sans);
+    color: var(--color-text);
+    outline: none;
+    transition: border-color 0.15s;
+    box-sizing: border-box;
 }
 
-.remote-config-container {
-    @apply space-y-4 bg-purple-500/5 p-4 rounded-lg border border-purple-500/10;
+.model-field__input:focus,
+.model-field__select:focus {
+    border-color: var(--color-accent);
 }
 
-.model-card-footer {
-    @apply flex justify-end pt-4 mt-4 border-t border-white/5;
+.model-field__select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%237878a0' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+    cursor: pointer;
 }
 
-.btn-save {
-    @apply px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium disabled:opacity-50 transition-colors flex items-center gap-2;
+.model-field__select option {
+    background: var(--color-surface-2);
+    color: var(--color-text);
 }
 
-.loading-spinner {
-    @apply animate-spin h-4 w-4 text-white;
+.model-field__input::placeholder {
+    color: var(--color-text-dim);
 }
 
-.loading-container {
-    @apply p-4 flex items-center justify-center h-full;
+/* ── Remote config block ── */
+.model-card__remote {
+    background: var(--color-surface-2);
+    border: 1px solid rgba(167, 139, 250, 0.15);
+    border-radius: 8px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
-.loading-text {
-    @apply text-gray-400;
+/* ── Footer ── */
+.model-card__footer {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 4px;
+    border-top: 1px solid var(--color-border);
+}
+
+.model-card__save-btn {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 8px 20px;
+    background: var(--color-accent);
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    cursor: pointer;
+    font-family: var(--font-sans);
+    transition: opacity 0.15s;
+}
+
+.model-card__save-btn:hover:not(:disabled) {
+    opacity: 0.85;
+}
+
+.model-card__save-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.model-card__spinner {
+    width: 14px;
+    height: 14px;
+    animation: spin 0.8s linear infinite;
+    flex-shrink: 0;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }

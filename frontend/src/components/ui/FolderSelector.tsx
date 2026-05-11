@@ -19,13 +19,13 @@ export function FolderSelector({ onSelect }: Props) {
 
     return (
         <div className="folder-selector">
-            <button onClick={handlePick}>
+            <button className="folder-selector__button" onClick={handlePick}>
                 📁 Choose folder
             </button>
 
-            <div className="folder-selector__preview">
-                {path || 'No folder selected'}
-            </div>
+            {path && (
+                <div className="folder-selector__preview">{path}</div>
+            )}
         </div>
     )
 }

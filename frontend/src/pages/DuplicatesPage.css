@@ -33,6 +33,14 @@
     margin: 0 0 8px;
 }
 
+.dup-section__select-all {
+    width: 15px;
+    height: 15px;
+    accent-color: var(--color-accent);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
 .dup-section__count {
     font-size: 12px;
     font-weight: 500;

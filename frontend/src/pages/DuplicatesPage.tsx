@@ -80,12 +80,20 @@ function ExactDuplicatesSection({ groups, onReload }: {
     const [deleting, setDeleting] = useState(false)
     const [confirmOpen, setConfirmOpen] = useState(false)
 
+    const allDupIds = groups.flatMap(g => g.duplicates.map(d => d.id))
+    const allSelected = allDupIds.length > 0 && allDupIds.every(id => selected.has(id))
+    const someSelected = selected.size > 0 && !allSelected
+
     function toggle(id: number) {
         setSelected(prev => {
             const next = new Set(prev)
             next.has(id) ? next.delete(id) : next.add(id)
             return next
         })
+    }
+
+    function toggleAll() {
+        setSelected(allSelected ? new Set() : new Set(allDupIds))
     }
 
     async function handleDeleteSelected() {
@@ -109,6 +117,16 @@ function ExactDuplicatesSection({ groups, onReload }: {
     return (
         <section className="dup-section">
             <h2 className="dup-section__heading">
+                {allDupIds.length > 0 && (
+                    <input
+                        type="checkbox"
+                        className="dup-section__select-all"
+                        checked={allSelected}
+                        ref={el => { if (el) el.indeterminate = someSelected }}
+                        onChange={toggleAll}
+                        title="Select / deselect all duplicates"
+                    />
+                )}
                 Exact duplicates
                 <span className="dup-section__count">{totalExact}</span>
                 <button

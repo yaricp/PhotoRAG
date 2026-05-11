@@ -712,9 +712,11 @@ def create_quality_issue(
 
 
 def get_quality_summary(db: Session) -> dict[str, int]:
-    """Return count of distinct photos flagged per issue_type."""
+    """Return count of distinct non-archived photos flagged per issue_type."""
     rows = (
         db.query(PhotoQualityIssue.issue_type, func.count(PhotoQualityIssue.photo_id.distinct()))
+        .join(Photo, Photo.id == PhotoQualityIssue.photo_id)
+        .filter(Photo.is_archived == False)
         .group_by(PhotoQualityIssue.issue_type)
         .all()
     )
