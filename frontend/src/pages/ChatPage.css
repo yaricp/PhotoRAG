@@ -191,6 +191,23 @@
 }
 
 /* =======================
+   NEW CHAT BUTTON
+======================= */
+.chat-page__clear-btn {
+    background: transparent;
+    color: var(--color-text-dim);
+    border: 1px solid var(--color-border);
+    font-size: 13px;
+    padding: 10px 12px;
+}
+
+.chat-page__clear-btn:hover:not(:disabled) {
+    background: var(--color-surface);
+    color: var(--color-text);
+    opacity: 1;
+}
+
+/* =======================
    PHOTO SELECTION
 ======================= */
 .chat-photo-item {

@@ -2,21 +2,15 @@ import React, { useState, useRef, useEffect } from 'react'
 import { sendChat, undoLastAction } from '@/api/client'
 import { PhotoCard } from '@/components/photos/PhotoCard'
 import { Spinner } from '@/components/ui/Spinner'
-import type { Photo } from '@/types/api'
+import { useChatStore } from '@/stores/useChatStore'
 import './ChatPage.css'
 
-type Message = {
-    role: 'user' | 'assistant'
-    content: string
-}
-
 export function ChatPage() {
-    const [messages, setMessages] = useState<Message[]>([])
+    const { messages, threadId, contextPhotos, addMessage, setThreadId, setContextPhotos, clearConversation } =
+        useChatStore()
+
     const [input, setInput] = useState('')
     const [loading, setLoading] = useState(false)
-
-    const [contextPhotos, setContextPhotos] = useState<Photo[]>([])
-    const [threadId, setThreadId] = useState<string | null>(null)
     const [selectedPhotoIds, setSelectedPhotoIds] = useState<Set<number>>(new Set())
 
     const messagesEndRef = useRef<HTMLDivElement | null>(null)
@@ -45,9 +39,7 @@ export function ChatPage() {
             ? `${input.trim()}\n\n[Selected photo IDs: ${[...selectedPhotoIds].join(', ')}]`
             : input.trim()
 
-        const userMsg = { role: 'user' as const, content: finalMessage }
-
-        setMessages(prev => [...prev, userMsg])
+        addMessage({ role: 'user', content: finalMessage })
         setInput('')
         setLoading(true)
 
@@ -57,11 +49,7 @@ export function ChatPage() {
                 thread_id: threadId ?? undefined,
             })
 
-            setMessages(prev => [
-                ...prev,
-                { role: 'assistant', content: res.response }
-            ])
-
+            addMessage({ role: 'assistant', content: res.response })
             setThreadId(res.thread_id)
 
             if ((res as any).photos) {
@@ -76,15 +64,9 @@ export function ChatPage() {
     const onUndo = async () => {
         try {
             const result = await undoLastAction()
-            setMessages(prev => [
-                ...prev,
-                { role: 'assistant', content: `↩ ${result.detail}` }
-            ])
+            addMessage({ role: 'assistant', content: `↩ ${result.detail}` })
         } catch {
-            setMessages(prev => [
-                ...prev,
-                { role: 'assistant', content: 'Undo failed.' }
-            ])
+            addMessage({ role: 'assistant', content: 'Undo failed.' })
         }
     }
 
@@ -161,6 +143,17 @@ export function ChatPage() {
                     <button onClick={onSend} disabled={loading}>
                         Send
                     </button>
+
+                    {messages.length > 0 && (
+                        <button
+                            className="chat-page__clear-btn"
+                            onClick={clearConversation}
+                            disabled={loading}
+                            title="Start a new conversation"
+                        >
+                            New chat
+                        </button>
+                    )}
                 </div>
             </div>
         </div>
