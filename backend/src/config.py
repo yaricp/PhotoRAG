@@ -68,6 +68,7 @@ class ML_Settings(BaseSettings):
     PHOTO_EMBEDDER_MODEL: str = "nomic-ai/nomic-embed-text-v1.5"
     EMBEDDING_API_URL: str = ""
     EMBEDDING_API_KEY: str = ""
+    EMBEDDING_SIMILARITY_LIMIT: float = 0.89  # cosine distance threshold; lower = stricter
 
     # Translator
     TRANSLATOR_MODEL: str = "facebook/nllb-200-distilled-600M"

@@ -14,6 +14,7 @@ function basename(path: string): string {
 
 function DupPhotoCard({
     filePath,
+    photoId,
     badge,
     onArchive,
     onDelete,
@@ -21,6 +22,7 @@ function DupPhotoCard({
     onCheck,
 }: {
     filePath: string
+    photoId?: number
     badge?: React.ReactNode
     onArchive?: () => void
     onDelete?: () => void
@@ -36,6 +38,9 @@ function DupPhotoCard({
                     className="dup-card__image"
                     loading="lazy"
                 />
+                {photoId !== undefined && (
+                    <span className="dup-card__id-badge">#{photoId}</span>
+                )}
                 {badge}
                 {onCheck !== undefined && (
                     <input
@@ -146,7 +151,7 @@ function ExactDuplicatesSection({ groups, onReload }: {
                 groups.map((g, i) => (
                     <div key={i} className="dup-group">
                         <div className="dup-cards">
-                            <DupPhotoCard filePath={g.original.file_path} badge={originalBadge} />
+                            <DupPhotoCard filePath={g.original.file_path} photoId={g.original.id} badge={originalBadge} />
                             {g.duplicates.map((d) => (
                                 <DupPhotoCard
                                     key={d.id}
@@ -195,18 +200,22 @@ function PerceptualGroup({ group, onReload }: {
         }
     }
 
-    const originalBadge = (
-        <span className="dup-card__badge dup-card__badge--original">Original</span>
-    )
+    const origId = group.original.id
 
     return (
         <div className="dup-group">
             <div className="dup-cards">
-                <DupPhotoCard filePath={group.original.file_path} badge={originalBadge} />
+                <DupPhotoCard
+                    filePath={group.original.file_path}
+                    photoId={origId}
+                    onArchive={busy[origId] ? undefined : () => setPending({ id: origId, type: 'archive' })}
+                    onDelete={busy[origId] ? undefined : () => setPending({ id: origId, type: 'delete' })}
+                />
                 {group.duplicates.map((d) => (
                     <DupPhotoCard
                         key={d.id}
                         filePath={d.file_path}
+                        photoId={d.id}
                         badge={<span className="dup-card__dist">dist {d.hash_distance}</span>}
                         onArchive={busy[d.id] ? undefined : () => setPending({ id: d.id, type: 'archive' })}
                         onDelete={busy[d.id] ? undefined : () => setPending({ id: d.id, type: 'delete' })}

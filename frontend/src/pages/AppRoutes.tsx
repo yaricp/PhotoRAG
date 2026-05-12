@@ -13,6 +13,7 @@ import { DuplicatesPage } from './DuplicatesPage'
 import { GarbageBadPhotoPage } from './GarbageBadPhotoPage'
 import { TemplateTagsPage } from './TemplateTagsPage'
 import { TemplateCategoriesPage } from './TemplateCategoriesPage'
+import { PhotoEditPage } from './PhotoEditPage'
 
 export function AppRoutes() {
     return (
@@ -24,6 +25,7 @@ export function AppRoutes() {
             <Route path="/garbage" element={<GarbageBadPhotoPage />} />
             <Route path="/chat" element={<ChatPage />} />
             <Route path="/photo/:id" element={<PhotoDetailPage />} />
+            <Route path="/photo/:id/edit" element={<PhotoEditPage />} />
             <Route path="/processing" element={<JobProcessingPage />} />
             <Route path="/folders" element={<FoldersPage />} />
             <Route path="/models" element={<ModelsPage />} />

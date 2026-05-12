@@ -25,6 +25,7 @@ export function SearchPage() {
         }
     }
 
+
     const onClear = () => {
         clear()
         setError(null)
@@ -71,8 +72,12 @@ export function SearchPage() {
 
             {!loading && !error && results.length > 0 && (
                 <div className="search-page__grid">
-                    {results.map(photo => (
-                        <PhotoCard key={photo.id} photo={photo} />
+                    {results.map((result, index) => (
+                        <div key={result.photo.id} className="search-page__result-item">
+                            <span className="search-page__rank">#{index + 1}</span>
+                            <span className="search-page__distance">dist {result.distance.toFixed(3)}</span>
+                            <PhotoCard photo={result.photo} />
+                        </div>
                     ))}
                 </div>
             )}

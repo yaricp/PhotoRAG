@@ -12,7 +12,7 @@ describe('factories', () => {
         expect(photo.id).toBe(1)
         expect(photo.file_path).toBe('/Users/test/Photos/doc1.png')
         expect(photo.is_doc).toBe(false)
-        expect(photo.tags).toHaveLength(1)
+        expect(photo.tags_rel).toHaveLength(1)
     })
 
     it('makePhoto accepts overrides', () => {

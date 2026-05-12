@@ -149,6 +149,21 @@
     z-index: 2;
 }
 
+/* Photo ID badge */
+.dup-card__id-badge {
+    position: absolute;
+    bottom: 4px;
+    left: 4px;
+    font-size: 10px;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    padding: 1px 5px;
+    border-radius: 4px;
+    z-index: 2;
+    pointer-events: none;
+    line-height: 1.6;
+}
+
 /* Distance badge (perceptual section) */
 .dup-card__dist {
     position: absolute;

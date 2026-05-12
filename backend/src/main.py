@@ -47,6 +47,15 @@ from src.db_service import (
     create_template_category,
     update_template_category,
     delete_template_category,
+    get_photo_is_trash,
+    mark_photo_as_trash,
+    unmark_photo_as_trash,
+    update_photo_fields,
+    set_photo_is_doc,
+    link_photo_tag,
+    unlink_photo_tag,
+    link_photo_category,
+    unlink_photo_category,
 )
 from src.utils import archive_photos_to_zip
 from src.database import Session, SessionLocal
@@ -80,6 +89,13 @@ from src.schemas import (
     TemplateCategoryCreate,
     TemplateCategoryUpdate,
     TemplateCategoryResponse,
+    PhotoUpdate,
+    PhotoFlagsUpdate,
+    PhotoTagLink,
+    PhotoCategoryLink,
+    PhotoTagResponse,
+    PhotoCategoryResponse,
+    PhotoSearchResult,
 )
 from src.ai.translator import Translator
 from src.ai.registry import registry
@@ -219,14 +235,14 @@ def archive_photos_endpoint(
 def get_photo_endpoint(
     photo_id: int,
     db: Session = Depends(get_db),
-    translator: Optional[Translator] = Depends(get_translator)
 ) -> PhotoSchema:
     logger.info(f"Getting photo: {photo_id}")
     photo = get_photo_by_id(db, photo_id)
     if not photo:
         raise HTTPException(status_code=404, detail="Photo not found")
-    logger.info(f"Photo found in DB: {photo}")
-    return photo
+    result = PhotoSchema.model_validate(photo)
+    result.is_trash = get_photo_is_trash(db, photo_id)
+    return result
 
 
 @app.get("/api/photos/", tags=["Photos"], response_model=PaginatedResponse[PhotoSchema])
@@ -342,16 +358,24 @@ def delete_photo_endpoint(photo_id: int, db: Session = Depends(get_db)) -> Photo
     return deleted_photo
 
 
-@app.post("/api/search/", tags=["Photos"], response_model=List[PhotoSchema])
+@app.post("/api/search/", tags=["Photos"], response_model=List[PhotoSearchResult])
 async def search_photos_endpoint(
     request: QueryRequest,
     db: Session = Depends(get_db),
     translator: Optional[Translator] = Depends(get_translator)
-) -> List[PhotoSchema]:
-    """Search photos by vector"""
+) -> List[PhotoSearchResult]:
+    """Search photos by vector, returns results sorted by distance (most relevant first)."""
     logger.info(f"Received search request for text: {request.text_query}")
-    photos = get_photos_by_vector(db, request.text_query, request.k)
-    return photos
+    pairs = get_photos_by_vector(db, request.text_query, request.k)
+    result = []
+    for photo, distance in pairs:
+        item = PhotoSearchResult(
+            photo=PhotoSchema.model_validate(photo),
+            distance=round(distance, 4),
+        )
+        item.photo.is_trash = get_photo_is_trash(db, photo.id)
+        result.append(item)
+    return result
 
 
 @app.get("/api/tags/", tags=["Metadata"], response_model=List[TagSchema])
@@ -636,3 +660,75 @@ def delete_template_category_endpoint(cat_id: int, db: Session = Depends(get_db)
         raise HTTPException(status_code=404, detail="Template category not found")
     from src.tasks.recompute_tasks import trigger_recompute_categories
     trigger_recompute_categories()
+
+
+# ── Photo edit endpoints ───────────────────────────────────────────────────────
+
+@app.put("/api/photos/{photo_id}", tags=["Photos"], response_model=PhotoSchema)
+def update_photo_endpoint(photo_id: int, body: PhotoUpdate, db: Session = Depends(get_db)):
+    photo = get_photo_by_id(db, photo_id)
+    if not photo:
+        raise HTTPException(status_code=404, detail="Photo not found")
+    old_description = photo.description
+    updated = update_photo_fields(db, photo_id, **body.model_dump(exclude_none=True))
+    db.commit()
+    db.refresh(updated)
+    if body.description is not None and body.description != old_description:
+        from src.tasks.embedding_tasks import final_embedding_task
+        final_embedding_task(photo_id, phase="edit")
+    result = PhotoSchema.model_validate(updated)
+    result.is_trash = get_photo_is_trash(db, photo_id)
+    return result
+
+
+@app.put("/api/photos/{photo_id}/flags", tags=["Photos"], response_model=PhotoSchema)
+def update_photo_flags_endpoint(photo_id: int, body: PhotoFlagsUpdate, db: Session = Depends(get_db)):
+    photo = get_photo_by_id(db, photo_id)
+    if not photo:
+        raise HTTPException(status_code=404, detail="Photo not found")
+    if body.is_doc is not None:
+        set_photo_is_doc(db, photo_id, body.is_doc)
+    if body.is_trash is not None:
+        if body.is_trash:
+            mark_photo_as_trash(db, photo_id)
+        else:
+            unmark_photo_as_trash(db, photo_id)
+    db.commit()
+    db.refresh(photo)
+    result = PhotoSchema.model_validate(photo)
+    result.is_trash = get_photo_is_trash(db, photo_id)
+    return result
+
+
+@app.post("/api/photos/{photo_id}/tags", tags=["Photos"], status_code=201, response_model=PhotoTagResponse)
+def link_photo_tag_endpoint(photo_id: int, body: PhotoTagLink, db: Session = Depends(get_db)):
+    if not get_photo_by_id(db, photo_id):
+        raise HTTPException(status_code=404, detail="Photo not found")
+    pt = link_photo_tag(db, photo_id, body.name)
+    db.commit()
+    db.refresh(pt)
+    return PhotoTagResponse(id=pt.tag_id, name=pt.tag.name, confidence_score=pt.confidence_score)
+
+
+@app.delete("/api/photos/{photo_id}/tags/{tag_id}", tags=["Photos"], status_code=204)
+def unlink_photo_tag_endpoint(photo_id: int, tag_id: int, db: Session = Depends(get_db)):
+    if not unlink_photo_tag(db, photo_id, tag_id):
+        raise HTTPException(status_code=404, detail="Tag not linked to this photo")
+    db.commit()
+
+
+@app.post("/api/photos/{photo_id}/categories", tags=["Photos"], status_code=201, response_model=PhotoCategoryResponse)
+def link_photo_category_endpoint(photo_id: int, body: PhotoCategoryLink, db: Session = Depends(get_db)):
+    if not get_photo_by_id(db, photo_id):
+        raise HTTPException(status_code=404, detail="Photo not found")
+    pc = link_photo_category(db, photo_id, body.name)
+    db.commit()
+    db.refresh(pc)
+    return PhotoCategoryResponse(id=pc.category_id, name=pc.category.name, confidence_score=pc.confidence_score)
+
+
+@app.delete("/api/photos/{photo_id}/categories/{cat_id}", tags=["Photos"], status_code=204)
+def unlink_photo_category_endpoint(photo_id: int, cat_id: int, db: Session = Depends(get_db)):
+    if not unlink_photo_category(db, photo_id, cat_id):
+        raise HTTPException(status_code=404, detail="Category not linked to this photo")
+    db.commit()

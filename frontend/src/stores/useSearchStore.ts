@@ -1,14 +1,14 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import type { Photo } from '@/types/api'
+import type { SearchResult } from '@/types/api'
 
 type SearchStore = {
     query: string
-    results: Photo[]
+    results: SearchResult[]
     hasSearched: boolean
 
     setQuery: (q: string) => void
-    setResults: (query: string, results: Photo[]) => void
+    setResults: (query: string, results: SearchResult[]) => void
     clear: () => void
 }
 

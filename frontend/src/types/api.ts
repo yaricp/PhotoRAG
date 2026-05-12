@@ -4,11 +4,20 @@ export interface Photo {
     description: string | null
     translated_description: string | null
     is_doc: boolean
+    is_trash: boolean | null
     ocr_text: string | null
     created_at: string
-    updated_at: string
-    tags: PhotoTag[]
-    categories: PhotoCategory[]
+    captured_at: string | null
+    file_created_at: string | null
+    image_width: number | null
+    image_height: number | null
+    iso: number | null
+    aperture: number | null
+    focal_length: number | null
+    shutter_speed: number | null
+    offset_time: string | null
+    tags_rel: PhotoTag[]
+    categories_rel: PhotoCategory[]
     camera: Camera | null
     geoposition: Geoposition | null
 }
@@ -91,7 +100,7 @@ export interface SystemStatus {
 
 export interface SearchResult {
     photo: Photo
-    score: number
+    distance: number
 }
 
 export interface ChatMessage {

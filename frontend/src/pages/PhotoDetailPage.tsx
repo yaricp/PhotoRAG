@@ -1,140 +1,250 @@
 import React, { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
-import { getPhoto } from '@/api/client'
+import { useParams, useNavigate, Link } from 'react-router-dom'
+import { getPhoto, deletePhoto, archivePhotos, updatePhotoFlags } from '@/api/client'
 import { Spinner } from '@/components/ui/Spinner'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import type { Photo } from '@/types/api'
 import { photoImageUrl } from '@/api/images'
 import './PhotoDetailPage.css'
 
-function Item({ label, value }: { label: string; value?: any }) {
+function Item({ label, value }: { label: string; value?: string | number | null }) {
     if (value === null || value === undefined || value === '') return null
-
     return (
-        <div className="photo-detail__item">
-            <div className="photo-detail__label">{label}</div>
-            <div className="photo-detail__value">{String(value)}</div>
+        <div className="pd__item">
+            <div className="pd__item-label">{label}</div>
+            <div className="pd__item-value">{String(value)}</div>
         </div>
     )
 }
 
+function CollapsibleRow({ title, children }: { title: string; children: React.ReactNode }) {
+    const [open, setOpen] = useState(false)
+    return (
+        <div className="pd__collapsible">
+            <button className="pd__collapsible-toggle" onClick={() => setOpen(o => !o)}>
+                <span className={`pd__chevron ${open ? 'pd__chevron--open' : ''}`}>▶</span>
+                {title}
+            </button>
+            {open && <div className="pd__collapsible-body">{children}</div>}
+        </div>
+    )
+}
+
+type PendingAction = 'archive' | 'delete' | null
+
 export function PhotoDetailPage() {
     const { id } = useParams()
+    const navigate = useNavigate()
     const [photo, setPhoto] = useState<Photo | null>(null)
     const [loading, setLoading] = useState(true)
-
-    const filename =
-        photo?.file_path?.split('/').pop() ?? photo?.file_path ?? 'Unknown file'
+    const [pending, setPending] = useState<PendingAction>(null)
+    const [flagLoading, setFlagLoading] = useState(false)
 
     useEffect(() => {
         if (!id) return
-
         setLoading(true)
-
         getPhoto(Number(id))
             .then(setPhoto)
             .finally(() => setLoading(false))
     }, [id])
 
+    async function handleToggleFlag(flag: 'is_doc' | 'is_trash', value: boolean) {
+        if (!photo) return
+        setFlagLoading(true)
+        try {
+            const updated = await updatePhotoFlags(photo.id, { [flag]: value })
+            setPhoto(updated)
+        } finally {
+            setFlagLoading(false)
+        }
+    }
+
+    async function handleArchive() {
+        if (!photo) return
+        await archivePhotos([photo.id])
+        navigate(-1)
+    }
+
+    async function handleDelete() {
+        if (!photo) return
+        await deletePhoto(photo.id)
+        navigate(-1)
+    }
+
     if (loading) {
-        return (
-            <div className="photo-detail__center">
-                <Spinner size="lg" />
-            </div>
-        )
+        return <div className="pd__center"><Spinner size="lg" /></div>
     }
 
     if (!photo) {
-        return (
-            <div className="photo-detail__center">
-                Photo not found
-            </div>
-        )
+        return <div className="pd__center">Photo not found</div>
     }
 
+    const filename = photo.file_path.split('/').pop() ?? photo.file_path
+    const geo = photo.geoposition
+    const cam = photo.camera
+    const tags = photo.tags_rel ?? []
+    const categories = photo.categories_rel ?? []
+
     return (
-        <div className="photo-detail">
+        <div className="pd">
+            {/* HEADER */}
+            <div className="pd__header">
+                <button className="pd__back-btn" onClick={() => navigate(-1)}>← Back</button>
+                <Link className="pd__edit-btn" to={`/photo/${photo.id}/edit`}>Edit</Link>
+            </div>
 
             {/* IMAGE */}
-            <div className="photo-detail__image-wrap">
-                <img
-                    className="photo-detail__image"
-                    src={photoImageUrl(photo.file_path)}
-                    alt={filename}
-                />
+            <div className="pd__image-wrap">
+                <img className="pd__image" src={photoImageUrl(photo.file_path)} alt={filename} />
             </div>
 
             {/* MAIN INFO */}
-            <div className="photo-detail__section">
-                <h2>Main info</h2>
+            <div className="pd__section">
+                <div className="pd__filepath">{photo.file_path}</div>
 
-                <div className="photo-detail__grid">
-                    <Item label="Created at" value={photo.created_at} />
-                    <Item label="Captured at" value={photo.captured_at} />
-                    <Item label="File created at" value={photo.file_created_at} />
+                {photo.captured_at && (
+                    <Item label="Date taken" value={photo.captured_at.replace('T', ' ').slice(0, 16)} />
+                )}
 
-                    <Item label="Width" value={photo.image_width} />
-                    <Item label="Height" value={photo.image_height} />
-
-                    <Item label="ISO" value={photo.iso} />
-                    <Item label="Aperture" value={photo.aperture} />
-                    <Item label="Focal length" value={photo.focal_length} />
-                    <Item label="Shutter speed" value={photo.shutter_speed} />
-                    <Item label="Offset time" value={photo.offset_time} />
-                </div>
-            </div>
-
-            {/* DESCRIPTION */}
-            <div className="photo-detail__section">
-                <h2>Description</h2>
-
-                <div className="photo-detail__text">
-                    {photo.description}
-                </div>
-
-                <div className="photo-detail__text photo-detail__text--muted">
-                    {photo.translated_description}
-                </div>
-            </div>
-
-            {/* CAMERA */}
-            {photo.camera && (
-                <div className="photo-detail__section">
-                    <h2>Camera</h2>
-
-                    <div className="photo-detail__grid">
-                        <Item label="Make" value={photo.camera.make} />
-                        <Item label="Model" value={photo.camera.model} />
-                        <Item label="Serial number" value={photo.camera.serial_number} />
+                {geo && (
+                    <div className="pd__geo">
+                        {geo.address && <span className="pd__geo-address">{geo.address}</span>}
+                        {geo.latitude != null && geo.longitude != null && (
+                            <>
+                                <span className="pd__geo-coords">
+                                    {geo.latitude.toFixed(4)}°N {geo.longitude.toFixed(4)}°W
+                                </span>
+                                <a
+                                    className="pd__map-link"
+                                    href={`https://maps.google.com/?q=${geo.latitude},${geo.longitude}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                >
+                                    Open in Google Maps ↗
+                                </a>
+                            </>
+                        )}
                     </div>
-                </div>
-            )}
+                )}
 
-            {/* GEO */}
-            {photo.geoposition && (
-                <div className="photo-detail__section">
-                    <h2>Location</h2>
+                {cam && (
+                    <Item label="Camera" value={`${cam.make ?? ''} ${cam.model ?? ''}`.trim()} />
+                )}
 
-                    <div className="photo-detail__grid">
-                        <Item label="Latitude" value={photo.geoposition.latitude} />
-                        <Item label="Longitude" value={photo.geoposition.longitude} />
+                {photo.description && (
+                    <div className="pd__description">
+                        <div className="pd__desc-label">Description</div>
+                        <div className="pd__desc-text">{photo.description}</div>
                     </div>
+                )}
 
-                    {photo.geoposition.address && (
-                        <div className="photo-detail__address">
-                            {photo.geoposition.address}
+                {photo.translated_description && (
+                    <div className="pd__description">
+                        <div className="pd__desc-label">Translation</div>
+                        <div className="pd__desc-text pd__desc-text--muted">{photo.translated_description}</div>
+                    </div>
+                )}
+
+                {tags.length > 0 && (
+                    <div className="pd__tags">
+                        <div className="pd__desc-label">Tags</div>
+                        <div className="pd__tag-list">
+                            {tags.map(pt => (
+                                <span key={pt.tag?.id} className="pd__tag">{pt.tag?.name}</span>
+                            ))}
                         </div>
-                    )}
+                    </div>
+                )}
 
-                    <a
-                        className="photo-detail__map-link"
-                        href={`https://www.google.com/maps?q=${photo.geoposition.latitude},${photo.geoposition.longitude}`}
-                        target="_blank"
-                        rel="noreferrer"
-                    >
-                        Open in Google Maps
-                    </a>
+                {categories.length > 0 && (
+                    <div className="pd__tags">
+                        <div className="pd__desc-label">Categories</div>
+                        <div className="pd__tag-list">
+                            {categories.map(pc => (
+                                <span key={pc.category?.id} className="pd__tag pd__tag--cat">{pc.category?.name}</span>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* FLAGS */}
+            <div className="pd__section pd__flags">
+                <label className={`pd__flag-label ${flagLoading ? 'pd__flag-label--disabled' : ''}`}>
+                    <input
+                        type="checkbox"
+                        checked={!!photo.is_trash}
+                        disabled={flagLoading}
+                        onChange={e => handleToggleFlag('is_trash', e.target.checked)}
+                    />
+                    Trash
+                </label>
+                <label className={`pd__flag-label ${flagLoading ? 'pd__flag-label--disabled' : ''}`}>
+                    <input
+                        type="checkbox"
+                        checked={!!photo.is_doc}
+                        disabled={flagLoading}
+                        onChange={e => handleToggleFlag('is_doc', e.target.checked)}
+                    />
+                    Document
+                </label>
+            </div>
+
+            {/* DOCUMENT TEXT (collapsible, only when is_doc) */}
+            {photo.is_doc && photo.ocr_text && (
+                <div className="pd__section">
+                    <CollapsibleRow title="Document text">
+                        <div className="pd__ocr-text">{photo.ocr_text}</div>
+                    </CollapsibleRow>
                 </div>
             )}
+
+            {/* ADDITIONAL DATA (collapsible) */}
+            <div className="pd__section">
+                <CollapsibleRow title="Additional data">
+                    <div className="pd__grid">
+                        <Item label="File created" value={photo.file_created_at?.replace('T', ' ').slice(0, 16)} />
+                        <Item label="Captured" value={photo.captured_at?.replace('T', ' ').slice(0, 16)} />
+                        <Item label="Indexed" value={photo.created_at?.replace('T', ' ').slice(0, 16)} />
+                        <Item label="Width" value={photo.image_width} />
+                        <Item label="Height" value={photo.image_height} />
+                        <Item label="ISO" value={photo.iso} />
+                        <Item label="Aperture" value={photo.aperture} />
+                        <Item label="Focal length" value={photo.focal_length} />
+                        <Item label="Shutter speed" value={photo.shutter_speed} />
+                        <Item label="Offset time" value={photo.offset_time} />
+                    </div>
+                </CollapsibleRow>
+            </div>
+
+            {/* ARCHIVE / DELETE */}
+            <div className="pd__actions">
+                <button className="pd__action-btn pd__action-btn--warning" onClick={() => setPending('archive')}>
+                    Archive
+                </button>
+                <button className="pd__action-btn pd__action-btn--danger" onClick={() => setPending('delete')}>
+                    Delete
+                </button>
+            </div>
+
+            <ConfirmModal
+                open={pending === 'archive'}
+                title="Archive photo?"
+                message="The photo will be zipped and removed from the library."
+                confirmLabel="Archive"
+                variant="warning"
+                onConfirm={handleArchive}
+                onClose={() => setPending(null)}
+            />
+            <ConfirmModal
+                open={pending === 'delete'}
+                title="Delete photo?"
+                message="The photo will be permanently deleted."
+                confirmLabel="Delete"
+                variant="danger"
+                onConfirm={handleDelete}
+                onClose={() => setPending(null)}
+            />
         </div>
     )
 }

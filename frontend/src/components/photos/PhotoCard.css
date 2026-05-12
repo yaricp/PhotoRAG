@@ -16,6 +16,20 @@
     aspect-ratio: 4/3;
     overflow: hidden;
     background: var(--color-surface-2);
+    position: relative;
+}
+
+.photo-card__id-badge {
+    position: absolute;
+    bottom: 4px;
+    left: 4px;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    font-size: 10px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    pointer-events: none;
+    line-height: 1.6;
 }
 
 .photo-card__image {

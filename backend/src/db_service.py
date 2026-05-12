@@ -175,8 +175,8 @@ def get_available_dates(
 
 def get_photos_by_vector(
     db: Session, request_text: str, k: int
-) -> List[Photo]:
-    """Returns a list of photos that are similar to the query vector."""
+) -> List[tuple]:
+    """Returns (Photo, distance) pairs sorted by ascending distance (most relevant first)."""
     logger.info("Getting photos by vector")
     # pyrefly: ignore [missing-import]
     from src.ai.registry import registry
@@ -191,15 +191,14 @@ def get_photos_by_vector(
         text=request_text, purpose="search"
     )
     results = search_similar_photos(db=db, query_embedding=embedding, limit=k)
-    logger.info(f"Photos found in DB: {results}")
-    photo_ids = [item[0] for item in results]
-    photos = []
-    for photo_id in photo_ids:
+    logger.info(f"Vector search results: {results}")
+    pairs = []
+    for photo_id, distance in results:
         photo = get_photo_by_id(db, photo_id)
         if photo and not photo.is_archived:
-            photos.append(photo)
-    logger.info(f"Photos found in DB: {photos}")
-    return photos
+            pairs.append((photo, distance))
+    logger.info(f"Returning {len(pairs)} photo+distance pairs")
+    return pairs
 
 
 def update_model_status(db: Session, name: str, status: str):
@@ -1139,3 +1138,90 @@ def get_or_create_template_category(
         db.commit()
         db.refresh(cat)
     return cat
+
+
+# ---------------------------------------------------------------------------
+# Photo edit helpers
+# ---------------------------------------------------------------------------
+
+def get_photo_is_trash(db: Session, photo_id: int) -> bool:
+    return db.query(PhotoQualityIssue).filter_by(
+        photo_id=photo_id, issue_type="user_trash"
+    ).first() is not None
+
+
+def mark_photo_as_trash(db: Session, photo_id: int) -> None:
+    exists = db.query(PhotoQualityIssue).filter_by(
+        photo_id=photo_id, issue_type="user_trash"
+    ).first()
+    if not exists:
+        db.add(PhotoQualityIssue(photo_id=photo_id, issue_type="user_trash"))
+
+
+def unmark_photo_as_trash(db: Session, photo_id: int) -> None:
+    db.query(PhotoQualityIssue).filter_by(
+        photo_id=photo_id, issue_type="user_trash"
+    ).delete()
+
+
+def update_photo_fields(db: Session, photo_id: int, **fields) -> Optional[Photo]:
+    photo = db.query(Photo).filter_by(id=photo_id).first()
+    if not photo:
+        return None
+    allowed = {"description", "translated_description", "ocr_text"}
+    for key, value in fields.items():
+        if key in allowed:
+            setattr(photo, key, value)
+    return photo
+
+
+def set_photo_is_doc(db: Session, photo_id: int, value: bool) -> Optional[Photo]:
+    photo = db.query(Photo).filter_by(id=photo_id).first()
+    if not photo:
+        return None
+    photo.is_doc = value
+    return photo
+
+
+def link_photo_tag(db: Session, photo_id: int, tag_name: str) -> PhotoTag:
+    tag = db.query(Tag).filter_by(name=tag_name).first()
+    if not tag:
+        tag = Tag(name=tag_name)
+        db.add(tag)
+        db.flush()
+    pt = db.query(PhotoTag).filter_by(photo_id=photo_id, tag_id=tag.id).first()
+    if not pt:
+        pt = PhotoTag(photo_id=photo_id, tag_id=tag.id, confidence_score=1.0)
+        db.add(pt)
+        db.flush()
+    return pt
+
+
+def unlink_photo_tag(db: Session, photo_id: int, tag_id: int) -> bool:
+    pt = db.query(PhotoTag).filter_by(photo_id=photo_id, tag_id=tag_id).first()
+    if not pt:
+        return False
+    db.delete(pt)
+    return True
+
+
+def link_photo_category(db: Session, photo_id: int, cat_name: str) -> PhotoCategory:
+    cat = db.query(Category).filter_by(name=cat_name).first()
+    if not cat:
+        cat = Category(name=cat_name, prompt=cat_name)
+        db.add(cat)
+        db.flush()
+    pc = db.query(PhotoCategory).filter_by(photo_id=photo_id, category_id=cat.id).first()
+    if not pc:
+        pc = PhotoCategory(photo_id=photo_id, category_id=cat.id, confidence_score=1.0)
+        db.add(pc)
+        db.flush()
+    return pc
+
+
+def unlink_photo_category(db: Session, photo_id: int, cat_id: int) -> bool:
+    pc = db.query(PhotoCategory).filter_by(photo_id=photo_id, category_id=cat_id).first()
+    if not pc:
+        return False
+    db.delete(pc)
+    return True

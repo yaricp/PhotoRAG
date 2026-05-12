@@ -4,6 +4,7 @@ from typing import List, Optional, Tuple
 import numpy as np
 
 from src.models import PhotoEmbedding
+from src.config import ML_Settings
 
 
 # ----------------------------
@@ -87,15 +88,16 @@ def search_similar_photos(
 ) -> List[Tuple[int, float]]:
     try:
         embedding_bytes = np.array(query_embedding, dtype=np.float32).flatten().tobytes()
+        similarity_limit = ML_Settings().EMBEDDING_SIMILARITY_LIMIT
 
         rows = db.execute(text("""
             SELECT m.photo_id, v.distance
             FROM photo_embeddings_vss v
             JOIN photo_embedding_map m ON v.rowid = m.id
-            WHERE v.embedding MATCH :embedding AND v.distance < 0.89
+            WHERE v.embedding MATCH :embedding AND v.distance < :similarity_limit
             AND v.k = :k
             ORDER BY v.distance
-        """), {"embedding": embedding_bytes, "k": limit}).fetchall()
+        """), {"embedding": embedding_bytes, "k": limit, "similarity_limit": similarity_limit}).fetchall()
 
         logger.info(f"Vector search returned {len(rows)} results")
 

@@ -18,7 +18,7 @@ export function PhotoCard({ photo, job, onArchive, onDelete }: PhotoCardProps) {
     const filename =
         photo?.file_path?.split('/').pop() ?? photo?.file_path ?? 'Unknown file'
 
-    const topTag = photo?.tags?.[0]
+    const topTag = photo?.tags_rel?.[0]
 
     const hasActions = onArchive !== undefined || onDelete !== undefined
 
@@ -34,6 +34,7 @@ export function PhotoCard({ photo, job, onArchive, onDelete }: PhotoCardProps) {
                     alt={filename}
                     className="photo-card__image"
                 />
+                <span className="photo-card__id-badge">#{photo.id}</span>
             </div>
 
             <div className="photo-card__body">

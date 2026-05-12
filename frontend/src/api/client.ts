@@ -91,13 +91,13 @@ export async function deletePhoto(id: number): Promise<Photo> {
 }
 
 export interface SearchParams {
-    query: string
+    text_query: string
     k?: number
-    threshold?: number
+    thresholds?: number
 }
 
-export async function searchPhotos(params: SearchParams): Promise<Photo[]> {
-    return apiFetch<Photo[]>('/api/search/', {
+export async function searchPhotos(params: SearchParams): Promise<SearchResult[]> {
+    return apiFetch<SearchResult[]>('/api/search/', {
         method: 'POST',
         body: JSON.stringify(params),
     })
@@ -256,6 +256,71 @@ export async function getGarbagePhotos(
 ): Promise<PaginatedPhotos> {
     const qs = `?skip=${skip}&limit=${limit}`
     return apiFetch<PaginatedPhotos>(`/api/garbage/${issueType}/photos/${qs}`)
+}
+
+// ── Photo edit ───────────────────────────────────────────────────────────────
+
+export interface PhotoUpdatePayload {
+    description?: string
+    translated_description?: string
+    ocr_text?: string
+}
+
+export interface PhotoFlagsPayload {
+    is_doc?: boolean
+    is_trash?: boolean
+}
+
+export interface LinkedTag {
+    id: number
+    name: string
+    confidence_score: number
+}
+
+export interface LinkedCategory {
+    id: number
+    name: string
+    confidence_score: number
+}
+
+export async function updatePhoto(id: number, data: PhotoUpdatePayload): Promise<Photo> {
+    return apiFetch<Photo>(`/api/photos/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+    })
+}
+
+export async function updatePhotoFlags(id: number, flags: PhotoFlagsPayload): Promise<Photo> {
+    return apiFetch<Photo>(`/api/photos/${id}/flags`, {
+        method: 'PUT',
+        body: JSON.stringify(flags),
+    })
+}
+
+export async function linkPhotoTag(photoId: number, tagName: string): Promise<LinkedTag> {
+    return apiFetch<LinkedTag>(`/api/photos/${photoId}/tags`, {
+        method: 'POST',
+        body: JSON.stringify({ name: tagName }),
+    })
+}
+
+export async function unlinkPhotoTag(photoId: number, tagId: number): Promise<void> {
+    const base = await getBaseUrl()
+    const res = await fetch(`${base}/api/photos/${photoId}/tags/${tagId}`, { method: 'DELETE' })
+    if (!res.ok) throw new Error(`API error ${res.status}: DELETE /api/photos/${photoId}/tags/${tagId}`)
+}
+
+export async function linkPhotoCategory(photoId: number, catName: string): Promise<LinkedCategory> {
+    return apiFetch<LinkedCategory>(`/api/photos/${photoId}/categories`, {
+        method: 'POST',
+        body: JSON.stringify({ name: catName }),
+    })
+}
+
+export async function unlinkPhotoCategory(photoId: number, catId: number): Promise<void> {
+    const base = await getBaseUrl()
+    const res = await fetch(`${base}/api/photos/${photoId}/categories/${catId}`, { method: 'DELETE' })
+    if (!res.ok) throw new Error(`API error ${res.status}: DELETE /api/photos/${photoId}/categories/${catId}`)
 }
 
 // ── Template Tags ─────────────────────────────────────────────────────────────

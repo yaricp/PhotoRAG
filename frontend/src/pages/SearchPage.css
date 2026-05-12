@@ -81,6 +81,39 @@
     gap: 16px;
 }
 
+.search-page__result-item {
+    position: relative;
+}
+
+.search-page__rank {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    z-index: 1;
+    background: var(--color-accent, #7c6fff);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+    pointer-events: none;
+    line-height: 1.6;
+}
+
+.search-page__distance {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    z-index: 1;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    pointer-events: none;
+    line-height: 1.6;
+}
+
 /* ===== STATES ===== */
 .search-page__center {
     display: flex;
