@@ -62,7 +62,13 @@ def search_photos_semantic(query: str, k: int = 5) -> str:
     logger.info(f"[tool] semantic search: {query}")
     db = SessionLocal()
     try:
-        photos = get_photos_by_vector(db, query, k)
+        photos_distance = get_photos_by_vector(db, query, k)
+        logger.info(f"Semantic search found {len(photos_distance)} photos")
+        if not photos_distance:
+            return "No photos found matching that description."
+        logger.info(f"Semantic search results (photo_id, distance): {photos_distance}")
+        photos = [p[0] for p in photos_distance]
+        logger.info(f"Semantic search photos: {photos}")
         if not photos:
             return "No photos found matching that description."
         return _serialize_photos(photos)
