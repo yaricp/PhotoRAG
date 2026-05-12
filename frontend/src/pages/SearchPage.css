@@ -60,6 +60,20 @@
     border-color: var(--color-accent);
 }
 
+.search-page__clear-btn {
+    background: transparent !important;
+    border-color: transparent !important;
+    color: var(--color-text-dim) !important;
+    font-size: 12px !important;
+    padding: 6px 10px !important;
+}
+
+.search-page__clear-btn:hover {
+    background: var(--color-surface-2) !important;
+    color: var(--color-text) !important;
+    border-color: var(--color-border) !important;
+}
+
 /* ===== GRID ===== */
 .search-page__grid {
     display: grid;
