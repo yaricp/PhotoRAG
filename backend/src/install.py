@@ -23,6 +23,8 @@ from src.db_service import (
     init_default_model_configs,
     get_setting,
     set_setting,
+    get_or_create_template_tag,
+    get_or_create_template_category,
 )
 from src.utils import load_categories_from_json
 
@@ -100,9 +102,40 @@ def _is_categories_cache_valid(cfg: CLIP_Settings, model_hash: str, db: Session)
 # Installers
 # ---------------------------------------------------------------------------
 
+def _seed_template_tags_if_empty(db: Session) -> None:
+    """
+    Seed template_tags from the cached vocabulary file if the table is empty.
+    Called unconditionally before install_clip so that users who already have
+    a valid tags.npy (from before this feature) still get the table populated.
+    """
+    from src.db_service import get_all_template_tags_ordered
+    if get_all_template_tags_ordered(db):
+        logger.info("[template_tags] Already seeded, skipping.")
+        return
+
+    cfg = CLIP_Settings()
+    if not os.path.exists(cfg.TAGS_LIST_PATH):
+        logger.info("[template_tags] Vocabulary file not found — will seed after download inside install_clip.")
+        return
+
+    with open(cfg.TAGS_LIST_PATH) as f:
+        tags = [line.strip() for line in f if line.strip()]
+
+    if not tags:
+        logger.info("[template_tags] Vocabulary file is empty — skipping seed.")
+        return
+
+    logger.info(f"[template_tags] Seeding {len(tags)} tags from vocabulary file...")
+    for tag_name in tags:
+        get_or_create_template_tag(db, tag_name, tag_name)
+    db.commit()
+    logger.info(f"[template_tags] Seeded {len(tags)} template_tags ✓")
+
+
 def install_categories(db: Session) -> None:
     """
-    Create default categories if not exist
+    Seed default_categories.json into both `categories` (legacy) and `template_categories` tables.
+    Idempotent — skips if already seeded.
     """
     if get_model_status(db, "categories") == "ready":
         logger.info("[categories] Already seeded, skipping.")
@@ -113,7 +146,7 @@ def install_categories(db: Session) -> None:
     defaults_path = os.path.join(base_dir, "defaults", "default_categories.json")
     defaults = load_categories_from_json(defaults_path)
     for cat in defaults:
-        get_or_create_category(db, cat["name"], cat["prompt"])
+        get_or_create_template_category(db, cat["name"], cat["prompt"])
     db.commit()
     update_model_status(db, "categories", "ready")
     logger.info("[categories] Seeding done ✓")
@@ -166,7 +199,7 @@ def install_clip(db: Session) -> None:
 
         tagger.load_model()
 
-        # 2. Теги
+        # 2. Теги — seed template_tags + compute embeddings
         if not tags_valid:
             if not os.path.exists(cfg.TAGS_LIST_PATH):
                 logger.info("[clip/tags] Downloading Open Images vocabulary...")
@@ -177,8 +210,15 @@ def install_clip(db: Session) -> None:
                     tags = [line.strip() for line in f if line.strip()]
                 logger.info(f"[clip/tags] Vocabulary loaded from cache: {len(tags)} tags ✓")
 
-            logger.info(f"[clip/tags] Computing embeddings for {len(tags)} tags...")
-            tagger.compute_embeddings_tags(tags)
+            # Seed template_tags table (idempotent)
+            logger.info(f"[clip/tags] Seeding {len(tags)} tags into template_tags...")
+            for tag_name in tags:
+                get_or_create_template_tag(db, tag_name, tag_name)
+            db.commit()
+            logger.info("[clip/tags] template_tags seeded ✓")
+
+            # Compute embeddings from DB to keep tags_names.json in sync
+            tagger.compute_embeddings_tags_from_db(db)
             _save_hash(cfg.TAGS_MODEL_HASH_PATH, model_hash)
             logger.info("[clip/tags] tags.npy saved ✓")
         else:
@@ -187,9 +227,7 @@ def install_clip(db: Session) -> None:
         # 3. Категории
         if not categories_valid:
             logger.info("[clip/categories] Computing categories embeddings...")
-            # load_or_compute_categories читает БД, считает эмбеддинги,
-            # и сам сохраняет categories_hash.txt через save_category_cache()
-            tagger.load_or_compute_categories()
+            tagger.compute_embeddings_categories_from_db(db)
             _save_hash(cfg.CATEGORIES_MODEL_HASH_PATH, model_hash)
             logger.info("[clip/categories] categories.npy saved ✓")
         else:
@@ -322,6 +360,11 @@ def init_db(db: Session):
     # Initialize default model configurations
     init_default_model_configs(db)
 
+    # Recompute status keys for template vocabularies
+    for recompute_key in ("clip_tags", "clip_categories"):
+        if not get_model_or_none(db, recompute_key):
+            db.add(ModelState(name=recompute_key, status="ready"))
+
     # Seed default app settings
     if get_setting(db, "default_folder") is None:
         set_setting(db, "default_folder", "")
@@ -351,6 +394,10 @@ def run_install(db: Session) -> None:
 
     # 2. Всегда — засеять категории в БД
     install_categories(db)
+
+    # 2b. Seed template_tags from vocabulary file if table is empty
+    # (runs before install_clip so existing-cache users also get the table populated)
+    _seed_template_tags_if_empty(db)
 
     # 3. Всегда — CLIP (теги + категории .npy)
     install_clip(db)

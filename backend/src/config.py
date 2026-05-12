@@ -37,9 +37,12 @@ class CLIP_Settings(BaseSettings):
     
     TAGS_MODEL_HASH_PATH: str = "data/tags_model.hash"
 
+    TAGS_NAMES_PATH: str = "data/tags_names.json"
+
     CATEGORIES_NPY_PATH: str = "data/categories_features.npy"
     CATEGORIES_HASH_PATH: str = "data/categories_hash.txt"
     CATEGORIES_MODEL_HASH_PATH: str = "data/categories_model.hash"
+    CATEGORIES_NAMES_PATH: str = "data/categories_names.json"
     CATEGORIES_CLIP_THRESHOLD: float = 0.2
 
     @property

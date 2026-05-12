@@ -8,7 +8,7 @@ from src.models import (
     Photo, Tag, Person, Keyword, Category, PhotoTag, PhotoCategory, Camera, Geoposition,
     ModelState, Watcher, ProcessingJob, FolderScanner, AIModelConfig,
     PhotoEmbedding, PhotoHash, PhotoDuplicate, PhotoQualityIssue,
-    AppSetting, HistoryAction,
+    AppSetting, HistoryAction, TemplateTag, TemplateCategory,
 )
 from src.schemas import Photo as PhotoSchema
 from src.schemas import AIModelConfigUpdate
@@ -1009,3 +1009,133 @@ def perform_undo(db: Session) -> str:
 
     delete_history_action(db, action.id)
     return f"Undone: {action.action_type}"
+
+
+# ---------------------------------------------------------------------------
+# TemplateTag CRUD
+# ---------------------------------------------------------------------------
+
+def create_template_tag(db: Session, name: str, clip_prompt: str) -> TemplateTag:
+    tag = TemplateTag(name=name, clip_prompt=clip_prompt)
+    db.add(tag)
+    db.commit()
+    db.refresh(tag)
+    return tag
+
+
+def get_template_tag_by_id(db: Session, tag_id: int) -> Optional[TemplateTag]:
+    return db.query(TemplateTag).filter(TemplateTag.id == tag_id).first()
+
+
+def get_all_template_tags(
+    db: Session, skip: int = 0, limit: int = 50
+) -> tuple[List[TemplateTag], int]:
+    q = db.query(TemplateTag).order_by(TemplateTag.name)
+    total = q.count()
+    tags = q.offset(skip).limit(limit).all()
+    return tags, total
+
+
+def get_all_template_tags_ordered(db: Session) -> List[TemplateTag]:
+    """Ordered by id — used to produce npy rows in a stable, reproducible order."""
+    return db.query(TemplateTag).order_by(TemplateTag.id).all()
+
+
+def update_template_tag(
+    db: Session, tag_id: int, name: str, clip_prompt: str
+) -> Optional[TemplateTag]:
+    tag = get_template_tag_by_id(db, tag_id)
+    if not tag:
+        return None
+    tag.name = name
+    tag.clip_prompt = clip_prompt
+    tag.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(tag)
+    return tag
+
+
+def delete_template_tag(db: Session, tag_id: int) -> bool:
+    tag = get_template_tag_by_id(db, tag_id)
+    if not tag:
+        return False
+    db.delete(tag)
+    db.commit()
+    return True
+
+
+def get_or_create_template_tag(
+    db: Session, name: str, clip_prompt: str
+) -> TemplateTag:
+    tag = db.query(TemplateTag).filter(TemplateTag.name == name).first()
+    if not tag:
+        tag = TemplateTag(name=name, clip_prompt=clip_prompt)
+        db.add(tag)
+        db.commit()
+        db.refresh(tag)
+    return tag
+
+
+# ---------------------------------------------------------------------------
+# TemplateCategory CRUD
+# ---------------------------------------------------------------------------
+
+def create_template_category(db: Session, name: str, clip_prompt: str) -> TemplateCategory:
+    cat = TemplateCategory(name=name, clip_prompt=clip_prompt)
+    db.add(cat)
+    db.commit()
+    db.refresh(cat)
+    return cat
+
+
+def get_template_category_by_id(db: Session, cat_id: int) -> Optional[TemplateCategory]:
+    return db.query(TemplateCategory).filter(TemplateCategory.id == cat_id).first()
+
+
+def get_all_template_categories(
+    db: Session, skip: int = 0, limit: int = 50
+) -> tuple[List[TemplateCategory], int]:
+    q = db.query(TemplateCategory).order_by(TemplateCategory.name)
+    total = q.count()
+    cats = q.offset(skip).limit(limit).all()
+    return cats, total
+
+
+def get_all_template_categories_ordered(db: Session) -> List[TemplateCategory]:
+    """Ordered by id — used to produce npy rows in a stable, reproducible order."""
+    return db.query(TemplateCategory).order_by(TemplateCategory.id).all()
+
+
+def update_template_category(
+    db: Session, cat_id: int, name: str, clip_prompt: str
+) -> Optional[TemplateCategory]:
+    cat = get_template_category_by_id(db, cat_id)
+    if not cat:
+        return None
+    cat.name = name
+    cat.clip_prompt = clip_prompt
+    cat.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(cat)
+    return cat
+
+
+def delete_template_category(db: Session, cat_id: int) -> bool:
+    cat = get_template_category_by_id(db, cat_id)
+    if not cat:
+        return False
+    db.delete(cat)
+    db.commit()
+    return True
+
+
+def get_or_create_template_category(
+    db: Session, name: str, clip_prompt: str
+) -> TemplateCategory:
+    cat = db.query(TemplateCategory).filter(TemplateCategory.name == name).first()
+    if not cat:
+        cat = TemplateCategory(name=name, clip_prompt=clip_prompt)
+        db.add(cat)
+        db.commit()
+        db.refresh(cat)
+    return cat

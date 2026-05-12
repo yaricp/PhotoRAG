@@ -258,3 +258,81 @@ export async function getGarbagePhotos(
     return apiFetch<PaginatedPhotos>(`/api/garbage/${issueType}/photos/${qs}`)
 }
 
+// ── Template Tags ─────────────────────────────────────────────────────────────
+
+export interface TemplateTag {
+    id: number
+    name: string
+    clip_prompt: string
+    created_at?: string
+    updated_at?: string
+}
+
+export interface PaginatedTemplateTags {
+    items: TemplateTag[]
+    total: number
+}
+
+export async function getTemplateTags(skip = 0, limit = 50): Promise<PaginatedTemplateTags> {
+    return apiFetch<PaginatedTemplateTags>(`/api/template-tags/?skip=${skip}&limit=${limit}`)
+}
+
+export async function createTemplateTag(name: string, clip_prompt: string): Promise<TemplateTag> {
+    return apiFetch<TemplateTag>('/api/template-tags/', {
+        method: 'POST',
+        body: JSON.stringify({ name, clip_prompt }),
+    })
+}
+
+export async function updateTemplateTag(id: number, name: string, clip_prompt: string): Promise<TemplateTag> {
+    return apiFetch<TemplateTag>(`/api/template-tags/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ name, clip_prompt }),
+    })
+}
+
+export async function deleteTemplateTag(id: number): Promise<void> {
+    const base = await getBaseUrl()
+    const res = await fetch(`${base}/api/template-tags/${id}`, { method: 'DELETE' })
+    if (!res.ok) throw new Error(`API error ${res.status}: DELETE /api/template-tags/${id}`)
+}
+
+// ── Template Categories ───────────────────────────────────────────────────────
+
+export interface TemplateCategory {
+    id: number
+    name: string
+    clip_prompt: string
+    created_at?: string
+    updated_at?: string
+}
+
+export interface PaginatedTemplateCategories {
+    items: TemplateCategory[]
+    total: number
+}
+
+export async function getTemplateCategories(skip = 0, limit = 50): Promise<PaginatedTemplateCategories> {
+    return apiFetch<PaginatedTemplateCategories>(`/api/template-categories/?skip=${skip}&limit=${limit}`)
+}
+
+export async function createTemplateCategory(name: string, clip_prompt: string): Promise<TemplateCategory> {
+    return apiFetch<TemplateCategory>('/api/template-categories/', {
+        method: 'POST',
+        body: JSON.stringify({ name, clip_prompt }),
+    })
+}
+
+export async function updateTemplateCategory(id: number, name: string, clip_prompt: string): Promise<TemplateCategory> {
+    return apiFetch<TemplateCategory>(`/api/template-categories/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ name, clip_prompt }),
+    })
+}
+
+export async function deleteTemplateCategory(id: number): Promise<void> {
+    const base = await getBaseUrl()
+    const res = await fetch(`${base}/api/template-categories/${id}`, { method: 'DELETE' })
+    if (!res.ok) throw new Error(`API error ${res.status}: DELETE /api/template-categories/${id}`)
+}
+

@@ -229,6 +229,24 @@ class PhotoQualityIssue(Base):
     photo = relationship("Photo", back_populates="quality_issues")
 
 
+class TemplateTag(Base):
+    __tablename__ = "template_tags"
+    id = Column(Integer, primary_key=True)
+    name = Column(String, unique=True, nullable=False)
+    clip_prompt = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class TemplateCategory(Base):
+    __tablename__ = "template_categories"
+    id = Column(Integer, primary_key=True)
+    name = Column(String, unique=True, nullable=False)
+    clip_prompt = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class AppSetting(Base):
     __tablename__ = "app_settings"
 

@@ -11,6 +11,8 @@ import { FoldersPage } from './FoldersPage'
 import { ModelsPage } from './ModelsPage'
 import { DuplicatesPage } from './DuplicatesPage'
 import { GarbageBadPhotoPage } from './GarbageBadPhotoPage'
+import { TemplateTagsPage } from './TemplateTagsPage'
+import { TemplateCategoriesPage } from './TemplateCategoriesPage'
 
 export function AppRoutes() {
     return (
@@ -26,6 +28,8 @@ export function AppRoutes() {
             <Route path="/folders" element={<FoldersPage />} />
             <Route path="/models" element={<ModelsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/template-tags" element={<TemplateTagsPage />} />
+            <Route path="/template-categories" element={<TemplateCategoriesPage />} />
         </Routes>
     )
 }

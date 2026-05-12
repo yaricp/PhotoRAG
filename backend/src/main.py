@@ -37,6 +37,16 @@ from src.db_service import (
     get_history_actions,
     perform_undo,
     create_history_action,
+    get_all_template_tags,
+    get_template_tag_by_id,
+    create_template_tag,
+    update_template_tag,
+    delete_template_tag,
+    get_all_template_categories,
+    get_template_category_by_id,
+    create_template_category,
+    update_template_category,
+    delete_template_category,
 )
 from src.utils import archive_photos_to_zip
 from src.database import Session, SessionLocal
@@ -64,6 +74,12 @@ from src.schemas import (
     AIModelConfigUpdate,
     AppSettingSchema,
     HistoryActionSchema,
+    TemplateTagCreate,
+    TemplateTagUpdate,
+    TemplateTagResponse,
+    TemplateCategoryCreate,
+    TemplateCategoryUpdate,
+    TemplateCategoryResponse,
 )
 from src.ai.translator import Translator
 from src.ai.registry import registry
@@ -534,3 +550,89 @@ def get_history_endpoint(db: Session = Depends(get_db)) -> List[HistoryActionSch
 def undo_last_action_endpoint(db: Session = Depends(get_db)) -> Dict[str, str]:
     detail = perform_undo(db)
     return {"status": "ok", "detail": detail}
+
+
+# ---------------------------------------------------------------------------
+# Template Tags endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/api/template-tags/", tags=["Template Tags"], response_model=PaginatedResponse[TemplateTagResponse])
+def list_template_tags_endpoint(
+    skip: int = Query(0), limit: int = Query(50), db: Session = Depends(get_db)
+):
+    tags, total = get_all_template_tags(db, skip=skip, limit=limit)
+    return PaginatedResponse(items=tags, total=total, page=(skip // limit) + 1 if limit else 1, size=limit)
+
+
+@app.post("/api/template-tags/", tags=["Template Tags"], response_model=TemplateTagResponse, status_code=201)
+def create_template_tag_endpoint(body: TemplateTagCreate, db: Session = Depends(get_db)):
+    from sqlalchemy.exc import IntegrityError
+    try:
+        tag = create_template_tag(db, name=body.name.strip(), clip_prompt=body.clip_prompt.strip())
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=f"Template tag '{body.name}' already exists")
+    from src.tasks.recompute_tasks import trigger_recompute_tags
+    trigger_recompute_tags()
+    return tag
+
+
+@app.put("/api/template-tags/{tag_id}", tags=["Template Tags"], response_model=TemplateTagResponse)
+def update_template_tag_endpoint(tag_id: int, body: TemplateTagUpdate, db: Session = Depends(get_db)):
+    tag = update_template_tag(db, tag_id, name=body.name.strip(), clip_prompt=body.clip_prompt.strip())
+    if not tag:
+        raise HTTPException(status_code=404, detail="Template tag not found")
+    from src.tasks.recompute_tasks import trigger_recompute_tags
+    trigger_recompute_tags()
+    return tag
+
+
+@app.delete("/api/template-tags/{tag_id}", tags=["Template Tags"], status_code=204)
+def delete_template_tag_endpoint(tag_id: int, db: Session = Depends(get_db)):
+    if not delete_template_tag(db, tag_id):
+        raise HTTPException(status_code=404, detail="Template tag not found")
+    from src.tasks.recompute_tasks import trigger_recompute_tags
+    trigger_recompute_tags()
+
+
+# ---------------------------------------------------------------------------
+# Template Categories endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/api/template-categories/", tags=["Template Categories"], response_model=PaginatedResponse[TemplateCategoryResponse])
+def list_template_categories_endpoint(
+    skip: int = Query(0), limit: int = Query(50), db: Session = Depends(get_db)
+):
+    cats, total = get_all_template_categories(db, skip=skip, limit=limit)
+    return PaginatedResponse(items=cats, total=total, page=(skip // limit) + 1 if limit else 1, size=limit)
+
+
+@app.post("/api/template-categories/", tags=["Template Categories"], response_model=TemplateCategoryResponse, status_code=201)
+def create_template_category_endpoint(body: TemplateCategoryCreate, db: Session = Depends(get_db)):
+    from sqlalchemy.exc import IntegrityError
+    try:
+        cat = create_template_category(db, name=body.name.strip(), clip_prompt=body.clip_prompt.strip())
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=f"Template category '{body.name}' already exists")
+    from src.tasks.recompute_tasks import trigger_recompute_categories
+    trigger_recompute_categories()
+    return cat
+
+
+@app.put("/api/template-categories/{cat_id}", tags=["Template Categories"], response_model=TemplateCategoryResponse)
+def update_template_category_endpoint(cat_id: int, body: TemplateCategoryUpdate, db: Session = Depends(get_db)):
+    cat = update_template_category(db, cat_id, name=body.name.strip(), clip_prompt=body.clip_prompt.strip())
+    if not cat:
+        raise HTTPException(status_code=404, detail="Template category not found")
+    from src.tasks.recompute_tasks import trigger_recompute_categories
+    trigger_recompute_categories()
+    return cat
+
+
+@app.delete("/api/template-categories/{cat_id}", tags=["Template Categories"], status_code=204)
+def delete_template_category_endpoint(cat_id: int, db: Session = Depends(get_db)):
+    if not delete_template_category(db, cat_id):
+        raise HTTPException(status_code=404, detail="Template category not found")
+    from src.tasks.recompute_tasks import trigger_recompute_categories
+    trigger_recompute_categories()

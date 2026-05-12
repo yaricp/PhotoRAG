@@ -172,8 +172,9 @@ def categorize_photo_task(photo_id: int, phase: str, folder_scanner_id: int = No
 
         cat_results = registry.clip_tagger.categorize(photo.file_path)
         logger.info(f"[clip/categories] Photo {photo_id}: {len(cat_results)} categories")
-        for cat_id, cat_name, score in cat_results:
-            add_photo_category_with_score(db, photo_id, cat_id, score)
+        for cat_name, score in cat_results:
+            cat = get_or_create_category(db, cat_name)
+            add_photo_category_with_score(db, photo_id, cat.id, score)
 
         db.commit()
         _finish_task(

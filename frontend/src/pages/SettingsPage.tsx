@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { getSettings, updateSetting } from '@/api/client'
 import './SettingsPage.css'
 
@@ -8,6 +9,7 @@ const LANGUAGES = [
 ]
 
 export function SettingsPage() {
+    const navigate = useNavigate()
     const [defaultFolder, setDefaultFolder] = useState('')
     const [language, setLanguage] = useState('en')
     const [saving, setSaving] = useState(false)
@@ -91,6 +93,20 @@ export function SettingsPage() {
                     {saving ? 'Saving…' : 'Save'}
                 </button>
                 {saved && <span className="settings-saved">Saved</span>}
+            </div>
+
+            <div className="settings-section">
+                <p className="settings-section__heading">CLIP Vocabulary</p>
+                <div className="settings-nav-cards">
+                    <button className="settings-nav-card" onClick={() => navigate('/template-tags')}>
+                        <span className="settings-nav-card__title">Template Tags</span>
+                        <span className="settings-nav-card__desc">Manage the tag vocabulary used by CLIP detection</span>
+                    </button>
+                    <button className="settings-nav-card" onClick={() => navigate('/template-categories')}>
+                        <span className="settings-nav-card__title">Template Categories</span>
+                        <span className="settings-nav-card__desc">Manage the category list used by CLIP classification</span>
+                    </button>
+                </div>
             </div>
         </div>
     )

@@ -1,6 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional, Generic, TypeVar, List
 from datetime import datetime
+from enum import Enum
 
 T = TypeVar('T')
 
@@ -198,3 +199,48 @@ class HistoryActionSchema(BaseModel):
             undo_data=json.loads(action.undo_data),
             created_at=action.created_at,
         )
+
+
+# ---------------------------------------------------------------------------
+# Template Tags
+# ---------------------------------------------------------------------------
+
+class TemplateTagCreate(BaseModel):
+    name: str
+    clip_prompt: str
+
+class TemplateTagUpdate(BaseModel):
+    name: str
+    clip_prompt: str
+
+class TemplateTagResponse(BaseModel):
+    id: int
+    name: str
+    clip_prompt: str
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    model_config = ConfigDict(from_attributes=True)
+
+# ---------------------------------------------------------------------------
+# Template Categories
+# ---------------------------------------------------------------------------
+
+class TemplateCategoryCreate(BaseModel):
+    name: str
+    clip_prompt: str
+
+class TemplateCategoryUpdate(BaseModel):
+    name: str
+    clip_prompt: str
+
+class TemplateCategoryResponse(BaseModel):
+    id: int
+    name: str
+    clip_prompt: str
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    model_config = ConfigDict(from_attributes=True)
+
+# Recompute status returned by write endpoints
+class RecomputeStatus(BaseModel):
+    status: str = "recomputing"
