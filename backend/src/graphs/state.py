@@ -6,8 +6,8 @@ from src.schemas import Photo
 
 
 def replace_photos(existing: List[Photo], new: List[Photo]) -> List[Photo]:
-    """Replace photos entirely instead of accumulating across calls."""
-    return new
+    """Use new photos when found; keep existing when this tool round found none."""
+    return new if new else existing
 
 
 class AgentState(TypedDict):

@@ -110,7 +110,7 @@ def call_model(state: AgentState):
         messages = [system_msg] + messages
 
     response = llm_with_tools.invoke(messages)
-    logger.info(f"[ai_agent] response: {response}")
+    # logger.info(f"[ai_agent] response: {response}")
     return {"messages": [response]}
 
 

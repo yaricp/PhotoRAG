@@ -109,7 +109,7 @@ export interface ChatMessage {
 }
 
 export interface ChatResponse {
-    message: string
+    response: string
     thread_id: string
     photos: Photo[]
 }
