@@ -263,3 +263,18 @@ class HistoryAction(Base):
     params = Column(String, nullable=False)      # JSON dict
     undo_data = Column(String, nullable=False)   # JSON dict
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class PipelineTask(Base):
+    """Per-task progress record for the Processing Page."""
+    __tablename__ = "pipeline_tasks"
+
+    id = Column(Integer, primary_key=True)
+    photo_id = Column(Integer, ForeignKey("photos.id", ondelete="CASCADE"), nullable=False, index=True)
+    phase = Column(String, nullable=False)
+    task_name = Column(String, nullable=False)
+    status = Column(String, nullable=False, default="pending")  # pending|running|done|failed
+    error = Column(String, nullable=True)
+    started_at = Column(DateTime, nullable=True)
+    finished_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)

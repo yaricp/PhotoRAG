@@ -3,7 +3,7 @@ from loguru import logger
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 import torch
 
-from src.config import ML_Settings, Main_Settings
+from src.config import Translation_Settings as ML_Settings, Main_Settings
 from src.schemas import TranslateRequest
 
 

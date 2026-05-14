@@ -4,7 +4,7 @@ from PIL import Image
 from transformers import AutoProcessor, Qwen2VLForConditionalGeneration
 from qwen_vl_utils import process_vision_info
 
-from src.config import ML_Settings
+from src.config import Vision_Settings as ML_Settings
 from src.ai.prompts import PROMPTS
 
 

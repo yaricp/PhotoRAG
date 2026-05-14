@@ -13,6 +13,10 @@ from src.models import (
 from src.schemas import Photo as PhotoSchema
 from src.schemas import AIModelConfigUpdate
 from src.utils import generate_file_hash
+from src.model_services import (
+    call_embedding_model,
+    call_translation_model
+)
 from src.vector_db_services import search_similar_photos
 from src.config  import Main_Settings
 
@@ -173,24 +177,33 @@ def get_available_dates(
     return [{'year': int(r.year), 'month': int(r.month), 'day': int(r.day)} for r in rows]
 
 
-def get_photos_by_vector(
+async def get_photos_by_vector(
     db: Session, request_text: str, k: int
 ) -> List[tuple]:
     """Returns (Photo, distance) pairs sorted by ascending distance (most relevant first)."""
     logger.info("Getting photos by vector")
     # pyrefly: ignore [missing-import]
-    from src.ai.registry import registry
+    # from src.ai.registry import registry
     settings = Main_Settings()
 
     if settings.DEFAULT_LANGUAGE != "en":
         logger.info("Translating request text to English")
-        request_text = registry.translator.translate(request_text, backward=True)
+        # request_text = registry.translator.translate(request_text, backward=True)
+        request_text = await call_translation_model(
+            request_text, backward=True
+        )
 
-    _ = registry.nomic_embedder
-    embedding = registry.embedder_encode_text(
+    # _ = registry.nomic_embedder
+    # embedding = registry.embedder_encode_text(
+    #     text=request_text, purpose="search"
+    # )
+    embedding = await call_embedding_model(
         text=request_text, purpose="search"
     )
-    results = search_similar_photos(db=db, query_embedding=embedding, limit=k)
+    results = search_similar_photos(
+        db=db, query_embedding=embedding, limit=k
+    )
+    
     logger.info(f"Vector search results: {results}")
     pairs = []
     for photo_id, distance in results:

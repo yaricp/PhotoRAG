@@ -34,3 +34,6 @@ dependencies = [
     "uvicorn>=0.46.0",
     "watchdog>=6.0.0",
 ]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

@@ -1,150 +1,120 @@
+"""Phase-1, phase-2, and phase-3 vision and OCR tasks — called by incoming_pipeline.py."""
+import asyncio
 from loguru import logger
 
-from src.ai.registry import registry
-from src.database import SessionLocal
-from src.db_service import get_photo_by_id, delete_job
-from src.ai.ocr import extract_text_from_image
-
-from src.queues.vision_queue import vision_queue
+from src.db.database import SessionLocal
+from src.db_service import get_photo_by_id
+from src.model_services import call_vision_model, call_ocr_model
+from src.pipeline_tracker import track_task
 
 
 # ---------------------------------------------------------------------------
-# Vision tasks → vision_queue (воркер: src.queue.vision_queue)
+# Sync DB helpers — run via asyncio.to_thread to avoid blocking the event loop
 # ---------------------------------------------------------------------------
 
-@vision_queue.task()
-def vision_task(photo_id: int, phase: str, folder_scanner_id: int = None):
-    """Vision: сгенерировать текстовое описание фото."""
-    logger.info(f"[vision] Start vision task: photo_id={photo_id}, phase={phase}")
-    from src.tasks.utils import _finish_task
+def _get_vision_input_sync(photo_id: int) -> str | None:
+    """Return file_path, or None if photo not found."""
     db = SessionLocal()
     try:
         photo = get_photo_by_id(db, photo_id)
-        if not photo:
-            db.rollback()
-            _finish_task(
-                photo_id=photo_id,
-                phase=phase,
-                name="vision_task",
-                folder_scanner_id=folder_scanner_id
-            )
-            return
-
-        desc = registry.generate_vision_text(
-            file_path=photo.file_path,
-            prompt_key="describe_scene",
-        )
-        photo.description = desc
-        db.commit()
-        logger.info(f"[vision] Photo {photo_id}: description saved ✓")
-        _finish_task(
-            photo_id=photo_id,
-            phase=phase,
-            name="vision_task",
-            folder_scanner_id=folder_scanner_id
-        )
-    except Exception as e:
-        logger.error(f"[vision] Error for photo {photo_id}: {e}")
-        db.rollback()  # ✅ ОБЯЗАТЕЛЬНО
-
-        try:
-            delete_job(db, photo_id, phase)
-            db.commit()  # отдельная транзакция
-        except Exception:
-            db.rollback()
-            logger.error(f"[vision] Failed to delete job for photo {photo_id}")
-            raise
+        return photo.file_path if photo else None
     finally:
         db.close()
 
 
-@vision_queue.task()
-def is_this_document_task(photo_id: int, phase: str, folder_scanner_id: int = None):
-    """Check if the photo is a document"""
-    logger.info(f"[vision] Start is_document task: photo_id={photo_id}, phase={phase}")
-    from src.tasks.utils import _finish_task
+def _get_doc_input_sync(photo_id: int) -> tuple[str | None, bool]:
+    """Return (file_path, is_doc) for ocr_task pre-check."""
     db = SessionLocal()
     try:
         photo = get_photo_by_id(db, photo_id)
         if not photo:
-            db.rollback()
-            _finish_task(
-                photo_id=photo_id,
-                phase=phase,
-                name="is_this_document_task",
-                folder_scanner_id=folder_scanner_id
-            )
-            return
-
-        result = registry.generate_vision_text(
-            file_path=photo.file_path,
-            prompt_key="is_document",
-        )
-        photo.is_doc = "yes" in result.lower()
-        db.commit()
-        logger.info(f"[vision] Photo {photo_id}: is_doc={photo.is_doc} ✓")
-        _finish_task(
-            photo_id=photo_id,
-            phase=phase,
-            name="is_this_document_task",
-            folder_scanner_id=folder_scanner_id
-        )
-    except Exception as e:
-        logger.error(f"[vision] Error for photo {photo_id}: {e}")
-        db.rollback()  # ✅ ОБЯЗАТЕЛЬНО
-
-        try:
-            delete_job(db, photo_id, phase)
-            db.commit()  # отдельная транзакция
-        except Exception:
-            db.rollback()
-            logger.error(f"[vision] Failed to delete job for photo {photo_id}")
-            raise
+            return None, False
+        return photo.file_path, bool(photo.is_doc)
     finally:
         db.close()
 
 
-@vision_queue.task()
-def ocr_task(photo_id: int, phase: str, folder_scanner_id: int = None):
-    """OCR recognition: extract text from image"""
-    logger.info(f"[vision] Start ocr task: photo_id={photo_id}, phase={phase}")
-    from src.tasks.utils import _finish_task
+def _save_description_sync(photo_id: int, desc: str) -> None:
     db = SessionLocal()
     try:
         photo = get_photo_by_id(db, photo_id)
-        if not photo:
-            db.rollback()
-            _finish_task(
-                photo_id=photo_id,
-                phase=phase,
-                name="ocr_task",
-                folder_scanner_id=folder_scanner_id
-            )
-            return
+        if photo:
+            photo.description = desc
+            db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
 
-        text = extract_text_from_image(photo.file_path)
-        if text and text.strip():
+
+def _save_is_doc_sync(photo_id: int, is_doc: bool) -> None:
+    db = SessionLocal()
+    try:
+        photo = get_photo_by_id(db, photo_id)
+        if photo:
+            photo.is_doc = is_doc
+            db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
+
+
+def _save_ocr_text_sync(photo_id: int, text: str) -> None:
+    db = SessionLocal()
+    try:
+        photo = get_photo_by_id(db, photo_id)
+        if photo and text and text.strip():
             photo.ocr_text = text
-            logger.info(f"[ocr] Photo {photo_id}: text extracted")
-        db.commit()
-        _finish_task(
-            photo_id=photo_id,
-            phase=phase,
-            name="ocr_task",
-            folder_scanner_id=folder_scanner_id
-        )
-
-    except Exception as e:
-        logger.error(f"[ocr] Error for photo {photo_id}: {e}")
-        db.rollback()  # ✅ ОБЯЗАТЕЛЬНО
-
-        try:
-            delete_job(db, photo_id, phase)
-            db.commit()  # отдельная транзакция
-        except Exception:
-            db.rollback()
-            logger.error(f"[ocr] Failed to delete job for photo {photo_id}")
-            raise
+            db.commit()
+    except Exception:
+        db.rollback()
+        raise
     finally:
         db.close()
 
+
+# ---------------------------------------------------------------------------
+# Async task functions
+# ---------------------------------------------------------------------------
+
+async def vision_task(photo_id: int) -> None:
+    """Generate a natural-language description of the photo."""
+    logger.info(f"[vision] Start: photo_id={photo_id}")
+    async with track_task(photo_id, "phase_1", "vision_task"):
+        file_path = await asyncio.to_thread(_get_vision_input_sync, photo_id)
+        if not file_path:
+            return
+        desc = await call_vision_model(file_path=file_path, prompt_key="describe_scene")
+        await asyncio.to_thread(_save_description_sync, photo_id, desc)
+        logger.info(f"[vision] Photo {photo_id}: description saved ✓")
+
+
+async def is_this_document_task(photo_id: int) -> None:
+    """Classify whether the photo is a document (yes/no)."""
+    logger.info(f"[vision/doc] Start: photo_id={photo_id}")
+    async with track_task(photo_id, "phase_2", "is_this_document_task"):
+        file_path = await asyncio.to_thread(_get_vision_input_sync, photo_id)
+        if not file_path:
+            return
+        result = await call_vision_model(file_path=file_path, prompt_key="is_document")
+        is_doc = "yes" in result.lower()
+        await asyncio.to_thread(_save_is_doc_sync, photo_id, is_doc)
+        logger.info(f"[vision/doc] Photo {photo_id}: is_doc={is_doc} ✓")
+
+
+async def ocr_task(photo_id: int) -> None:
+    """Extract text from the photo via OCR (skips non-documents)."""
+    logger.info(f"[ocr] Start: photo_id={photo_id}")
+    async with track_task(photo_id, "phase_3", "ocr_task"):
+        file_path, is_doc = await asyncio.to_thread(_get_doc_input_sync, photo_id)
+        if not file_path:
+            return
+        if not is_doc:
+            logger.info(f"[ocr] Photo {photo_id} is not a document, skipping OCR")
+            return
+        text = await call_ocr_model(file_path=file_path)
+        await asyncio.to_thread(_save_ocr_text_sync, photo_id, text)
+        logger.info(f"[ocr] Photo {photo_id}: text extracted ✓")

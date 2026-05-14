@@ -1,6 +1,9 @@
 import threading
 from loguru import logger
-from src.config import ML_Settings
+from src.config import (
+    Vision_Settings, CLIP_Settings, Embedding_Settings,
+    Translation_Settings, OCR_Settings, Chat_Settings
+)
 
 
 class AIModelRegistry:
@@ -14,13 +17,13 @@ class AIModelRegistry:
     _lock = threading.Lock()
 
     def __init__(self):
+        self.settings = Chat_Settings()
         self._clip_tagger = None
         self._vision_generator = None
         self._nomic_embedder = None
         self._geo_enricher = None
         self._translator = None
         self._chat_model = None
-        self._settings = None
 
         self._clip_lock = threading.Lock()
         self._vision_lock = threading.Lock()
@@ -38,14 +41,14 @@ class AIModelRegistry:
                     cls._instance = cls()
         return cls._instance
 
-    @property
-    def settings(self) -> ML_Settings:
-        if self._settings is None:
-            self._settings = ML_Settings()
-        return self._settings
+    # @property
+    # def clip_settings(self) -> CLIP_Settings:
+    #     if self._settings is None:
+    #         self._settings = CLIP_Settings()
+    #     return self._settings
 
     def get_model_config(self, model_type: str):
-        from src.database import SessionLocal
+        from src.db.database import SessionLocal
         from src.db_service import get_model_config as db_get_model_config
         
         db = SessionLocal()
@@ -83,26 +86,26 @@ class AIModelRegistry:
             with self._vision_lock:
                 if self._vision_generator is None:
                     config = self.get_model_config("vision")
-                    mode = config.mode if config else self.settings.VISION_MODE
+                    # mode = config.mode if config else self.settings.VISION_MODE
                     
-                    if mode == "local":
-                        logger.info("[registry] Warming up Qwen-VL Vision Generator...")
-                        from src.ai.vision import QwenVisionGenerator
-                        self._vision_generator = QwenVisionGenerator()
-                        logger.info("[registry] Qwen-VL Vision Generator ready ✓")
-                    else:
-                        logger.info("[registry] Vision mode=remote, using API client.")
-                        from src.ai.vision_remote import RemoteVisionGenerator
+                    # if mode == "local":
+                    logger.info("[registry] Warming up Qwen-VL Vision Generator...")
+                    from src.ai.vision import QwenVisionGenerator
+                    self._vision_generator = QwenVisionGenerator()
+                    logger.info("[registry] Qwen-VL Vision Generator ready ✓")
+                    # else:
+                    #     logger.info("[registry] Vision mode=remote, using API client.")
+                    #     from src.ai.vision_remote import RemoteVisionGenerator
                         
-                        api_key = config.api_key if config and config.api_key else self.settings.VISION_API_KEY
-                        api_url = config.url if config and config.url else self.settings.VISION_API_URL
-                        model_name = config.model_name if config and config.model_name else self.settings.VISION_DESCRIBER_MODEL
+                    #     api_key = config.api_key if config and config.api_key else self.settings.VISION_API_KEY
+                    #     api_url = config.url if config and config.url else self.settings.VISION_API_URL
+                    #     model_name = config.model_name if config and config.model_name else self.settings.VISION_DESCRIBER_MODEL
                         
-                        self._vision_generator = RemoteVisionGenerator(
-                            api_key=api_key,
-                            api_url=api_url,
-                            model_name=model_name
-                        )
+                    #     self._vision_generator = RemoteVisionGenerator(
+                    #         api_key=api_key,
+                    #         api_url=api_url,
+                    #         model_name=model_name
+                    #     )
         return self._vision_generator
 
     def generate_vision_text(self, file_path: str, prompt_key: str) -> str:
@@ -121,50 +124,50 @@ class AIModelRegistry:
         if self._nomic_embedder is None:
             with self._nomic_lock:
                 if self._nomic_embedder is None:
-                    config = self.get_model_config("embedding")
-                    mode = config.mode if config else self.settings.EMBEDDING_MODE
+                    # config = self.get_model_config("embedding")
+                    # mode = config.mode if config else self.settings.EMBEDDING_MODE
                     
-                    if mode == "local":
-                        logger.info("[registry] Warming up Nomic Embedder...")
-                        model_name = config.model_name if config and config.model_name else self.settings.PHOTO_EMBEDDER_MODEL
-                        from sentence_transformers import SentenceTransformer
-                        model = SentenceTransformer(
-                            model_name,
-                            trust_remote_code=True,
-                        )
-                        model.max_seq_length = 512
-                        model.name = model_name
-                        self._nomic_embedder = model
-                        logger.info("[registry] Nomic Embedder ready ✓")
-                    else:
-                        logger.info("[registry] Embedding mode=remote, using API client.")
-                        from src.ai.embedding_remote import RemoteEmbedder
+                    # if mode == "local":
+                    logger.info("[registry] Warming up Nomic Embedder...")
+                    model_name = self.embedding_settings.PHOTO_EMBEDDER_MODEL
+                    from sentence_transformers import SentenceTransformer
+                    model = SentenceTransformer(
+                        model_name,
+                        trust_remote_code=True,
+                    )
+                    model.max_seq_length = 512
+                    model.name = model_name
+                    self._nomic_embedder = model
+                    logger.info("[registry] Nomic Embedder ready ✓")
+                    # else:
+                    #     logger.info("[registry] Embedding mode=remote, using API client.")
+                    #     from src.ai.embedding_remote import RemoteEmbedder
                         
-                        api_key = config.api_key if config and config.api_key else self.settings.EMBEDDING_API_KEY
-                        api_url = config.url if config and config.url else self.settings.EMBEDDING_API_URL
-                        model_name = config.model_name if config and config.model_name else self.settings.PHOTO_EMBEDDER_MODEL
+                    #     api_key = config.api_key if config and config.api_key else self.settings.EMBEDDING_API_KEY
+                    #     api_url = config.url if config and config.url else self.settings.EMBEDDING_API_URL
+                    #     model_name = config.model_name if config and config.model_name else self.settings.PHOTO_EMBEDDER_MODEL
                         
-                        self._nomic_embedder = RemoteEmbedder(
-                            api_key=api_key,
-                            api_url=api_url,
-                            model_name=model_name
-                        )
+                    #     self._nomic_embedder = RemoteEmbedder(
+                    #         api_key=api_key,
+                    #         api_url=api_url,
+                    #         model_name=model_name
+                    #     )
         return self._nomic_embedder
 
     def embedder_encode_text(self, text: str, purpose: str = "save") -> list:
         """Единая точка входа — local или remote прозрачно для tasks.py"""
-        config = self.get_model_config("embedding")
-        mode = config.mode if config else self.settings.EMBEDDING_MODE
+        # config = self.get_model_config("embedding")
+        # mode = config.mode if config else self.settings.EMBEDDING_MODE
         
-        if mode == "local":
-            if purpose == "search":
-                text = f"search_query: {text}"
-            elif purpose == "save":
-                text = f"search_document: {text}"
-            with self._nomic_inference_lock:
-                return self.nomic_embedder.encode(text, normalize_embeddings=True)
-        else:
-            return self.nomic_embedder.encode(text, purpose=purpose)
+        # if mode == "local":
+        if purpose == "search":
+            text = f"search_query: {text}"
+        elif purpose == "save":
+            text = f"search_document: {text}"
+        with self._nomic_inference_lock:
+            return self.nomic_embedder.encode(text, normalize_embeddings=True)
+        # else:
+        #     return self.nomic_embedder.encode(text, purpose=purpose)
 
     # ------------------------------------------------------------------
     # Geo — всегда local (lightweight, no GPU)

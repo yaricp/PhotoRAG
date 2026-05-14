@@ -2,6 +2,7 @@
 *.sqlite3
 *.sqlite3*
 *.sqlite3-*
+*.db
 .env
 **/*.pyc
 **/__pycache__

@@ -1,153 +1,108 @@
+"""Phase-2 and phase-4 embedding tasks — called by incoming_pipeline.py."""
+import asyncio
 from loguru import logger
-from src.ai.registry import registry
-from src.database import SessionLocal
-from src.db_service import get_photo_by_id, delete_job
+
+from src.config import Embedding_Settings
+from src.db.database import SessionLocal
+from src.db_service import get_photo_by_id
+from src.model_services import call_embedding_model, call_translation_model
+from src.pipeline_tracker import track_task
 from src.vector_db_services import store_photo_embedding
-from src.models import Photo
 from src.ai.prompts import build_photo_text_for_embedding
-from src.queues.embedding_queue import embedding_queue
 
 
-@embedding_queue.task()
-def final_embedding_task(photo_id: int, phase: str, folder_scanner_id: int = None):
-    """
-    Embedding: aggregate the results of all previous tasks
-    and save a 768-dimensional vector for search.
-    Started in the 'second' phase — after all tasks in the 'first' phase are completed.
-    """
-    logger.info(f"[embedding] Start embedding task: photo_id={photo_id}, phase={phase}")
-    from src.tasks.utils import _finish_task
+# ---------------------------------------------------------------------------
+# Sync DB helpers — run via asyncio.to_thread to avoid blocking the event loop
+# ---------------------------------------------------------------------------
+
+def _read_embedding_input_sync(photo_id: int) -> dict | None:
+    """Read all fields needed to build the embedding text. Returns None if not found."""
     db = SessionLocal()
     try:
         photo = get_photo_by_id(db, photo_id)
         if not photo:
-            db.rollback()
-            db.close()
-            _finish_task(
-                photo_id=photo_id,
-                phase=phase,
-                name="final_embedding_task",
-                folder_scanner_id=folder_scanner_id
-            )
-            return
-
+            return None
         tags = [pt.tag.name for pt in photo.tags_rel]
         categories = [pc.category.name for pc in photo.categories_rel]
-        location = photo.geoposition.address if photo.geoposition and photo.geoposition.address else "Unknown Location"
-
-        photo_text = build_photo_text_for_embedding(
-            description=photo.description,
-            tags=tags,
-            categories=categories,
-            location=location,
+        location = (
+            photo.geoposition.address
+            if photo.geoposition and photo.geoposition.address
+            else "Unknown Location"
         )
-        logger.info(f"[embedding] Photo {photo_id}: embedding text ready")
-        logger.info(f"[embedding] Text for embedding: {photo_text}")
-
-        embedding = registry.embedder_encode_text(text=photo_text, purpose="save")
-        store_photo_embedding(db, photo.id, embedding, registry.nomic_embedder.name)
-        db.commit()
-        logger.info(f"[embedding] Photo {photo_id}: vector saved ✓")
-        _finish_task(
-            photo_id=photo_id,
-            phase=phase,
-            name="final_embedding_task",
-            folder_scanner_id=folder_scanner_id
-        )
-    except Exception as e:
-        logger.error(f"[embedding] Error for photo {photo_id}: {e}")
-        db.rollback()  # ✅ ОБЯЗАТЕЛЬНО
-
-        try:
-            delete_job(db, photo_id, phase)
-            db.commit()  # отдельная транзакция
-        except Exception:
-            db.rollback()
-            logger.error(f"[embedding] Failed to delete job for photo {photo_id}")
-            raise
+        return {
+            "description": photo.description,
+            "tags": tags,
+            "categories": categories,
+            "location": location,
+        }
     finally:
         db.close()
 
 
-@embedding_queue.task()
-def embedding_document_text_task(photo_id: int, phase: str, folder_scanner_id: int = None):
-    """
-    Embedding: aggregate the results of all previous tasks
-    and save a 768-dimensional vector for search.
-    Started in the 'second' phase — after all tasks in the 'first' phase are completed.
-    """
-    logger.info(f"[embedding] Start embedding document text task: photo_id={photo_id}, phase={phase}")
-    from src.tasks.utils import _finish_task
+def _save_embedding_sync(photo_id: int, embedding: list[float]) -> None:
+    db = SessionLocal()
+    try:
+        model_name = Embedding_Settings().PHOTO_EMBEDDER_MODEL
+        store_photo_embedding(db, photo_id, embedding, model_name)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
 
+
+def _read_doc_input_sync(photo_id: int) -> tuple[bool, str | None]:
+    """Return (is_doc, ocr_text). Returns (False, None) if photo not found."""
     db = SessionLocal()
     try:
         photo = get_photo_by_id(db, photo_id)
         if not photo:
-            logger.info(f"[embedding] Document {photo_id}: photo not found")
-            db.rollback()
-            db.close()
-            _finish_task(
-                photo_id=photo_id,
-                phase=phase,
-                name="embedding_document_text_task",
-                folder_scanner_id=folder_scanner_id
-            )
-            return
-        logger.debug(f"[embedding] type of photo.is_doc: {type(photo.is_doc)}, value {photo.is_doc}")
-        if not photo.is_doc:
-            logger.info(f"[embedding] Document {photo_id}: not a document")
-            db.rollback()
-            db.close()
-            _finish_task(
-                photo_id=photo_id,
-                phase=phase,
-                name="embedding_document_text_task",
-                folder_scanner_id=folder_scanner_id
-            )
-            return
-        doc_text = photo.ocr_text
-        if not doc_text:
-            logger.info(f"[embedding] Document {photo_id}: no ocr text")
-            db.rollback()
-            db.close()
-            _finish_task(
-                photo_id=photo_id,
-                phase=phase,
-                name="embedding_document_text_task",
-                folder_scanner_id=folder_scanner_id
-            )
-            return
-        logger.info(f"[embedding] Document {photo_id}: embedding text ready")
-        logger.info(f"[embedding] Text for embedding: {doc_text}")
-
-        doc_text_en = registry.translator.translate(doc_text, backward=True)
-        logger.info(f"[embedding] Document {photo_id}: translated to English")
-
-        embedding = registry.embedder_encode_text(text=doc_text_en, purpose="save")
-        logger.info(f"[embedding] Document {photo_id}: embedding ready")
-
-        store_photo_embedding(db, photo.id, embedding, registry.nomic_embedder.name)
-        logger.info(f"[embedding] Document {photo_id}: embedding stored")
-        
-        db.commit()
-        logger.info(f"[embedding] Document {photo_id}: transaction committed")
-        logger.info(f"[embedding] Photo {photo_id}: vector saved ✓")
-        _finish_task(
-            photo_id=photo_id,
-            phase=phase,
-            name="embedding_document_text_task",
-            folder_scanner_id=folder_scanner_id
-        )
-    except Exception as e:
-        logger.error(f"[embedding] Error for photo {photo_id}: {e}")
-        db.rollback()  # ✅ ОБЯЗАТЕЛЬНО
-
-        try:
-            delete_job(db, photo_id, phase)
-            db.commit()  # отдельная транзакция
-        except Exception:
-            db.rollback()
-            logger.error(f"[embedding] Failed to delete job for photo {photo_id}")
-            raise
+            return False, None
+        return bool(photo.is_doc), photo.ocr_text
     finally:
         db.close()
+
+
+# ---------------------------------------------------------------------------
+# Async task functions
+# ---------------------------------------------------------------------------
+
+async def final_embedding_task(photo_id: int) -> None:
+    """
+    Aggregate phase-1 results (description, tags, categories, location)
+    into a normalised embedding vector and store it for semantic search.
+    """
+    logger.info(f"[embedding] Start: photo_id={photo_id}")
+    async with track_task(photo_id, "phase_2", "final_embedding_task"):
+        inputs = await asyncio.to_thread(_read_embedding_input_sync, photo_id)
+        if inputs is None:
+            return
+
+        photo_text = build_photo_text_for_embedding(
+            description=inputs["description"],
+            tags=inputs["tags"],
+            categories=inputs["categories"],
+            location=inputs["location"],
+        )
+        embedding = await call_embedding_model(text=photo_text, purpose="save")
+        await asyncio.to_thread(_save_embedding_sync, photo_id, embedding)
+        logger.info(f"[embedding] Photo {photo_id}: vector saved ✓")
+
+
+async def embedding_document_text_task(photo_id: int) -> None:
+    """
+    For documents: translate the OCR text to English and embed it
+    as a second search vector.
+    """
+    logger.info(f"[embedding/doc] Start: photo_id={photo_id}")
+    async with track_task(photo_id, "phase_4", "embedding_document_text_task"):
+        is_doc, ocr_text = await asyncio.to_thread(_read_doc_input_sync, photo_id)
+        if not is_doc or not ocr_text:
+            logger.info(f"[embedding/doc] Photo {photo_id}: skipping (not a doc or no OCR text)")
+            return
+
+        doc_text_en = await call_translation_model(ocr_text, backward=True)
+        embedding = await call_embedding_model(text=doc_text_en, purpose="save")
+        await asyncio.to_thread(_save_embedding_sync, photo_id, embedding)
+        logger.info(f"[embedding/doc] Photo {photo_id}: doc vector saved ✓")

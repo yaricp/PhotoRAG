@@ -5,7 +5,7 @@ Run once against an existing database:
     cd backend && python -m src.migrate_geoposition
 """
 from loguru import logger
-from src.database import engine
+from src.db.database import engine
 
 
 def run():

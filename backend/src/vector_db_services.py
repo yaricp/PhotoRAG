@@ -4,7 +4,7 @@ from typing import List, Optional, Tuple
 import numpy as np
 
 from src.models import PhotoEmbedding
-from src.config import ML_Settings
+from src.config import Embedding_Settings as ML_Settings
 
 
 # ----------------------------

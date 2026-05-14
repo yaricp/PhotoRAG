@@ -2,103 +2,178 @@
     padding: 20px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 20px;
 }
 
-/* HEADER */
 .jobs-page__header {
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
-/* GRID (как gallery) */
-.jobs-page__grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 16px;
+.jobs-page__center {
+    display: flex;
+    justify-content: center;
+    padding: 40px 0;
+    color: var(--color-text-dim);
 }
 
-/* TILE */
-.job-tile {
+/* ── Sections ─────────────────────────────────────────────── */
+
+.pipeline-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.pipeline-section__title {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-text-dim);
+    margin: 0;
+}
+
+.pipeline-section--recent {
+    opacity: 0.75;
+}
+
+/* ── Photo row ─────────────────────────────────────────────── */
+
+.photo-row {
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    background: var(--color-surface);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.photo-row--running {
+    border-color: #4fa3ff;
+    box-shadow: 0 0 0 2px rgba(79, 163, 255, 0.15);
+}
+
+.photo-row--failed {
+    border-color: #ff6b6b;
+}
+
+.photo-row__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.photo-row__id {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.photo-row__status {
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: var(--color-bg);
+}
+
+.photo-row__status--running {
+    background: rgba(79, 163, 255, 0.15);
+    color: #4fa3ff;
+}
+
+.photo-row__status--done {
+    background: rgba(50, 200, 100, 0.15);
+    color: #32c864;
+}
+
+.photo-row__status--failed {
+    background: rgba(255, 80, 80, 0.15);
+    color: #ff5050;
+}
+
+.photo-row__status--pending {
+    background: var(--color-bg);
+    color: var(--color-text-dim);
+}
+
+.photo-row__phases {
     display: flex;
     flex-direction: column;
     gap: 8px;
 }
 
-/* META BLOCK */
-.job-tile__meta {
-    padding: 8px;
-    border-radius: 8px;
+/* ── Phase block ───────────────────────────────────────────── */
 
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-}
-
-/* TITLE */
-.job-tile__title {
-    font-size: 13px;
-    font-weight: 600;
-}
-
-/* TASKS */
-.job-tile__tasks {
-    font-size: 12px;
-    margin-top: 4px;
-
-    font-family: monospace;
-
-    background: var(--color-bg);
-    border: 1px solid var(--color-border);
-
-    padding: 6px;
-    border-radius: 6px;
-
-    word-break: break-word;
-}
-
-/* DATE */
-.job-tile__date {
-    font-size: 11px;
-    color: var(--color-text-dim);
-    margin-top: 4px;
-}
-
-/* CENTER */
-.jobs-page__center {
+.phase-block {
     display: flex;
-    justify-content: center;
-    padding: 40px 0;
+    flex-direction: column;
+    gap: 6px;
 }
 
-.job-tile__phase {
-    display: inline-block;
-    padding: 4px 8px;
-    border-radius: 6px;
-
+.phase-block__label {
     font-size: 11px;
     font-weight: 600;
-
     text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-dim);
 }
 
-/* состояния */
-.job-tile__phase--pending {
-    background: #eee;
-    color: #555;
+.phase-block__tasks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
 }
 
-.job-tile__phase--first {
-    background: #ffe58f;
-    color: #8a6d00;
+/* ── Task chip ─────────────────────────────────────────────── */
+
+.task-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    border: 1px solid transparent;
+    background: var(--color-bg);
 }
 
-.job-tile__phase--second {
-    background: #d3f9d8;
-    color: #1b7f3b;
+.task-chip--pending {
+    color: var(--color-text-dim);
+    border-color: var(--color-border);
 }
 
-.job-tile__phase--third {
-    background: #ffd6d6;
-    color: #a40000;
+.task-chip--running {
+    background: rgba(79, 163, 255, 0.12);
+    border-color: #4fa3ff;
+    color: #4fa3ff;
+    font-weight: 600;
+}
+
+.task-chip--done {
+    background: rgba(50, 200, 100, 0.1);
+    border-color: rgba(50, 200, 100, 0.3);
+    color: #32c864;
+}
+
+.task-chip--failed {
+    background: rgba(255, 80, 80, 0.1);
+    border-color: rgba(255, 80, 80, 0.4);
+    color: #ff5050;
+}
+
+.task-chip__icon {
+    font-size: 11px;
+}
+
+.task-chip__name {
+    font-family: monospace;
+    font-size: 11px;
+}
+
+.task-chip__elapsed {
+    font-size: 10px;
+    opacity: 0.8;
+    margin-left: 2px;
 }

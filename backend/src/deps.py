@@ -1,7 +1,5 @@
-from src.database import SessionLocal
-from src.database import Session
-from src.ai.registry import registry
-from src.ai.translator import Translator
+from src.db.database import SessionLocal
+from src.db.database import Session
 
 
 def get_db() -> Session:
@@ -10,7 +8,3 @@ def get_db() -> Session:
         yield db
     finally:
         db.close()
-
-
-def get_translator() -> Translator:
-    return registry.translator

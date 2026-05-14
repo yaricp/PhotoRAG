@@ -1,93 +1,173 @@
 import React, { useEffect, useState } from 'react'
-import { getJobs } from '@/api/client'
-import { PhotoCard } from '@/components/photos/PhotoCard'
+import { getActivePipelineTasks, getRecentPipelineTasks } from '@/api/client'
 import { Spinner } from '@/components/ui/Spinner'
-import type { Job, Photo } from '@/types/api'
+import type { PipelineTask } from '@/types/api'
 import './JobProcessingPage.css'
 
+const STATUS_ICON: Record<string, string> = {
+    pending: '⏳',
+    running: '🔄',
+    done: '✅',
+    failed: '❌',
+}
+
+function shortName(task_name: string): string {
+    return task_name.replace(/_task$/, '').replace(/_/g, ' ')
+}
+
+function parseUtc(ts: string): Date {
+    // SQLAlchemy returns naive UTC strings like "2026-05-14T11:30:00".
+    // Without a timezone marker JS treats them as local time, adding/subtracting
+    // the user's UTC offset. Appending 'Z' forces correct UTC interpretation.
+    const marked = ts.endsWith('Z') || ts.includes('+') ? ts : ts + 'Z'
+    return new Date(marked)
+}
+
+function formatElapsed(started_at: string | null, now: number): string {
+    if (!started_at) return ''
+    const secs = Math.max(0, Math.round((now - parseUtc(started_at).getTime()) / 1000))
+    if (secs < 60) return `${secs}s`
+    const m = Math.floor(secs / 60)
+    const s = secs % 60
+    return `${m}m ${s < 10 ? '0' : ''}${s}s`
+}
+
+type PhotoGroup = { photo_id: number; tasks: PipelineTask[] }
+
+function groupByPhoto(tasks: PipelineTask[]): PhotoGroup[] {
+    const map = new Map<number, PipelineTask[]>()
+    for (const t of tasks) {
+        if (!map.has(t.photo_id)) map.set(t.photo_id, [])
+        map.get(t.photo_id)!.push(t)
+    }
+    return Array.from(map.entries())
+        .map(([photo_id, tasks]) => ({ photo_id, tasks }))
+        .sort((a, b) => b.photo_id - a.photo_id)
+}
+
+function PhaseBlock({ phase, tasks, now }: { phase: string; tasks: PipelineTask[]; now: number }) {
+    return (
+        <div className="phase-block">
+            <div className="phase-block__label">{phase.replace('_', ' ')}</div>
+            <div className="phase-block__tasks">
+                {tasks.map(t => (
+                    <div
+                        key={t.id}
+                        className={`task-chip task-chip--${t.status}`}
+                        title={t.error ?? t.task_name}
+                    >
+                        <span className="task-chip__icon">{STATUS_ICON[t.status] ?? '?'}</span>
+                        <span className="task-chip__name">{shortName(t.task_name)}</span>
+                        {t.status === 'running' && t.started_at && (
+                            <span className="task-chip__elapsed">{formatElapsed(t.started_at, now)}</span>
+                        )}
+                    </div>
+                ))}
+            </div>
+        </div>
+    )
+}
+
+function PhotoRow({ photo_id, tasks, now }: PhotoGroup & { now: number }) {
+    const phases = Array.from(new Set(tasks.map(t => t.phase))).sort()
+    const overallStatus = tasks.some(t => t.status === 'running')
+        ? 'running'
+        : tasks.some(t => t.status === 'failed')
+        ? 'failed'
+        : tasks.every(t => t.status === 'done')
+        ? 'done'
+        : 'pending'
+
+    return (
+        <div className={`photo-row photo-row--${overallStatus}`}>
+            <div className="photo-row__header">
+                <span className="photo-row__id">Photo #{photo_id}</span>
+                <span className={`photo-row__status photo-row__status--${overallStatus}`}>
+                    {STATUS_ICON[overallStatus]} {overallStatus}
+                </span>
+            </div>
+            <div className="photo-row__phases">
+                {phases.map(phase => (
+                    <PhaseBlock
+                        key={phase}
+                        phase={phase}
+                        tasks={tasks.filter(t => t.phase === phase)}
+                        now={now}
+                    />
+                ))}
+            </div>
+        </div>
+    )
+}
 
 export function JobProcessingPage() {
-    const [jobs, setJobs] = useState<Job[]>([])
+    const [active, setActive] = useState<PipelineTask[]>([])
+    const [recent, setRecent] = useState<PipelineTask[]>([])
     const [loading, setLoading] = useState(true)
+    const [now, setNow] = useState(Date.now())
 
-    const loadJobs = async () => {
+    const loadData = async () => {
         try {
-            const data = await getJobs()
-            setJobs(data)
+            const [activeTasks, recentTasks] = await Promise.all([
+                getActivePipelineTasks(),
+                getRecentPipelineTasks(50),
+            ])
+            setActive(activeTasks)
+            setRecent(recentTasks)
         } finally {
             setLoading(false)
         }
     }
 
     useEffect(() => {
-        loadJobs()
-
-        // 🔁 polling
-        const interval = setInterval(loadJobs, 4000)
-        return () => clearInterval(interval)
+        loadData()
+        const poll = setInterval(loadData, 3000)
+        const tick = setInterval(() => setNow(Date.now()), 1000)
+        return () => {
+            clearInterval(poll)
+            clearInterval(tick)
+        }
     }, [])
+
+    const activeGroups = groupByPhoto(active)
+    const activeTaskIds = new Set(active.map(t => t.id))
+    const recentGroups = groupByPhoto(recent.filter(t => !activeTaskIds.has(t.id)))
 
     return (
         <div className="jobs-page">
-
-            {/* HEADER */}
             <div className="jobs-page__header">
                 <h2>Processing</h2>
-                <span>{jobs.length} jobs</span>
+                <span>{activeGroups.length} active photo{activeGroups.length !== 1 ? 's' : ''}</span>
             </div>
 
-            {/* LOADING */}
             {loading && (
                 <div className="jobs-page__center">
                     <Spinner size="lg" />
                 </div>
             )}
 
-            {/* GRID */}
-            {!loading && jobs.length > 0 && (
-                <div className="jobs-page__grid">
+            {!loading && (
+                <>
+                    {activeGroups.length > 0 ? (
+                        <section className="pipeline-section">
+                            <h3 className="pipeline-section__title">Active</h3>
+                            {activeGroups.map(g => (
+                                <PhotoRow key={g.photo_id} {...g} now={now} />
+                            ))}
+                        </section>
+                    ) : (
+                        <div className="jobs-page__center">No active processing</div>
+                    )}
 
-                    {jobs.map(job => {
-                        // ⚠️ fake photo для PhotoCard
-                        const fakePhoto: Photo = {
-                            id: job.photo_id,
-                            file_path: job.file_path,
-                            created_at: job.created_at,
-                        } as Photo
-
-                        return (
-                            <div key={job.id} className="job-tile">
-
-                                <PhotoCard photo={fakePhoto} />
-
-                                {/* STATUS BLOCK */}
-                                <div className="job-tile__meta">
-
-                                    <div className={`job-tile__phase job-tile__phase--${job.phase}`}>
-                                        Phase: {job.phase}
-                                    </div>
-
-                                    <div className="job-tile__tasks">
-                                        {job.tasks}
-                                    </div>
-
-                                    <div className="job-tile__date">
-                                        {new Date(job.created_at).toLocaleString()}
-                                    </div>
-
-                                </div>
-                            </div>
-                        )
-                    })}
-
-                </div>
-            )}
-
-            {/* EMPTY */}
-            {!loading && jobs.length === 0 && (
-                <div className="jobs-page__center">
-                    No active jobs
-                </div>
+                    {recentGroups.length > 0 && (
+                        <section className="pipeline-section pipeline-section--recent">
+                            <h3 className="pipeline-section__title">Recent</h3>
+                            {recentGroups.map(g => (
+                                <PhotoRow key={g.photo_id} {...g} now={now} />
+                            ))}
+                        </section>
+                    )}
+                </>
             )}
         </div>
     )

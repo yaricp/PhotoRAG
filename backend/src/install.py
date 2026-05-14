@@ -10,8 +10,27 @@ from typing import Optional
 from loguru import logger
 from sqlalchemy.orm import Session
 
-from src.config import CLIP_Settings, ML_Settings
-from src.database import engine, SessionLocal
+from src.config import (
+    CLIP_Settings, Vision_Settings, Embedding_Settings,
+    Translation_Settings, OCR_Settings, Chat_Settings,
+)
+
+
+def _local_ml_models() -> list[str]:
+    """Return list of model names that are configured to run locally."""
+    result = []
+    if Vision_Settings().VISION_MODE == "local":
+        result.append("vision")
+    if Embedding_Settings().EMBEDDING_MODE == "local":
+        result.append("embedding")
+    if Translation_Settings().TRANSLATOR_MODE == "local":
+        result.append("translator")
+    if OCR_Settings().OCR_MODE == "local":
+        result.append("ocr")
+    if Chat_Settings().CHAT_MODEL_MODE == "local":
+        result.append("chat")
+    return result
+from src.db.database import engine, SessionLocal
 from src.models import Base, ModelState
 from sqlalchemy import text
 from src.db_service import (
@@ -272,7 +291,7 @@ def install_embedding(db: Session) -> None:
         logger.info("[embedding] Downloading nomic-embed-text-v1.5...")
         from sentence_transformers import SentenceTransformer
         SentenceTransformer(
-            ML_Settings().PHOTO_EMBEDDER_MODEL,
+            Embedding_Settings().PHOTO_EMBEDDER_MODEL,
             trust_remote_code=True,
         )
         update_model_status(db, "embedding", "ready")
@@ -292,7 +311,7 @@ def install_translator(db: Session) -> None:
         update_model_status(db, "translator", "downloading")
         import torch
         from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
-        translate_name_model = ML_Settings().TRANSLATOR_MODEL
+        translate_name_model = Translation_Settings().TRANSLATOR_MODEL
         logger.info(f"[translator] Downloading {translate_name_model}...")
         model = AutoModelForSeq2SeqLM.from_pretrained(translate_name_model).to(torch.float16)
         tokenizer = AutoTokenizer.from_pretrained(translate_name_model)
@@ -312,7 +331,7 @@ def install_chat(db: Session) -> None:
     try:
         update_model_status(db, "chat", "downloading")
         from transformers import AutoModelForCausalLM, AutoTokenizer
-        chat_model_name = ML_Settings().CHAT_LOCAL_MODEL
+        chat_model_name = Chat_Settings().CHAT_LOCAL_MODEL
         logger.info(f"[chat] Downloading {chat_model_name} (this may take a while)...")
         AutoTokenizer.from_pretrained(chat_model_name)
         AutoModelForCausalLM.from_pretrained(chat_model_name)
@@ -351,7 +370,7 @@ def init_db(db: Session):
             CREATE VIRTUAL TABLE IF NOT EXISTS photo_embeddings_vss
             USING vec0(embedding FLOAT[768]);
         """))
-    ml_local_models = ML_Settings().local_models
+    ml_local_models = _local_ml_models()
     clip_local_models = CLIP_Settings().local_models
     for local_model_name in ml_local_models + clip_local_models:
         if not get_model_or_none(db, local_model_name):
@@ -382,8 +401,7 @@ def run_install(db: Session) -> None:
       1. Категории в БД должны быть засеяны ДО install_clip,
          потому что install_clip читает их для categories.npy
     """
-    ml_settings = ML_Settings()
-    local_ml = ml_settings.local_models
+    local_ml = _local_ml_models()
     clip_settings = CLIP_Settings()
     local_clip = clip_settings.local_models
     local_models = local_ml + local_clip

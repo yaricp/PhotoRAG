@@ -1,85 +1,101 @@
+import asyncio
 import os
-import shutil
+import threading
 from datetime import datetime
+
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from loguru import logger
 
-from src.utils import (
-    generate_file_hash, move_photo, get_photo_capture_date
-)
-from src.tasks import start_pipeline
-from src.database import SessionLocal
+from src.utils import generate_file_hash, move_photo, get_photo_capture_date
+from src.incoming_pipeline import start_pipeline
+from src.db.database import SessionLocal
 from src.db_service import check_photo_hash_exists, create_photo_record, record_exact_duplicate
-
 
 
 class PhotoEventHandler(FileSystemEventHandler):
     """
-    Observes the given path for new photo files.
+    Watches a folder for new photo files and submits them to the async pipeline.
+
+    A dedicated asyncio event loop runs in a daemon thread so that multiple
+    photos arriving close together are processed concurrently rather than
+    queued behind each other.
     """
 
     def __init__(self, destination_root_folder: str):
+        super().__init__()
         self.destination_root_folder = destination_root_folder
+        self._loop = asyncio.new_event_loop()
+        self._thread = threading.Thread(
+            target=self._loop.run_forever,
+            daemon=True,
+            name="observer-event-loop",
+        )
+        self._thread.start()
 
     def on_created(self, event):
-        # 1. Sync Extension Check
-        if not event.is_directory and event.src_path.lower().endswith(('.jpg', '.png', '.jpeg', '.gif', '.tiff')):
+        if event.is_directory:
+            return
+        src = event.src_path
+        if not src.lower().endswith(('.jpg', '.jpeg', '.png', '.gif', '.tiff')):
+            return
+
+        logger.info(f"[observer] New file: {src}")
+        try:
+            file_hash = generate_file_hash(src)
+
+            db = SessionLocal()
             try:
-                logger.info(f"Photo appears: {event.src_path}")
-                # 2. Sync Hashing
-                file_hash = generate_file_hash(event.src_path)
-                logger.info(f"File hash: {file_hash}")
-                
-                db = SessionLocal()
-                try:
-                    photo = check_photo_hash_exists(db, file_hash)
-                    logger.info(f"Photo found in DB: {photo}")
-                    if photo:
-                        logger.info(f"Exact duplicate detected: {event.src_path}")
-                        record_exact_duplicate(db, photo.id, event.src_path)
-                    if not photo:
-                        logger.info(f"Photo not found in DB")
-                        photo_capture_date = get_photo_capture_date(event.src_path)
-                        logger.info(f"Photo capture date: {photo_capture_date}")
-                        new_path = move_photo(event.src_path, self.destination_root_folder)
-                        logger.info(f"File moved to: {new_path}")
-                        try:
-                            photo = create_photo_record(
-                                db, file_hash, new_path, photo_capture_date
-                            )
-                            logger.info(f"Photo created: {photo}")
-                        except Exception as e:
-                            logger.error(f"Error creating photo record for photo {new_path}: {e}")
-                            return
-                        # 6. Dispatch Async Tasks with the Photo ID
-                        logger.info(f"Starting pipeline for photo: {photo.id}")
-                        try:
-                            start_pipeline(photo.id)
-                        except Exception as e:
-                            logger.error(f"Error starting pipeline for photo {photo.id}: {e}")
-                except Exception as e:
-                    logger.error(f"Error dispatching tasks for file {event.src_path}: {e}")
+                existing = check_photo_hash_exists(db, file_hash)
+                if existing:
+                    logger.info(f"[observer] Exact duplicate: {src}")
+                    record_exact_duplicate(db, existing.id, src)
+                    db.commit()
                     return
-                finally:
-                    db.close()
-                    logger.info(f"working with {event.src_path} is finished")
-                    
-            except Exception as e:
-                logger.error(f"Error processing {event.src_path}: {e}")
+
+                capture_date = get_photo_capture_date(src)
+                new_path = move_photo(src, self.destination_root_folder)
+                logger.info(f"[observer] Moved to: {new_path}")
+
+                photo_id = None
+                try:
+                    photo = create_photo_record(db, file_hash, new_path, capture_date)
+                    db.flush()
+                    photo_id = photo.id
+                    db.commit()
+                except Exception as exc:
+                    logger.error(f"[observer] Failed to create photo record for {new_path}: {exc}")
+                    db.rollback()
+                    return
+
+            finally:
+                db.close()
+
+            if photo_id is None:
+                return
+
+            # Submit the async pipeline to the dedicated event loop without blocking
+            # the watchdog thread.  Multiple photos arriving simultaneously each get
+            # their own coroutine on the shared loop and run concurrently.
+            logger.info(f"[observer] Submitting pipeline for photo_id={photo_id}")
+            asyncio.run_coroutine_threadsafe(
+                start_pipeline(photo_id),
+                self._loop,
+            )
+
+        except Exception as exc:
+            logger.error(f"[observer] Error processing {src}: {exc}")
 
 
-def start_observer(path: str, destination_root_folder: str):
-    """
-    Starts the observer for the given path.
-    """
-    logger.info(f"Starting observer for path: {path}")
+def start_observer(path: str, destination_root_folder: str) -> Observer:
+    """Start a watchdog observer for *path*, moving new photos to *destination_root_folder*."""
+    logger.info(f"[observer] Starting observer for: {path}")
     observer = Observer()
     observer.schedule(
         PhotoEventHandler(destination_root_folder),
         path,
-        recursive=False
+        recursive=False,
     )
     observer.start()
-    logger.info(f"Observer: {observer}")
+    logger.info(f"[observer] Observer running: {observer}")
     return observer

@@ -12,9 +12,22 @@ class Main_Settings(BaseSettings):
     DEFAULT_LANGUAGE: str = "en"
 
 
+class TaskQueue_Settings(BaseSettings):
+    # How long to wait for a single model task result before giving up.
+    # Must be large enough to cover (MAX_CONCURRENT_PIPELINES × slowest model time).
+    # Vision on CPU can take 30s/photo; with 8 concurrent photos worst-case is 240s.
+    TASK_RESULT_TIMEOUT: float = 600.0
+    TASK_RESULT_POLL_INTERVAL: float = 0.5     # seconds between polls
+    TASK_RESULT_DB_PATH: str = "../task_results.db"
+    MAX_CONCURRENT_PIPELINES: int = 20          # max photos processed simultaneously
+    # Log a "still waiting" heartbeat this often while polling (seconds)
+    TASK_RESULT_LOG_INTERVAL: float = 30.0
+
+
 class Database_Settings(BaseSettings):
     DATABASE_DIALECT: str = "sqlite"
     DATABASE_NAME: str = "../db.sqlite3"
+    TASK_RESULTS_DATABASE_NAME: str = "../task_results.db"
 
 
 class Api_Settings(BaseSettings):
@@ -54,7 +67,7 @@ class CLIP_Settings(BaseSettings):
         return result
 
 
-class ML_Settings(BaseSettings):
+class Vision_Settings(BaseSettings):
     # Vision
     VISION_MODE: str = "local"           # local | remote
     VISION_DESCRIBER_MODEL: str = "Qwen/Qwen2-VL-2B-Instruct"
@@ -63,6 +76,8 @@ class ML_Settings(BaseSettings):
     RESIZE_FOR_DESCRIPTION: tuple[int, int] = (448, 448)
     RESIZE_FOR_DETECTION: tuple[int, int] = (224, 224)
 
+
+class Embedding_Settings(BaseSettings):
     # Embedding
     EMBEDDING_MODE: str = "local"        # local | remote
     PHOTO_EMBEDDER_MODEL: str = "nomic-ai/nomic-embed-text-v1.5"
@@ -70,15 +85,24 @@ class ML_Settings(BaseSettings):
     EMBEDDING_API_KEY: str = ""
     EMBEDDING_SIMILARITY_LIMIT: float = 0.89  # cosine distance threshold; lower = stricter
 
+
+class Translation_Settings(BaseSettings):
     # Translator
     TRANSLATOR_MODEL: str = "facebook/nllb-200-distilled-600M"
     TRANSLATOR_MODE: str = "local"
     TRANSLATOR_API_URL: str = ""
     TRANSLATOR_API_KEY: str = ""
 
+
+class OCR_Settings(BaseSettings):
     # OCR
     OCR_MODE: str = "local"
+    OCR_MODEL: str = "microsoft/trocr-small-handwritten"
+    OCR_API_URL: str = ""
+    OCR_API_KEY: str = ""
 
+
+class Chat_Settings(BaseSettings):
     # Chat
     CHAT_MODEL_MODE: str = "remote"           # local | remote
     CHAT_MODEL: str = "gpt-4o-mini"
@@ -86,14 +110,14 @@ class ML_Settings(BaseSettings):
     CHAT_API_URL: str = ""
     CHAT_API_KEY: str = ""
 
-    @property
-    def local_models(self) -> list[str]:
-        """Список моделей которые нужно скачать и запустить как процесс"""
-        result = []
-        if self.VISION_MODE == "local":
-            result.append("vision")
-        if self.EMBEDDING_MODE == "local":
-            result.append("embedding")
-        if self.TRANSLATOR_MODE == "local":
-            result.append("translate")
-        return result
+    # @property
+    # def local_models(self) -> list[str]:
+    #     """Список моделей которые нужно скачать и запустить как процесс"""
+    #     result = []
+    #     if self.VISION_MODE == "local":
+    #         result.append("vision")
+    #     if self.EMBEDDING_MODE == "local":
+    #         result.append("embedding")
+    #     if self.TRANSLATOR_MODE == "local":
+    #         result.append("translate")
+    #     return result

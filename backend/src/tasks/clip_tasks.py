@@ -1,8 +1,9 @@
+"""Phase-0 CPU tasks and phase-1 CLIP tasks — called by incoming_pipeline.py."""
+import asyncio
+from time import time
 from loguru import logger
 
-
-from src.ai.registry import registry
-from src.database import SessionLocal
+from src.db.database import SessionLocal
 from src.db_service import (
     get_photo_by_id,
     get_or_create_camera,
@@ -10,43 +11,31 @@ from src.db_service import (
     add_photo_tag_with_score,
     get_or_create_category,
     add_photo_category_with_score,
-    delete_job,
     get_or_create_photo_hash,
     find_perceptual_duplicates,
     record_perceptual_duplicate,
     create_quality_issue,
 )
+from src.model_services import call_clip_model
+from src.pipeline_tracker import track_task
 from src.utils import extract_exif, parse_datetime
 from src.quality_checks import check_resolution, check_exif
-from src.queues.clip_queue import clip_queue
+
 
 # ---------------------------------------------------------------------------
-# CLIP tasks → clip_queue (воркер: src.queue.clip_queue)
+# Phase 0 — CPU-only, run via asyncio.to_thread so they don't block the loop
 # ---------------------------------------------------------------------------
 
-@clip_queue.task()
-def metadata_task(photo_id: int, phase: str, folder_scanner_id: int = None):
-    """Extracts EXIF, geolocation, and camera info — does not require GPU."""
-    logger.info(f"[metadata] Start metadata task: photo_id={photo_id}, phase={phase}")
+def _metadata_sync(photo_id: int) -> None:
     from src.geo import GeoEnricher
-    from src.tasks.utils import _finish_task
     db = SessionLocal()
     try:
         photo = get_photo_by_id(db, photo_id)
         if not photo:
-            db.rollback()
-            _finish_task(
-                photo_id=photo_id,
-                phase=phase,
-                name="metadata_task",
-                folder_scanner_id=folder_scanner_id
-            )
             return
 
         exif_raw = extract_exif(photo.file_path)
-        logger.info(f"[metadata] Photo {photo_id} EXIF: {exif_raw}")
         photo.captured_at = parse_datetime(exif_raw)
-        logger.info(f"[metadata] Photo {photo_id} captured_at: {photo.captured_at}")
 
         make = exif_raw.get("Make")
         model = exif_raw.get("Model")
@@ -70,11 +59,8 @@ def metadata_task(photo_id: int, phase: str, folder_scanner_id: int = None):
         photo.focal_length = exif_raw.get("FocalLength")
         photo.shutter_speed = exif_raw.get("ExposureTime")
         photo.offset_time = exif_raw.get("OffsetTime") or exif_raw.get("OffsetTimeOriginal")
-            
         db.commit()
-        logger.info(f"[metadata] Photo {photo_id} metadata saved ✓")
 
-        # Quality checks: resolution + EXIF (CPU-only, no GPU required)
         is_thumbnail, px_count = check_resolution(photo.file_path)
         if is_thumbnail:
             create_quality_issue(db, photo.id, "thumbnail", px_count)
@@ -84,146 +70,29 @@ def metadata_task(photo_id: int, phase: str, folder_scanner_id: int = None):
             create_quality_issue(db, photo.id, "no_exif", 0.0)
 
         db.commit()
-
-        _finish_task(
-            photo_id=photo_id,
-            phase=phase,
-            name="metadata_task",
-            folder_scanner_id=folder_scanner_id
-        )
-    except Exception as e:
-        logger.error(f"[metadata] Error for photo {photo_id}: {e}")
-        db.rollback()  # ✅ ОБЯЗАТЕЛЬНО
-
-        try:
-            delete_job(db, photo_id, phase)
-            db.commit()  # отдельная транзакция
-        except Exception:
-            db.rollback()
-            logger.error(f"[metadata] Failed to delete job for photo {photo_id}")
-            raise
+        logger.info(f"[metadata] Photo {photo_id} done ✓")
+    except Exception:
+        db.rollback()
+        raise
     finally:
         db.close()
 
 
-@clip_queue.task()
-def auto_tag_clip_task(photo_id: int, phase: str, folder_scanner_id: int = None):
-    """CLIP: search the tags for photo"""
-    logger.info(f"[clip/tags] Start auto_tag_clip_task: photo_id={photo_id}, phase={phase}")
-    from src.tasks.utils import _finish_task
-    db = SessionLocal()
-    try:
-        photo = get_photo_by_id(db, photo_id)
-        if not photo:
-            db.rollback()
-            _finish_task(
-                photo_id=photo_id,
-                phase=phase,
-                name="auto_tag_clip_task",
-                folder_scanner_id=folder_scanner_id
-            )
-            return
-
-        confident_tags = registry.clip_tagger.find_tags(photo.file_path)
-        # confident_tags = get_tags_from_remote_model(photo.file_path)
-        logger.info(f"[clip/tags] Photo {photo_id}: {len(confident_tags)} tags found")
-        for tag_name, score in confident_tags:
-            add_photo_tag_with_score(db, photo_id, tag_name, score)
-
-        db.commit()
-        _finish_task(
-            photo_id=photo_id,
-            phase=phase,
-            name="auto_tag_clip_task",
-            folder_scanner_id=folder_scanner_id
-        )
-    except Exception as e:
-        logger.error(f"[clip/tags] Error for photo {photo_id}: {e}")
-        db.rollback()  # ✅ ОБЯЗАТЕЛЬНО
-
-        try:
-            delete_job(db, photo_id, phase)
-            db.commit()  # отдельная транзакция
-        except Exception:
-            db.rollback()
-            logger.error(f"[clip/tags] Failed to delete job for photo {photo_id}")
-            raise
-    finally:
-        db.close()
+async def metadata_task(photo_id: int) -> None:
+    """Extract EXIF, geolocation, and camera info — CPU-only, runs in thread pool."""
+    logger.info(f"[metadata] Start: photo_id={photo_id}")
+    async with track_task(photo_id, "phase_0", "metadata_task"):
+        await asyncio.to_thread(_metadata_sync, photo_id)
 
 
-@clip_queue.task()
-def categorize_photo_task(photo_id: int, phase: str, folder_scanner_id: int = None):
-    """CLIP: determine categories of photo"""
-    logger.info(f"[clip/categories] Start categorize_photo_task: photo_id={photo_id}, phase={phase}")
-    from src.tasks.utils import _finish_task
-    db = SessionLocal()
-    try:
-        photo = get_photo_by_id(db, photo_id)
-        if not photo:
-            db.rollback()
-            _finish_task(
-                photo_id=photo_id,
-                phase=phase,
-                name="categorize_photo_task",
-                folder_scanner_id=folder_scanner_id
-            )
-            return
-
-        cat_results = registry.clip_tagger.categorize(photo.file_path)
-        logger.info(f"[clip/categories] Photo {photo_id}: {len(cat_results)} categories")
-        for cat_name, score in cat_results:
-            cat = get_or_create_category(db, cat_name)
-            add_photo_category_with_score(db, photo_id, cat.id, score)
-
-        db.commit()
-        _finish_task(
-            photo_id=photo_id,
-            phase=phase,
-            name="categorize_photo_task",
-            folder_scanner_id=folder_scanner_id
-        )
-    except Exception as e:
-        logger.error(f"[clip/categories] Error for photo {photo_id}: {e}")
-        db.rollback()  # ✅ ОБЯЗАТЕЛЬНО
-
-        try:
-            delete_job(db, photo_id, phase)
-            db.commit()  # отдельная транзакция
-        except Exception:
-            db.rollback()
-            logger.error(f"[clip/categories] Failed to delete job for photo {photo_id}")
-            raise
-    finally:
-        db.close()
-
-
-@clip_queue.task()
-def compute_perceptual_hashes_task(photo_id: int, phase: str, folder_scanner_id: int = None):
-    """
-    Phase 1 task: compute dHash/aHash/pHash, store them, and record any
-    near-duplicate photos (hamming distance ≤ 10 on dHash).
-
-    Hash failure (corrupt image, missing file) is treated as non-fatal:
-    the task still calls _finish_task so the phase can advance.
-    """
-    logger.info(f"[perceptual] Start hashing photo_id={photo_id}, phase={phase}")
+def _perceptual_hashes_sync(photo_id: int) -> None:
     import imagehash
     from PIL import Image
-    from src.tasks.utils import _finish_task
 
     db = SessionLocal()
     try:
         photo = get_photo_by_id(db, photo_id)
         if not photo:
-            logger.warning(f"[perceptual] Photo {photo_id} not found, skipping")
-            db.rollback()
-            _finish_task(
-                photo_id=photo_id,
-                phase=phase,
-                name="compute_perceptual_hashes_task",
-                folder_scanner_id=folder_scanner_id,
-            )
             return
 
         try:
@@ -233,37 +102,94 @@ def compute_perceptual_hashes_task(photo_id: int, phase: str, folder_scanner_id:
             phash_val = str(imagehash.phash(img))
 
             get_or_create_photo_hash(db, photo_id, dhash=dhash_val, ahash=ahash_val, phash=phash_val)
-            logger.info(f"[perceptual] Photo {photo_id}: hashes stored")
 
             near_dupes = find_perceptual_duplicates(db, photo_id, threshold=10)
             for match in near_dupes:
                 record_perceptual_duplicate(db, photo_id, match["photo_id"], match["hash_distance"])
-                logger.info(
-                    f"[perceptual] Photo {photo_id}: near-duplicate {match['photo_id']} "
-                    f"(dist={match['hash_distance']})"
-                )
             db.commit()
-            logger.info(f"[perceptual] Photo {photo_id}: hashes and duplicates saved ✓")
-
+            logger.info(f"[perceptual] Photo {photo_id}: hashes saved ✓")
         except Exception as hash_err:
-            logger.warning(f"[perceptual] Hash computation failed for photo {photo_id}: {hash_err} — skipping")
+            logger.warning(f"[perceptual] Hash failed for photo {photo_id}: {hash_err} — skipping")
             db.rollback()
-
-        _finish_task(
-            photo_id=photo_id,
-            phase=phase,
-            name="compute_perceptual_hashes_task",
-            folder_scanner_id=folder_scanner_id,
-        )
-
-    except Exception as e:
-        logger.error(f"[perceptual] Fatal error for photo {photo_id}: {e}")
+    except Exception:
         db.rollback()
-        try:
-            delete_job(db, photo_id, phase)
-            db.commit()
-        except Exception:
-            db.rollback()
-            raise
+        raise
     finally:
         db.close()
+
+
+async def compute_perceptual_hashes_task(photo_id: int) -> None:
+    """Compute dHash/aHash/pHash and detect near-duplicate photos — runs in thread pool."""
+    logger.info(f"[perceptual] Start: photo_id={photo_id}")
+    async with track_task(photo_id, "phase_0", "compute_perceptual_hashes_task"):
+        await asyncio.to_thread(_perceptual_hashes_sync, photo_id)
+
+
+# ---------------------------------------------------------------------------
+# Phase 1 — CLIP model calls (async, poll Huey worker)
+# DB reads and writes run in threads so the event loop stays free.
+# ---------------------------------------------------------------------------
+
+def _get_file_path_sync(photo_id: int) -> str | None:
+    db = SessionLocal()
+    try:
+        photo = get_photo_by_id(db, photo_id)
+        return photo.file_path if photo else None
+    finally:
+        db.close()
+
+
+def _save_tags_sync(photo_id: int, tags: list) -> None:
+    db = SessionLocal()
+    try:
+        for tag_name, score in tags:
+            add_photo_tag_with_score(db, photo_id, tag_name, score)
+            logger.debug(f"[clip/tags] Photo {photo_id}: tag '{tag_name}' score={score:.3f}")
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
+
+
+def _save_categories_sync(photo_id: int, cat_results: list) -> None:
+    db = SessionLocal()
+    try:
+        for cat_name, score in cat_results:
+            cat = get_or_create_category(db, cat_name)
+            add_photo_category_with_score(db, photo_id, cat.id, score)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
+
+
+async def auto_tag_clip_task(photo_id: int) -> None:
+    """CLIP: find tags for photo."""
+    logger.info(f"[clip/tags] Start: photo_id={photo_id}")
+    async with track_task(photo_id, "phase_1", "auto_tag_clip_task"):
+        file_path = await asyncio.to_thread(_get_file_path_sync, photo_id)
+        if not file_path:
+            return
+        t0 = time()
+        tags = await call_clip_model(file_path, task="tags")
+        logger.debug(f"[clip/tags] Photo {photo_id}: model took {time()-t0:.2f}s, {len(tags)} tags")
+        await asyncio.to_thread(_save_tags_sync, photo_id, tags)
+        logger.info(f"[clip/tags] Photo {photo_id}: {len(tags)} tags ✓")
+
+
+async def categorize_photo_task(photo_id: int) -> None:
+    """CLIP: determine categories of photo."""
+    logger.info(f"[clip/categories] Start: photo_id={photo_id}")
+    async with track_task(photo_id, "phase_1", "categorize_photo_task"):
+        file_path = await asyncio.to_thread(_get_file_path_sync, photo_id)
+        if not file_path:
+            return
+        t0 = time()
+        cat_results = await call_clip_model(file_path=file_path, task="categorize")
+        logger.debug(f"[clip/categories] Photo {photo_id}: model took {time()-t0:.2f}s, {len(cat_results)} cats")
+        await asyncio.to_thread(_save_categories_sync, photo_id, cat_results)
+        logger.info(f"[clip/categories] Photo {photo_id}: {len(cat_results)} categories ✓")

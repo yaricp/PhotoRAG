@@ -58,10 +58,10 @@ from src.db_service import (
     unlink_photo_category,
 )
 from src.utils import archive_photos_to_zip
-from src.database import Session, SessionLocal
-from src.deps import get_db, get_translator
+from src.db.database import Session, SessionLocal
+from src.deps import get_db
 from src.config import Api_Settings
-from src.models import Photo, Category, Tag, Camera, Geoposition, PhotoDuplicate
+from src.models import PhotoDuplicate
 from src.schemas import (
     Photo as PhotoSchema,
     WatchRequest,
@@ -72,7 +72,6 @@ from src.schemas import (
     Category as CategorySchema,
     Camera as CameraSchema,
     GeoPosition as GeoPositionSchema,
-    TranslateRequest,
     ChatRequest,
     ChatResponse,
     Job as JobSchema,
@@ -96,13 +95,13 @@ from src.schemas import (
     PhotoTagResponse,
     PhotoCategoryResponse,
     PhotoSearchResult,
+    PipelineTaskSchema,
 )
-from src.ai.translator import Translator
-from src.ai.registry import registry
 from src.watcher_service import WatcherService
 from src.graphs.ai_agent import app as agent_app
 from langchain_core.messages import HumanMessage
-from src.tasks.folder_scanners import start_folder_scanner_task
+from src.queues.folder_scan_queue import start_folder_scanner_task
+from src.task_notifier import get_notifier
 
 
 watcher_service = WatcherService()
@@ -110,16 +109,25 @@ watcher_service = WatcherService()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    import asyncio
+    from src.pipeline_tracker import recover_interrupted_pipelines
+    from src.incoming_pipeline import run_pipelines_batch
+
     db = SessionLocal()
-    # load models in memory
-    registry.translator.load()
-    registry.vision_generator.load()
-    # startup
     watcher_service.start_all(db)
+
+    stuck_ids = recover_interrupted_pipelines(db)
+    if stuck_ids:
+        logger.info(f"[startup] Recovering {len(stuck_ids)} interrupted pipeline(s): {stuck_ids}")
+        asyncio.create_task(run_pipelines_batch(stuck_ids))
+
     yield
-    # shutdown
+
     watcher_service.stop_all(db)
+    get_notifier().stop_all()
     db.close()
+    from src.db.database import engine
+    engine.dispose()  # closes all pooled connections → SQLite WAL checkpoints and cleans up
 
 
 app = FastAPI(
@@ -362,11 +370,10 @@ def delete_photo_endpoint(photo_id: int, db: Session = Depends(get_db)) -> Photo
 async def search_photos_endpoint(
     request: QueryRequest,
     db: Session = Depends(get_db),
-    translator: Optional[Translator] = Depends(get_translator)
 ) -> List[PhotoSearchResult]:
     """Search photos by vector, returns results sorted by distance (most relevant first)."""
     logger.info(f"Received search request for text: {request.text_query}")
-    pairs = get_photos_by_vector(db, request.text_query, request.k)
+    pairs = await get_photos_by_vector(db, request.text_query, request.k)
     result = []
     for photo, distance in pairs:
         item = PhotoSearchResult(
@@ -532,8 +539,6 @@ def update_model_endpoint(
     if not config:
         raise HTTPException(status_code=404, detail="Model config not found")
 
-    # Invalidate cache so it reloads with new settings
-    registry.reset_model(config_type)
     return config
 
 
@@ -732,3 +737,31 @@ def unlink_photo_category_endpoint(photo_id: int, cat_id: int, db: Session = Dep
     if not unlink_photo_category(db, photo_id, cat_id):
         raise HTTPException(status_code=404, detail="Category not linked to this photo")
     db.commit()
+
+
+# ---------------------------------------------------------------------------
+# Processing Page endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/api/pipeline/active", tags=["Pipeline"], response_model=List[PipelineTaskSchema])
+def get_active_pipeline_tasks_endpoint(db: Session = Depends(get_db)):
+    """Return all currently pending or running pipeline tasks (for the Processing Page)."""
+    from src.pipeline_tracker import get_active_pipeline_tasks
+    return get_active_pipeline_tasks(db)
+
+
+@app.get("/api/pipeline/recent", tags=["Pipeline"], response_model=List[PipelineTaskSchema])
+def get_recent_pipeline_tasks_endpoint(
+    limit: int = 50,
+    db: Session = Depends(get_db),
+):
+    """Return the most recently created pipeline tasks."""
+    from src.pipeline_tracker import get_recent_pipeline_tasks
+    return get_recent_pipeline_tasks(db, limit=limit)
+
+
+@app.get("/api/photos/{photo_id}/pipeline", tags=["Pipeline"], response_model=List[PipelineTaskSchema])
+def get_photo_pipeline_tasks_endpoint(photo_id: int, db: Session = Depends(get_db)):
+    """Return all pipeline tasks for a specific photo."""
+    from src.pipeline_tracker import get_photo_pipeline_tasks
+    return get_photo_pipeline_tasks(db, photo_id)

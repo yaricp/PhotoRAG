@@ -129,3 +129,15 @@ export interface AIModelConfigUpdate {
     url?: string
     api_key?: string
 }
+
+export interface PipelineTask {
+    id: number
+    photo_id: number
+    phase: string
+    task_name: string
+    status: 'pending' | 'running' | 'done' | 'failed'
+    error: string | null
+    started_at: string | null
+    finished_at: string | null
+    created_at: string
+}

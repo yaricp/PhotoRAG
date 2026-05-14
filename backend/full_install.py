@@ -1,5 +1,5 @@
 from src.install import run_install
-from src.database import SessionLocal
+from src.db.database import SessionLocal
 
 db = SessionLocal()
 run_install(db)

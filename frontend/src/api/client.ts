@@ -2,7 +2,7 @@ import { getBaseUrl } from './base'
 import type {
     Photo, PaginatedPhotos, Watcher, Job,
     SystemStatus, SearchResult, ChatResponse, FolderScanner,
-    AIModelConfig, AIModelConfigUpdate
+    AIModelConfig, AIModelConfigUpdate, PipelineTask
 } from '@/types/api'
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -399,5 +399,17 @@ export async function deleteTemplateCategory(id: number): Promise<void> {
     const base = await getBaseUrl()
     const res = await fetch(`${base}/api/template-categories/${id}`, { method: 'DELETE' })
     if (!res.ok) throw new Error(`API error ${res.status}: DELETE /api/template-categories/${id}`)
+}
+
+export async function getActivePipelineTasks(): Promise<PipelineTask[]> {
+    return apiFetch<PipelineTask[]>('/api/pipeline/active')
+}
+
+export async function getRecentPipelineTasks(limit: number = 50): Promise<PipelineTask[]> {
+    return apiFetch<PipelineTask[]>(`/api/pipeline/recent?limit=${limit}`)
+}
+
+export async function getPhotoPipelineTasks(photoId: number): Promise<PipelineTask[]> {
+    return apiFetch<PipelineTask[]>(`/api/photos/${photoId}/pipeline`)
 }
 

@@ -16,7 +16,7 @@ def trigger_recompute_tags() -> None:
 
 
 def _do_recompute_tags() -> None:
-    from src.database import SessionLocal
+    from src.db.database import SessionLocal
     from src.db_service import update_model_status
     from src.ai.clip import ClipTagger
     from src.install import _compute_model_hash, _save_hash
@@ -35,7 +35,7 @@ def _do_recompute_tags() -> None:
         logger.info("[recompute] tags.npy updated ✓")
     except Exception as e:
         logger.error(f"[recompute] tags failed: {e}")
-        from src.database import SessionLocal as SL
+        from src.db.database import SessionLocal as SL
         db2 = SL()
         try:
             update_model_status(db2, "clip_tags", "error")
@@ -50,7 +50,7 @@ def trigger_recompute_categories() -> None:
 
 
 def _do_recompute_categories() -> None:
-    from src.database import SessionLocal
+    from src.db.database import SessionLocal
     from src.db_service import update_model_status
     from src.ai.clip import ClipTagger
     from src.install import _compute_model_hash, _save_hash
@@ -69,7 +69,7 @@ def _do_recompute_categories() -> None:
         logger.info("[recompute] categories.npy updated ✓")
     except Exception as e:
         logger.error(f"[recompute] categories failed: {e}")
-        from src.database import SessionLocal as SL
+        from src.db.database import SessionLocal as SL
         db2 = SL()
         try:
             update_model_status(db2, "clip_categories", "error")

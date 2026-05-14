@@ -1,7 +1,7 @@
 from loguru import logger
 from sqlalchemy import text
 
-from src.database import SessionLocal
+from src.db.database import SessionLocal
 from src.db_service import (
     delete_job, get_or_create_job, get_folder_scanner, update_folder_scanner_progress
 )

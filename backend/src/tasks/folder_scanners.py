@@ -2,7 +2,7 @@ import os
 from loguru import logger
 from datetime import datetime
 
-from src.database import SessionLocal
+from src.db.database import SessionLocal
 from src.models import FolderScanner
 from src.db_service import (
     update_folder_scanner_progress,
@@ -12,7 +12,7 @@ from src.db_service import (
     get_or_create_folder_scanner,
     record_exact_duplicate,
 )
-from src.tasks import start_pipeline
+import asyncio
 from src.utils import generate_file_hash, check_if_file_is_image
 from src.queues.folder_scan_queue import folder_scan_queue
 
@@ -60,7 +60,8 @@ def start_folder_scanner_task(path: str) -> bool:
                     continue
                 photo = create_photo_record(db, file_hash, file_path, file_created_at)
                 logger.info(f"Photo {file_path} created in DB with ID: {photo.id}")
-                start_pipeline(photo.id, folder_scanner.id)
+                from src.incoming_pipeline import start_pipeline
+                asyncio.run(start_pipeline(photo.id, folder_scanner.id))
                 logger.debug(f"Pipeline started for photo {photo.id}")
             except Exception as e:
                 logger.error(f"Error starting pipeline for photo {photo.id}: {e}")

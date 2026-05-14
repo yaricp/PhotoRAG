@@ -9,7 +9,7 @@ import requests
 from PIL import Image
 from loguru import logger
 
-from src.database import SessionLocal
+from src.db.database import SessionLocal
 from src.db_service import get_all_categories, get_all_template_tags_ordered, get_all_template_categories_ordered
 
 from src.config import CLIP_Settings
@@ -266,8 +266,8 @@ class ClipTagger:
                     self.tags = [line.strip() for line in f if line.strip()]
 
     def find_tags(self, filepath: str, top_k: int = 20) -> list[tuple[str, float]]:
-        self.load_tags()
-        self.load_model()
+        # self.load_tags()
+        # self.load_model()
         if self.tags_features is None or not self.tags:
             return []
         image = self.preprocess(Image.open(filepath)).unsqueeze(0).to(self.device)
@@ -281,8 +281,8 @@ class ClipTagger:
 
     def categorize(self, filepath: str, top_k: int = 5) -> list[tuple[str, float]]:
         """Zero-Shot categorization. Returns list of (category_name, score)."""
-        self.load_or_compute_categories()
-        self.load_model()
+        # self.load_or_compute_categories()
+        # self.load_model()
         image = self.preprocess(Image.open(filepath)).unsqueeze(0).to(self.device)
         with torch.no_grad():
             image_features = self.model.encode_image(image)

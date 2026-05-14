@@ -281,3 +281,18 @@ class PhotoCategoryResponse(BaseModel):
     name: str
     confidence_score: Optional[float] = None
     model_config = ConfigDict(from_attributes=True)
+
+
+class PipelineTaskSchema(BaseModel):
+    id: int
+    photo_id: int
+    phase: str
+    task_name: str
+    status: str
+    error: Optional[str] = None
+    started_at: Optional[datetime] = None
+    finished_at: Optional[datetime] = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+

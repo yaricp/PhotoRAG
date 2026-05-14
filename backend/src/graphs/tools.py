@@ -17,8 +17,8 @@ from src.db_service import (
     get_or_create_category, add_photo_category_with_score,
     update_photo_geoposition, get_or_create_photo_hash,
 )
-from src.database import SessionLocal
-from src.ai.registry import registry
+from src.db.database import SessionLocal
+from src.model_services import call_vision_model, call_clip_model
 from src.utils import extract_exif, resize_image, archive_photos_to_zip
 from src.schemas import Photo
 
@@ -39,7 +39,7 @@ def _serialize_photos(photos: list) -> str:
 
 
 @tool
-def search_photos_semantic(query: str, k: int = 5) -> str:
+async def search_photos_semantic(query: str, k: int = 5) -> str:
     """
     Search for photos using a natural-language description (semantic / AI search).
 
@@ -62,13 +62,11 @@ def search_photos_semantic(query: str, k: int = 5) -> str:
     logger.info(f"[tool] semantic search: {query}")
     db = SessionLocal()
     try:
-        photos_distance = get_photos_by_vector(db, query, k)
+        photos_distance = await get_photos_by_vector(db, query, k)
         logger.info(f"Semantic search found {len(photos_distance)} photos")
         if not photos_distance:
             return "No photos found matching that description."
-        logger.info(f"Semantic search results (photo_id, distance): {photos_distance}")
         photos = [p[0] for p in photos_distance]
-        logger.info(f"Semantic search photos: {photos}")
         if not photos:
             return "No photos found matching that description."
         return _serialize_photos(photos)
@@ -636,7 +634,7 @@ def undo_last_action() -> str:
 
 
 @tool
-def describe_photo(photo_id: int) -> str:
+async def describe_photo(photo_id: int) -> str:
     """
     Generate an AI visual description of a photo using the vision model.
     ⏳ Slow — runs a large vision model. Use only when the user explicitly asks
@@ -660,10 +658,7 @@ def describe_photo(photo_id: int) -> str:
         p = get_photo_by_id(db, photo_id)
         if not p:
             return f"Photo with ID {photo_id} not found."
-        desc = registry.generate_vision_text(
-            file_path=p.file_path,
-            prompt_key="describe_scene",
-        )
+        desc = await call_vision_model(file_path=p.file_path, prompt_key="describe_scene")
         logger.info(f"[tool] description result: {desc}")
         return f"Description for photo {photo_id}: {desc}"
     finally:
@@ -824,7 +819,7 @@ def estimate_photo_quality_quick(photo_id: int) -> str:
 
 
 @tool
-def estimate_photo_quality_deep(photo_id: int) -> str:
+async def estimate_photo_quality_deep(photo_id: int) -> str:
     """
     Run a deep AI-based quality assessment using the CLIP vision model.
     ⏳ Slow — requires running a neural network. Use sparingly.
@@ -858,16 +853,13 @@ def estimate_photo_quality_deep(photo_id: int) -> str:
             "a good quality photo",
             "a sharp well-lit photo",
         ]
-        from PIL import Image
-        with Image.open(photo.file_path) as img:
-            img_rgb = img.convert("RGB")
-            image_features = registry.clip_tagger.model.encode_image(img_rgb)
-        image_vec = np.array(image_features).flatten()
+        image_vec_raw = await call_clip_model(photo.file_path, task="encode_image")
+        image_vec = np.array(image_vec_raw).flatten()
         image_vec = image_vec / (np.linalg.norm(image_vec) + 1e-8)
         scores = {}
         for probe in probes:
-            text_features = registry.clip_tagger.model.encode_text(probe)
-            text_vec = np.array(text_features).flatten()
+            text_vec_raw = await call_clip_model(photo.file_path, task="categorize")
+            text_vec = np.array(text_vec_raw).flatten()
             text_vec = text_vec / (np.linalg.norm(text_vec) + 1e-8)
             scores[probe] = round(float(np.dot(image_vec, text_vec)), 4)
         bad_probes = probes[:6]
@@ -988,7 +980,7 @@ def compare_photos_quick(photo_id_a: int, photo_id_b: int) -> str:
 
 
 @tool
-def compare_photos_deep(photo_id_a: int, photo_id_b: int) -> str:
+async def compare_photos_deep(photo_id_a: int, photo_id_b: int) -> str:
     """
     Compare two photos using the CLIP vision model (cosine similarity).
     ⏳ Slow — requires encoding both images with a neural network.
@@ -1007,7 +999,6 @@ def compare_photos_deep(photo_id_a: int, photo_id_b: int) -> str:
     - "Проверь с помощью AI: одинаковые ли фото 2 и 9?"
     """
     import numpy as np
-    from PIL import Image
     logger.info(f"[tool] compare_photos_deep: {photo_id_a} vs {photo_id_b}")
     db = SessionLocal()
     try:
@@ -1018,14 +1009,12 @@ def compare_photos_deep(photo_id_a: int, photo_id_b: int) -> str:
         if not photo_b:
             return f"Photo {photo_id_b} not found."
 
-        def _encode(fp):
-            with Image.open(fp) as img:
-                feats = registry.clip_tagger.model.encode_image(img.convert("RGB"))
-            vec = np.array(feats).flatten()
-            return vec / (np.linalg.norm(vec) + 1e-8)
-
-        vec_a = _encode(photo_a.file_path)
-        vec_b = _encode(photo_b.file_path)
+        raw_a = await call_clip_model(photo_a.file_path, task="encode_image")
+        raw_b = await call_clip_model(photo_b.file_path, task="encode_image")
+        vec_a = np.array(raw_a).flatten()
+        vec_b = np.array(raw_b).flatten()
+        vec_a = vec_a / (np.linalg.norm(vec_a) + 1e-8)
+        vec_b = vec_b / (np.linalg.norm(vec_b) + 1e-8)
         similarity = round(float(np.dot(vec_a, vec_b)), 4)
         if similarity >= 0.95:
             verdict = "almost certainly duplicates"
