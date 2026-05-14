@@ -6,7 +6,6 @@ from langgraph.graph import StateGraph, END
 from langgraph.prebuilt import ToolNode
 from langgraph.checkpoint.memory import MemorySaver
 
-from src.ai.registry import registry
 from src.ai.prompts import PROMPTS
 from src.graphs.state import AgentState
 from src.graphs.tools import (
@@ -21,6 +20,7 @@ from src.graphs.tools import (
     resize_photo,
     get_exif_data,
     describe_photo,
+    recognize_text_in_photos,
     get_action_history,
     undo_last_action,
     create_folder,
@@ -40,6 +40,7 @@ from src.graphs.tools import (
     add_category_to_photos,
     add_geoposition_to_photos,
     geocode_photo_from_exif,
+    mark_photos_as_duplicates,
     # Group D — search / filter
     get_photos_by_tag_id,
     search_photos_by_exif,
@@ -62,6 +63,7 @@ tools = [
     get_photo_details,
     get_exif_data,
     describe_photo,
+    recognize_text_in_photos,
     filter_photos,
     get_photos_by_tag_id,
     search_photos_by_exif,
@@ -79,6 +81,7 @@ tools = [
     add_category_to_photos,
     add_geoposition_to_photos,
     geocode_photo_from_exif,
+    mark_photos_as_duplicates,
     # File operations (write)
     create_folder,
     move_photos,
@@ -94,10 +97,6 @@ editing_tools = [
 tool_node = ToolNode(tools)
 editing_tool_node = ToolNode(editing_tools)
 
-# 2. Initialize LLM
-llm = registry.chat_model
-llm_with_tools = llm.bind_tools(tools)
-
 
 # 3. Define Nodes
 def call_model(state: AgentState):
@@ -109,6 +108,8 @@ def call_model(state: AgentState):
         system_msg = SystemMessage(content=PROMPTS["chat_agent"]["system_message"])
         messages = [system_msg] + messages
 
+    from src.ai.registry import registry as _registry  # local import avoids LangGraph closure introspection
+    llm_with_tools = _registry.chat_model.bind_tools(tools)
     response = llm_with_tools.invoke(messages)
     # logger.info(f"[ai_agent] response: {response}")
     return {"messages": [response]}

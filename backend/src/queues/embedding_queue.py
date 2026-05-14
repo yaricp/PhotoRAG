@@ -35,7 +35,12 @@ def _get_model():
     if _model is None:
         with _lock:
             if _model is None:
-                model_name = get_model_name_from_db(_DB_PATH, "embedding", _DEFAULT_MODEL_NAME)
+                from src.queues.queue_config import read_model_config_from_db
+                cfg = read_model_config_from_db(_DB_PATH, "embedding")
+                if cfg and cfg.get("mode") == "remote":
+                    logger.info("[embedding_queue] mode=remote — skipping local model load")
+                    return None
+                model_name = (cfg and cfg.get("model_name")) or _DEFAULT_MODEL_NAME
                 logger.info(f"[embedding_queue] Loading model: {model_name}")
                 from sentence_transformers import SentenceTransformer
                 m = SentenceTransformer(model_name, trust_remote_code=True)
@@ -48,33 +53,30 @@ def _get_model():
 
 @embedding_queue.on_startup()
 def warm():
-    """Load embedding model into RAM before accepting tasks."""
+    """Load embedding model into RAM before accepting tasks (skipped in remote mode)."""
     _get_model()
 
 
 @embedding_queue.task()
 def call_local_embedding_model(task_id: str, text: str, purpose: str) -> None:
     """
-    Encode text into a normalised float vector.
-
-    purpose:
-      "save"   -> prepends "search_document: " (nomic convention)
-      "search" -> prepends "search_query: "
+    Encode pre-processed text into a normalised float vector.
+    Any model-specific prefix (e.g. nomic instruction prefix) is applied
+    by model_services.call_embedding_model before this task is dispatched.
 
     Result stored as JSON: list[float]
     """
-    logger.info(f"[embedding_queue] task_id={task_id} purpose={purpose!r} Encoding text: {text[:30]}...")
+    logger.info(f"[embedding_queue] task_id={task_id} purpose={purpose!r} text={text[:40]!r}")
     start_time = time.time()
     try:
         model = _get_model()
-        if purpose == "save":
-            text = f"search_document: {text}"
-        elif purpose == "search":
-            text = f"search_query: {text}"
+        if model is None:
+            save_error(task_id, "Local embedding model not loaded (mode=remote)")
+            return
         with _lock:
             embedding = model.encode(text, normalize_embeddings=True)
         save_result(task_id, json.dumps(embedding.tolist()))
-        logger.info(f"[embedding_queue] task_id={task_id} purpose={purpose!r} Encoding completed in {time.time() - start_time:.2f}s")
+        logger.info(f"[embedding_queue] task_id={task_id} done in {time.time() - start_time:.2f}s")
     except Exception as exc:
         logger.error(f"[embedding_queue] purpose={purpose!r} failed: {exc}")
         save_error(task_id, str(exc))

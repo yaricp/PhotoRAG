@@ -121,6 +121,8 @@ export interface AIModelConfig {
     model_name: string
     url?: string
     api_key?: string
+    model_provider?: string
+    similarity_limit?: number
 }
 
 export interface AIModelConfigUpdate {
@@ -128,6 +130,8 @@ export interface AIModelConfigUpdate {
     model_name: string
     url?: string
     api_key?: string
+    model_provider?: string
+    similarity_limit?: number
 }
 
 export interface PipelineTask {

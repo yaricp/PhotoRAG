@@ -1,5 +1,6 @@
 """Phase-2 and phase-4 embedding tasks — called by incoming_pipeline.py."""
 import asyncio
+import os
 from loguru import logger
 
 from src.config import Embedding_Settings
@@ -9,6 +10,8 @@ from src.model_services import call_embedding_model, call_translation_model
 from src.pipeline_tracker import track_task
 from src.vector_db_services import store_photo_embedding
 from src.ai.prompts import build_photo_text_for_embedding
+
+_DB_PATH = os.path.join(os.getcwd(), "../db.sqlite3")
 
 
 # ---------------------------------------------------------------------------
@@ -40,9 +43,11 @@ def _read_embedding_input_sync(photo_id: int) -> dict | None:
 
 
 def _save_embedding_sync(photo_id: int, embedding: list[float]) -> None:
+    from src.queues.queue_config import read_model_config_from_db
     db = SessionLocal()
     try:
-        model_name = Embedding_Settings().PHOTO_EMBEDDER_MODEL
+        cfg = read_model_config_from_db(_DB_PATH, "embedding")
+        model_name = (cfg and cfg.get("model_name")) or Embedding_Settings().PHOTO_EMBEDDER_MODEL
         store_photo_embedding(db, photo_id, embedding, model_name)
         db.commit()
     except Exception:

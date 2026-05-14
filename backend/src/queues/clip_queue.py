@@ -74,7 +74,7 @@ def call_local_clip_model(task_id: str, file_path: str, task: str = "tags") -> N
             elif task == "categorize":
                 result = model.categorize(file_path)
             elif task == "encode_image":
-                result = model.model.encode_image(file_path)
+                result = model.encode_image(file_path)
             else:
                 raise ValueError(f"[clip_queue] Unknown task: {task!r}")
         logger.info(f"[clip_queue] CLIP task {task} for {file_path} result: {result}")

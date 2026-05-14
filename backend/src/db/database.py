@@ -14,7 +14,7 @@ if settings.DATABASE_DIALECT == "sqlite":
 else:
     DATABASE_URL: str = f"{settings.DATABASE_DIALECT}+{settings.DATABASE_DRIVER}://{settings.DATABASE_USER}:{settings.DATABASE_PASSWORD}@{settings.DATABASE_HOST}:{settings.DATABASE_PORT}/{settings.DATABASE_NAME}"
 engine = create_engine(DATABASE_URL)
-SessionLocal: Session = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+SessionLocal: sessionmaker[Session] = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 @event.listens_for(Engine, "connect")

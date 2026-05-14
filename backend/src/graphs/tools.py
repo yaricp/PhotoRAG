@@ -16,9 +16,10 @@ from src.db_service import (
     get_or_create_tag, add_photo_tag_with_score,
     get_or_create_category, add_photo_category_with_score,
     update_photo_geoposition, get_or_create_photo_hash,
+    record_perceptual_duplicate,
 )
 from src.db.database import SessionLocal
-from src.model_services import call_vision_model, call_clip_model
+from src.model_services import call_vision_model, call_clip_model, call_ocr_model
 from src.utils import extract_exif, resize_image, archive_photos_to_zip
 from src.schemas import Photo
 
@@ -665,6 +666,52 @@ async def describe_photo(photo_id: int) -> str:
         db.close()
 
 
+@tool
+async def recognize_text_in_photos(photo_ids: List[int]) -> str:
+    """
+    Run OCR (Optical Character Recognition) on one or more photos to extract any text visible in them.
+    ⏳ Slow — runs an OCR model per photo. Use when the user wants to read text from images.
+
+    Saves the extracted text to each photo record in the database.
+    Photos where text is found are also marked as documents (is_doc=True).
+
+    User query examples:
+    - "Read the text from photo 5"
+    - "What does photo 12 say?"
+    - "Extract text from pictures 3, 7 and 9"
+    - "Scan these receipts for text"
+    - "OCR photo number 15"
+    - "Прочитай текст на фото 6"
+    - "Что написано на фотографии 10?"
+    - "Распознай текст на снимках 2 и 4"
+
+    Returns: extracted text per photo ID.
+    """
+    logger.info(f"[tool] recognize_text_in_photos: {photo_ids}")
+    db = SessionLocal()
+    try:
+        results = []
+        for pid in photo_ids:
+            photo = get_photo_by_id(db, pid)
+            if not photo:
+                results.append(f"Photo {pid}: not found.")
+                continue
+            try:
+                text = await call_ocr_model(photo.file_path)
+                if text:
+                    photo.ocr_text = text
+                    photo.is_doc = True
+                    db.commit()
+                    results.append(f"Photo {pid}:\n{text}")
+                else:
+                    results.append(f"Photo {pid}: no text detected.")
+            except Exception as exc:
+                results.append(f"Photo {pid}: OCR failed — {exc}")
+        return "\n\n".join(results)
+    finally:
+        db.close()
+
+
 # =============================================================================
 # Group A — Garbage / Quality
 # =============================================================================
@@ -1249,6 +1296,57 @@ def geocode_photo_from_exif(photo_id: int) -> str:
             f"Geocoded photo {photo_id}: lat={geo['latitude']:.5f}, "
             f"lon={geo['longitude']:.5f}, address='{geo.get('address')}'"
         )
+    finally:
+        db.close()
+
+
+@tool
+def mark_photos_as_duplicates(original_id: int, duplicate_ids: List[int]) -> str:
+    """
+    Manually mark one or more photos as duplicates of a chosen original.
+
+    The original is considered the photo to keep. All photos listed in
+    duplicate_ids are recorded as duplicates of original_id in the database.
+    They will appear in the Duplicates page and can be reviewed or deleted there.
+
+    ⚠️ BEFORE CALLING THIS TOOL — ASK USER PERMISSION:
+    Tell the user: "I am going to mark photo(s) [duplicate_ids] as duplicates of photo [original_id]."
+    Ask: "Should I go ahead?"
+    Only call after the user confirms (yes / ok / go ahead / да / давай).
+
+    User query examples:
+    - "Mark photos 8 and 9 as duplicates of photo 5"
+    - "These two are the same shot — flag them as duplicates"
+    - "Photo 12 is a duplicate of photo 3"
+    - "Register photos 4, 6 and 10 as copies of photo 1"
+    - "Пометь фото 7 и 8 как дубликаты фото 2"
+    - "Это одинаковые снимки — пометь как дубликаты"
+
+    Returns: summary of how many photos were marked.
+    """
+    logger.info(f"[tool] mark_photos_as_duplicates: original={original_id} dupes={duplicate_ids}")
+    db = SessionLocal()
+    try:
+        original = get_photo_by_id(db, original_id)
+        if not original:
+            return f"Photo {original_id} not found."
+        marked = []
+        skipped = []
+        for did in duplicate_ids:
+            if did == original_id:
+                skipped.append(f"ID {did} is the same as the original — skipped.")
+                continue
+            dupe = get_photo_by_id(db, did)
+            if not dupe:
+                skipped.append(f"ID {did} not found.")
+                continue
+            record_perceptual_duplicate(db, original_id=original_id, duplicate_id=did, distance=0)
+            marked.append(did)
+        db.commit()
+        result = f"Marked {len(marked)} photo(s) as duplicates of photo {original_id}."
+        if skipped:
+            result += " Skipped: " + "; ".join(skipped)
+        return result
     finally:
         db.close()
 

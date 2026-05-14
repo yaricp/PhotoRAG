@@ -189,6 +189,8 @@ class AIModelConfig(Base):
     model_name = Column(String) # e.g. "Qwen/Qwen2-VL-2B-Instruct"
     url = Column(String, nullable=True)
     api_key = Column(String, nullable=True)
+    model_provider = Column(String, nullable=True)  # e.g. "openai", "google_genai", "anthropic"
+    similarity_limit = Column(Float, nullable=True)  # per-model L2 distance cutoff for vector search
 
 
 class PhotoHash(Base):

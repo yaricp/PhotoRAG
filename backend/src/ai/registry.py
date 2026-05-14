@@ -217,20 +217,29 @@ class AIModelRegistry:
                             bnb_4bit_quant_type="nf4",
                         )
                         
-                        try:
-                            model = AutoModelForCausalLM.from_pretrained(
-                                model_id,
-                                device_map="auto",
-                                quantization_config=bnb_config,
-                                trust_remote_code=True
-                            )
-                        except Exception as e:
-                            logger.warning(f"[registry] Failed to load with quantization: {e}. Falling back to default.")
-                            model = AutoModelForCausalLM.from_pretrained(
-                                model_id,
-                                device_map="auto",
-                                trust_remote_code=True
-                            )
+                        def _load_causal_lm(mid, extra_kwargs):
+                            try:
+                                return AutoModelForCausalLM.from_pretrained(
+                                    mid, device_map="auto",
+                                    quantization_config=bnb_config,
+                                    trust_remote_code=True, **extra_kwargs
+                                )
+                            except ValueError as e:
+                                if "Unrecognized configuration class" in str(e):
+                                    raise RuntimeError(
+                                        f"'{mid}' is a vision-language model and cannot be used as a "
+                                        f"local chat LLM. Choose a text-only model instead, e.g. "
+                                        f"Qwen/Qwen2.5-1.5B-Instruct, Qwen/Qwen3-1.7B, "
+                                        f"microsoft/Phi-3-mini-4k-instruct, or meta-llama/Llama-3.2-1B-Instruct."
+                                    ) from e
+                                raise
+                            except Exception as e:
+                                logger.warning(f"[registry] Quantized load failed: {e}. Retrying without quantization.")
+                                return AutoModelForCausalLM.from_pretrained(
+                                    mid, device_map="auto", trust_remote_code=True
+                                )
+
+                        model = _load_causal_lm(model_id, {})
 
                         pipe = pipeline(
                             "text-generation",
@@ -256,16 +265,40 @@ class AIModelRegistry:
                         api_key = config.api_key if config and config.api_key else self.settings.CHAT_API_KEY
                         api_url = config.url if config and config.url else self.settings.CHAT_API_URL
                         
+                        model_provider = config.model_provider if config and config.model_provider else None
+
                         kwargs = {
                             "model": model_name,
-                            "temperature": 0.5,
                         }
+                        # Ollama does not accept temperature at the init_chat_model level
+                        if model_provider != "ollama":
+                            kwargs["temperature"] = 0.5
+                        if model_provider:
+                            kwargs["model_provider"] = model_provider
                         if api_key:
                             kwargs["api_key"] = api_key
                         if api_url:
                             kwargs["base_url"] = api_url
-                            
-                        self._chat_model = init_chat_model(**kwargs)
+
+                        _PROVIDER_INSTALL = {
+                            "openai":           "langchain-openai",
+                            "anthropic":        "langchain-anthropic",
+                            "google_genai":     "langchain-google-genai",
+                            "google_vertexai":  "langchain-google-vertexai",
+                            "ollama":           "langchain-ollama",
+                            "groq":             "langchain-groq",
+                            "mistralai":        "langchain-mistralai",
+                            "together":         "langchain-together",
+                            "cohere":           "langchain-cohere",
+                        }
+                        try:
+                            self._chat_model = init_chat_model(**kwargs)
+                        except ImportError as exc:
+                            pkg = _PROVIDER_INSTALL.get(model_provider or "", "the appropriate langchain provider package")
+                            raise RuntimeError(
+                                f"Missing package for provider '{model_provider}'. "
+                                f"Install it with: uv pip install {pkg}"
+                            ) from exc
         return self._chat_model
 
     def reset_model(self, model_type: str) -> None:

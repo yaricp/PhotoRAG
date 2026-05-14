@@ -164,6 +164,8 @@ class AIModelConfigBase(BaseModel):
     model_name: str
     url: Optional[str] = None
     api_key: Optional[str] = None
+    model_provider: Optional[str] = None
+    similarity_limit: Optional[float] = None
 
 
 class AIModelConfigUpdate(AIModelConfigBase):

@@ -418,9 +418,15 @@ async def chat_with_agent_endpoint(request: ChatRequest) -> ChatResponse:
     logger.info(f"Agent result: {result}")
     # Get the last AI message
     last_msg = result["messages"][-1]
-    
+    content = last_msg.content
+    if isinstance(content, list):
+        content = " ".join(
+            block["text"] for block in content
+            if isinstance(block, dict) and block.get("type") == "text"
+        )
+
     return ChatResponse(
-        response=last_msg.content,
+        response=content,
         photos=result["photos"]
     )
 
@@ -535,6 +541,15 @@ def update_model_endpoint(
     db: Session = Depends(get_db)
 ):
     """Update AI model configuration and reload it in the registry"""
+    from src.vector_db_services import get_embedding_dimension, current_vss_dimension, rebuild_embeddings_vss
+
+    if config_type == "embedding":
+        new_dim = get_embedding_dimension(request.model_name)
+        cur_dim = current_vss_dimension(db)
+        if new_dim != cur_dim:
+            logger.info(f"[models] Embedding dimension changed {cur_dim}→{new_dim}, rebuilding VSS table")
+            rebuild_embeddings_vss(db, new_dim)
+
     config = update_model_config(db, config_type, request)
     if not config:
         raise HTTPException(status_code=404, detail="Model config not found")

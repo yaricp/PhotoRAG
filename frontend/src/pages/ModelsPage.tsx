@@ -10,6 +10,7 @@ export function ModelsPage() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [saving, setSaving] = useState<string | null>(null)
+    const [savedType, setSavedType] = useState<string | null>(null)
 
     useEffect(() => {
         getModelConfigs()
@@ -26,8 +27,11 @@ export function ModelsPage() {
                 model_name: config.model_name,
                 url: config.url || undefined,
                 api_key: config.api_key || undefined,
+                model_provider: config.model_provider || undefined,
+                similarity_limit: config.similarity_limit ?? undefined,
             })
             setConfigs(prev => prev.map(c => c.type === updated.type ? updated : c))
+            setSavedType(config.type)
         } catch (err: any) {
             setError(err.message || 'Failed to save configuration')
         } finally {
@@ -36,7 +40,14 @@ export function ModelsPage() {
     }
 
     const handleChange = (type: string, field: keyof AIModelConfig, value: string) => {
-        setConfigs(prev => prev.map(c => c.type === type ? { ...c, [field]: value } : c))
+        setConfigs(prev => prev.map(c => {
+            if (c.type !== type) return c
+            if (field === 'similarity_limit') {
+                const num = parseFloat(value)
+                return { ...c, similarity_limit: isNaN(num) ? undefined : num }
+            }
+            return { ...c, [field]: value }
+        }))
     }
 
     if (loading) return <div className="models-page"><Spinner size="lg" /></div>
@@ -45,11 +56,37 @@ export function ModelsPage() {
         <div className="models-page">
             <h1 className="models-page__title">AI Models</h1>
             <p className="models-page__desc">
-                Configure which models run each task. Changes apply immediately — no server restart needed.
+                Configure which models run each task.
                 Local models are downloaded automatically on first use.
             </p>
 
             {error && <div className="models-page__error">{error}</div>}
+
+            {savedType && (
+                <div className="model-modal-overlay" onClick={() => setSavedType(null)}>
+                    <div className="model-modal" onClick={e => e.stopPropagation()}>
+                        <div className="model-modal__icon">⚠️</div>
+                        <p className="model-modal__title">Configuration saved — action required</p>
+                        <div className="model-modal__body">
+                            <div className="model-modal__row">
+                                <span className="model-modal__row-icon">🔄</span>
+                                <span>Restart the application for the new <strong>{savedType}</strong> model to take effect.</span>
+                            </div>
+                            {savedType === 'embedding' && (
+                                <div className="model-modal__row">
+                                    <span className="model-modal__row-icon">🗂️</span>
+                                    <span>The embedding model changed — all photos need to be re-indexed. Run the pipeline again on your photo folders to rebuild the search index.</span>
+                                </div>
+                            )}
+                        </div>
+                        <div className="model-modal__footer">
+                            <button className="model-modal__ok-btn" onClick={() => setSavedType(null)}>
+                                Got it
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <div className="models-grid">
                 {configs.map(config => (
@@ -92,28 +129,83 @@ export function ModelsPage() {
 
                             {config.mode === 'remote' && (
                                 <div className="model-card__remote">
+                                    {(config.type === 'chat' || config.type === 'embedding') && (
+                                        <div className="model-field">
+                                            <label className="model-field__label">Provider</label>
+                                            <select
+                                                className="model-field__select"
+                                                value={config.model_provider || ''}
+                                                onChange={e => handleChange(config.type, 'model_provider', e.target.value)}
+                                            >
+                                                <option value="">— auto-detect —</option>
+                                                <option value="openai">OpenAI</option>
+                                                {config.type === 'chat' && <option value="anthropic">Anthropic (Claude)</option>}
+                                                <option value="google_genai">Google Gemini (AI Studio key)</option>
+                                                {config.type === 'chat' && <option value="google_vertexai">Google Vertex AI (GCP auth)</option>}
+                                                <option value="ollama">Ollama (self-hosted)</option>
+                                                {config.type === 'chat' && <option value="groq">Groq</option>}
+                                                {config.type === 'chat' && <option value="mistralai">Mistral AI</option>}
+                                                {config.type === 'chat' && <option value="together">Together AI</option>}
+                                                {config.type === 'chat' && <option value="cohere">Cohere</option>}
+                                            </select>
+                                            {config.model_provider === 'ollama' && (
+                                                <p className="model-field__hint">
+                                                    Set API base URL to your Ollama server (default: http://localhost:11434). No API key needed.
+                                                </p>
+                                            )}
+                                            {config.model_provider === 'google_vertexai' && (
+                                                <p className="model-field__hint">
+                                                    Requires GCP credentials (GOOGLE_APPLICATION_CREDENTIALS). No API key field needed.
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
                                     <div className="model-field">
-                                        <label className="model-field__label">API base URL (optional)</label>
+                                        <label className="model-field__label">
+                                            {config.model_provider === 'ollama' ? 'Ollama server URL' : 'API base URL (optional)'}
+                                        </label>
                                         <input
                                             className="model-field__input"
                                             value={config.url || ''}
                                             onChange={e => handleChange(config.type, 'url', e.target.value)}
-                                            placeholder="https://api.openai.com/v1"
+                                            placeholder={config.model_provider === 'ollama' ? 'http://localhost:11434' : 'https://api.openai.com/v1'}
                                         />
                                     </div>
-                                    <div className="model-field">
-                                        <label className="model-field__label">API key</label>
-                                        <input
-                                            className="model-field__input"
-                                            type="password"
-                                            value={config.api_key || ''}
-                                            onChange={e => handleChange(config.type, 'api_key', e.target.value)}
-                                            placeholder="sk-..."
-                                        />
-                                    </div>
+                                    {config.model_provider !== 'ollama' && config.model_provider !== 'google_vertexai' && (
+                                        <div className="model-field">
+                                            <label className="model-field__label">API key</label>
+                                            <input
+                                                className="model-field__input"
+                                                type="password"
+                                                value={config.api_key || ''}
+                                                onChange={e => handleChange(config.type, 'api_key', e.target.value)}
+                                                placeholder="sk-…"
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
+
+                        {config.type === 'embedding' && (
+                            <div className="model-field">
+                                <label className="model-field__label">Similarity threshold</label>
+                                <input
+                                    className="model-field__input"
+                                    type="number"
+                                    step="0.01"
+                                    min="0.1"
+                                    max="2.0"
+                                    value={config.similarity_limit ?? ''}
+                                    onChange={e => handleChange(config.type, 'similarity_limit', e.target.value)}
+                                    placeholder="auto (scaled by dimension)"
+                                />
+                                <p className="model-field__hint">
+                                    L2 distance cutoff — lower is stricter. Leave blank to auto-scale from the base threshold.
+                                    Recommended: nomic&nbsp;768d&nbsp;→&nbsp;0.75, OpenAI&nbsp;text-embedding-3-small&nbsp;→&nbsp;1.05, OpenAI&nbsp;text-embedding-3-large&nbsp;→&nbsp;1.50.
+                                </p>
+                            </div>
+                        )}
 
                         <div className="model-card__footer">
                             <button

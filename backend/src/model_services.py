@@ -150,6 +150,17 @@ async def call_vision_model(file_path: str, prompt_key: str) -> str:
 # Embedding
 # ---------------------------------------------------------------------------
 
+def _apply_embedding_prefix(text: str, model_name: str, purpose: str) -> str:
+    """Apply model-specific text prefix before encoding.
+    Currently only nomic models use instruction prefixes."""
+    if "nomic" in model_name.lower():
+        if purpose == "save":
+            return f"search_document: {text}"
+        if purpose == "search":
+            return f"search_query: {text}"
+    return text
+
+
 async def call_embedding_model(text: str, purpose: str = "search") -> list[float]:
     """
     Encode text into a normalised embedding vector.
@@ -158,7 +169,12 @@ async def call_embedding_model(text: str, purpose: str = "search") -> list[float
     Returns list[float].
     """
     emb_settings = Embedding_Settings()
-    mode = _get_mode("embedding", emb_settings)
+    cfg = read_model_config_from_db(_DB_PATH, "embedding")
+    mode = cfg["mode"] if cfg and cfg.get("mode") else getattr(emb_settings, "EMBEDDING_MODE", "local")
+    model_name = (cfg and cfg.get("model_name")) or emb_settings.PHOTO_EMBEDDER_MODEL
+
+    # Apply model-specific prefix once, before dispatching to either path
+    text = _apply_embedding_prefix(text, model_name, purpose)
 
     if mode == "local":
         from src.queues.embedding_queue import call_local_embedding_model
@@ -170,16 +186,55 @@ async def call_embedding_model(text: str, purpose: str = "search") -> list[float
         logger.debug(f"[embedding/{purpose}] task {task_id}: vector dim={len(result)}")
         return result
     else:
-        result = await _call_remote(
-            model_url=emb_settings.EMBEDDING_API_URL,
-            payload={
-                "model": emb_settings.PHOTO_EMBEDDER_MODEL,
-                "text": text,
-                "purpose": purpose,
-            },
-            api_key=emb_settings.EMBEDDING_API_KEY,
-        )
-        return result.get("embedding", [])
+        return await _call_remote_embedding(text, purpose, cfg, emb_settings)
+
+
+async def _call_remote_embedding(
+    text: str, purpose: str, cfg: dict | None, emb_settings
+) -> list[float]:
+    """Encode text using a LangChain embedding provider. Text arrives pre-prefixed."""
+    model_name = (cfg and cfg.get("model_name")) or emb_settings.PHOTO_EMBEDDER_MODEL
+    api_key = (cfg and cfg.get("api_key")) or getattr(emb_settings, "EMBEDDING_API_KEY", None)
+    api_url = (cfg and cfg.get("url")) or getattr(emb_settings, "EMBEDDING_API_URL", None)
+    provider = (cfg and cfg.get("model_provider")) or None
+
+    embedder = _build_langchain_embedder(provider, model_name, api_key, api_url)
+    loop = asyncio.get_running_loop()
+    vector = await loop.run_in_executor(None, embedder.embed_query, text)
+    logger.debug(f"[embedding/{purpose}] remote vector dim={len(vector)}")
+    return vector
+
+
+def _build_langchain_embedder(provider: str | None, model_name: str,
+                               api_key: str | None, api_url: str | None):
+    """Return the appropriate LangChain Embeddings object for the given provider."""
+    p = (provider or "").lower()
+
+    if p == "ollama":
+        from langchain_ollama import OllamaEmbeddings
+        kwargs = {"model": model_name}
+        if api_url:
+            kwargs["base_url"] = api_url
+        return OllamaEmbeddings(**kwargs)
+
+    if p in ("google_genai", "google"):
+        from langchain_google_genai import GoogleGenerativeAIEmbeddings
+        kwargs = {"model": model_name}
+        if api_key:
+            kwargs["google_api_key"] = api_key
+        return GoogleGenerativeAIEmbeddings(**kwargs)
+
+    if p == "anthropic":
+        raise RuntimeError("Anthropic does not provide an embeddings API. Use a different provider.")
+
+    # Default: OpenAI-compatible (openai, together, groq, mistral, custom OpenAI-compat endpoints)
+    from langchain_openai import OpenAIEmbeddings
+    kwargs = {"model": model_name}
+    if api_key:
+        kwargs["api_key"] = api_key
+    if api_url:
+        kwargs["base_url"] = api_url
+    return OpenAIEmbeddings(**kwargs)
 
 
 # ---------------------------------------------------------------------------

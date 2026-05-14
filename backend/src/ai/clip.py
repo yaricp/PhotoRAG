@@ -265,6 +265,14 @@ class ClipTagger:
                 with open(self.TAGS_LIST_PATH, "r") as f:
                     self.tags = [line.strip() for line in f if line.strip()]
 
+    def encode_image(self, filepath: str) -> list[float]:
+        """Load, preprocess and encode an image. Returns a normalised feature vector as a plain list."""
+        image = self.preprocess(Image.open(filepath)).unsqueeze(0).to(self.device)
+        with torch.no_grad():
+            features = self.model.encode_image(image)
+            features = features / features.norm(dim=-1, keepdim=True)
+        return features.squeeze(0).cpu().tolist()
+
     def find_tags(self, filepath: str, top_k: int = 20) -> list[tuple[str, float]]:
         # self.load_tags()
         # self.load_model()

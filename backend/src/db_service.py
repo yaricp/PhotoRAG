@@ -181,27 +181,23 @@ async def get_photos_by_vector(
     db: Session, request_text: str, k: int
 ) -> List[tuple]:
     """Returns (Photo, distance) pairs sorted by ascending distance (most relevant first)."""
+    import os
+    from src.queues.queue_config import read_model_config_from_db
     logger.info("Getting photos by vector")
-    # pyrefly: ignore [missing-import]
-    # from src.ai.registry import registry
     settings = Main_Settings()
 
     if settings.DEFAULT_LANGUAGE != "en":
         logger.info("Translating request text to English")
-        # request_text = registry.translator.translate(request_text, backward=True)
-        request_text = await call_translation_model(
-            request_text, backward=True
-        )
+        request_text = await call_translation_model(request_text, backward=True)
 
-    # _ = registry.nomic_embedder
-    # embedding = registry.embedder_encode_text(
-    #     text=request_text, purpose="search"
-    # )
-    embedding = await call_embedding_model(
-        text=request_text, purpose="search"
-    )
+    embedding = await call_embedding_model(text=request_text, purpose="search")
+
+    db_path = os.path.join(os.getcwd(), "../db.sqlite3")
+    cfg = read_model_config_from_db(db_path, "embedding")
+    similarity_limit = cfg.get("similarity_limit") if cfg else None
+
     results = search_similar_photos(
-        db=db, query_embedding=embedding, limit=k
+        db=db, query_embedding=embedding, limit=k, similarity_limit=similarity_limit
     )
     
     logger.info(f"Vector search results: {results}")
@@ -283,10 +279,14 @@ def update_photo_geoposition(db: Session, photo_id: int, lat: float, lon: float,
 def get_or_create_tag(db: Session, name: str):
     tag = db.query(Tag).filter_by(name=name).first()
     if not tag:
-        tag = Tag(name=name)
-        db.add(tag)
-        db.commit()
-        db.refresh(tag)
+        try:
+            tag = Tag(name=name)
+            db.add(tag)
+            db.commit()
+            db.refresh(tag)
+        except Exception:
+            db.rollback()
+            tag = db.query(Tag).filter_by(name=name).first()
     return tag
 
 
@@ -313,10 +313,14 @@ def add_photo_tag_with_score(db: Session, photo_id: int, tag_name: str, score: f
 def get_or_create_category(db: Session, name: str, prompt: str = ""):
     cat = db.query(Category).filter_by(name=name).first()
     if not cat:
-        cat = Category(name=name, prompt=prompt)
-        db.add(cat)
-        db.commit()
-        db.refresh(cat)
+        try:
+            cat = Category(name=name, prompt=prompt)
+            db.add(cat)
+            db.commit()
+            db.refresh(cat)
+        except Exception:
+            db.rollback()
+            cat = db.query(Category).filter_by(name=name).first()
     return cat
 
 
@@ -541,6 +545,8 @@ def update_model_config(db: Session, config_type: str, schema: AIModelConfigUpda
         config.model_name = schema.model_name
         config.url = schema.url
         config.api_key = schema.api_key
+        config.model_provider = schema.model_provider
+        config.similarity_limit = schema.similarity_limit
         db.commit()
         db.refresh(config)
     return config
