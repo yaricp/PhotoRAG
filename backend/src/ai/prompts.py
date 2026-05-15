@@ -1,6 +1,7 @@
 import json
 import sqlite3
 import os
+from loguru import logger
 from pathlib import Path
 
 _PROMPTS_JSON_PATH = Path(__file__).parent.parent.parent / "prompts" / "prompts.json"
@@ -60,23 +61,64 @@ def expand_tags(tags):
     return ", ".join(tag_list)
 
 
-def build_photo_text_for_embedding(
-    description: str, tags:list[str], categories:list[str], location: str
+def normalize_for_embedding(
+    raw_description: str,
+    categories: list[str],
+    location: str | None,
 ) -> str:
-    parts = []
+    """
+    Clean a raw vision-model description and assemble it with context for embedding.
 
-    if description:
-        parts.append(f"A detailed photo of {description}")
+    Strips common model-generated preamble phrases, removes any residual
+    "This is related to…" sentences, then appends category and location.
+    """
+    import re
 
-    if tags:
-        tags_str = ", ".join(tags)
-        parts.append(f"It contains: {tags_str}")
+    _JUNK_PREFIXES = [
+        "a detailed photo of",
+        "the photo depicts",
+        "this image shows",
+        "the image depicts",
+        "a photo of",
+        "a picture of",
+        "in this image,",
+        "in this photo,",
+        "The photo captures",
+        "The image captures",
+        
+    ]
+
+    text = raw_description.strip() if raw_description else ""
+    for prefix in _JUNK_PREFIXES:
+        if text.lower().startswith(prefix):
+            text = text[len(prefix):].lstrip(", .")
+            if text:
+                text = text[0].upper() + text[1:]
+            break
+
+    text = re.sub(r'\s*This is related to[^.]+\.', '', text).strip()
+
+    parts = [text] if text else []
 
     if categories:
-        categories_str = ", ".join(categories)
-        parts.append(f"This is related to {categories_str}")
+        cats = ", ".join(c.strip() for c in categories if c.strip())
+        if cats:
+            parts.append(f"Category: {cats}.")
 
     if location and location != "Unknown Location":
-        parts.append(f"Taken at {location}")
+        parts.append(f"Location: {location}.")
 
-    return ". ".join(parts)
+    return " ".join(parts)
+
+
+def build_photo_text_for_embedding(
+    description: str, tags: list[str], categories: list[str], location: str
+) -> str:
+    text = normalize_for_embedding(description, categories, location)
+    logger.debug(f"Normalized description for embedding: {text}")
+    if tags:
+        tags_str = ", ".join(t.strip() for t in tags if t.strip())
+        if tags_str:
+            text += f" Tags: {tags_str}."
+
+    return text

@@ -65,8 +65,18 @@ class QwenVisionGenerator:
             prompt_text = get_prompt(f"vision_analysis.{prompt_key}")
         except KeyError:
             prompt_text = get_prompt("vision_analysis.describe_scene")
-
+        # logger.debug(f"Generating vision text with prompt_key='{prompt_key}' and prompt_text='{prompt_text}'")
+        
+        try:
+            system_text = get_prompt("vision_analysis.system_prompt")
+        except KeyError:
+            system_text = "You are a helpful assistant."
+        # logger.debug(f"Using system prompt: '{system_text}'")
         messages = [
+            {
+                "role": "system",
+                "content": system_text,
+            },
             {
                 "role": "user",
                 "content": [
@@ -80,6 +90,7 @@ class QwenVisionGenerator:
         text = self.processor.apply_chat_template(
             messages, tokenize=False, add_generation_prompt=True
         )
+        # logger.debug(f"Processed text: {text}")
         image_inputs, video_inputs = process_vision_info(messages)
         inputs = self.processor(
             text=[text],
@@ -99,5 +110,6 @@ class QwenVisionGenerator:
             output_text = self.processor.batch_decode(
                 generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False
             )
+            logger.debug(f"Raw output text: {output_text}")
             
         return output_text[0] if output_text else ""

@@ -91,6 +91,7 @@ async def final_embedding_task(photo_id: int) -> None:
             categories=inputs["categories"],
             location=inputs["location"],
         )
+        logger.debug(f"[embedding] Photo {photo_id}: built text for embedding: {photo_text}")
         embedding = await call_embedding_model(text=photo_text, purpose="save")
         await asyncio.to_thread(_save_embedding_sync, photo_id, embedding)
         logger.info(f"[embedding] Photo {photo_id}: vector saved ✓")
