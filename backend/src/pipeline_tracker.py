@@ -15,11 +15,17 @@ from src.models import PipelineTask
 
 
 def init_pipeline_tasks(photo_id: int, phase: str, task_names: list[str]) -> None:
-    """Create one PipelineTask per task_name with status='pending'."""
+    """Create one PipelineTask per task_name with status='pending'.
+
+    Existing rows for the same (photo_id, phase) are deleted first so that
+    re-runs don't leave stale rows that the tracker would update instead of
+    the newly created ones.
+    """
     if not task_names:
         return
     db = SessionLocal()
     try:
+        db.query(PipelineTask).filter_by(photo_id=photo_id, phase=phase).delete()
         for name in task_names:
             db.add(PipelineTask(
                 photo_id=photo_id,

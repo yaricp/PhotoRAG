@@ -853,6 +853,32 @@ async def reindex_photo_endpoint(
     return {"status": "queued", "photo_id": photo_id}
 
 
+@app.post("/api/photos/{photo_id}/run-pipeline", tags=["Photos"])
+async def run_pipeline_for_photo_endpoint(
+    photo_id: int,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    """Clear tags/categories and re-run the full pipeline for a single photo."""
+    from src.models import PhotoTag, PhotoCategory
+    photo = get_photo_by_id(db, photo_id)
+    if not photo:
+        raise HTTPException(status_code=404, detail=f"Photo {photo_id} not found")
+    db.query(PhotoTag).filter_by(photo_id=photo_id).delete()
+    db.query(PhotoCategory).filter_by(photo_id=photo_id).delete()
+    db.commit()
+
+    def _run():
+        import asyncio
+        from src.incoming_pipeline import run_pipelines_batch
+        asyncio.run(run_pipelines_batch([photo_id]))
+
+    import threading
+    t = threading.Thread(target=_run, daemon=True)
+    t.start()
+    return {"status": "queued", "photo_id": photo_id}
+
+
 # ---------------------------------------------------------------------------
 # Processing Page endpoints
 # ---------------------------------------------------------------------------

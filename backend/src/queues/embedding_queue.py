@@ -82,7 +82,7 @@ def call_local_embedding_model(task_id: str, text: str, purpose: str) -> None:
 
     Result stored as JSON: list[float]
     """
-    logger.info(f"[embedding_queue] task_id={task_id} purpose={purpose!r} text={text[:40]!r}")
+    logger.info(f"[embedding_queue] task_id={task_id} purpose={purpose!r} text={text[:40]!r}...")
     start_time = time.time()
     try:
         model = _get_model()

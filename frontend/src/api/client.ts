@@ -419,6 +419,10 @@ export async function reindexPhoto(id: number): Promise<{ status: string; photo_
     return apiFetch(`/api/photos/${id}/reindex`, { method: 'POST' })
 }
 
+export async function runPipelineForPhoto(id: number): Promise<{ status: string; photo_id: number }> {
+    return apiFetch(`/api/photos/${id}/run-pipeline`, { method: 'POST' })
+}
+
 export async function getPrompts(): Promise<Prompt[]> {
     return apiFetch<Prompt[]>('/api/prompts/')
 }

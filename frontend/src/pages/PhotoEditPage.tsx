@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getPhoto, updatePhoto, reindexPhoto } from '@/api/client'
+import { getPhoto, updatePhoto, reindexPhoto, runPipelineForPhoto } from '@/api/client'
 import type { LinkedTag, LinkedCategory } from '@/api/client'
 import { Spinner } from '@/components/ui/Spinner'
 import { TagPickerModal } from '@/components/photos/TagPickerModal'
@@ -28,6 +28,8 @@ export function PhotoEditPage() {
     const [saved, setSaved] = useState(false)
     const [reindexing, setReindexing] = useState(false)
     const [reindexed, setReindexed] = useState(false)
+    const [pipelining, setPipelining] = useState(false)
+    const [pipelined, setPipelined] = useState(false)
 
     const [description, setDescription] = useState('')
     const [translatedDescription, setTranslatedDescription] = useState('')
@@ -51,6 +53,19 @@ export function PhotoEditPage() {
             setLinkedCategories((p.categories_rel ?? []).map(catToLinked).filter(Boolean) as LinkedCategory[])
         }).finally(() => setLoading(false))
     }, [id])
+
+    async function handleRunPipeline() {
+        if (!photo) return
+        setPipelining(true)
+        setPipelined(false)
+        try {
+            await runPipelineForPhoto(photo.id)
+            setPipelined(true)
+            setTimeout(() => setPipelined(false), 2500)
+        } finally {
+            setPipelining(false)
+        }
+    }
 
     async function handleReindex() {
         if (!photo) return
@@ -165,6 +180,9 @@ export function PhotoEditPage() {
                 </button>
                 <button className="pe__reindex-btn" onClick={handleReindex} disabled={reindexing}>
                     {reindexing ? 'Queuing…' : reindexed ? 'Queued ✓' : 'Re-index Search'}
+                </button>
+                <button className="pe__pipeline-btn" onClick={handleRunPipeline} disabled={pipelining}>
+                    {pipelining ? 'Starting…' : pipelined ? 'Started ✓' : 'Run Full Pipeline'}
                 </button>
             </div>
 
