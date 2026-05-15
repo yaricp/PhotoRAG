@@ -156,7 +156,10 @@ def get_system_status_endpoint(db: Session = Depends(get_db)):
     logger.info(f"System status: {states}")
 
     from src.ai.registry import registry as _registry
-    chat_ready = _registry._chat_model is not None
+    chat_config = get_model_config(db, "chat")
+    chat_mode = chat_config.mode if chat_config else "local"
+    # Remote chat model is available immediately (no warm-up); local requires the model to be loaded
+    chat_ready = chat_mode == "remote" or _registry._chat_model is not None
 
     return {
         "ready": all(s.status == "ready" for s in states),
