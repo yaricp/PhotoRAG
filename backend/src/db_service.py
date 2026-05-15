@@ -8,7 +8,7 @@ from src.models import (
     Photo, Tag, Person, Keyword, Category, PhotoTag, PhotoCategory, Camera, Geoposition,
     ModelState, Watcher, ProcessingJob, FolderScanner, AIModelConfig,
     PhotoEmbedding, PhotoHash, PhotoDuplicate, PhotoQualityIssue,
-    AppSetting, HistoryAction, TemplateTag, TemplateCategory,
+    AppSetting, HistoryAction, TemplateTag, TemplateCategory, Prompt,
 )
 from src.schemas import Photo as PhotoSchema
 from src.schemas import AIModelConfigUpdate
@@ -1244,3 +1244,77 @@ def unlink_photo_category(db: Session, photo_id: int, cat_id: int) -> bool:
         return False
     db.delete(pc)
     return True
+
+
+# ---------------------------------------------------------------------------
+# Prompts
+# ---------------------------------------------------------------------------
+
+_PROMPT_METADATA: dict[str, dict] = {
+    "vision_analysis.system_prompt": {
+        "title": "Vision — System Prompt",
+        "description": "Sets the AI persona for all vision analysis tasks. Applied as the system message to the local vision model.",
+    },
+    "vision_analysis.describe_scene": {
+        "title": "Vision — Describe Scene",
+        "description": "Used when generating a natural-language description of a photo.",
+    },
+    "vision_analysis.is_document": {
+        "title": "Vision — Is Document?",
+        "description": "Classifies whether a photo is a text document. Must return only 'yes' or 'no'.",
+    },
+    "chat_agent.system_message": {
+        "title": "Chat Agent — System Message",
+        "description": "Main system message for the AI photo search agent. Controls tool usage rules and response language.",
+    },
+}
+
+
+def seed_prompts_from_json(db: Session, json_path) -> int:
+    """
+    Insert prompts from prompts.json into the prompts table.
+    Skips rows that already exist (idempotent — user edits are preserved).
+    Returns the number of newly inserted rows.
+    """
+    import json
+    from pathlib import Path
+    data = json.loads(Path(json_path).read_text(encoding="utf-8"))
+    seeded = 0
+    for group, entries in data.items():
+        for name, text in entries.items():
+            key = f"{group}.{name}"
+            if db.query(Prompt).filter_by(key=key).first():
+                continue
+            meta = _PROMPT_METADATA.get(key, {})
+            db.add(Prompt(
+                key=key,
+                group=group,
+                name=name,
+                title=meta.get("title", f"{group} / {name}"),
+                text=text,
+                description=meta.get("description"),
+            ))
+            seeded += 1
+    db.commit()
+    return seeded
+
+
+def get_all_prompts(db: Session) -> list[Prompt]:
+    """Return all prompts sorted by group then name."""
+    return db.query(Prompt).order_by(Prompt.key).all()
+
+
+def get_prompt_by_key(db: Session, key: str) -> Prompt | None:
+    return db.query(Prompt).filter_by(key=key).first()
+
+
+def update_prompt(db: Session, key: str, text: str) -> Prompt | None:
+    from datetime import datetime
+    p = db.query(Prompt).filter_by(key=key).first()
+    if not p:
+        return None
+    p.text = text
+    p.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(p)
+    return p

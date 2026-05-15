@@ -6,7 +6,7 @@ from langgraph.graph import StateGraph, END
 from langgraph.prebuilt import ToolNode
 from langgraph.checkpoint.memory import MemorySaver
 
-from src.ai.prompts import PROMPTS
+from src.ai.prompts import get_prompt
 from src.graphs.state import AgentState
 from src.graphs.tools import (
     get_categories,
@@ -105,7 +105,7 @@ def call_model(state: AgentState):
     messages = state["messages"]
 
     if not any(isinstance(m, SystemMessage) for m in messages):
-        system_msg = SystemMessage(content=PROMPTS["chat_agent"]["system_message"])
+        system_msg = SystemMessage(content=get_prompt("chat_agent.system_message"))
         messages = [system_msg] + messages
 
     from src.ai.registry import registry as _registry  # local import avoids LangGraph closure introspection

@@ -47,6 +47,10 @@ from src.db_service import (
     create_template_category,
     update_template_category,
     delete_template_category,
+    get_all_prompts,
+    get_prompt_by_key,
+    update_prompt,
+    seed_prompts_from_json,
     get_photo_is_trash,
     mark_photo_as_trash,
     unmark_photo_as_trash,
@@ -96,6 +100,8 @@ from src.schemas import (
     PhotoCategoryResponse,
     PhotoSearchResult,
     PipelineTaskSchema,
+    PromptResponse,
+    PromptUpdate,
 )
 from src.watcher_service import WatcherService
 from src.graphs.ai_agent import app as agent_app
@@ -125,6 +131,16 @@ async def lifespan(app: FastAPI):
 
     db = SessionLocal()
     watcher_service.start_all(db)
+
+    # Seed prompts table from prompts.json for new rows (idempotent — user edits preserved)
+    try:
+        from pathlib import Path
+        _prompts_json = Path(__file__).parent.parent / "prompts" / "prompts.json"
+        seeded = seed_prompts_from_json(db, _prompts_json)
+        if seeded:
+            logger.info(f"[startup] Seeded {seeded} new prompt(s) from prompts.json")
+    except Exception as exc:
+        logger.warning(f"[startup] Could not seed prompts (table may not exist yet — run install): {exc}")
 
     stuck_ids = recover_interrupted_pipelines(db)
     if stuck_ids:
@@ -603,6 +619,26 @@ def update_model_endpoint(
             warmup_embedding_model()
 
     return config
+
+
+# ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Prompts endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/api/prompts/", tags=["Prompts"], response_model=List[PromptResponse])
+def get_prompts_endpoint(db: Session = Depends(get_db)):
+    """Return all editable prompts sorted by key."""
+    return get_all_prompts(db)
+
+
+@app.put("/api/prompts/{key:path}", tags=["Prompts"], response_model=PromptResponse)
+def update_prompt_endpoint(key: str, body: PromptUpdate, db: Session = Depends(get_db)):
+    """Update the text of a prompt. Returns 404 if the key does not exist."""
+    updated = update_prompt(db, key, body.text)
+    if not updated:
+        raise HTTPException(status_code=404, detail=f"Prompt key {key!r} not found")
+    return updated
 
 
 # ---------------------------------------------------------------------------

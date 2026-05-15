@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, JSON, DateTime, ForeignKey, Table, Float, Boolean
+from sqlalchemy import Column, Integer, String, Text, JSON, DateTime, ForeignKey, Table, Float, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
@@ -280,3 +280,17 @@ class PipelineTask(Base):
     started_at = Column(DateTime, nullable=True)
     finished_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class Prompt(Base):
+    """Editable AI prompts, seeded from prompts/prompts.json."""
+    __tablename__ = "prompts"
+
+    id          = Column(Integer, primary_key=True, index=True)
+    key         = Column(String, unique=True, nullable=False, index=True)  # "vision_analysis.describe_scene"
+    group       = Column(String, nullable=False)   # "vision_analysis"
+    name        = Column(String, nullable=False)   # "describe_scene"
+    title       = Column(String, nullable=False)   # Human-readable label for the UI
+    text        = Column(Text,   nullable=False)   # The actual prompt text
+    description = Column(String, nullable=True)    # Usage hint shown in UI
+    updated_at  = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

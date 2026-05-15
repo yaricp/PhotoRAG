@@ -5,7 +5,7 @@ from transformers import AutoProcessor, Qwen2VLForConditionalGeneration
 from qwen_vl_utils import process_vision_info
 
 from src.config import Vision_Settings as ML_Settings
-from src.ai.prompts import PROMPTS
+from src.ai.prompts import get_prompt
 
 
 class QwenVisionGenerator:
@@ -19,7 +19,6 @@ class QwenVisionGenerator:
     MODEL_ID = settings.VISION_DESCRIBER_MODEL
 
     def __init__(self):
-        self.system_prompt = PROMPTS["vision_analysis"]["system_prompt"]
         self.processor = None
         self.model = None
         if torch.cuda.is_available():
@@ -61,11 +60,11 @@ class QwenVisionGenerator:
         elif prompt_key == "is_document":
             image = image.resize(self.RESIZE_FOR_DETECTION)
         
-        # Pull prompt from registry
-        prompt_text = PROMPTS["vision_analysis"].get(
-            prompt_key, 
-            PROMPTS["vision_analysis"]["describe_scene"]
-        )
+        # Fetch prompt fresh from DB on every call (no cache)
+        try:
+            prompt_text = get_prompt(f"vision_analysis.{prompt_key}")
+        except KeyError:
+            prompt_text = get_prompt("vision_analysis.describe_scene")
 
         messages = [
             {

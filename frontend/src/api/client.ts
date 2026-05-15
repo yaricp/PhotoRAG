@@ -2,7 +2,7 @@ import { getBaseUrl } from './base'
 import type {
     Photo, PaginatedPhotos, Watcher, Job,
     SystemStatus, SearchResult, ChatResponse, FolderScanner,
-    AIModelConfig, AIModelConfigUpdate, PipelineTask
+    AIModelConfig, AIModelConfigUpdate, PipelineTask, Prompt
 } from '@/types/api'
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -411,5 +411,18 @@ export async function getRecentPipelineTasks(limit: number = 50): Promise<Pipeli
 
 export async function getPhotoPipelineTasks(photoId: number): Promise<PipelineTask[]> {
     return apiFetch<PipelineTask[]>(`/api/photos/${photoId}/pipeline`)
+}
+
+// ── Prompts ───────────────────────────────────────────────────────────────────
+
+export async function getPrompts(): Promise<Prompt[]> {
+    return apiFetch<Prompt[]>('/api/prompts/')
+}
+
+export async function updatePrompt(key: string, text: string): Promise<Prompt> {
+    return apiFetch<Prompt>(`/api/prompts/${key}`, {
+        method: 'PUT',
+        body: JSON.stringify({ text }),
+    })
 }
 

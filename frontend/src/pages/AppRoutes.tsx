@@ -14,6 +14,7 @@ import { GarbageBadPhotoPage } from './GarbageBadPhotoPage'
 import { TemplateTagsPage } from './TemplateTagsPage'
 import { TemplateCategoriesPage } from './TemplateCategoriesPage'
 import { PhotoEditPage } from './PhotoEditPage'
+import { PromptsPage } from './PromptsPage'
 
 export function AppRoutes() {
     return (
@@ -29,6 +30,7 @@ export function AppRoutes() {
             <Route path="/processing" element={<JobProcessingPage />} />
             <Route path="/folders" element={<FoldersPage />} />
             <Route path="/models" element={<ModelsPage />} />
+            <Route path="/prompts" element={<PromptsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/template-tags" element={<TemplateTagsPage />} />
             <Route path="/template-categories" element={<TemplateCategoriesPage />} />

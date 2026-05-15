@@ -1,0 +1,137 @@
+.prompts-page {
+    padding: 24px;
+    max-width: 760px;
+    margin: 0 auto;
+}
+
+.prompts-page__title {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--color-text);
+    margin: 0 0 8px;
+}
+
+.prompts-page__subtitle {
+    font-size: 13px;
+    color: var(--color-text-dim);
+    margin: 0 0 28px;
+}
+
+.prompts-loading {
+    color: var(--color-text-dim);
+    font-size: 14px;
+}
+
+/* ── Group ── */
+.prompts-group {
+    margin-bottom: 32px;
+}
+
+.prompts-group__name {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--color-text-dim);
+    margin: 0 0 12px;
+}
+
+/* ── Prompt card ── */
+.prompt-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin-bottom: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.prompt-card__header {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.prompt-card__title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.prompt-card__key {
+    font-size: 11px;
+    font-family: var(--font-mono, monospace);
+    color: var(--color-text-dim);
+    background: var(--color-surface-2);
+    border-radius: 4px;
+    padding: 1px 6px;
+}
+
+.prompt-card__desc {
+    font-size: 12px;
+    color: var(--color-text-dim);
+    margin: 0;
+    line-height: 1.5;
+}
+
+.prompt-card__textarea {
+    width: 100%;
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    border-radius: 7px;
+    padding: 10px 12px;
+    font-size: 13px;
+    font-family: var(--font-mono, monospace);
+    color: var(--color-text);
+    outline: none;
+    resize: vertical;
+    line-height: 1.55;
+    transition: border-color 0.15s;
+    box-sizing: border-box;
+}
+
+.prompt-card__textarea:focus {
+    border-color: var(--color-accent);
+}
+
+/* ── Footer ── */
+.prompt-card__footer {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.prompt-card__save-btn {
+    font-size: 13px;
+    font-weight: 500;
+    padding: 7px 20px;
+    background: var(--color-accent);
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    cursor: pointer;
+    font-family: var(--font-sans);
+    transition: opacity 0.15s;
+}
+
+.prompt-card__save-btn:hover:not(:disabled) {
+    opacity: 0.85;
+}
+
+.prompt-card__save-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.prompt-card__saved {
+    font-size: 13px;
+    color: var(--color-success);
+}
+
+.prompt-card__error {
+    font-size: 13px;
+    color: var(--color-danger, #e74c3c);
+}

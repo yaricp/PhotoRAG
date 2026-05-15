@@ -211,7 +211,7 @@ async def call_vision_model(file_path: str, prompt_key: str) -> str:
     prompt_key: "describe_scene" | "is_document"
     Returns the generated text string.
     """
-    from src.ai.prompts import PROMPTS
+    from src.ai.prompts import get_prompt
 
     vision_settings = Vision_Settings()
     cfg = read_model_config_from_db(_DB_PATH, "vision")
@@ -227,9 +227,10 @@ async def call_vision_model(file_path: str, prompt_key: str) -> str:
         logger.debug(f"[vision/{prompt_key}] task {task_id}: {len(text)} chars")
         return text
     else:
-        prompt_text = PROMPTS["vision_analysis"].get(
-            prompt_key, PROMPTS["vision_analysis"]["describe_scene"]
-        )
+        try:
+            prompt_text = get_prompt(f"vision_analysis.{prompt_key}")
+        except KeyError:
+            prompt_text = get_prompt("vision_analysis.describe_scene")
         return await _call_remote_vision(cfg or {}, file_path, prompt_text)
 
 

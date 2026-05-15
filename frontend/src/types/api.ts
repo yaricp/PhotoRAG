@@ -136,6 +136,17 @@ export interface AIModelConfigUpdate {
     similarity_limit?: number
 }
 
+export interface Prompt {
+    id: number
+    key: string
+    group: string
+    name: string
+    title: string
+    text: string
+    description: string | null
+    updated_at: string | null
+}
+
 export interface PipelineTask {
     id: number
     photo_id: number

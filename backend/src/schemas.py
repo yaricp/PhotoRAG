@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from typing import Optional, Generic, TypeVar, List
 from datetime import datetime
 from enum import Enum
@@ -297,4 +297,28 @@ class PipelineTaskSchema(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class PromptResponse(BaseModel):
+    id: int
+    key: str
+    group: str
+    name: str
+    title: str
+    text: str
+    description: Optional[str] = None
+    updated_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PromptUpdate(BaseModel):
+    text: str
+
+    @field_validator("text")
+    @classmethod
+    def text_not_blank(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("text must not be blank")
+        return v
 

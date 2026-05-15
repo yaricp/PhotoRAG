@@ -44,6 +44,7 @@ from src.db_service import (
     set_setting,
     get_or_create_template_tag,
     get_or_create_template_category,
+    seed_prompts_from_json,
 )
 from src.utils import load_categories_from_json
 
@@ -409,6 +410,13 @@ def run_install(db: Session) -> None:
 
     # 1. DB init
     init_db(db)
+
+    # 1b. Seed prompts table from prompts.json (idempotent)
+    from pathlib import Path
+    _prompts_json = Path(__file__).parent.parent / "prompts" / "prompts.json"
+    seeded = seed_prompts_from_json(db, _prompts_json)
+    if seeded:
+        logger.info(f"[install] Seeded {seeded} prompt(s) from prompts.json")
 
     # 2. Всегда — засеять категории в БД
     install_categories(db)

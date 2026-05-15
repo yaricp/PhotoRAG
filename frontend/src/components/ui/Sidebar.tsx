@@ -18,6 +18,7 @@ const links = [
     { to: '/processing', label: 'Processing', icon: '📹' },
     { to: '/folders', label: 'Folders', icon: '📁' },
     { to: '/models', label: 'Models', icon: '🤖' },
+    { to: '/prompts', label: 'Prompts', icon: '📝' },
     { to: '/settings', label: 'Settings', icon: '⚙️' },
 ]
 
