@@ -193,6 +193,18 @@ class AIModelRegistry:
                     logger.info("[registry] Translator ready ✓")
         return self._translator
 
+    def _update_model_status(self, name: str, status: str) -> None:
+        try:
+            from src.db.database import SessionLocal
+            from src.db_service import update_model_status
+            db = SessionLocal()
+            try:
+                update_model_status(db, name, status)
+            finally:
+                db.close()
+        except Exception as exc:
+            logger.warning(f"[registry] Could not update model status '{name}'→'{status}': {exc}")
+
     @property
     def chat_model(self):
         if self._chat_model is None:
@@ -200,71 +212,77 @@ class AIModelRegistry:
                 if self._chat_model is None:
                     config = self.get_model_config("chat")
                     mode = config.mode if config else self.settings.CHAT_MODEL_MODE
-                    
+
                     if mode == "local":
                         model_id = config.model_name if config and config.model_name else self.settings.CHAT_LOCAL_MODEL
                         logger.info(f"[registry] Warming up local Chat Model: {model_id}")
-                        from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline, BitsAndBytesConfig
-                        from langchain_huggingface import HuggingFacePipeline, ChatHuggingFace
-                        import torch
-                        
-                        tokenizer = AutoTokenizer.from_pretrained(model_id)
-                        
-                        # Use 4-bit quantization if possible to fit larger models and speed up inference
-                        bnb_config = BitsAndBytesConfig(
-                            load_in_4bit=True,
-                            bnb_4bit_compute_dtype=torch.float16,
-                            bnb_4bit_quant_type="nf4",
-                        )
-                        
-                        def _load_causal_lm(mid, extra_kwargs):
-                            try:
-                                return AutoModelForCausalLM.from_pretrained(
-                                    mid, device_map="auto",
-                                    quantization_config=bnb_config,
-                                    trust_remote_code=True, **extra_kwargs
-                                )
-                            except ValueError as e:
-                                if "Unrecognized configuration class" in str(e):
-                                    raise RuntimeError(
-                                        f"'{mid}' is a vision-language model and cannot be used as a "
-                                        f"local chat LLM. Choose a text-only model instead, e.g. "
-                                        f"Qwen/Qwen2.5-1.5B-Instruct, Qwen/Qwen3-1.7B, "
-                                        f"microsoft/Phi-3-mini-4k-instruct, or meta-llama/Llama-3.2-1B-Instruct."
-                                    ) from e
-                                raise
-                            except Exception as e:
-                                logger.warning(f"[registry] Quantized load failed: {e}. Retrying without quantization.")
-                                return AutoModelForCausalLM.from_pretrained(
-                                    mid, device_map="auto", trust_remote_code=True
-                                )
+                        self._update_model_status("chat", "loading")
+                        try:
+                            from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline, BitsAndBytesConfig
+                            from langchain_huggingface import HuggingFacePipeline, ChatHuggingFace
+                            import torch
 
-                        model = _load_causal_lm(model_id, {})
+                            tokenizer = AutoTokenizer.from_pretrained(model_id)
 
-                        pipe = pipeline(
-                            "text-generation",
-                            model=model,
-                            tokenizer=tokenizer,
-                            max_new_tokens=1024,
-                            temperature=0,      # Deterministic for tools
-                            do_sample=False,
-                            return_full_text=False, # IMPORTANT: don't repeat the prompt
-                        )
-                        hf_pipe = HuggingFacePipeline(pipeline=pipe)
-                        # Pass tokenizer explicitly to ensure ChatML template is used
-                        self._chat_model = ChatHuggingFace(
-                            llm=hf_pipe,
-                            tokenizer=tokenizer
-                        )
-                        logger.info("[registry] Local Chat Model ready ✓")
+                            # Use 4-bit quantization if possible to fit larger models and speed up inference
+                            bnb_config = BitsAndBytesConfig(
+                                load_in_4bit=True,
+                                bnb_4bit_compute_dtype=torch.float16,
+                                bnb_4bit_quant_type="nf4",
+                            )
+
+                            def _load_causal_lm(mid, extra_kwargs):
+                                try:
+                                    return AutoModelForCausalLM.from_pretrained(
+                                        mid, device_map="auto",
+                                        quantization_config=bnb_config,
+                                        trust_remote_code=True, **extra_kwargs
+                                    )
+                                except ValueError as e:
+                                    if "Unrecognized configuration class" in str(e):
+                                        raise RuntimeError(
+                                            f"'{mid}' is a vision-language model and cannot be used as a "
+                                            f"local chat LLM. Choose a text-only model instead, e.g. "
+                                            f"Qwen/Qwen2.5-1.5B-Instruct, Qwen/Qwen3-1.7B, "
+                                            f"microsoft/Phi-3-mini-4k-instruct, or meta-llama/Llama-3.2-1B-Instruct."
+                                        ) from e
+                                    raise
+                                except Exception as e:
+                                    logger.warning(f"[registry] Quantized load failed: {e}. Retrying without quantization.")
+                                    return AutoModelForCausalLM.from_pretrained(
+                                        mid, device_map="auto", trust_remote_code=True
+                                    )
+
+                            model = _load_causal_lm(model_id, {})
+
+                            pipe = pipeline(
+                                "text-generation",
+                                model=model,
+                                tokenizer=tokenizer,
+                                max_new_tokens=1024,
+                                temperature=0,      # Deterministic for tools
+                                do_sample=False,
+                                return_full_text=False, # IMPORTANT: don't repeat the prompt
+                            )
+                            hf_pipe = HuggingFacePipeline(pipeline=pipe)
+                            # Pass tokenizer explicitly to ensure ChatML template is used
+                            self._chat_model = ChatHuggingFace(
+                                llm=hf_pipe,
+                                tokenizer=tokenizer
+                            )
+                            self._update_model_status("chat", "ready")
+                            logger.info("[registry] Local Chat Model ready ✓")
+                        except Exception:
+                            self._update_model_status("chat", "error")
+                            raise
                     else:
                         model_name = config.model_name if config and config.model_name else self.settings.CHAT_MODEL
                         logger.info(f"[registry] Using remote Chat Model: {model_name}")
                         from langchain.chat_models import init_chat_model
-                        
+
                         api_key = config.api_key if config and config.api_key else self.settings.CHAT_API_KEY
                         api_url = config.url if config and config.url else self.settings.CHAT_API_URL
-                        
+
                         model_provider = config.model_provider if config and config.model_provider else None
 
                         kwargs = {

@@ -16,7 +16,7 @@ from huey import SqliteHuey
 from loguru import logger
 
 from src.db.task_results import save_result, save_error
-from src.queues.queue_config import read_model_config_from_db
+from src.queues.queue_config import read_model_config_from_db, update_model_status_raw
 
 from src.config import Database_Settings as _DB_Settings
 _DB_PATH = _DB_Settings().DATABASE_PATH
@@ -44,17 +44,33 @@ def _get_model():
                     return None
                 model_name = (cfg and cfg.get("model_name")) or _DEFAULT_MODEL_NAME
                 logger.info(f"[translation_queue] Loading model: {model_name}")
-                from src.ai.translator import Translator
-                translator = Translator()
-                _model = translator
-                _model_loaded = True
-                logger.info(f"[translation_queue] Model ready: {model_name}")
+                update_model_status_raw(_DB_PATH, "translator", "loading")
+                try:
+                    from src.ai.translator import Translator
+                    translator = Translator()
+                    _model = translator
+                    _model_loaded = True
+                    update_model_status_raw(_DB_PATH, "translator", "ready")
+                    logger.info(f"[translation_queue] Model ready: {model_name}")
+                except Exception:
+                    update_model_status_raw(_DB_PATH, "translator", "error")
+                    raise
     return _model
 
 
 @translation_queue.on_startup()
 def warm():
     """Load translation model into RAM before accepting tasks."""
+    _get_model()
+
+
+@translation_queue.task()
+def warmup_translation_model() -> None:
+    """Reset and reload the translation model — called when config changes to local."""
+    global _model, _model_loaded
+    with _lock:
+        _model = None
+        _model_loaded = False
     _get_model()
 
 

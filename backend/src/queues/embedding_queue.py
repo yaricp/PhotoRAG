@@ -16,7 +16,7 @@ from huey import SqliteHuey
 from loguru import logger
 
 from src.db.task_results import save_result, save_error
-from src.queues.queue_config import get_model_name_from_db
+from src.queues.queue_config import get_model_name_from_db, update_model_status_raw
 
 from src.config import Database_Settings as _DB_Settings
 _DB_PATH = _DB_Settings().DATABASE_PATH
@@ -43,18 +43,33 @@ def _get_model():
                     return None
                 model_name = (cfg and cfg.get("model_name")) or _DEFAULT_MODEL_NAME
                 logger.info(f"[embedding_queue] Loading model: {model_name}")
-                from sentence_transformers import SentenceTransformer
-                m = SentenceTransformer(model_name, trust_remote_code=True)
-                m.max_seq_length = 512
-                m.name = model_name
-                _model = m
-                logger.info(f"[embedding_queue] Model ready: {model_name}")
+                update_model_status_raw(_DB_PATH, "embedding", "loading")
+                try:
+                    from sentence_transformers import SentenceTransformer
+                    m = SentenceTransformer(model_name, trust_remote_code=True)
+                    m.max_seq_length = 512
+                    m.name = model_name
+                    _model = m
+                    update_model_status_raw(_DB_PATH, "embedding", "ready")
+                    logger.info(f"[embedding_queue] Model ready: {model_name}")
+                except Exception:
+                    update_model_status_raw(_DB_PATH, "embedding", "error")
+                    raise
     return _model
 
 
 @embedding_queue.on_startup()
 def warm():
     """Load embedding model into RAM before accepting tasks (skipped in remote mode)."""
+    _get_model()
+
+
+@embedding_queue.task()
+def warmup_embedding_model() -> None:
+    """Reset and reload the embedding model — called when config changes to local."""
+    global _model
+    with _lock:
+        _model = None
     _get_model()
 
 

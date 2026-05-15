@@ -1,9 +1,35 @@
-import { useState, useEffect } from 'react'
-import { getModelConfigs, updateModelConfig } from '@/api/client'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { getModelConfigs, updateModelConfig, getSystemStatus } from '@/api/client'
 import type { AIModelConfig } from '@/types/api'
 import { ServerIcon, CloudIcon } from '@heroicons/react/24/outline'
 import { Spinner } from '@/components/ui/Spinner'
 import './ModelsPage.css'
+
+type ModelStatusMap = Record<string, string>  // model type → status
+
+const STATUS_LABEL: Record<string, string> = {
+    ready:       'Ready',
+    loading:     'Loading…',
+    downloading: 'Downloading…',
+    pending:     'Pending',
+    error:       'Error',
+}
+
+function ModelStatusBadge({ status }: { status: string | undefined }) {
+    if (!status || status === 'ready') return null
+    const label = STATUS_LABEL[status] ?? status
+    return (
+        <span className={`model-status-badge model-status-badge--${status}`}>
+            {(status === 'loading' || status === 'downloading') && (
+                <svg className="model-status-badge__spinner" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.25" />
+                    <path fill="currentColor" opacity="0.75" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+            )}
+            {label}
+        </span>
+    )
+}
 
 export function ModelsPage() {
     const [configs, setConfigs] = useState<AIModelConfig[]>([])
@@ -11,13 +37,37 @@ export function ModelsPage() {
     const [error, setError] = useState<string | null>(null)
     const [saving, setSaving] = useState<string | null>(null)
     const [savedType, setSavedType] = useState<string | null>(null)
+    const [modelStatuses, setModelStatuses] = useState<ModelStatusMap>({})
+    const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+    const fetchStatuses = useCallback(() => {
+        getSystemStatus().then(s => {
+            const map: ModelStatusMap = {}
+            s.models.forEach(m => { map[m.name] = m.status })
+            setModelStatuses(map)
+            // stop polling when nothing is actively loading
+            const busy = s.models.some(m => m.status === 'loading' || m.status === 'downloading')
+            if (!busy && pollRef.current) {
+                clearInterval(pollRef.current)
+                pollRef.current = null
+            }
+        }).catch(() => {})
+    }, [])
+
+    const startPolling = useCallback(() => {
+        if (pollRef.current) return
+        fetchStatuses()
+        pollRef.current = setInterval(fetchStatuses, 3000)
+    }, [fetchStatuses])
 
     useEffect(() => {
         getModelConfigs()
             .then(data => { setConfigs(data); setError(null) })
             .catch(err => setError(err.message || 'Failed to fetch model configs'))
             .finally(() => setLoading(false))
-    }, [])
+        startPolling()
+        return () => { if (pollRef.current) clearInterval(pollRef.current) }
+    }, [startPolling])
 
     const handleSave = async (config: AIModelConfig) => {
         setSaving(config.type)
@@ -32,6 +82,7 @@ export function ModelsPage() {
             })
             setConfigs(prev => prev.map(c => c.type === updated.type ? updated : c))
             setSavedType(config.type)
+            if (config.mode === 'local') startPolling()
         } catch (err: any) {
             setError(err.message || 'Failed to save configuration')
         } finally {
@@ -70,12 +121,17 @@ export function ModelsPage() {
             {savedType && (
                 <div className="model-modal-overlay" onClick={() => setSavedType(null)}>
                     <div className="model-modal" onClick={e => e.stopPropagation()}>
-                        <div className="model-modal__icon">⚠️</div>
-                        <p className="model-modal__title">Configuration saved — action required</p>
+                        <div className="model-modal__icon">✅</div>
+                        <p className="model-modal__title">Configuration saved</p>
                         <div className="model-modal__body">
                             <div className="model-modal__row">
                                 <span className="model-modal__row-icon">🔄</span>
-                                <span>Restart the application for the new <strong>{savedType}</strong> model to take effect.</span>
+                                <span>
+                                    The <strong>{savedType}</strong> model is{' '}
+                                    {configs.find(c => c.type === savedType)?.mode === 'local'
+                                        ? 'loading in the background. Status updates are shown on this page.'
+                                        : 'now using the remote API.'}
+                                </span>
                             </div>
                             {savedType === 'embedding' && (
                                 <div className="model-modal__row">
@@ -104,9 +160,14 @@ export function ModelsPage() {
                                 }
                                 {config.type}
                             </h2>
-                            <span className={`model-card__badge model-card__badge--${config.mode}`}>
-                                {config.mode}
-                            </span>
+                            <div className="model-card__badges">
+                                <span className={`model-card__badge model-card__badge--${config.mode}`}>
+                                    {config.mode}
+                                </span>
+                                {config.mode === 'local' && (
+                                    <ModelStatusBadge status={modelStatuses[config.type]} />
+                                )}
+                            </div>
                         </div>
 
                         <div className="model-card__form">

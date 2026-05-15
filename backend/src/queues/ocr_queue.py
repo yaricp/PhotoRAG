@@ -15,7 +15,7 @@ from huey import SqliteHuey
 from loguru import logger
 
 from src.db.task_results import save_result, save_error
-from src.queues.queue_config import read_model_config_from_db
+from src.queues.queue_config import read_model_config_from_db, update_model_status_raw
 
 from src.config import Database_Settings as _DB_Settings
 _DB_PATH = _DB_Settings().DATABASE_PATH
@@ -42,16 +42,32 @@ def _get_reader():
                     _reader_loaded = True
                     return None
                 logger.info("[ocr_queue] Loading OCR engine: EasyOCR")
-                from src.ai.ocr import EasyOCRReader
-                _reader = EasyOCRReader.get_instance()
-                _reader_loaded = True
-                logger.info("[ocr_queue] OCR engine ready")
+                update_model_status_raw(_DB_PATH, "ocr", "loading")
+                try:
+                    from src.ai.ocr import EasyOCRReader
+                    _reader = EasyOCRReader.get_instance()
+                    _reader_loaded = True
+                    update_model_status_raw(_DB_PATH, "ocr", "ready")
+                    logger.info("[ocr_queue] OCR engine ready")
+                except Exception:
+                    update_model_status_raw(_DB_PATH, "ocr", "error")
+                    raise
     return _reader
 
 
 @ocr_queue.on_startup()
 def warm():
     """Load OCR engine into RAM before accepting tasks."""
+    _get_reader()
+
+
+@ocr_queue.task()
+def warmup_ocr_model() -> None:
+    """Reset and reload the OCR engine — called when config changes to local."""
+    global _reader, _reader_loaded
+    with _lock:
+        _reader = None
+        _reader_loaded = False
     _get_reader()
 
 

@@ -108,8 +108,18 @@ watcher_service = WatcherService()
 
 
 @asynccontextmanager
+def _eager_load_chat_model() -> None:
+    """Background thread: warm up the local chat model at startup."""
+    try:
+        from src.ai.registry import registry as _registry
+        _ = _registry.chat_model
+    except Exception as exc:
+        logger.error(f"[startup] Chat model warmup failed: {exc}")
+
+
 async def lifespan(app: FastAPI):
     import asyncio
+    import threading
     from src.pipeline_tracker import recover_interrupted_pipelines
     from src.incoming_pipeline import run_pipelines_batch
 
@@ -120,6 +130,13 @@ async def lifespan(app: FastAPI):
     if stuck_ids:
         logger.info(f"[startup] Recovering {len(stuck_ids)} interrupted pipeline(s): {stuck_ids}")
         asyncio.create_task(run_pipelines_batch(stuck_ids))
+
+    # Eager-load chat model in background if configured as local
+    chat_config = get_model_config(db, "chat")
+    chat_mode = chat_config.mode if chat_config else "local"
+    if chat_mode == "local":
+        logger.info("[startup] Spawning background thread to warm up local chat model")
+        threading.Thread(target=_eager_load_chat_model, name="chat-warmup", daemon=True).start()
 
     yield
 
@@ -561,6 +578,29 @@ def update_model_endpoint(
     config = update_model_config(db, config_type, request)
     if not config:
         raise HTTPException(status_code=404, detail="Model config not found")
+
+    # When switching to local, trigger eager loading immediately
+    if request.mode == "local":
+        import threading
+        if config_type == "chat":
+            from src.ai.registry import registry as _registry
+            _registry.reset_model("chat")
+            threading.Thread(target=_eager_load_chat_model, name="chat-warmup", daemon=True).start()
+        elif config_type == "vision":
+            from src.queues.vision_queue import warmup_vision_model
+            warmup_vision_model()
+        elif config_type == "ocr":
+            from src.queues.ocr_queue import warmup_ocr_model
+            warmup_ocr_model()
+        elif config_type == "clip":
+            from src.queues.clip_queue import warmup_clip_model
+            warmup_clip_model()
+        elif config_type == "translator":
+            from src.queues.translation_queue import warmup_translation_model
+            warmup_translation_model()
+        elif config_type == "embedding":
+            from src.queues.embedding_queue import warmup_embedding_model
+            warmup_embedding_model()
 
     return config
 

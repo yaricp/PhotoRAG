@@ -16,7 +16,7 @@ from huey import SqliteHuey
 from loguru import logger
 
 from src.db.task_results import save_result, save_error
-from src.queues.queue_config import read_model_config_from_db
+from src.queues.queue_config import read_model_config_from_db, update_model_status_raw
 
 from src.config import Database_Settings as _DB_Settings
 _DB_PATH = _DB_Settings().DATABASE_PATH
@@ -44,20 +44,36 @@ def _get_model():
                     return None
                 model_name = (cfg and cfg.get("model_name")) or _DEFAULT_MODEL_NAME
                 logger.info(f"[clip_queue] Loading model: {model_name}")
-                from src.ai.clip import ClipTagger
-                tagger = ClipTagger()
-                tagger.load_model()
-                tagger.load_tags()
-                tagger.load_or_compute_categories()
-                _model = tagger
-                _model_loaded = True
-                logger.info(f"[clip_queue] Model ready: {model_name}")
+                update_model_status_raw(_DB_PATH, "clip", "loading")
+                try:
+                    from src.ai.clip import ClipTagger
+                    tagger = ClipTagger()
+                    tagger.load_model()
+                    tagger.load_tags()
+                    tagger.load_or_compute_categories()
+                    _model = tagger
+                    _model_loaded = True
+                    update_model_status_raw(_DB_PATH, "clip", "ready")
+                    logger.info(f"[clip_queue] Model ready: {model_name}")
+                except Exception:
+                    update_model_status_raw(_DB_PATH, "clip", "error")
+                    raise
     return _model
 
 
 @clip_queue.on_startup()
 def warm():
     """Load model into RAM before the worker accepts any tasks."""
+    _get_model()
+
+
+@clip_queue.task()
+def warmup_clip_model() -> None:
+    """Reset and reload the CLIP model — called when config changes to local."""
+    global _model, _model_loaded
+    with _lock:
+        _model = None
+        _model_loaded = False
     _get_model()
 
 

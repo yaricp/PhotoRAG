@@ -146,15 +146,12 @@ def test_models_endpoints():
         "api_key": "123"
     }
     
-    # Mock registry.reset_model
-    with patch("src.main.registry.reset_model") as mock_reset:
-        response = client.put("/api/models/vision", json=update_data)
-        assert response.status_code == 200
-        result = response.json()
-        assert result["mode"] == "remote"
-        assert result["url"] == "http://test"
-        
-        mock_reset.assert_called_once_with("vision")
+    # mode=remote → no warmup task dispatched
+    response = client.put("/api/models/vision", json=update_data)
+    assert response.status_code == 200
+    result = response.json()
+    assert result["mode"] == "remote"
+    assert result["url"] == "http://test"
 
 
 def test_get_photo_by_id():

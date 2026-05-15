@@ -44,6 +44,29 @@ def read_model_config_from_db(db_path: str, model_type: str) -> dict | None:
         return None
 
 
+def update_model_status_raw(db_path: str, name: str, status: str) -> None:
+    """
+    Write a model_states row using raw sqlite3 (safe for Huey worker processes).
+    Creates the row if it doesn't exist.
+    """
+    try:
+        if not os.path.exists(db_path):
+            return
+        with sqlite3.connect(db_path) as conn:
+            conn.execute(
+                "UPDATE model_states SET status=? WHERE name=?",
+                (status, name)
+            )
+            if conn.total_changes == 0:
+                conn.execute(
+                    "INSERT OR IGNORE INTO model_states (name, status) VALUES (?, ?)",
+                    (name, status)
+                )
+            conn.commit()
+    except Exception as exc:
+        logger.warning(f"[queue_config] Could not update model_states '{name}'→'{status}': {exc}")
+
+
 def get_model_name_from_db(db_path: str, model_type: str, default: str) -> str:
     """
     Return the model_name from DB, falling back to default if unavailable.
