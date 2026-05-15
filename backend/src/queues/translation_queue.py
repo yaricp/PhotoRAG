@@ -18,7 +18,8 @@ from loguru import logger
 from src.db.task_results import save_result, save_error
 from src.queues.queue_config import read_model_config_from_db
 
-_DB_PATH = os.path.join(os.getcwd(), "../db.sqlite3")
+from src.config import Database_Settings as _DB_Settings
+_DB_PATH = _DB_Settings().DATABASE_PATH
 _DEFAULT_MODEL_NAME = "facebook/nllb-200-distilled-600M"
 
 translation_queue = SqliteHuey(

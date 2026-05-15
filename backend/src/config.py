@@ -1,5 +1,6 @@
 # src/config.py
 
+import os
 from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
 
@@ -28,6 +29,14 @@ class Database_Settings(BaseSettings):
     DATABASE_DIALECT: str = "sqlite"
     DATABASE_NAME: str = "../db.sqlite3"
     TASK_RESULTS_DATABASE_NAME: str = "../task_results.db"
+
+    @property
+    def DATABASE_PATH(self) -> str:
+        return os.path.abspath(self.DATABASE_NAME)
+
+    @property
+    def TASK_RESULTS_DATABASE_PATH(self) -> str:
+        return os.path.abspath(self.TASK_RESULTS_DATABASE_NAME)
 
 
 class Api_Settings(BaseSettings):

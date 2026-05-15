@@ -11,7 +11,8 @@ from src.pipeline_tracker import track_task
 from src.vector_db_services import store_photo_embedding
 from src.ai.prompts import build_photo_text_for_embedding
 
-_DB_PATH = os.path.join(os.getcwd(), "../db.sqlite3")
+from src.config import Database_Settings as _DB_Settings
+_DB_PATH = _DB_Settings().DATABASE_PATH
 
 
 # ---------------------------------------------------------------------------

@@ -28,7 +28,8 @@ from src.config import (
     OCR_Settings,
 )
 
-_DB_PATH = os.path.join(os.getcwd(), "../db.sqlite3")
+from src.config import Database_Settings as _DB_Settings
+_DB_PATH = _DB_Settings().DATABASE_PATH
 
 _task_queue_settings = TaskQueue_Settings()
 
