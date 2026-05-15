@@ -131,6 +131,7 @@
 .pe__footer {
     display: flex;
     justify-content: center;
+    gap: 12px;
     padding: 8px 0 16px;
 }
 
@@ -147,3 +148,19 @@
 
 .pe__save-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 .pe__save-btn:not(:disabled):hover { opacity: 0.85; }
+
+.pe__reindex-btn {
+    background: var(--color-surface);
+    border: 1px solid var(--color-accent);
+    border-radius: 8px;
+    padding: 10px 24px;
+    font-size: 14px;
+    color: var(--color-accent);
+    cursor: pointer;
+    min-width: 150px;
+    font-family: var(--font-sans);
+    transition: background 0.15s, opacity 0.15s;
+}
+
+.pe__reindex-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.pe__reindex-btn:not(:disabled):hover { background: rgba(var(--color-accent-rgb, 99,102,241), 0.08); }

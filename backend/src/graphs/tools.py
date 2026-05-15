@@ -22,6 +22,7 @@ from src.db.database import SessionLocal
 from src.model_services import call_vision_model, call_clip_model, call_ocr_model
 from src.utils import extract_exif, resize_image, archive_photos_to_zip
 from src.schemas import Photo
+from src.models import PhotoTag, PhotoCategory
 
 
 class SearchMetadataArgs(BaseModel):
@@ -1490,3 +1491,100 @@ def filter_photos(
         return _serialize_photos(photos)
     finally:
         db.close()
+
+
+# ---------------------------------------------------------------------------
+# Re-index and pipeline re-run tools
+# ---------------------------------------------------------------------------
+
+@tool
+def reindex_photos(photo_ids: List[int]) -> str:
+    """
+    Re-save the description of the given photos into the vector search database.
+
+    Uses the existing description, tags, categories and location — does NOT
+    re-generate them with AI. Useful after manually editing a description on
+    the Edit page, or after changing the embedding model.
+
+    This operation runs in the background. No data is cleared.
+
+    User query examples:
+    - "Re-index photos 1, 2, 3"
+    - "Update the search index for photo 42"
+    - "Sync embedding for these photos"
+    - "Обновить векторный индекс для фото 5 и 10"
+    """
+    logger.info(f"[tool] reindex_photos: photo_ids={photo_ids}")
+    if not photo_ids:
+        return "No photo IDs provided."
+
+    db = SessionLocal()
+    try:
+        for pid in photo_ids:
+            if not get_photo_by_id(db, pid):
+                return f"Photo {pid} not found. Aborting."
+    finally:
+        db.close()
+
+    def _run():
+        import asyncio
+        from src.tasks.embedding_tasks import final_embedding_task
+        async def _embed_all():
+            for pid in photo_ids:
+                await final_embedding_task(pid)
+        asyncio.run(_embed_all())
+
+    import threading
+    t = threading.Thread(target=_run, daemon=True)
+    t.start()
+    return f"Re-indexing started for {len(photo_ids)} photo(s). IDs: {photo_ids}."
+
+
+@tool
+def rerun_pipeline_for_photos(photo_ids: List[int]) -> str:
+    """
+    Run the complete AI processing pipeline (phases 0–4) for the given photos.
+
+    This re-generates everything from scratch: CLIP tags, categories, vision
+    description, OCR text, translation, and embedding. Tags and categories are
+    cleared first so CLIP detection starts from a clean slate.
+
+    This operation runs in the background — check the Processing page for status.
+    Use this after changing AI model settings, prompts, or when photos need a
+    full refresh.
+
+    User query examples:
+    - "Reprocess photos 1, 2, 3"
+    - "Run the full pipeline again for photo 42"
+    - "Re-analyze these photos with new settings"
+    - "Переобработать фотографии 5 и 10 полностью"
+    """
+    logger.info(f"[tool] rerun_pipeline_for_photos: photo_ids={photo_ids}")
+    if not photo_ids:
+        return "No photo IDs provided."
+
+    db = SessionLocal()
+    try:
+        for pid in photo_ids:
+            if not get_photo_by_id(db, pid):
+                return f"Photo {pid} not found. Aborting."
+        # Clear tags and categories so CLIP detection starts from a clean slate
+        for pid in photo_ids:
+            db.query(PhotoTag).filter_by(photo_id=pid).delete()
+            db.query(PhotoCategory).filter_by(photo_id=pid).delete()
+        db.commit()
+    finally:
+        db.close()
+
+    def _run():
+        import asyncio
+        from src.incoming_pipeline import run_pipelines_batch
+        asyncio.run(run_pipelines_batch(photo_ids))
+
+    import threading
+    t = threading.Thread(target=_run, daemon=True)
+    t.start()
+    return (
+        f"Full pipeline started for {len(photo_ids)} photo(s). IDs: {photo_ids}. "
+        "Tags and categories cleared. Check the Processing page for status."
+    )

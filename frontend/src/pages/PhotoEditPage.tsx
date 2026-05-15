@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getPhoto, updatePhoto } from '@/api/client'
+import { getPhoto, updatePhoto, reindexPhoto } from '@/api/client'
 import type { LinkedTag, LinkedCategory } from '@/api/client'
 import { Spinner } from '@/components/ui/Spinner'
 import { TagPickerModal } from '@/components/photos/TagPickerModal'
@@ -26,6 +26,8 @@ export function PhotoEditPage() {
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [saved, setSaved] = useState(false)
+    const [reindexing, setReindexing] = useState(false)
+    const [reindexed, setReindexed] = useState(false)
 
     const [description, setDescription] = useState('')
     const [translatedDescription, setTranslatedDescription] = useState('')
@@ -49,6 +51,19 @@ export function PhotoEditPage() {
             setLinkedCategories((p.categories_rel ?? []).map(catToLinked).filter(Boolean) as LinkedCategory[])
         }).finally(() => setLoading(false))
     }, [id])
+
+    async function handleReindex() {
+        if (!photo) return
+        setReindexing(true)
+        setReindexed(false)
+        try {
+            await reindexPhoto(photo.id)
+            setReindexed(true)
+            setTimeout(() => setReindexed(false), 2500)
+        } finally {
+            setReindexing(false)
+        }
+    }
 
     async function handleSave() {
         if (!photo) return
@@ -143,10 +158,13 @@ export function PhotoEditPage() {
                 </div>
             </div>
 
-            {/* SAVE */}
+            {/* SAVE / REINDEX */}
             <div className="pe__footer">
                 <button className="pe__save-btn" onClick={handleSave} disabled={saving}>
                     {saving ? 'Saving…' : saved ? 'Saved ✓' : 'Save'}
+                </button>
+                <button className="pe__reindex-btn" onClick={handleReindex} disabled={reindexing}>
+                    {reindexing ? 'Queuing…' : reindexed ? 'Queued ✓' : 'Re-index Search'}
                 </button>
             </div>
 

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, Query
+from fastapi import FastAPI, Depends, HTTPException, Query, BackgroundTasks
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -108,6 +108,7 @@ from src.graphs.ai_agent import app as agent_app
 from langchain_core.messages import HumanMessage
 from src.queues.folder_scan_queue import start_folder_scanner_task
 from src.task_notifier import get_notifier
+from src.tasks.embedding_tasks import final_embedding_task
 
 
 watcher_service = WatcherService()
@@ -836,6 +837,20 @@ def unlink_photo_category_endpoint(photo_id: int, cat_id: int, db: Session = Dep
     if not unlink_photo_category(db, photo_id, cat_id):
         raise HTTPException(status_code=404, detail="Category not linked to this photo")
     db.commit()
+
+
+@app.post("/api/photos/{photo_id}/reindex", tags=["Photos"])
+async def reindex_photo_endpoint(
+    photo_id: int,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    """Re-save a photo's description into the vector search index using existing metadata."""
+    photo = get_photo_by_id(db, photo_id)
+    if not photo:
+        raise HTTPException(status_code=404, detail=f"Photo {photo_id} not found")
+    background_tasks.add_task(final_embedding_task, photo_id)
+    return {"status": "queued", "photo_id": photo_id}
 
 
 # ---------------------------------------------------------------------------

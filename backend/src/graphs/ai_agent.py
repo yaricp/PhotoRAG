@@ -45,6 +45,9 @@ from src.graphs.tools import (
     get_photos_by_tag_id,
     search_photos_by_exif,
     filter_photos,
+    # Group E — reindex / reprocess
+    reindex_photos,
+    rerun_pipeline_for_photos,
 )
 from src.schemas import Photo
 
@@ -89,6 +92,9 @@ tools = [
     # History
     get_action_history,
     undo_last_action,
+    # Reindex / reprocess
+    reindex_photos,
+    rerun_pipeline_for_photos,
 ]
 editing_tools = [
     resize_photo,
