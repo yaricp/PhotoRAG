@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react'
-import { sendChat, undoLastAction, archivePhotos, deletePhoto } from '@/api/client'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
+import { sendChat, undoLastAction, archivePhotos, deletePhoto, getSystemStatus } from '@/api/client'
 import { PhotoCard } from '@/components/photos/PhotoCard'
 import { Spinner } from '@/components/ui/Spinner'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
@@ -17,8 +17,38 @@ export function ChatPage() {
     const [selectedPhotoIds, setSelectedPhotoIds] = useState<Set<number>>(new Set())
     const [busyPhotoIds, setBusyPhotoIds] = useState<Set<number>>(new Set())
     const [pending, setPending] = useState<PendingAction>(null)
+    const [chatReady, setChatReady] = useState<boolean | null>(null)
+    const [bannerDismissed, setBannerDismissed] = useState(false)
 
     const messagesEndRef = useRef<HTMLDivElement | null>(null)
+    const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+    const stopPolling = useCallback(() => {
+        if (pollTimerRef.current) {
+            clearInterval(pollTimerRef.current)
+            pollTimerRef.current = null
+        }
+    }, [])
+
+    useEffect(() => {
+        let cancelled = false
+        const check = async () => {
+            try {
+                const status = await getSystemStatus()
+                if (cancelled) return
+                setChatReady(status.chat_ready)
+                if (status.chat_ready) stopPolling()
+            } catch {
+                // ignore network errors during polling
+            }
+        }
+        check()
+        pollTimerRef.current = setInterval(check, 5000)
+        return () => {
+            cancelled = true
+            stopPolling()
+        }
+    }, [stopPolling])
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -82,6 +112,9 @@ export function ChatPage() {
             addMessage({ role: 'assistant', content: res.response })
             setThreadId(res.thread_id)
             if (res.photos.length > 0) setContextPhotos(res.photos)
+            // Model is clearly ready once a response arrives
+            setChatReady(true)
+            stopPolling()
         } finally {
             setLoading(false)
         }
@@ -170,6 +203,13 @@ export function ChatPage() {
 
             {/* RIGHT — chat */}
             <div className="chat-page__chat">
+                {chatReady === false && !bannerDismissed && (
+                    <div className="chat-page__warming-banner">
+                        <Spinner size="sm" />
+                        <span>The AI chat model is still warming up. Your first message may take a moment.</span>
+                        <button className="chat-page__warming-dismiss" onClick={() => setBannerDismissed(true)}>✕</button>
+                    </div>
+                )}
                 <div className="chat-page__messages">
                     {messages.map((m, i) => (
                         <div key={i} className={`chat-bubble chat-bubble--${m.role}`}>

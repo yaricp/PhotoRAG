@@ -154,8 +154,13 @@ def get_system_status_endpoint(db: Session = Depends(get_db)):
     logger.info("Getting system status")
     states = get_all_model_states(db)
     logger.info(f"System status: {states}")
+
+    from src.ai.registry import registry as _registry
+    chat_ready = _registry._chat_model is not None
+
     return {
         "ready": all(s.status == "ready" for s in states),
+        "chat_ready": chat_ready,
         "models": [{"name": s.name, "status": s.status} for s in states]
     }
 

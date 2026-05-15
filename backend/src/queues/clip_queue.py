@@ -16,11 +16,10 @@ from huey import SqliteHuey
 from loguru import logger
 
 from src.db.task_results import save_result, save_error
-from src.queues.queue_config import get_model_name_from_db
+from src.queues.queue_config import read_model_config_from_db
 
 _DB_PATH = os.path.join(os.getcwd(), "../db.sqlite3")
 _DEFAULT_MODEL_NAME = "ViT-B-32"
-_DEFAULT_PRETRAINED = "laion2b_s34b_b79k"
 
 clip_queue = SqliteHuey(
     "clip",
@@ -28,15 +27,21 @@ clip_queue = SqliteHuey(
 )
 
 _model = None
+_model_loaded = False
 _lock = threading.Lock()
 
 
 def _get_model():
-    global _model
-    if _model is None:
+    global _model, _model_loaded
+    if not _model_loaded:
         with _lock:
-            if _model is None:
-                model_name = get_model_name_from_db(_DB_PATH, "clip", _DEFAULT_MODEL_NAME)
+            if not _model_loaded:
+                cfg = read_model_config_from_db(_DB_PATH, "clip")
+                if cfg and cfg.get("mode") == "remote":
+                    logger.info("[clip_queue] mode=remote — skipping local model load")
+                    _model_loaded = True
+                    return None
+                model_name = (cfg and cfg.get("model_name")) or _DEFAULT_MODEL_NAME
                 logger.info(f"[clip_queue] Loading model: {model_name}")
                 from src.ai.clip import ClipTagger
                 tagger = ClipTagger()
@@ -44,6 +49,7 @@ def _get_model():
                 tagger.load_tags()
                 tagger.load_or_compute_categories()
                 _model = tagger
+                _model_loaded = True
                 logger.info(f"[clip_queue] Model ready: {model_name}")
     return _model
 
@@ -68,6 +74,9 @@ def call_local_clip_model(task_id: str, file_path: str, task: str = "tags") -> N
     start_time = time.time()
     try:
         model = _get_model()
+        if model is None:
+            save_error(task_id, "CLIP model not loaded (mode=remote)")
+            return
         with _lock:
             if task == "tags":
                 result = model.find_tags(file_path)

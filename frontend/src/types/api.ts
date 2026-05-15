@@ -95,6 +95,8 @@ export interface ModelStatus {
 }
 
 export interface SystemStatus {
+    ready: boolean
+    chat_ready: boolean
     models: ModelStatus[]
 }
 

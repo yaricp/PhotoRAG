@@ -15,7 +15,7 @@ from huey import SqliteHuey
 from loguru import logger
 
 from src.db.task_results import save_result, save_error
-from src.queues.queue_config import get_model_name_from_db
+from src.queues.queue_config import read_model_config_from_db
 
 _DB_PATH = os.path.join(os.getcwd(), "../db.sqlite3")
 _DEFAULT_MODEL_NAME = "easyocr"
@@ -26,19 +26,25 @@ ocr_queue = SqliteHuey(
 )
 
 _reader = None
+_reader_loaded = False
 _lock = threading.Lock()
 
 
 def _get_reader():
-    global _reader
-    if _reader is None:
+    global _reader, _reader_loaded
+    if not _reader_loaded:
         with _lock:
-            if _reader is None:
-                model_name = get_model_name_from_db(_DB_PATH, "ocr", _DEFAULT_MODEL_NAME)
-                logger.info(f"[ocr_queue] Loading OCR engine: {model_name}")
+            if not _reader_loaded:
+                cfg = read_model_config_from_db(_DB_PATH, "ocr")
+                if cfg and cfg.get("mode") == "remote":
+                    logger.info("[ocr_queue] mode=remote — skipping local OCR engine load")
+                    _reader_loaded = True
+                    return None
+                logger.info("[ocr_queue] Loading OCR engine: EasyOCR")
                 from src.ai.ocr import EasyOCRReader
                 _reader = EasyOCRReader.get_instance()
-                logger.info(f"[ocr_queue] OCR engine ready: {model_name}")
+                _reader_loaded = True
+                logger.info("[ocr_queue] OCR engine ready")
     return _reader
 
 
@@ -59,6 +65,9 @@ def call_local_ocr_model(task_id: str, file_path: str) -> None:
     start_time = time.time()
     try:
         reader = _get_reader()
+        if reader is None:
+            save_error(task_id, "OCR engine not loaded (mode=remote)")
+            return
         with _lock:
             from src.ai.ocr import extract_text_from_image
             text = extract_text_from_image(file_path)

@@ -16,7 +16,7 @@ from huey import SqliteHuey
 from loguru import logger
 
 from src.db.task_results import save_result, save_error
-from src.queues.queue_config import get_model_name_from_db
+from src.queues.queue_config import read_model_config_from_db
 
 _DB_PATH = os.path.join(os.getcwd(), "../db.sqlite3")
 _DEFAULT_MODEL_NAME = "facebook/nllb-200-distilled-600M"
@@ -27,19 +27,26 @@ translation_queue = SqliteHuey(
 )
 
 _model = None
+_model_loaded = False
 _lock = threading.Lock()
 
 
 def _get_model():
-    global _model
-    if _model is None:
+    global _model, _model_loaded
+    if not _model_loaded:
         with _lock:
-            if _model is None:
-                model_name = get_model_name_from_db(_DB_PATH, "translator", _DEFAULT_MODEL_NAME)
+            if not _model_loaded:
+                cfg = read_model_config_from_db(_DB_PATH, "translator")
+                if cfg and cfg.get("mode") == "remote":
+                    logger.info("[translation_queue] mode=remote — skipping local model load")
+                    _model_loaded = True
+                    return None
+                model_name = (cfg and cfg.get("model_name")) or _DEFAULT_MODEL_NAME
                 logger.info(f"[translation_queue] Loading model: {model_name}")
                 from src.ai.translator import Translator
                 translator = Translator()
                 _model = translator
+                _model_loaded = True
                 logger.info(f"[translation_queue] Model ready: {model_name}")
     return _model
 
@@ -64,6 +71,9 @@ def call_local_translation_model(task_id: str, text: str, backward: bool = False
     start_time = time.time()
     try:
         model = _get_model()
+        if model is None:
+            save_error(task_id, "translation model not loaded (mode=remote)")
+            return
         with _lock:
             translation = model.translate(text=text, backward=backward)
         save_result(task_id, json.dumps({"translation": translation}))

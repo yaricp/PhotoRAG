@@ -73,8 +73,10 @@ def setup_data():
     db.add(photo1)
     db.commit()
     
-    geo = Geoposition(photo_id=photo1.id, latitude=0.0, longitude=0.0)
+    geo = Geoposition(latitude=0.0, longitude=0.0)
     db.add(geo)
+    db.commit()
+    photo1.geoposition_id = geo.id
     db.commit()
     
     yield
@@ -84,7 +86,36 @@ def setup_data():
 def test_get_system_status():
     response = client.get("/api/system/status/")
     assert response.status_code == 200
-    assert "ready" in response.json()
+    body = response.json()
+    assert "ready" in body
+    assert "chat_ready" in body
+    assert isinstance(body["chat_ready"], bool)
+    assert "models" in body
+
+
+def test_system_status_chat_ready_false_when_model_not_loaded():
+    from src.ai.registry import registry as _registry
+    original = _registry._chat_model
+    _registry._chat_model = None
+    try:
+        response = client.get("/api/system/status/")
+        assert response.status_code == 200
+        assert response.json()["chat_ready"] is False
+    finally:
+        _registry._chat_model = original
+
+
+def test_system_status_chat_ready_true_when_model_loaded():
+    from src.ai.registry import registry as _registry
+    from unittest.mock import MagicMock
+    original = _registry._chat_model
+    _registry._chat_model = MagicMock()
+    try:
+        response = client.get("/api/system/status/")
+        assert response.status_code == 200
+        assert response.json()["chat_ready"] is True
+    finally:
+        _registry._chat_model = original
 
 
 def test_get_folder_scanners():

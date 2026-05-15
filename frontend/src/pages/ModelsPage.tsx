@@ -50,7 +50,12 @@ export function ModelsPage() {
         }))
     }
 
-    if (loading) return <div className="models-page"><Spinner size="lg" /></div>
+    if (loading) return (
+        <div className="models-page models-page--loading">
+            <Spinner size="lg" />
+            <p className="models-page__loading-text">Loading model configurations…</p>
+        </div>
+    )
 
     return (
         <div className="models-page">
@@ -123,43 +128,67 @@ export function ModelsPage() {
                                     className="model-field__input"
                                     value={config.model_name}
                                     onChange={e => handleChange(config.type, 'model_name', e.target.value)}
-                                    placeholder={config.mode === 'local' ? 'e.g. Qwen/Qwen2-VL-2B-Instruct' : 'e.g. gpt-4o-mini'}
+                                    placeholder={config.mode === 'local'
+                                        ? 'e.g. Qwen/Qwen2-VL-2B-Instruct'
+                                        : config.type === 'vision' || config.type === 'clip' || config.type === 'ocr'
+                                            ? 'e.g. gpt-4o  /  claude-3-haiku-20240307  /  llava'
+                                            : config.type === 'translator'
+                                                ? 'e.g. gpt-4o-mini  (not needed for deepl/libretranslate)'
+                                                : 'e.g. gpt-4o-mini'
+                                    }
                                 />
                             </div>
 
                             {config.mode === 'remote' && (
                                 <div className="model-card__remote">
-                                    {(config.type === 'chat' || config.type === 'embedding') && (
-                                        <div className="model-field">
-                                            <label className="model-field__label">Provider</label>
-                                            <select
-                                                className="model-field__select"
-                                                value={config.model_provider || ''}
-                                                onChange={e => handleChange(config.type, 'model_provider', e.target.value)}
-                                            >
-                                                <option value="">— auto-detect —</option>
-                                                <option value="openai">OpenAI</option>
-                                                {config.type === 'chat' && <option value="anthropic">Anthropic (Claude)</option>}
-                                                <option value="google_genai">Google Gemini (AI Studio key)</option>
-                                                {config.type === 'chat' && <option value="google_vertexai">Google Vertex AI (GCP auth)</option>}
-                                                <option value="ollama">Ollama (self-hosted)</option>
-                                                {config.type === 'chat' && <option value="groq">Groq</option>}
-                                                {config.type === 'chat' && <option value="mistralai">Mistral AI</option>}
-                                                {config.type === 'chat' && <option value="together">Together AI</option>}
-                                                {config.type === 'chat' && <option value="cohere">Cohere</option>}
-                                            </select>
-                                            {config.model_provider === 'ollama' && (
-                                                <p className="model-field__hint">
-                                                    Set API base URL to your Ollama server (default: http://localhost:11434). No API key needed.
-                                                </p>
+                                    <div className="model-field">
+                                        <label className="model-field__label">Provider</label>
+                                        <select
+                                            className="model-field__select"
+                                            value={config.model_provider || ''}
+                                            onChange={e => handleChange(config.type, 'model_provider', e.target.value)}
+                                        >
+                                            <option value="">— auto-detect —</option>
+                                            <option value="openai">OpenAI</option>
+                                            {(config.type === 'chat' || config.type === 'vision' || config.type === 'clip' || config.type === 'ocr' || config.type === 'translator') && (
+                                                <option value="anthropic">Anthropic (Claude)</option>
                                             )}
-                                            {config.model_provider === 'google_vertexai' && (
-                                                <p className="model-field__hint">
-                                                    Requires GCP credentials (GOOGLE_APPLICATION_CREDENTIALS). No API key field needed.
-                                                </p>
-                                            )}
-                                        </div>
-                                    )}
+                                            <option value="google_genai">Google Gemini (AI Studio key)</option>
+                                            {config.type === 'chat' && <option value="google_vertexai">Google Vertex AI (GCP auth)</option>}
+                                            <option value="ollama">Ollama (self-hosted)</option>
+                                            {config.type === 'chat' && <option value="groq">Groq</option>}
+                                            {config.type === 'chat' && <option value="mistralai">Mistral AI</option>}
+                                            {config.type === 'chat' && <option value="together">Together AI</option>}
+                                            {config.type === 'chat' && <option value="cohere">Cohere</option>}
+                                            {config.type === 'translator' && <option value="deepl">DeepL</option>}
+                                            {config.type === 'translator' && <option value="libretranslate">LibreTranslate (self-hosted)</option>}
+                                        </select>
+                                        {config.model_provider === 'ollama' && (
+                                            <p className="model-field__hint">
+                                                Set API base URL to your Ollama server (default: http://localhost:11434). No API key needed.
+                                            </p>
+                                        )}
+                                        {config.model_provider === 'google_vertexai' && (
+                                            <p className="model-field__hint">
+                                                Requires GCP credentials (GOOGLE_APPLICATION_CREDENTIALS). No API key field needed.
+                                            </p>
+                                        )}
+                                        {config.type === 'clip' && config.mode === 'remote' && (
+                                            <p className="model-field__hint">
+                                                Remote CLIP uses a vision LLM to classify tags from your vocabulary. Use the same vision model you configured above, or a dedicated one (e.g. gpt-4o-mini for cost savings).
+                                            </p>
+                                        )}
+                                        {config.model_provider === 'deepl' && (
+                                            <p className="model-field__hint">
+                                                Enter your DeepL API key below. Model name is not used. Free tier: api-free.deepl.com (set in base URL).
+                                            </p>
+                                        )}
+                                        {config.model_provider === 'libretranslate' && (
+                                            <p className="model-field__hint">
+                                                Self-hosted LibreTranslate. Set the base URL to your server. Model name is not used.
+                                            </p>
+                                        )}
+                                    </div>
                                     <div className="model-field">
                                         <label className="model-field__label">
                                             {config.model_provider === 'ollama' ? 'Ollama server URL' : 'API base URL (optional)'}
