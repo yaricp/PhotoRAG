@@ -48,39 +48,6 @@ def _set_poll_value(value: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# _get_mode
-# ---------------------------------------------------------------------------
-
-class TestGetMode:
-    def test_returns_db_mode_when_present(self):
-        from src.model_services import _get_mode
-        from src.config import CLIP_Settings
-
-        with patch("src.model_services.read_model_config_from_db",
-                   return_value={"mode": "remote", "model_name": "some-model"}):
-            assert _get_mode("clip", CLIP_Settings()) == "remote"
-
-    def test_falls_back_to_settings_when_db_returns_none(self):
-        from src.model_services import _get_mode
-        from src.config import CLIP_Settings
-
-        with patch("src.model_services.read_model_config_from_db", return_value=None):
-            settings = CLIP_Settings()
-            settings.CLIP_MODE = "local"
-            assert _get_mode("clip", settings) == "local"
-
-    def test_falls_back_to_translation_mode_attr_as_last_resort(self):
-        """When neither DB nor a typed attribute exists, uses TRANSLATION_MODE."""
-        from src.model_services import _get_mode
-        from src.config import Translation_Settings
-
-        with patch("src.model_services.read_model_config_from_db", return_value=None):
-            settings = Translation_Settings()
-            result = _get_mode("translator", settings)
-            assert result in ("local", "remote")
-
-
-# ---------------------------------------------------------------------------
 # call_clip_model — local mode
 # ---------------------------------------------------------------------------
 

@@ -12,10 +12,8 @@ env-var settings if the DB is unavailable.
 import base64
 import json
 import asyncio
-import os
 from uuid import uuid4
 from loguru import logger
-from httpx import AsyncClient
 
 from src.queues.queue_config import read_model_config_from_db
 from src.task_notifier import get_notifier
@@ -38,14 +36,6 @@ _task_queue_settings = TaskQueue_Settings()
 # Internal helpers
 # ---------------------------------------------------------------------------
 
-def _get_mode(model_type: str, fallback_settings) -> str:
-    cfg = read_model_config_from_db(_DB_PATH, model_type)
-    if cfg and cfg.get("mode"):
-        return cfg["mode"]
-    return getattr(fallback_settings, f"{model_type.upper()}_MODE",
-                   getattr(fallback_settings, "TRANSLATION_MODE", "local"))
-
-
 async def _wait_result(task_id: str, label: str = "") -> str:
     """
     Wait for a Huey task result via the shared TaskResultNotifier.
@@ -64,22 +54,6 @@ async def _wait_result(task_id: str, label: str = "") -> str:
     )
     logger.debug(f"{tag}Task {task_id} result received")
     return raw
-
-
-async def _call_remote(model_url: str, payload: dict,
-                       files: dict = None, api_key: str = None) -> dict:
-    """POST to a remote model API and return the JSON response body."""
-    async with AsyncClient() as client:
-        try:
-            headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
-            response = await client.post(
-                model_url, json=payload, files=files, headers=headers, timeout=120.0
-            )
-            response.raise_for_status()
-            return response.json()
-        except Exception as exc:
-            logger.error(f"[model_services] Remote call to {model_url} failed: {exc}")
-            raise
 
 
 # ---------------------------------------------------------------------------
@@ -148,7 +122,9 @@ async def _call_remote_vision(cfg: dict, file_path: str, prompt_text: str) -> st
         {"type": "text", "text": prompt_text},
     ])
     loop = asyncio.get_running_loop()
+    logger.debug(f"[vision/remote] Sending image to remote model {model_name} at {api_url or 'default endpoint'}")
     response = await loop.run_in_executor(None, llm.invoke, [msg])
+    logger.debug(f"[vision/remote] Received response from remote model: {response}")
     return response.content
 
 
@@ -184,10 +160,17 @@ async def _call_remote_clip(cfg: dict, file_path: str, task: str) -> list:
     tagger = RemoteClipTagger(llm=llm, all_tags=all_tags, all_categories=all_categories)
 
     loop = asyncio.get_running_loop()
+    logger.debug(f"[clip/remote] Running remote CLIP tagger for task '{task}' on model '{model_name}' at {api_url or 'default endpoint'}")  
     if task == "tags":
-        return await loop.run_in_executor(None, tagger.get_tags, file_path)
+        result = await loop.run_in_executor(None, tagger.get_tags, file_path)
+        logger.debug(f"[clip/remote] result: {result}")
+        logger.debug(f"[clip/remote] task '{task}' completed successfully") 
+        return result
     elif task == "categorize":
-        return await loop.run_in_executor(None, tagger.get_categories, file_path)
+        result = await loop.run_in_executor(None, tagger.get_categories, file_path)
+        logger.debug(f"[clip/remote] result: {result}")
+        logger.debug(f"[clip/remote] task '{task}' completed successfully")
+        return result
     else:
         logger.warning(f"[clip/remote] Unknown task '{task}', returning []")
         return []
@@ -373,7 +356,9 @@ async def _call_remote_translation(cfg: dict, text: str, *, backward: bool = Fal
         translator = RemoteTranslator(llm=llm, src_lang=src_lang, tgt_lang=tgt_lang)
 
     loop = asyncio.get_running_loop()
+    logger.debug(f"[translation/remote] Translating text with provider '{provider or 'LLM'}' and model '{model_name or 'default'}'")
     result = await loop.run_in_executor(None, translator.translate, text, backward)
+    logger.debug(f"[translation/remote] Translation result: {result[:60]}{'...' if len(result) > 60 else ''}")  
     return result
 
 
