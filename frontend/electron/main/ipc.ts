@@ -1,5 +1,5 @@
-import { ipcMain, dialog, app, WebContents } from 'electron'
-import { existsSync, writeFileSync, readFileSync } from 'fs'
+import { ipcMain, dialog, shell, app, WebContents } from 'electron'
+import { existsSync, writeFileSync, readFileSync, rmSync } from 'fs'
 import { join } from 'path'
 import { spawn } from 'child_process'
 import { locatePython, locateBackend, startBackend, waitForBackend } from './backend'
@@ -118,6 +118,47 @@ export function registerIpcHandlers(port: number): void {
         // Start the backend now that venv and DB are ready.
         currentPort = await startBackend()
         await waitForBackend(currentPort)
+    })
+
+    // Full uninstall: remove all app data, move the .app to Trash, then quit.
+    ipcMain.handle('app:uninstall', async () => {
+        const { response } = await dialog.showMessageBox({
+            type: 'warning',
+            title: 'Uninstall PhotoDescriber2',
+            message: 'Remove PhotoDescriber2 completely?',
+            detail: [
+                'This will permanently delete:',
+                '  • The application',
+                '  • Your photo database and index',
+                '  • Downloaded AI models (~several GB)',
+                '  • Settings and setup data',
+                '',
+                'Your original photos are NOT affected.',
+                'This cannot be undone.',
+            ].join('\n'),
+            buttons: ['Cancel', 'Uninstall'],
+            defaultId: 0,
+            cancelId: 0,
+        })
+
+        if (response !== 1) return { cancelled: true }
+
+        // Remove userData (venv, DB, models, .env, setup_done, HF cache)
+        const userData = app.getPath('userData')
+        try {
+            rmSync(userData, { recursive: true, force: true })
+        } catch { /* ignore if already gone */ }
+
+        // Move the .app bundle to Trash (works while app is running on macOS)
+        if (app.isPackaged) {
+            const appBundle = process.execPath.split('.app/Contents')[0] + '.app'
+            try {
+                await shell.trashItem(appBundle)
+            } catch { /* ignore — user can drag to Trash manually */ }
+        }
+
+        app.quit()
+        return { success: true }
     })
 
     console.log('[IPC] done')

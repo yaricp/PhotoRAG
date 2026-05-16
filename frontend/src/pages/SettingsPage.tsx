@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { getSettings, updateSetting } from '@/api/client'
 import './SettingsPage.css'
 
+const isElectron = typeof window !== 'undefined' && !!window.electronAPI?.uninstall
+
 const LANGUAGES = [
     { value: 'en', label: 'English' },
     { value: 'ru', label: 'Русский' },
@@ -14,6 +16,7 @@ export function SettingsPage() {
     const [language, setLanguage] = useState('en')
     const [saving, setSaving] = useState(false)
     const [saved, setSaved] = useState(false)
+    const [uninstalling, setUninstalling] = useState(false)
 
     useEffect(() => {
         getSettings().then(s => {
@@ -40,6 +43,16 @@ export function SettingsPage() {
             setTimeout(() => setSaved(false), 2500)
         } finally {
             setSaving(false)
+        }
+    }
+
+    async function handleUninstall() {
+        if (!window.electronAPI?.uninstall) return
+        setUninstalling(true)
+        try {
+            await window.electronAPI.uninstall()
+        } finally {
+            setUninstalling(false)
         }
     }
 
@@ -108,6 +121,28 @@ export function SettingsPage() {
                     </button>
                 </div>
             </div>
+
+            {isElectron && (
+                <div className="settings-section settings-section--danger">
+                    <p className="settings-section__heading">Danger Zone</p>
+                    <div className="settings-danger-row">
+                        <div className="settings-danger-info">
+                            <span className="settings-danger-title">Uninstall PhotoDescriber2</span>
+                            <span className="settings-danger-desc">
+                                Removes the app, database, AI models, and all settings.
+                                Your original photos are not affected.
+                            </span>
+                        </div>
+                        <button
+                            className="settings-uninstall-btn"
+                            onClick={handleUninstall}
+                            disabled={uninstalling}
+                        >
+                            {uninstalling ? 'Uninstalling…' : 'Uninstall'}
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     downloadModel: (payload: { modelId: string }) => ipcRenderer.invoke('setup:download-model', payload),
     cancelDownload: () => ipcRenderer.invoke('setup:cancel-download'),
     completeSetup: (payload?: { skippedModels?: string[] }) => ipcRenderer.invoke('setup:complete', payload),
+    uninstall: () => ipcRenderer.invoke('app:uninstall'),
 
     // Setup wizard — event subscriptions (main→renderer)
     onInstallDepsProgress: (cb: (data: { line: string; percent: number }) => void) => {

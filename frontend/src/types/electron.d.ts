@@ -15,6 +15,7 @@ export interface ElectronAPI {
     downloadModel: (payload: { modelId: string }) => Promise<void>
     cancelDownload: () => Promise<void>
     completeSetup: (payload?: { skippedModels?: string[] }) => Promise<void>
+    uninstall: () => Promise<{ cancelled: true } | { success: true }>
 
     // Setup wizard — event subscriptions (main→renderer)
     onInstallDepsProgress: (cb: (data: { line: string; percent: number }) => void) => void
