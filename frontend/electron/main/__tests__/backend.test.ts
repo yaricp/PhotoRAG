@@ -90,21 +90,16 @@ describe('startBackend', () => {
         expect(cp.spawn).toHaveBeenCalledWith('python3', expect.any(Array), expect.any(Object))
     })
 
-    it('uses bundled python path when packaged', async () => {
+    it('uses venv python path when packaged', async () => {
         isPackaged = true
-        // Simulate process.resourcesPath which Electron sets in packaged mode
-        const originalResourcesPath = (process as NodeJS.Process & { resourcesPath?: string }).resourcesPath
-        ;(process as NodeJS.Process & { resourcesPath?: string }).resourcesPath = '/Applications/PhotoDescriber2.app/Contents/Resources'
-        try {
-            const { startBackend } = await import('../backend')
-            const cp = await import('child_process')
-            await startBackend()
-            const pythonArg = (cp.spawn as ReturnType<typeof vi.fn>).mock.calls[0][0] as string
-            expect(pythonArg).toContain('python3')
-            expect(pythonArg).toContain('Resources')
-        } finally {
-            ;(process as NodeJS.Process & { resourcesPath?: string }).resourcesPath = originalResourcesPath
-        }
+        const { startBackend } = await import('../backend')
+        const cp = await import('child_process')
+        await startBackend()
+        const pythonArg = (cp.spawn as ReturnType<typeof vi.fn>).mock.calls[0][0] as string
+        expect(pythonArg).toContain('python3')
+        // After setup, the venv Python is used (not the bundled Python in Resources)
+        expect(pythonArg).toContain('venv')
+        expect(pythonArg).toContain(userData)
     })
 
     it('passes APP_DATA_DIR env var pointing to userData', async () => {

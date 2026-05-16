@@ -13,6 +13,11 @@ export function locatePython(): string {
     return 'python3'
 }
 
+// Returns the venv Python created during setup (has all pip packages installed).
+export function locateVenvPython(): string {
+    return path.join(app.getPath('userData'), 'venv', 'bin', 'python3')
+}
+
 export function locateBackend(): string {
     if (app.isPackaged) {
         return path.join(process.resourcesPath, 'backend')
@@ -55,7 +60,8 @@ export async function waitForBackend(port: number, maxRetries = 60): Promise<voi
 export async function startBackend(): Promise<number> {
     const port = await findFreePort()
     const appDataDir = getAppDataDir()
-    const python = locatePython()
+    // Packaged: use venv Python (has all pip packages). Dev: use system python3.
+    const python = app.isPackaged ? locateVenvPython() : 'python3'
     const backendDir = locateBackend()
 
     backendProcess = spawn(python, ['run.py'], {

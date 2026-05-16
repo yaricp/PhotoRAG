@@ -1,34 +1,16 @@
 import { app, BrowserWindow } from 'electron'
+import { existsSync } from 'fs'
 import { join } from 'path'
 import { registerIpcHandlers } from './ipc'
 import { registerAppProtocol } from './protocol'
 import { startBackend, stopBackend, waitForBackend } from './backend'
 
-// Force the correct userData path in dev mode (Electron defaults to "Electron")
 app.setName('PhotoDescriber2')
 
 let mainWindow: BrowserWindow | null = null
-let splashWindow: BrowserWindow | null = null
 
-function createSplash(): BrowserWindow {
-    const splash = new BrowserWindow({
-        width: 400,
-        height: 220,
-        frame: false,
-        resizable: false,
-        center: true,
-        show: false,
-        webPreferences: { nodeIntegration: false, contextIsolation: true },
-    })
-    splash.loadFile(join(__dirname, '../../resources/splash.html'))
-    splash.once('ready-to-show', () => splash.show())
-    return splash
-}
-
-async function createMainWindow(port: number) {
-    registerIpcHandlers(port)
-
-    mainWindow = new BrowserWindow({
+function createMainWindow(): BrowserWindow {
+    const win = new BrowserWindow({
         width: 1280,
         height: 820,
         show: false,
@@ -40,31 +22,37 @@ async function createMainWindow(port: number) {
     })
 
     if (!app.isPackaged) {
-        await mainWindow.loadURL('http://127.0.0.1:5173')
-        mainWindow.webContents.openDevTools()
+        win.loadURL('http://127.0.0.1:5173')
+        win.webContents.openDevTools()
     } else {
-        await mainWindow.loadFile(join(__dirname, '../../dist/index.html'))
+        win.loadFile(join(__dirname, '../../dist/index.html'))
     }
 
-    mainWindow.once('ready-to-show', () => {
-        splashWindow?.close()
-        splashWindow = null
-        mainWindow?.show()
-    })
+    win.once('ready-to-show', () => win.show())
+    return win
 }
 
 app.whenReady().then(async () => {
     registerAppProtocol()
 
-    splashWindow = createSplash()
+    const setupDone = existsSync(join(app.getPath('userData'), 'setup_done'))
 
+    if (!setupDone) {
+        // First run: show window immediately so the setup wizard can run.
+        // Backend will be started by setup:complete once the wizard finishes.
+        registerIpcHandlers(0)
+        mainWindow = createMainWindow()
+        return
+    }
+
+    // Setup already done: start backend, then open window.
     try {
         const port = await startBackend()
         await waitForBackend(port)
-        await createMainWindow(port)
+        registerIpcHandlers(port)
+        mainWindow = createMainWindow()
     } catch (err) {
         console.error('[startup] Failed to start backend:', err)
-        splashWindow?.close()
         app.quit()
     }
 })

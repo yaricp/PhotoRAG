@@ -1,11 +1,15 @@
 import { ipcMain, dialog, app, WebContents } from 'electron'
-import { existsSync, writeFileSync } from 'fs'
+import { existsSync, writeFileSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { spawn } from 'child_process'
-import { locatePython, locateBackend } from './backend'
+import { locatePython, locateBackend, startBackend, waitForBackend } from './backend'
 
-export function registerIpcHandlers(backendPort: number): void {
-    console.log('[IPC] registering handlers, port =', backendPort)
+// Mutable so setup:complete can update it after starting the backend.
+let currentPort = 0
+
+export function registerIpcHandlers(port: number): void {
+    currentPort = port
+    console.log('[IPC] registering handlers, port =', port)
 
     ipcMain.handle('select-folder', async () => {
         const result = await dialog.showOpenDialog({
@@ -15,12 +19,12 @@ export function registerIpcHandlers(backendPort: number): void {
         return result.canceled ? null : result.filePaths[0]
     })
 
-    ipcMain.handle('get-backend-port', () => backendPort)
+    ipcMain.handle('get-backend-port', () => currentPort)
 
-    // Check whether first-run setup wizard is needed (venv not yet created).
+    // Check whether first-run setup wizard is needed.
     ipcMain.handle('setup:check-needed', () => {
-        const venvPath = join(app.getPath('userData'), 'venv')
-        return { needed: !existsSync(venvPath) }
+        const done = existsSync(join(app.getPath('userData'), 'setup_done'))
+        return { needed: !done }
     })
 
     // Install Python deps into userData/venv and stream progress back.
@@ -89,8 +93,9 @@ export function registerIpcHandlers(backendPort: number): void {
         }
     })
 
-    // Write marker file and env stubs, then the renderer will reload as main app.
-    ipcMain.handle('setup:complete', (_, payload?: { skippedModels?: string[] }) => {
+    // Write marker + env stubs, start the backend, then return so the renderer
+    // can switch to app mode knowing the backend is ready.
+    ipcMain.handle('setup:complete', async (_, payload?: { skippedModels?: string[] }) => {
         const userData = app.getPath('userData')
         writeFileSync(join(userData, 'setup_done'), new Date().toISOString())
 
@@ -103,12 +108,16 @@ export function registerIpcHandlers(backendPort: number): void {
 
         if (envLines.length > 0) {
             const envPath = join(userData, '.env')
-            const existing = existsSync(envPath) ? require('fs').readFileSync(envPath, 'utf8') : ''
+            const existing = existsSync(envPath) ? readFileSync(envPath, 'utf8') : ''
             const toAppend = envLines.filter(l => !existing.includes(l.split('=')[0]))
             if (toAppend.length > 0) {
                 writeFileSync(envPath, existing + '\n' + toAppend.join('\n') + '\n')
             }
         }
+
+        // Start the backend now that venv and DB are ready.
+        currentPort = await startBackend()
+        await waitForBackend(currentPort)
     })
 
     console.log('[IPC] done')
