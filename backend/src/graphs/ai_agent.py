@@ -113,6 +113,8 @@ def call_model(state: AgentState):
     if not any(isinstance(m, SystemMessage) for m in messages):
         system_msg = SystemMessage(content=get_prompt("chat_agent.system_message"))
         messages = [system_msg] + messages
+        
+    logger.info(f"[ai_agent] current messages: {messages}")
 
     from src.ai.registry import registry as _registry  # local import avoids LangGraph closure introspection
     llm_with_tools = _registry.chat_model.bind_tools(tools)
