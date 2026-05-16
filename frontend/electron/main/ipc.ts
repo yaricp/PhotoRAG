@@ -95,6 +95,8 @@ export function registerIpcHandlers(port: number): void {
                     const percent = parseFloat(m[1])
                     const bytes = parseInt(m[2], 10)
                     event.sender.send('setup:download-model-progress', { modelId, percent, bytes })
+                } else if (line.trim()) {
+                    console.log(`[download:${modelId}]`, line)
                 }
             }
         )
@@ -231,7 +233,7 @@ function buildDownloadScript(modelId: string, userData: string): string {
     // disable=True silences tqdm's own stderr output; update() still
     // increments self.n (tqdm behaviour when disabled).
     return `
-import sys, os
+import sys, os, traceback
 sys.path.insert(0, '.')
 
 # Patch tqdm before any ML import so HF download progress is captured.
@@ -254,33 +256,37 @@ _tm.tqdm = _ta.tqdm = _Reporter
 
 print('PROGRESS:1:0', flush=True)
 
-from src.install import (
-    install_clip, install_embedding, install_vision,
-    install_translator, install_ocr, install_chat,
-)
-from src.db.database import SessionLocal
-
-INSTALL_MAP = {
-    'clip':        install_clip,
-    'embedding':   install_embedding,
-    'vision':      install_vision,
-    'translation': install_translator,
-    'ocr':         install_ocr,
-    'chat':        install_chat,
-}
-
-model_id = ${JSON.stringify(modelId)}
-fn = INSTALL_MAP.get(model_id)
-if fn is None:
-    print(f'Unknown model id: {model_id}', file=sys.stderr)
-    sys.exit(1)
-
-db = SessionLocal()
 try:
-    fn(db)
-finally:
-    db.close()
+    from src.install import (
+        install_clip, install_embedding, install_vision,
+        install_translator, install_ocr, install_chat,
+    )
+    from src.db.database import SessionLocal
 
-print('PROGRESS:100:0', flush=True)
+    INSTALL_MAP = {
+        'clip':        install_clip,
+        'embedding':   install_embedding,
+        'vision':      install_vision,
+        'translation': install_translator,
+        'ocr':         install_ocr,
+        'chat':        install_chat,
+    }
+
+    model_id = ${JSON.stringify(modelId)}
+    fn = INSTALL_MAP.get(model_id)
+    if fn is None:
+        print(f'ERROR: Unknown model id: {model_id}', flush=True)
+        sys.exit(1)
+
+    db = SessionLocal()
+    try:
+        fn(db)
+    finally:
+        db.close()
+
+    print('PROGRESS:100:0', flush=True)
+except Exception:
+    print('ERROR: ' + traceback.format_exc(), flush=True)
+    sys.exit(1)
 `
 }
