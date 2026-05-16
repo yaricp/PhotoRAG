@@ -94,6 +94,7 @@ export function registerIpcHandlers(port: number): void {
                 if (m) {
                     const percent = parseFloat(m[1])
                     const bytes = parseInt(m[2], 10)
+                    console.log(`[progress:${modelId}] ${percent.toFixed(1)}% ${bytes}B`)
                     event.sender.send('setup:download-model-progress', { modelId, percent, bytes })
                 } else if (line.trim()) {
                     console.log(`[download:${modelId}]`, line)
@@ -288,7 +289,6 @@ try:
     finally:
         db.close()
 
-    print('PROGRESS:100:0', flush=True)
 except Exception:
     print('ERROR: ' + traceback.format_exc(), flush=True)
     sys.exit(1)
