@@ -3,6 +3,8 @@ import { Sidebar } from './components/ui/Sidebar'
 import { Header } from './components/ui/Header'
 import { AppRoutes } from './pages/AppRoutes'
 import { SetupWizard } from './pages/SetupWizard'
+import { TesseractBanner, TesseractStatus } from './components/ui/TesseractBanner'
+import { getBaseUrl } from './api/base'
 import './styles/global.css'
 
 type SidebarState = 'full' | 'compact' | 'hidden'
@@ -14,6 +16,7 @@ const hasSetupCheck = typeof window !== 'undefined' && !!window.electronAPI?.che
 export default function App() {
     const [sidebarState, setSidebarState] = useState<SidebarState>('full')
     const [mode, setMode] = useState<AppMode>(hasSetupCheck ? 'loading' : 'app')
+    const [tesseractStatus, setTesseractStatus] = useState<TesseractStatus | null>(null)
 
     useEffect(() => {
         if (!hasSetupCheck) return
@@ -21,6 +24,17 @@ export default function App() {
             setMode(needed ? 'wizard' : 'app')
         })
     }, [])
+
+    // Fetch tesseract status once the main app is ready.
+    useEffect(() => {
+        if (mode !== 'app') return
+        getBaseUrl().then(base =>
+            fetch(`${base}/api/system/tesseract/`)
+                .then(r => r.json())
+                .then(setTesseractStatus)
+                .catch(() => { /* backend not reachable — suppress */ })
+        )
+    }, [mode])
 
     const cycleSidebar = () => {
         setSidebarState(prev => {
@@ -40,6 +54,7 @@ export default function App() {
 
     return (
         <div className="app-layout">
+            <TesseractBanner status={tesseractStatus} />
             <Header
                 sidebarState={sidebarState}
                 onToggleSidebar={cycleSidebar}

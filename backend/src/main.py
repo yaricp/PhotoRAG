@@ -2,6 +2,8 @@ from fastapi import FastAPI, Depends, HTTPException, Query, BackgroundTasks
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
+import os
+import shutil
 from typing import List, Dict, Any, Optional
 from loguru import logger
 from contextlib import asynccontextmanager
@@ -199,6 +201,16 @@ def get_system_status_endpoint(db: Session = Depends(get_db)):
         "ready": all(s.status == "ready" for s in states),
         "chat_ready": chat_ready,
         "models": [{"name": s.name, "status": s.status} for s in states]
+    }
+
+
+@app.get("/api/system/tesseract/", tags=["System"])
+def get_tesseract_status():
+    path = shutil.which("tesseract")
+    return {
+        "available": path is not None,
+        "path": path,
+        "ocr_mode": os.environ.get("OCR_MODE", "local"),
     }
 
 
