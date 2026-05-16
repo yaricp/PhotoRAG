@@ -37,12 +37,17 @@ export const useChatStore = create<ChatStore>()(
         }),
         {
             name: 'chat-session',
-            // Only persist these fields — selectedPhotoIds is UI-transient
             partialize: (s) => ({
                 messages: s.messages,
                 threadId: s.threadId,
                 contextPhotos: s.contextPhotos,
             }),
+            // Migrate stale persisted state that may have threadId: null
+            onRehydrateStorage: () => (state) => {
+                if (state && !state.threadId) {
+                    state.threadId = crypto.randomUUID()
+                }
+            },
         }
     )
 )

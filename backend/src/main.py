@@ -450,9 +450,11 @@ def get_geopositions_endpoint(db: Session = Depends(get_db)) -> List[GeoPosition
 @app.post("/api/chat/", tags=["Agent"], response_model=ChatResponse)
 async def chat_with_agent_endpoint(request: ChatRequest) -> ChatResponse:
     """Chat with the AI photo assistant"""
-    logger.info(f"Received chat message: {request.message} (thread_id: {request.thread_id})")
-    
-    config = {"configurable": {"thread_id": request.thread_id}}
+    from uuid import uuid4
+    thread_id = request.thread_id or str(uuid4())
+    logger.info(f"Received chat message: {request.message} (thread_id: {thread_id})")
+
+    config = {"configurable": {"thread_id": thread_id}}
     inputs = {"messages": [HumanMessage(content=request.message)]}
     
     # Run the agent graph
@@ -469,7 +471,7 @@ async def chat_with_agent_endpoint(request: ChatRequest) -> ChatResponse:
 
     return ChatResponse(
         response=content,
-        thread_id=request.thread_id,
+        thread_id=thread_id,
         photos=result["photos"]
     )
 

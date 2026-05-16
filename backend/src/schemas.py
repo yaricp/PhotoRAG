@@ -120,7 +120,7 @@ class TranslateRequest(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str
-    thread_id: str = "default"
+    thread_id: Optional[str] = None
 
 
 class ChatResponse(BaseModel):
