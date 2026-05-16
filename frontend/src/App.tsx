@@ -4,6 +4,7 @@ import { Header } from './components/ui/Header'
 import { AppRoutes } from './pages/AppRoutes'
 import { SetupWizard } from './pages/SetupWizard'
 import { TesseractBanner, TesseractStatus } from './components/ui/TesseractBanner'
+import { PipelineWarningBanner } from './components/ui/PipelineWarningBanner'
 import { getBaseUrl } from './api/base'
 import './styles/global.css'
 
@@ -55,6 +56,7 @@ export default function App() {
     return (
         <div className="app-layout">
             <TesseractBanner status={tesseractStatus} />
+            <PipelineWarningBanner />
             <Header
                 sidebarState={sidebarState}
                 onToggleSidebar={cycleSidebar}
