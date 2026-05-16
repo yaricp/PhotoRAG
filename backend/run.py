@@ -2,8 +2,10 @@
 import sys
 import signal
 import subprocess
+from pathlib import Path
 from loguru import logger
 
+from src.data_dir import resolve_app_data_dir, migrate_legacy_data
 from src.config import (
     Api_Settings, Vision_Settings, CLIP_Settings,
     Embedding_Settings, Translation_Settings, OCR_Settings
@@ -103,6 +105,11 @@ def start_api():
 
 
 if __name__ == "__main__":
+    _project_root = Path(__file__).parent.parent
+    _app_data_dir = resolve_app_data_dir()
+    migrate_legacy_data(_project_root, _app_data_dir)
+    logger.info(f"[startup] APP_DATA_DIR = {_app_data_dir}")
+
     worker_procs = start_workers()
 
     # Ensure workers are cleaned up on SIGTERM (e.g. from Docker / systemd)

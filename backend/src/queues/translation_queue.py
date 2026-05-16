@@ -24,7 +24,7 @@ _DEFAULT_MODEL_NAME = "facebook/nllb-200-distilled-600M"
 
 translation_queue = SqliteHuey(
     "translation",
-    filename=os.path.join(os.getcwd(), "../translation.sqlite3")
+    filename=os.path.join(os.environ.get("QUEUE_DB_DIR", os.path.join(os.getcwd(), "..")), "translation.sqlite3")
 )
 
 _model = None

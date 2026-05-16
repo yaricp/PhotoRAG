@@ -23,7 +23,7 @@ _DEFAULT_MODEL_NAME = "easyocr"
 
 ocr_queue = SqliteHuey(
     "ocr",
-    filename=os.path.join(os.getcwd(), "../ocr.sqlite3")
+    filename=os.path.join(os.environ.get("QUEUE_DB_DIR", os.path.join(os.getcwd(), "..")), "ocr.sqlite3")
 )
 
 _reader = None

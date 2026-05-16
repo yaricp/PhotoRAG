@@ -24,7 +24,7 @@ _DEFAULT_MODEL_NAME = "ViT-B-32"
 
 clip_queue = SqliteHuey(
     "clip",
-    filename=os.path.join(os.getcwd(), "../clip.sqlite3")
+    filename=os.path.join(os.environ.get("QUEUE_DB_DIR", os.path.join(os.getcwd(), "..")), "clip.sqlite3")
 )
 
 _model = None

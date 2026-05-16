@@ -19,10 +19,7 @@ from src.utils import generate_file_hash, check_if_file_is_image
 
 folder_scan_queue = SqliteHuey(
     "folder_scan",
-    filename=os.path.join(
-        os.getcwd(),
-        "../folder_scan.sqlite3"
-    )
+    filename=os.path.join(os.environ.get("QUEUE_DB_DIR", os.path.join(os.getcwd(), "..")), "folder_scan.sqlite3")
 )
 
 

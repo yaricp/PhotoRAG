@@ -24,7 +24,7 @@ _DEFAULT_MODEL_NAME = "nomic-ai/nomic-embed-text-v1.5"
 
 embedding_queue = SqliteHuey(
     "embedding",
-    filename=os.path.join(os.getcwd(), "../embedding.sqlite3")
+    filename=os.path.join(os.environ.get("QUEUE_DB_DIR", os.path.join(os.getcwd(), "..")), "embedding.sqlite3")
 )
 
 _model = None

@@ -1,11 +1,18 @@
 # src/config.py
 
 import os
+from pathlib import Path
 from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
 
+from src.data_dir import resolve_app_data_dir
 
-load_dotenv()
+_APP_DATA_DIR = resolve_app_data_dir()
+(_APP_DATA_DIR / "data").mkdir(exist_ok=True)
+
+# Load .env from APP_DATA_DIR first, then fall back to project-root .env
+load_dotenv(_APP_DATA_DIR / ".env", override=False)
+load_dotenv(override=False)
 
 
 class Main_Settings(BaseSettings):
@@ -19,7 +26,7 @@ class TaskQueue_Settings(BaseSettings):
     # Vision on CPU can take 30s/photo; with 8 concurrent photos worst-case is 240s.
     TASK_RESULT_TIMEOUT: float = 600.0
     TASK_RESULT_POLL_INTERVAL: float = 0.5     # seconds between polls
-    TASK_RESULT_DB_PATH: str = "../task_results.db"
+    TASK_RESULT_DB_PATH: str = str(_APP_DATA_DIR / "task_results.db")
     MAX_CONCURRENT_PIPELINES: int = 20          # max photos processed simultaneously
     # Log a "still waiting" heartbeat this often while polling (seconds)
     TASK_RESULT_LOG_INTERVAL: float = 30.0
@@ -27,8 +34,8 @@ class TaskQueue_Settings(BaseSettings):
 
 class Database_Settings(BaseSettings):
     DATABASE_DIALECT: str = "sqlite"
-    DATABASE_NAME: str = "../db.sqlite3"
-    TASK_RESULTS_DATABASE_NAME: str = "../task_results.db"
+    DATABASE_NAME: str = str(_APP_DATA_DIR / "db.sqlite3")
+    TASK_RESULTS_DATABASE_NAME: str = str(_APP_DATA_DIR / "task_results.db")
 
     @property
     def DATABASE_PATH(self) -> str:
@@ -45,26 +52,30 @@ class Api_Settings(BaseSettings):
     API_TOKEN: str = "secret"
 
 
+def _data(name: str) -> str:
+    """Return absolute path to a mutable data file inside APP_DATA_DIR/data/."""
+    return str(_APP_DATA_DIR / "data" / name)
+
+
 class CLIP_Settings(BaseSettings):
     CLIP_MODEL: str = "ViT-B-32"
     CLIP_MODE: str = "local"        # local | remote
     CLIP_API_URL: str = ""
     CLIP_API_KEY: str = ""
     PRETRAINED: str = "laion2b_s34b_b79k"
+    # Read-only vocab files: keep relative so dev and bundled app can both find them
     CSV_PATH: str = "data/class-descriptions-boxable.csv"
-    NPY_PATH: str = "data/tags_features.npy"
     TAGS_LIST_PATH: str = "data/tags_list.txt"
     TAGS_CLIP_THRESHOLD: float = 0.26
     VOCAB_URL: str = "https://storage.googleapis.com/openimages/v7/oidv7-class-descriptions-boxable.csv"
-    
-    TAGS_MODEL_HASH_PATH: str = "data/tags_model.hash"
-
-    TAGS_NAMES_PATH: str = "data/tags_names.json"
-
-    CATEGORIES_NPY_PATH: str = "data/categories_features.npy"
-    CATEGORIES_HASH_PATH: str = "data/categories_hash.txt"
-    CATEGORIES_MODEL_HASH_PATH: str = "data/categories_model.hash"
-    CATEGORIES_NAMES_PATH: str = "data/categories_names.json"
+    # Mutable caches — live in APP_DATA_DIR/data/
+    NPY_PATH: str = _data("tags_features.npy")
+    TAGS_MODEL_HASH_PATH: str = _data("tags_model.hash")
+    TAGS_NAMES_PATH: str = _data("tags_names.json")
+    CATEGORIES_NPY_PATH: str = _data("categories_features.npy")
+    CATEGORIES_HASH_PATH: str = _data("categories_hash.txt")
+    CATEGORIES_MODEL_HASH_PATH: str = _data("categories_model.hash")
+    CATEGORIES_NAMES_PATH: str = _data("categories_names.json")
     CATEGORIES_CLIP_THRESHOLD: float = 0.2
 
     @property

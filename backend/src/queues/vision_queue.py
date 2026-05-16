@@ -23,7 +23,7 @@ _DEFAULT_MODEL_NAME = "Qwen/Qwen2-VL-2B-Instruct"
 
 vision_queue = SqliteHuey(
     "vision",
-    filename=os.path.join(os.getcwd(), "../vision.sqlite3")
+    filename=os.path.join(os.environ.get("QUEUE_DB_DIR", os.path.join(os.getcwd(), "..")), "vision.sqlite3")
 )
 
 _model = None
