@@ -168,11 +168,40 @@ function spawnTracked(
 }
 
 function buildDownloadScript(modelId: string, userData: string): string {
+    // Maps wizard model IDs to install functions in src/install.py.
+    // Prints PROGRESS markers so the renderer progress bar moves.
     return `
 import sys, os
 sys.path.insert(0, '.')
 os.environ.setdefault('APP_DATA_DIR', ${JSON.stringify(userData)})
-from src.download import download_model
-download_model(${JSON.stringify(modelId)})
+os.environ.setdefault('HUGGINGFACE_HUB_CACHE', os.path.join(${JSON.stringify(userData)}, '.hf_cache'))
+
+print('PROGRESS:5:0', flush=True)
+
+from src.install import install_clip, install_embedding, install_vision, install_translator, install_ocr, install_chat
+from src.db.database import SessionLocal
+
+INSTALL_MAP = {
+    'clip':        install_clip,
+    'embedding':   install_embedding,
+    'vision':      install_vision,
+    'translation': install_translator,
+    'ocr':         install_ocr,
+    'chat':        install_chat,
+}
+
+model_id = ${JSON.stringify(modelId)}
+fn = INSTALL_MAP.get(model_id)
+if fn is None:
+    print(f'Unknown model id: {model_id}', file=sys.stderr)
+    sys.exit(1)
+
+db = SessionLocal()
+try:
+    fn(db)
+finally:
+    db.close()
+
+print('PROGRESS:100:0', flush=True)
 `
 }
