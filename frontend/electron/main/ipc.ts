@@ -241,13 +241,17 @@ from tqdm import tqdm as _Orig
 
 class _Reporter(_Orig):
     def __init__(self, *args, **kwargs):
-        # Route tqdm's own output to devnull so self.n still increments.
-        # disable=True would make super().update(n) a no-op (self.n stays 0).
+        # Force enabled and redirect tqdm output to devnull.
+        # Subclasses like hf_tqdm auto-set disable=True via isatty() when
+        # running in a subprocess (no TTY). Disabled tqdm returns early from
+        # __init__ without setting self.unit or incrementing self.n, which
+        # breaks our update(). Forcing disable=False + devnull fixes both.
         kwargs['file'] = open(os.devnull, 'w')
+        kwargs['disable'] = False
         super().__init__(*args, **kwargs)
     def update(self, n=1):
-        super().update(n)  # increments self.n; output goes to devnull
-        if self.unit == 'B' and self.total and n:
+        super().update(n)  # increments self.n; writes to devnull
+        if getattr(self, 'unit', None) == 'B' and getattr(self, 'total', None) and n:
             pct = min(99.0, self.n / self.total * 100)
             print(f'PROGRESS:{pct:.1f}:{int(self.n)}', flush=True)
 
