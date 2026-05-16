@@ -454,13 +454,27 @@ async def chat_with_agent_endpoint(request: ChatRequest) -> ChatResponse:
     thread_id = request.thread_id or str(uuid4())
     logger.info(f"Received chat message: {request.message} (thread_id: {thread_id})")
 
-    config = {"configurable": {"thread_id": thread_id}}
     inputs = {"messages": [HumanMessage(content=request.message)]}
-    
-    # Run the agent graph
-    result = await agent_app.ainvoke(inputs, config)
-    # logger.info(f"Agent result: {result}")
-    # Get the last AI message
+
+    async def _invoke(tid: str):
+        config = {"configurable": {"thread_id": tid}}
+        return await agent_app.ainvoke(inputs, config), tid
+
+    try:
+        result, thread_id = await _invoke(thread_id)
+    except Exception as exc:
+        # Corrupted checkpoint: assistant tool_calls with no following tool messages.
+        # Heal automatically by starting a fresh thread.
+        if "tool_call" in str(exc).lower() and "tool messages" in str(exc).lower():
+            fresh_id = str(uuid4())
+            logger.warning(
+                f"[chat] Corrupted checkpoint for thread {thread_id!r}, "
+                f"retrying with fresh thread {fresh_id!r}: {exc}"
+            )
+            result, thread_id = await _invoke(fresh_id)
+        else:
+            raise
+
     last_msg = result["messages"][-1]
     content = last_msg.content
     if isinstance(content, list):
