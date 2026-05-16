@@ -11,9 +11,12 @@ interface Props {
 }
 
 const BREW_CMD = 'brew install tesseract'
+const STORAGE_KEY = 'tesseract_banner_dismissed'
 
 export function TesseractBanner({ status }: Props) {
-    const [dismissed, setDismissed] = useState(false)
+    const [dismissed, setDismissed] = useState(
+        () => localStorage.getItem(STORAGE_KEY) === '1'
+    )
     const [copied, setCopied] = useState(false)
 
     if (!status || status.available || status.ocr_mode === 'remote' || dismissed) {
@@ -25,6 +28,11 @@ export function TesseractBanner({ status }: Props) {
             setCopied(true)
             setTimeout(() => setCopied(false), 2000)
         })
+    }
+
+    const handleDismiss = () => {
+        localStorage.setItem(STORAGE_KEY, '1')
+        setDismissed(true)
     }
 
     return (
@@ -44,7 +52,7 @@ export function TesseractBanner({ status }: Props) {
             </button>
             <button
                 className="tesseract-banner__btn tesseract-banner__btn--dismiss"
-                onClick={() => setDismissed(true)}
+                onClick={handleDismiss}
                 aria-label="Dismiss"
             >
                 ✕
