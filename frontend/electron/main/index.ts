@@ -25,7 +25,7 @@ function createMainWindow(): BrowserWindow {
         win.loadURL('http://127.0.0.1:5173')
         win.webContents.openDevTools()
     } else {
-        win.loadFile(join(__dirname, '../../dist/index.html'))
+        win.loadFile(join(__dirname, '../renderer/index.html'))
     }
 
     win.once('ready-to-show', () => win.show())
