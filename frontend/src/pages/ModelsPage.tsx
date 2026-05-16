@@ -25,11 +25,11 @@ const MODEL_SUGGESTIONS: Record<string, Record<string, string[]>> = {
         translator: ['claude-3-5-haiku-20241022', 'claude-sonnet-4-5'],
     },
     google_genai: {
-        chat:       ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-pro', 'gemini-1.5-flash'],
-        vision:     ['gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-1.5-flash'],
-        ocr:        ['gemini-2.0-flash', 'gemini-1.5-flash'],
-        clip:       ['gemini-2.0-flash', 'gemini-1.5-flash'],
-        translator: ['gemini-2.0-flash', 'gemini-1.5-flash'],
+        chat:       ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash-latest', 'gemini-1.5-pro-latest'],
+        vision:     ['gemini-2.0-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-pro-latest'],
+        ocr:        ['gemini-2.0-flash', 'gemini-1.5-flash-latest'],
+        clip:       ['gemini-2.0-flash', 'gemini-1.5-flash-latest'],
+        translator: ['gemini-2.0-flash', 'gemini-1.5-flash-latest'],
     },
     google_vertexai: {
         chat:       ['gemini-2.0-flash-001', 'gemini-1.5-pro-001', 'gemini-1.5-flash-001'],

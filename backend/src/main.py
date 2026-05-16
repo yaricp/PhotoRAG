@@ -476,12 +476,21 @@ async def chat_with_agent_endpoint(request: ChatRequest) -> ChatResponse:
         elif "insufficient_quota" in exc_str or "rate_limit" in exc_str or "429" in exc_str:
             raise HTTPException(
                 status_code=429,
-                detail="OpenAI API quota exceeded. Please check your billing at platform.openai.com.",
+                detail="AI API quota exceeded. Please check your billing / rate limits.",
+            )
+        elif "not_found" in exc_str or "404" in exc_str or "is not found" in exc_str:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"Model not found: {exc}. "
+                    "Check the model name on the Models page — "
+                    "for Google Gemini use e.g. 'gemini-2.0-flash' or 'gemini-1.5-flash-latest'."
+                ),
             )
         elif "401" in exc_str or "authentication" in exc_str or "invalid api key" in exc_str:
             raise HTTPException(
                 status_code=502,
-                detail="OpenAI API key is invalid or missing. Please check your settings.",
+                detail="API key is invalid or missing. Please check your settings on the Models page.",
             )
         else:
             raise
