@@ -26,7 +26,8 @@
             "target": [{ "target": "dmg", "arch": ["universal"] }],
             "icon": "resources/icon.icns",
             "hardenedRuntime": false,
-            "gatekeeperAssess": false
+            "gatekeeperAssess": false,
+            "singleArchFiles": "**/python/**"
         },
         "dmg": {
             "background": "resources/dmg-background.png",
