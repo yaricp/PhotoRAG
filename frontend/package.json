@@ -8,9 +8,9 @@
         "build": "electron-vite build",
         "preview": "electron-vite preview",
         "dist": "npm run build && electron-builder",
-        "test": "vitest",
-        "test:ui": "vitest --ui",
-        "test:coverage": "vitest run --coverage",
+        "test": "node --require ./scripts/crypto-polyfill.cjs ./node_modules/.bin/vitest",
+        "test:ui": "node --require ./scripts/crypto-polyfill.cjs ./node_modules/.bin/vitest --ui",
+        "test:coverage": "node --require ./scripts/crypto-polyfill.cjs ./node_modules/.bin/vitest run --coverage",
         "test:e2e": "playwright test"
     },
     "dependencies": {

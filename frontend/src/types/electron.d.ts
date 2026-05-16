@@ -7,6 +7,9 @@ export interface ElectronAPI {
     getBackendPort: () => Promise<number>
     onBackendReady: (cb: (port: number) => void) => void
     platform: Platform
+
+    // Setup wizard
+    checkSetupNeeded: () => Promise<{ needed: boolean }>
 }
 
 declare global {
