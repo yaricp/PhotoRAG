@@ -27,7 +27,7 @@
             "icon": "resources/icon.icns",
             "hardenedRuntime": false,
             "gatekeeperAssess": false,
-            "singleArchFiles": "**/python/**"
+            "x64ArchFiles": "**/python/**"
         },
         "dmg": {
             "background": "resources/dmg-background.png",
