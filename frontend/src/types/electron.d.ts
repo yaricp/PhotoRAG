@@ -8,8 +8,17 @@ export interface ElectronAPI {
     onBackendReady: (cb: (port: number) => void) => void
     platform: Platform
 
-    // Setup wizard
+    // Setup wizard — invoke channels
     checkSetupNeeded: () => Promise<{ needed: boolean }>
+    installDeps: () => Promise<void>
+    initDb: () => Promise<void>
+    downloadModel: (payload: { modelId: string }) => Promise<void>
+    cancelDownload: () => Promise<void>
+    completeSetup: (payload?: { skippedModels?: string[] }) => Promise<void>
+
+    // Setup wizard — event subscriptions (main→renderer)
+    onInstallDepsProgress: (cb: (data: { line: string; percent: number }) => void) => void
+    onDownloadModelProgress: (cb: (data: { modelId: string; percent: number; bytes: number }) => void) => void
 }
 
 declare global {

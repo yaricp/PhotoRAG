@@ -6,14 +6,14 @@ import net from 'net'
 let backendProcess: ChildProcess | null = null
 let _port: number | null = null
 
-function locatePython(): string {
+export function locatePython(): string {
     if (app.isPackaged) {
         return path.join(process.resourcesPath, 'python', 'bin', 'python3')
     }
     return 'python3'
 }
 
-function locateBackend(): string {
+export function locateBackend(): string {
     if (app.isPackaged) {
         return path.join(process.resourcesPath, 'backend')
     }
