@@ -8,10 +8,47 @@
         "build": "electron-vite build",
         "preview": "electron-vite preview",
         "dist": "npm run build && electron-builder",
+        "predist:mac": "bash ../scripts/download-python.sh",
+        "dist:mac": "npm run build && electron-builder --mac --universal",
         "test": "node --require ./scripts/crypto-polyfill.cjs ./node_modules/.bin/vitest",
         "test:ui": "node --require ./scripts/crypto-polyfill.cjs ./node_modules/.bin/vitest --ui",
         "test:coverage": "node --require ./scripts/crypto-polyfill.cjs ./node_modules/.bin/vitest run --coverage",
         "test:e2e": "playwright test"
+    },
+    "build": {
+        "appId": "com.photodescriber.app",
+        "productName": "PhotoDescriber2",
+        "directories": {
+            "output": "dist-electron"
+        },
+        "mac": {
+            "category": "public.app-category.photography",
+            "target": [{ "target": "dmg", "arch": ["universal"] }],
+            "icon": "resources/icon.icns",
+            "hardenedRuntime": false,
+            "gatekeeperAssess": false
+        },
+        "dmg": {
+            "background": "resources/dmg-background.png",
+            "window": { "width": 540, "height": 380 },
+            "contents": [
+                { "x": 130, "y": 220, "type": "file" },
+                { "x": 410, "y": 220, "type": "link", "path": "/Applications" }
+            ]
+        },
+        "extraResources": [
+            { "from": "resources/python", "to": "python" },
+            {
+                "from": "../backend",
+                "to": "backend",
+                "filter": ["**/*", "!.venv/**", "!__pycache__/**", "!*.pyc", "!.env", "!tests/**", "!data/**"]
+            }
+        ],
+        "afterSign": "../scripts/notarize.js",
+        "files": [
+            "out/**/*",
+            "package.json"
+        ]
     },
     "dependencies": {
         "@heroicons/react": "^2.2.0",

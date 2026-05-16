@@ -24,3 +24,7 @@ test_output.txt
 **/Pictures
 data/
 .github/skills/
+
+# macOS installer build artifacts
+frontend/resources/python/
+frontend/dist-electron/
