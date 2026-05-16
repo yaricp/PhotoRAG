@@ -29,3 +29,4 @@ data/
 frontend/resources/python/
 frontend/dist-electron/
 frontend/resources/MyIcon.iconset/
+frontend/out/
