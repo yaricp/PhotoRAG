@@ -80,7 +80,15 @@ export function registerIpcHandlers(port: number): void {
         activeDownload = spawnTracked(
             python,
             ['-c', buildDownloadScript(modelId, userData)],
-            { cwd: backend },
+            {
+                cwd: backend,
+                env: {
+                    ...process.env,
+                    APP_DATA_DIR: userData,
+                    QUEUE_DB_DIR: userData,
+                    HUGGINGFACE_HUB_CACHE: join(userData, '.hf_cache'),
+                },
+            },
             (line) => {
                 const m = line.match(/PROGRESS:(\d+(?:\.\d+)?):(\d+)/)
                 if (m) {
@@ -218,17 +226,36 @@ function spawnTracked(
 }
 
 function buildDownloadScript(modelId: string, userData: string): string {
-    // Maps wizard model IDs to install functions in src/install.py.
-    // Prints PROGRESS markers so the renderer progress bar moves.
+    // Patch tqdm BEFORE importing any ML library so HuggingFace download
+    // chunks emit real PROGRESS:<percent>:<bytes> lines to stdout.
+    // disable=True silences tqdm's own stderr output; update() still
+    // increments self.n (tqdm behaviour when disabled).
     return `
 import sys, os
 sys.path.insert(0, '.')
-os.environ.setdefault('APP_DATA_DIR', ${JSON.stringify(userData)})
-os.environ.setdefault('HUGGINGFACE_HUB_CACHE', os.path.join(${JSON.stringify(userData)}, '.hf_cache'))
 
-print('PROGRESS:5:0', flush=True)
+# Patch tqdm before any ML import so HF download progress is captured.
+from tqdm import tqdm as _Orig
 
-from src.install import install_clip, install_embedding, install_vision, install_translator, install_ocr, install_chat
+class _Reporter(_Orig):
+    def __init__(self, *args, **kwargs):
+        kwargs['disable'] = True  # suppress console noise; update() still works
+        super().__init__(*args, **kwargs)
+    def update(self, n=1):
+        super().update(n)  # increments self.n (no I/O when disabled)
+        if self.unit == 'B' and self.total and n:
+            pct = min(99.0, self.n / self.total * 100)
+            print(f'PROGRESS:{pct:.1f}:{int(self.n)}', flush=True)
+
+import tqdm as _tm, tqdm.auto as _ta
+_tm.tqdm = _ta.tqdm = _Reporter
+
+print('PROGRESS:1:0', flush=True)
+
+from src.install import (
+    install_clip, install_embedding, install_vision,
+    install_translator, install_ocr, install_chat,
+)
 from src.db.database import SessionLocal
 
 INSTALL_MAP = {
