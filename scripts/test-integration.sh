@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # test-integration.sh — Smoke-test the packaged Python backend.
 #
-# Finds the first .app in frontend/dist-electron/, unpacks it to a temp dir,
-# spawns the bundled Python backend, polls /api/system/status/ for 30 s,
-# asserts HTTP 200, then kills the backend and checks that db.sqlite3 was created.
+# Finds the first .app in frontend/dist-electron/, spawns the bundled
+# Python backend, polls /api/system/status/ for 30 s, asserts HTTP 200,
+# then kills the backend and checks that db.sqlite3 was created.
 #
 # Usage:
 #   bash scripts/test-integration.sh [path/to/dist-electron]
@@ -27,37 +27,39 @@ RESOURCES="$APP_PATH/Contents/Resources"
 PYTHON="$RESOURCES/python/bin/python3"
 BACKEND="$RESOURCES/backend"
 
-# Temp data directory
+# Temp data directory — must be set before spawning the backend
 TMP_DATA="$(mktemp -d)"
-trap 'rm -rf "$TMP_DATA"' EXIT
 
-# Pick a free port
+# Pick a free port before spawning
 PORT=$(python3 -c "import socket; s=socket.socket(); s.bind(('',0)); print(s.getsockname()[1]); s.close()")
 
 echo "[integration] APP_DATA_DIR=$TMP_DATA  PORT=$PORT"
 
-# Spawn the backend
-"$PYTHON" run.py &
+# Spawn the backend with all env vars set, running from its own directory
+APP_DATA_DIR="$TMP_DATA" \
+API_PORT="$PORT" \
+QUEUE_DB_DIR="$TMP_DATA" \
+    "$PYTHON" "$BACKEND/run.py" > "$TMP_DATA/backend.log" 2>&1 &
 BACKEND_PID=$!
 
 cleanup() {
     kill "$BACKEND_PID" 2>/dev/null || true
+    wait "$BACKEND_PID" 2>/dev/null || true
+    rm -rf "$TMP_DATA"
 }
-trap 'cleanup; rm -rf "$TMP_DATA"' EXIT
-
-export APP_DATA_DIR="$TMP_DATA"
-export API_PORT="$PORT"
-export QUEUE_DB_DIR="$TMP_DATA"
+trap cleanup EXIT
 
 # Wait up to 30 s for the backend to respond
 echo "[integration] Waiting for backend on port $PORT …"
 for i in $(seq 1 60); do
     if curl -sf "http://127.0.0.1:$PORT/api/system/status/" > /dev/null 2>&1; then
-        echo "[integration] Backend responded after $((i / 2)) s"
+        echo "[integration] Backend responded after $(echo "scale=1; $i / 2" | bc) s"
         break
     fi
     if [[ $i -eq 60 ]]; then
         echo "ERROR: Backend did not start within 30 s"
+        echo "--- backend log ---"
+        cat "$TMP_DATA/backend.log" || true
         exit 1
     fi
     sleep 0.5
@@ -71,13 +73,15 @@ if [[ "$STATUS" != "200" ]]; then
 fi
 echo "[integration] ✓ GET /api/system/status/ → 200"
 
-# Kill backend cleanly
+# Kill backend cleanly before checking side-effects
 kill "$BACKEND_PID" 2>/dev/null || true
 wait "$BACKEND_PID" 2>/dev/null || true
 
 # Assert db.sqlite3 was created
 if [[ ! -f "$TMP_DATA/db.sqlite3" ]]; then
     echo "ERROR: db.sqlite3 not found in APP_DATA_DIR"
+    echo "--- backend log ---"
+    cat "$TMP_DATA/backend.log" || true
     exit 1
 fi
 echo "[integration] ✓ db.sqlite3 created in APP_DATA_DIR"
