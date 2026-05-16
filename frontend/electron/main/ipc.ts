@@ -239,10 +239,12 @@ from tqdm import tqdm as _Orig
 
 class _Reporter(_Orig):
     def __init__(self, *args, **kwargs):
-        kwargs['disable'] = True  # suppress console noise; update() still works
+        # Route tqdm's own output to devnull so self.n still increments.
+        # disable=True would make super().update(n) a no-op (self.n stays 0).
+        kwargs['file'] = open(os.devnull, 'w')
         super().__init__(*args, **kwargs)
     def update(self, n=1):
-        super().update(n)  # increments self.n (no I/O when disabled)
+        super().update(n)  # increments self.n; output goes to devnull
         if self.unit == 'B' and self.total and n:
             pct = min(99.0, self.n / self.total * 100)
             print(f'PROGRESS:{pct:.1f}:{int(self.n)}', flush=True)
