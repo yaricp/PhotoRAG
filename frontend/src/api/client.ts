@@ -11,7 +11,11 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
         headers: { 'Content-Type': 'application/json', ...init?.headers },
         ...init,
     })
-    if (!res.ok) throw new Error(`API error ${res.status}: ${path}`)
+    if (!res.ok) {
+        let detail: string | undefined
+        try { detail = (await res.json()).detail } catch { /* ignore */ }
+        throw new Error(detail ?? `API error ${res.status}: ${path}`)
+    }
     return res.json() as Promise<T>
 }
 

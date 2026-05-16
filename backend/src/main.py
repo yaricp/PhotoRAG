@@ -463,15 +463,26 @@ async def chat_with_agent_endpoint(request: ChatRequest) -> ChatResponse:
     try:
         result, thread_id = await _invoke(thread_id)
     except Exception as exc:
+        exc_str = str(exc).lower()
         # Corrupted checkpoint: assistant tool_calls with no following tool messages.
         # Heal automatically by starting a fresh thread.
-        if "tool_call" in str(exc).lower() and "tool messages" in str(exc).lower():
+        if "tool_call" in exc_str and "tool messages" in exc_str:
             fresh_id = str(uuid4())
             logger.warning(
                 f"[chat] Corrupted checkpoint for thread {thread_id!r}, "
                 f"retrying with fresh thread {fresh_id!r}: {exc}"
             )
             result, thread_id = await _invoke(fresh_id)
+        elif "insufficient_quota" in exc_str or "rate_limit" in exc_str or "429" in exc_str:
+            raise HTTPException(
+                status_code=429,
+                detail="OpenAI API quota exceeded. Please check your billing at platform.openai.com.",
+            )
+        elif "401" in exc_str or "authentication" in exc_str or "invalid api key" in exc_str:
+            raise HTTPException(
+                status_code=502,
+                detail="OpenAI API key is invalid or missing. Please check your settings.",
+            )
         else:
             raise
 

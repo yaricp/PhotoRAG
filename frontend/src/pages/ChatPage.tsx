@@ -115,6 +115,9 @@ export function ChatPage() {
             // Model is clearly ready once a response arrives
             setChatReady(true)
             stopPolling()
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : 'Unknown error'
+            addMessage({ role: 'assistant', content: `⚠️ ${msg}` })
         } finally {
             setLoading(false)
         }
