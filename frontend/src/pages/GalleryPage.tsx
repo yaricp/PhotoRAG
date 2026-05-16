@@ -140,36 +140,41 @@ export function GalleryPage() {
                 </div>
             )}
 
-            {!loading && data && (
-                <div className="gallery-grid">
-                    {data.items.filter(p => !removedIds.has(p.id)).map(photo => (
-                        <PhotoCard
-                            key={photo.id}
-                            photo={photo}
-                            onArchive={() => handleArchive(photo.id)}
-                            onDelete={() => handleDelete(photo.id)}
-                        />
-                    ))}
-                </div>
-            )}
-
-            <div className="gallery-pagination">
-                <Button
-                    disabled={page === 0}
-                    onClick={() => setPage(p => Math.max(0, p - 1))}
-                >
-                    Prev
-                </Button>
-
-                <span>{page + 1} / {totalPages}</span>
-
-                <Button
-                    disabled={page + 1 >= totalPages}
-                    onClick={() => setPage(p => p + 1)}
-                >
-                    Next
-                </Button>
-            </div>
+            {!loading && data && (() => {
+                const pagination = (
+                    <div className="gallery-pagination">
+                        <Button
+                            disabled={page === 0}
+                            onClick={() => setPage(p => Math.max(0, p - 1))}
+                        >
+                            Prev
+                        </Button>
+                        <span>{page + 1} / {totalPages}</span>
+                        <Button
+                            disabled={page + 1 >= totalPages}
+                            onClick={() => setPage(p => p + 1)}
+                        >
+                            Next
+                        </Button>
+                    </div>
+                )
+                return (
+                    <>
+                        {pagination}
+                        <div className="gallery-grid">
+                            {data.items.filter(p => !removedIds.has(p.id)).map(photo => (
+                                <PhotoCard
+                                    key={photo.id}
+                                    photo={photo}
+                                    onArchive={() => handleArchive(photo.id)}
+                                    onDelete={() => handleDelete(photo.id)}
+                                />
+                            ))}
+                        </div>
+                        {pagination}
+                    </>
+                )
+            })()}
         </div>
     )
 }
