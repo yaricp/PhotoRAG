@@ -457,7 +457,7 @@ async def chat_with_agent_endpoint(request: ChatRequest) -> ChatResponse:
     
     # Run the agent graph
     result = await agent_app.ainvoke(inputs, config)
-    logger.info(f"Agent result: {result}")
+    # logger.info(f"Agent result: {result}")
     # Get the last AI message
     last_msg = result["messages"][-1]
     content = last_msg.content
@@ -469,6 +469,7 @@ async def chat_with_agent_endpoint(request: ChatRequest) -> ChatResponse:
 
     return ChatResponse(
         response=content,
+        thread_id=request.thread_id,
         photos=result["photos"]
     )
 

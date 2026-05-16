@@ -9,7 +9,7 @@ export type ChatMessage = {
 
 type ChatStore = {
     messages: ChatMessage[]
-    threadId: string | null
+    threadId: string
     contextPhotos: Photo[]
 
     addMessage: (msg: ChatMessage) => void
@@ -22,7 +22,7 @@ export const useChatStore = create<ChatStore>()(
     persist(
         (set) => ({
             messages: [],
-            threadId: null,
+            threadId: crypto.randomUUID(),
             contextPhotos: [],
 
             addMessage: (msg) =>
@@ -33,7 +33,7 @@ export const useChatStore = create<ChatStore>()(
             setContextPhotos: (photos) => set({ contextPhotos: photos }),
 
             clearConversation: () =>
-                set({ messages: [], threadId: null, contextPhotos: [] }),
+                set({ messages: [], threadId: crypto.randomUUID(), contextPhotos: [] }),
         }),
         {
             name: 'chat-session',

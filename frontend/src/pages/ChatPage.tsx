@@ -108,7 +108,7 @@ export function ChatPage() {
         setLoading(true)
 
         try {
-            const res = await sendChat({ message: finalMessage, thread_id: threadId ?? undefined })
+            const res = await sendChat({ message: finalMessage, thread_id: threadId })
             addMessage({ role: 'assistant', content: res.response })
             setThreadId(res.thread_id)
             if (res.photos.length > 0) setContextPhotos(res.photos)
