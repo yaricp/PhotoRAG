@@ -47,7 +47,7 @@ test.describe('Setup Wizard — renderer unit checks', () => {
 
         await page.goto(process.env.VITE_DEV_URL || 'http://localhost:5173')
 
-        await expect(page.getByText(/welcome to photodescriber/i)).toBeVisible({ timeout: 5000 })
+        await expect(page.getByText(/welcome to photorag/i)).toBeVisible({ timeout: 5000 })
     })
 
     test('main app visible when setup already done', async ({ page }) => {
@@ -66,6 +66,6 @@ test.describe('Setup Wizard — renderer unit checks', () => {
         await page.goto(process.env.VITE_DEV_URL || 'http://localhost:5173')
 
         // Wizard should NOT appear
-        await expect(page.getByText(/welcome to photodescriber/i)).not.toBeVisible({ timeout: 3000 })
+        await expect(page.getByText(/welcome to photorag/i)).not.toBeVisible({ timeout: 3000 })
     })
 })

@@ -144,8 +144,8 @@ export function registerIpcHandlers(port: number): void {
     ipcMain.handle('app:uninstall', async () => {
         const { response } = await dialog.showMessageBox({
             type: 'warning',
-            title: 'Uninstall PhotoDescriber2',
-            message: 'Remove PhotoDescriber2 completely?',
+            title: 'Uninstall PhotoRAG',
+            message: 'Remove PhotoRAG completely?',
             detail: [
                 'This will permanently delete:',
                 '  • The application',

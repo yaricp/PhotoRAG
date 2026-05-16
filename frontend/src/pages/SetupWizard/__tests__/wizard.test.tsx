@@ -45,7 +45,7 @@ beforeEach(() => {
 describe('SetupWizard', () => {
     it('starts at welcome step', () => {
         render(<SetupWizard onComplete={vi.fn()} />)
-        expect(screen.getByText(/welcome to photodescriber/i)).toBeInTheDocument()
+        expect(screen.getByText(/welcome to photorag/i)).toBeInTheDocument()
     })
 
     it('advances to install-deps on continue', () => {

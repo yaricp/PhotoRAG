@@ -66,6 +66,6 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: PhotoDescriber2-macOS
+          name: PhotoRAG-macOS
           path: frontend/dist-electron/*.dmg
           retention-days: 14

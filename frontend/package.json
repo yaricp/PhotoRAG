@@ -16,8 +16,8 @@
         "test:e2e": "playwright test"
     },
     "build": {
-        "appId": "com.photodescriber.app",
-        "productName": "PhotoDescriber2",
+        "appId": "com.photorag.app",
+        "productName": "PhotoRAG",
         "directories": {
             "output": "dist-electron"
         },

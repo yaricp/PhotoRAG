@@ -5,7 +5,7 @@ import { registerIpcHandlers } from './ipc'
 import { registerAppProtocol } from './protocol'
 import { startBackend, stopBackend, waitForBackend } from './backend'
 
-app.setName('PhotoDescriber2')
+app.setName('PhotoRAG')
 
 let mainWindow: BrowserWindow | null = null
 

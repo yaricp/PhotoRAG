@@ -127,7 +127,7 @@ export function SettingsPage() {
                     <p className="settings-section__heading">Danger Zone</p>
                     <div className="settings-danger-row">
                         <div className="settings-danger-info">
-                            <span className="settings-danger-title">Uninstall PhotoDescriber2</span>
+                            <span className="settings-danger-title">Uninstall PhotoRAG</span>
                             <span className="settings-danger-desc">
                                 Removes the app, database, AI models, and all settings.
                                 Your original photos are not affected.

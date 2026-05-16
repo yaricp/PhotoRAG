@@ -26,7 +26,7 @@ def test_resolves_macos_path(tmp_path, monkeypatch):
     reload(data_dir)
 
     result = data_dir.resolve_app_data_dir()
-    assert result == tmp_path / "Library" / "Application Support" / "PhotoDescriber2"
+    assert result == tmp_path / "Library" / "Application Support" / "PhotoRAG"
     assert result.is_dir()
 
 
@@ -40,7 +40,7 @@ def test_resolves_linux_path(tmp_path, monkeypatch):
     reload(data_dir)
 
     result = data_dir.resolve_app_data_dir()
-    assert result == tmp_path / ".local" / "share" / "PhotoDescriber2"
+    assert result == tmp_path / ".local" / "share" / "PhotoRAG"
     assert result.is_dir()
 
 

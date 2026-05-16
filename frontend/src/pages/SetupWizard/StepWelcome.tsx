@@ -8,7 +8,7 @@ export function StepWelcome({ onContinue }: Props) {
     return (
         <div className="wizard-step">
             <div className="wizard-icon">📷</div>
-            <h1>Welcome to PhotoDescriber</h1>
+            <h1>Welcome to PhotoRAG</h1>
             <p className="wizard-subtitle">
                 Let's set up your AI-powered photo library. This will take a few minutes.
             </p>

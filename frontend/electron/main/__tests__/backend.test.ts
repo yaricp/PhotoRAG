@@ -10,7 +10,7 @@ let mockSpawnProcess = {
 }
 
 let isPackaged = false
-const userData = '/Users/test/Library/Application Support/PhotoDescriber2'
+const userData = '/Users/test/Library/Application Support/PhotoRAG'
 
 beforeEach(() => {
     isPackaged = false

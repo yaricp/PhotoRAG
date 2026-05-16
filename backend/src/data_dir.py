@@ -2,8 +2,8 @@
 Data directory resolution and legacy migration for Photo Describer 2.
 
 resolve_app_data_dir() returns the platform-appropriate mutable data directory:
-  macOS  → ~/Library/Application Support/PhotoDescriber2/
-  Linux  → ~/.local/share/PhotoDescriber2/
+  macOS  → ~/Library/Application Support/PhotoRAG/
+  Linux  → ~/.local/share/PhotoRAG/
   Override: APP_DATA_DIR env var (used in packaged app and tests)
 
 migrate_legacy_data() is called once on startup to copy existing files from
@@ -16,7 +16,7 @@ import shutil
 import sqlite3
 from pathlib import Path
 
-APP_NAME = "PhotoDescriber2"
+APP_NAME = "PhotoRAG"
 
 _SQLITE_FILES = [
     "db.sqlite3",

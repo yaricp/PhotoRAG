@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# uninstall.sh — fully remove PhotoDescriber2 from this Mac.
+# uninstall.sh — fully remove PhotoRAG from this Mac.
 #
 # Removes:
-#   /Applications/PhotoDescriber2.app
-#   ~/Library/Application Support/PhotoDescriber2/   (DB, venv, AI models)
-#   ~/Library/Logs/PhotoDescriber2/
-#   ~/Library/Saved Application State/com.photodescriber.app.savedState/
+#   /Applications/PhotoRAG.app
+#   ~/Library/Application Support/PhotoRAG/   (DB, venv, AI models)
+#   ~/Library/Logs/PhotoRAG/
+#   ~/Library/Saved Application State/com.photorag.app.savedState/
 #
 # Your original photos are NOT touched.
 #
@@ -14,9 +14,9 @@
 
 set -euo pipefail
 
-APP_NAME="PhotoDescriber2"
+APP_NAME="PhotoRAG"
 APP_BUNDLE="/Applications/${APP_NAME}.app"
-APP_ID="com.photodescriber.app"
+APP_ID="com.photorag.app"
 DATA_DIR="$HOME/Library/Application Support/${APP_NAME}"
 LOGS_DIR="$HOME/Library/Logs/${APP_NAME}"
 SAVED_STATE_DIR="$HOME/Library/Saved Application State/${APP_ID}.savedState"
@@ -26,7 +26,7 @@ BOLD='\033[1m'
 RESET='\033[0m'
 
 echo ""
-echo -e "${BOLD}PhotoDescriber2 Uninstaller${RESET}"
+echo -e "${BOLD}PhotoRAG Uninstaller${RESET}"
 echo "────────────────────────────────────────"
 echo "The following will be permanently deleted:"
 echo ""
@@ -75,4 +75,4 @@ defaults delete "$APP_ID" 2>/dev/null && \
     echo "[uninstall] Removed preferences: $APP_ID" || true
 
 echo ""
-echo "[uninstall] Done. PhotoDescriber2 has been completely removed."
+echo "[uninstall] Done. PhotoRAG has been completely removed."
