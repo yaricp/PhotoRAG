@@ -189,7 +189,10 @@ class ClipTagger:
             finally:
                 db2.close()
             if not legacy:
-                raise ValueError("No categories found in DB")
+                logger.warning("[clip] No categories found in DB — category matching will be unavailable")
+                self.categories_features = None
+                self.categories = []
+                return
             rows = legacy  # type: ignore[assignment]
             names = [c.name for c in rows]
             prompts = [c.prompt for c in rows]
