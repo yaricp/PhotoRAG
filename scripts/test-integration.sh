@@ -54,12 +54,19 @@ VENV_PIP="$TMP_DATA/venv/bin/pip"
 echo "[integration] Installing requirements (this may take a few minutes)..."
 "$VENV_PIP" install -r "$BACKEND/requirements.txt" --quiet --progress-bar off
 
+# Step 3: initialise the database (mirrors wizard step 3)
+echo "[integration] Initialising database..."
+export APP_DATA_DIR="$TMP_DATA"
+export QUEUE_DB_DIR="$TMP_DATA"
+export HUGGINGFACE_HUB_CACHE="$TMP_DATA/.hf_cache"
+"$VENV_PYTHON" "$BACKEND/full_install.py"
+echo "[integration] Database ready."
+
 # Pick a free port
 PORT="$(python3 -c "import socket; s=socket.socket(); s.bind(('',0)); p=s.getsockname()[1]; s.close(); print(p)")"
 echo "[integration] APP_DATA_DIR=$TMP_DATA  PORT=$PORT"
 
-# Step 3: spawn backend with explicit env, no inline assignment
-export APP_DATA_DIR="$TMP_DATA"
+# Step 4: spawn backend with explicit env, no inline assignment
 export API_PORT="$PORT"
 export QUEUE_DB_DIR="$TMP_DATA"
 export HUGGINGFACE_HUB_CACHE="$TMP_DATA/.hf_cache"
