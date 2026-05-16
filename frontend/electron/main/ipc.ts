@@ -52,13 +52,22 @@ export function registerIpcHandlers(port: number): void {
         event.sender.send('setup:install-deps-progress', { line: 'Done.', percent: 100 })
     })
 
-    // Run full_install.py to initialise the database.
+    // Initialise the database schema only. Model downloads happen in the
+    // separate download step so they go to the correct HF cache path.
     ipcMain.handle('setup:init-db', async () => {
         const userData = app.getPath('userData')
         const venvPath = join(userData, 'venv')
         const python = join(venvPath, 'bin', 'python3')
         const backend = locateBackend()
-        await spawnTracked(python, ['full_install.py'], { cwd: backend })
+        await spawnTracked(python, ['init_db_only.py'], {
+            cwd: backend,
+            env: {
+                ...process.env,
+                APP_DATA_DIR: userData,
+                QUEUE_DB_DIR: userData,
+                HUGGINGFACE_HUB_CACHE: join(userData, '.hf_cache'),
+            },
+        })
     })
 
     // Download a single model.

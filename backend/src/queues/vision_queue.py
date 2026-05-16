@@ -59,8 +59,10 @@ def _get_model():
 
 @vision_queue.on_startup()
 def warm():
-    """Load vision model into RAM before accepting tasks."""
-    _get_model()
+    """Load vision model weights into RAM before accepting tasks."""
+    generator = _get_model()
+    if generator is not None:
+        generator.load()  # actually loads weights; no-op if already loaded
 
 
 @vision_queue.task()
