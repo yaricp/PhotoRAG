@@ -28,3 +28,4 @@ data/
 # macOS installer build artifacts
 frontend/resources/python/
 frontend/dist-electron/
+frontend/resources/MyIcon.iconset/
