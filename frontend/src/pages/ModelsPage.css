@@ -377,3 +377,36 @@
 .model-modal__ok-btn:hover {
     opacity: 0.85;
 }
+
+/* Model name suggestion chips */
+.model-suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.model-suggestions__label {
+    font-size: 11px;
+    color: var(--color-text-dim);
+    white-space: nowrap;
+}
+
+.model-suggestions__chip {
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    padding: 2px 10px;
+    font-size: 11px;
+    color: var(--color-text-dim);
+    cursor: pointer;
+    font-family: var(--font-mono, monospace);
+    transition: background 0.1s, color 0.1s, border-color 0.1s;
+}
+
+.model-suggestions__chip:hover {
+    background: color-mix(in srgb, var(--color-accent) 12%, var(--color-surface-2));
+    color: var(--color-accent);
+    border-color: var(--color-accent);
+}

@@ -7,6 +7,58 @@ import './ModelsPage.css'
 
 type ModelStatusMap = Record<string, string>  // model type → status
 
+// provider → model type → suggested model names
+const MODEL_SUGGESTIONS: Record<string, Record<string, string[]>> = {
+    openai: {
+        chat:       ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'],
+        vision:     ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'],
+        ocr:        ['gpt-4o', 'gpt-4o-mini'],
+        clip:       ['gpt-4o-mini', 'gpt-4o'],
+        translator: ['gpt-4o-mini', 'gpt-4o'],
+        embedding:  ['text-embedding-3-small', 'text-embedding-3-large', 'text-embedding-ada-002'],
+    },
+    anthropic: {
+        chat:       ['claude-opus-4-5', 'claude-sonnet-4-5', 'claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022'],
+        vision:     ['claude-opus-4-5', 'claude-sonnet-4-5', 'claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022'],
+        ocr:        ['claude-3-5-haiku-20241022', 'claude-sonnet-4-5'],
+        clip:       ['claude-3-5-haiku-20241022', 'claude-sonnet-4-5'],
+        translator: ['claude-3-5-haiku-20241022', 'claude-sonnet-4-5'],
+    },
+    google_genai: {
+        chat:       ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-pro', 'gemini-1.5-flash'],
+        vision:     ['gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-1.5-flash'],
+        ocr:        ['gemini-2.0-flash', 'gemini-1.5-flash'],
+        clip:       ['gemini-2.0-flash', 'gemini-1.5-flash'],
+        translator: ['gemini-2.0-flash', 'gemini-1.5-flash'],
+    },
+    google_vertexai: {
+        chat:       ['gemini-2.0-flash-001', 'gemini-1.5-pro-001', 'gemini-1.5-flash-001'],
+    },
+    groq: {
+        chat:       ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768', 'gemma2-9b-it'],
+    },
+    mistralai: {
+        chat:       ['mistral-large-latest', 'mistral-small-latest', 'open-mistral-7b'],
+    },
+    cohere: {
+        chat:       ['command-r-plus', 'command-r', 'command-light'],
+    },
+    together: {
+        chat:       ['meta-llama/Llama-3.3-70B-Instruct-Turbo', 'mistralai/Mixtral-8x7B-Instruct-v0.1', 'meta-llama/Llama-3.2-11B-Vision-Instruct-Turbo'],
+    },
+    ollama: {
+        chat:       ['llama3.2', 'llama3.1', 'mistral', 'gemma3', 'phi4'],
+        vision:     ['llava', 'llava-llama3', 'moondream'],
+        ocr:        ['llava', 'llava-llama3'],
+        clip:       ['llava', 'llava-llama3'],
+        translator: ['llama3.2', 'mistral'],
+    },
+}
+
+function getModelSuggestions(provider: string, modelType: string): string[] {
+    return MODEL_SUGGESTIONS[provider]?.[modelType] ?? []
+}
+
 const STATUS_LABEL: Record<string, string> = {
     ready:       'Ready',
     loading:     'Loading…',
@@ -198,6 +250,27 @@ export function ModelsPage() {
                                                 : 'e.g. gpt-4o-mini'
                                     }
                                 />
+                                {config.mode === 'remote' && config.model_provider && (
+                                    (() => {
+                                        const suggestions = getModelSuggestions(config.model_provider, config.type)
+                                        if (!suggestions.length) return null
+                                        return (
+                                            <div className="model-suggestions">
+                                                <span className="model-suggestions__label">Suggestions:</span>
+                                                {suggestions.map(name => (
+                                                    <button
+                                                        key={name}
+                                                        className="model-suggestions__chip"
+                                                        type="button"
+                                                        onClick={() => handleChange(config.type, 'model_name', name)}
+                                                    >
+                                                        {name}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )
+                                    })()
+                                )}
                             </div>
 
                             {config.mode === 'remote' && (
