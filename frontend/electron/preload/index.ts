@@ -19,6 +19,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     completeSetup: (payload?: { skippedModels?: string[] }) => ipcRenderer.invoke('setup:complete', payload),
     uninstall: () => ipcRenderer.invoke('app:uninstall'),
 
+    // Setup wizard — model config (runs before backend starts, talks to DB directly)
+    getModelConfigs: () => ipcRenderer.invoke('setup:get-model-configs'),
+    saveModelConfigs: (configs: any[]) => ipcRenderer.invoke('setup:save-model-configs', configs),
+
     // Setup wizard — event subscriptions (main→renderer)
     onInstallDepsProgress: (cb: (data: { line: string; percent: number }) => void) => {
         ipcRenderer.on('setup:install-deps-progress', (_, data) => cb(data))

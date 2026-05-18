@@ -2,6 +2,17 @@ export { }
 
 type Platform = 'win32' | 'darwin' | 'linux'
 
+interface ModelConfigBrief {
+    id: number
+    type: string
+    mode: 'local' | 'remote'
+    model_name: string
+    url?: string
+    api_key?: string
+    model_provider?: string
+    similarity_limit?: number
+}
+
 export interface ElectronAPI {
     openFolder: () => Promise<string | null>
     getBackendPort: () => Promise<number>
@@ -16,6 +27,10 @@ export interface ElectronAPI {
     cancelDownload: () => Promise<void>
     completeSetup: (payload?: { skippedModels?: string[] }) => Promise<void>
     uninstall: () => Promise<{ cancelled: true } | { success: true }>
+
+    // Setup wizard — model config (talks to DB directly, before backend starts)
+    getModelConfigs: () => Promise<ModelConfigBrief[]>
+    saveModelConfigs: (configs: ModelConfigBrief[]) => Promise<void>
 
     // Setup wizard — event subscriptions (main→renderer)
     onInstallDepsProgress: (cb: (data: { line: string; percent: number }) => void) => void

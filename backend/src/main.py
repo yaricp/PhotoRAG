@@ -145,6 +145,21 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.warning(f"[startup] Could not seed prompts (table may not exist yet — run install): {exc}")
 
+    # Ensure the VSS table dimension matches the configured embedding model.
+    # This matters when the model was changed via the setup wizard (which writes
+    # directly to the DB, bypassing the API endpoint that normally triggers a rebuild).
+    try:
+        from src.vector_db_services import get_embedding_dimension, current_vss_dimension, rebuild_embeddings_vss
+        emb_config = get_model_config(db, "embedding")
+        if emb_config:
+            new_dim = get_embedding_dimension(emb_config.model_name)
+            cur_dim = current_vss_dimension(db)
+            if new_dim != cur_dim:
+                logger.info(f"[startup] Embedding dimension mismatch {cur_dim}→{new_dim}, rebuilding VSS table")
+                rebuild_embeddings_vss(db, new_dim)
+    except Exception as exc:
+        logger.warning(f"[startup] Could not verify embedding VSS dimension: {exc}")
+
     stuck_ids = recover_interrupted_pipelines(db)
     if stuck_ids:
         logger.info(f"[startup] Recovering {len(stuck_ids)} interrupted pipeline(s): {stuck_ids}")
@@ -202,6 +217,24 @@ def get_system_status_endpoint(db: Session = Depends(get_db)):
         "chat_ready": chat_ready,
         "models": [{"name": s.name, "status": s.status} for s in states]
     }
+
+
+@app.get("/api/system/reindex-status/", tags=["System"])
+def get_reindex_status_endpoint(db: Session = Depends(get_db)):
+    """
+    Returns whether photos need to be re-embedded.
+    This happens after the embedding model changes and the VSS table is rebuilt
+    (clearing photo_embedding_map).
+    """
+    from src.models import Photo, PhotoEmbedding
+    total = db.query(Photo).filter(
+        Photo.is_archived == False,
+        Photo.description != None,
+        Photo.description != "",
+    ).count()
+    indexed = db.query(PhotoEmbedding).count()
+    needed = total > 0 and indexed < total
+    return {"needed": needed, "total": total, "indexed": indexed}
 
 
 @app.get("/api/system/tesseract/", tags=["System"])

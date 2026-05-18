@@ -1,15 +1,20 @@
 import React, { useState } from 'react'
 
 interface Props {
+    skippedModels?: string[]
     onComplete: () => void
 }
 
-export function StepDone({ onComplete }: Props) {
+export function StepDone({ skippedModels, onComplete }: Props) {
     const [launching, setLaunching] = useState(false)
 
     const handleLaunch = async () => {
         setLaunching(true)
-        await window.electronAPI.completeSetup()
+        await window.electronAPI.completeSetup(
+            skippedModels && skippedModels.length > 0
+                ? { skippedModels }
+                : undefined
+        )
         onComplete()
     }
 

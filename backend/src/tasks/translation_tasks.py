@@ -54,6 +54,6 @@ async def translate_description_task(photo_id: int) -> None:
         if not description:
             return
 
-        translated = await call_translation_model(description, backward=False)
+        translated = await call_translation_model(description, backward=False, target_lang=lang)
         await asyncio.to_thread(_save_translation_sync, photo_id, translated)
         logger.info(f"[translate] Photo {photo_id}: translation saved ✓")

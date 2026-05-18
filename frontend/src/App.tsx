@@ -5,6 +5,7 @@ import { AppRoutes } from './pages/AppRoutes'
 import { SetupWizard } from './pages/SetupWizard'
 import { TesseractBanner, TesseractStatus } from './components/ui/TesseractBanner'
 import { PipelineWarningBanner } from './components/ui/PipelineWarningBanner'
+import { EmbeddingReindexBanner } from './components/ui/EmbeddingReindexBanner'
 import { getBaseUrl } from './api/base'
 import './styles/global.css'
 
@@ -57,6 +58,7 @@ export default function App() {
         <div className="app-layout">
             <TesseractBanner status={tesseractStatus} />
             <PipelineWarningBanner />
+            <EmbeddingReindexBanner />
             <Header
                 sidebarState={sidebarState}
                 onToggleSidebar={cycleSidebar}

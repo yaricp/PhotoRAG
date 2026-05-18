@@ -181,11 +181,103 @@ export function registerIpcHandlers(port: number): void {
         return { success: true }
     })
 
+    // Read model configs from the DB (runs during setup, before backend starts).
+    ipcMain.handle('setup:get-model-configs', async () => {
+        const userData = app.getPath('userData')
+        const venvPath = join(userData, 'venv')
+        const python = join(venvPath, 'bin', 'python3')
+        const backend = locateBackend()
+        const script = `
+import json, sys
+sys.path.insert(0, '.')
+from src.db.database import SessionLocal
+from src.db_service import get_all_model_configs
+db = SessionLocal()
+try:
+    configs = get_all_model_configs(db)
+    print(json.dumps([{
+        'id': c.id,
+        'type': c.type,
+        'mode': c.mode,
+        'model_name': c.model_name or '',
+        'url': c.url or '',
+        'api_key': c.api_key or '',
+        'model_provider': c.model_provider or '',
+        'similarity_limit': c.similarity_limit,
+    } for c in configs]))
+finally:
+    db.close()
+`
+        const output = await spawnCaptured(python, ['-c', script], {
+            cwd: backend,
+            env: { ...process.env, APP_DATA_DIR: userData, QUEUE_DB_DIR: userData, HUGGINGFACE_HUB_CACHE: join(userData, '.hf_cache') },
+        })
+        return JSON.parse(output.trim())
+    })
+
+    // Save model configs to the DB (runs during setup, before backend starts).
+    ipcMain.handle('setup:save-model-configs', async (_, configs: any[]) => {
+        const userData = app.getPath('userData')
+        const venvPath = join(userData, 'venv')
+        const python = join(venvPath, 'bin', 'python3')
+        const backend = locateBackend()
+        const script = `
+import json, os, sys
+sys.path.insert(0, '.')
+from src.db.database import SessionLocal
+from src.db_service import update_model_config
+from src.schemas import AIModelConfigUpdate
+configs = json.loads(os.environ['MODEL_CONFIGS'])
+db = SessionLocal()
+try:
+    for c in configs:
+        upd = AIModelConfigUpdate(
+            mode=c['mode'],
+            model_name=c.get('model_name') or '',
+            url=c.get('url') or None,
+            api_key=c.get('api_key') or None,
+            model_provider=c.get('model_provider') or None,
+            similarity_limit=c.get('similarity_limit'),
+        )
+        update_model_config(db, c['type'], upd)
+finally:
+    db.close()
+print('OK')
+`
+        await spawnCaptured(python, ['-c', script], {
+            cwd: backend,
+            env: { ...process.env, APP_DATA_DIR: userData, QUEUE_DB_DIR: userData, HUGGINGFACE_HUB_CACHE: join(userData, '.hf_cache'), MODEL_CONFIGS: JSON.stringify(configs) },
+        })
+    })
+
     console.log('[IPC] done')
 }
 
 // Tracks the current download so it can be cancelled.
 let activeDownload: (Promise<void> & { cancel?: () => void }) | null = null
+
+// Runs a process and resolves with captured stdout, rejects on non-zero exit.
+function spawnCaptured(
+    cmd: string,
+    args: string[],
+    opts: { cwd?: string; env?: NodeJS.ProcessEnv }
+): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const child = spawn(cmd, args, {
+            cwd: opts.cwd,
+            env: opts.env ?? process.env,
+        })
+        let stdout = ''
+        let stderr = ''
+        child.stdout?.on('data', (d: Buffer) => { stdout += d.toString() })
+        child.stderr?.on('data', (d: Buffer) => { stderr += d.toString() })
+        child.on('close', (code) => {
+            if (code === 0) resolve(stdout)
+            else reject(new Error(`Process exited with code ${code}: ${stderr || stdout}`))
+        })
+        child.on('error', reject)
+    })
+}
 
 // Spawns a process, collects stdout/stderr line-by-line, rejects on non-zero exit.
 function spawnTracked(

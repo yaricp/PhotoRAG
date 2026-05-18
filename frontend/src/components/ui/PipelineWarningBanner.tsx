@@ -20,7 +20,9 @@ const KEYLESS_PROVIDERS = new Set(['ollama'])
 
 function isConfigured(config: AIModelConfig, status: ModelStatus | undefined): boolean {
     if (config.mode === 'local') {
-        return status?.status === 'ready'
+        // Local model is configured as long as it hasn't hard-failed.
+        // 'loading' / 'pending' are transient startup states, not a problem.
+        return status?.status !== 'error'
     }
     // Remote: needs an api_key unless it's a keyless provider like Ollama
     if (KEYLESS_PROVIDERS.has(config.model_provider ?? '')) return true

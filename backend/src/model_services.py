@@ -329,46 +329,59 @@ def _build_langchain_embedder(provider: str | None, model_name: str,
 # Translation
 # ---------------------------------------------------------------------------
 
-async def _call_remote_translation(cfg: dict, text: str, *, backward: bool = False) -> str:
-    """Translate text via a LangChain chat model or specialty service (DeepL, LibreTranslate)."""
+_LANG_NAMES: dict[str, str] = {
+    "en": "English", "ru": "Russian", "de": "German",
+    "fr": "French",  "es": "Spanish", "it": "Italian",
+    "zh": "Chinese", "ja": "Japanese", "ko": "Korean",
+    "pt": "Portuguese", "ar": "Arabic", "tr": "Turkish",
+}
+
+
+async def _call_remote_translation(cfg: dict, text: str, *, backward: bool = False, target_lang: str | None = None) -> str:
+    """Translate text via a LangChain chat model or specialty service (DeepL, LibreTranslate).
+
+    backward=False: translate to target_lang (or DEFAULT_LANGUAGE)
+    backward=True:  translate to English (for embedding/search) — target_lang is ignored
+    """
     from src.ai.translator_remote import RemoteTranslator
     from src.config import Main_Settings
 
-    main = Main_Settings()
     provider = cfg.get("model_provider")
     model_name = cfg.get("model_name")
     api_key = cfg.get("api_key")
     api_url = cfg.get("url")
 
-    lang = main.DEFAULT_LANGUAGE
-    if lang == "en":
-        src_lang, tgt_lang = "Russian", "English"
+    # Compute the correct target language name upfront — never rely on RemoteTranslator.backward
+    if backward:
+        tgt_name = "English"
     else:
-        src_lang, tgt_lang = "English", "Russian"
+        lang = target_lang or Main_Settings().DEFAULT_LANGUAGE
+        tgt_name = _LANG_NAMES.get(lang, lang.capitalize())
 
     p = (provider or "").lower()
     if p in ("deepl", "libretranslate"):
         translator = RemoteTranslator(
             provider=p, api_key=api_key, api_url=api_url,
-            src_lang=src_lang, tgt_lang=tgt_lang,
+            tgt_lang=tgt_name,
         )
     else:
         llm = _build_langchain_vision_model(provider, model_name or "gpt-4o-mini", api_key, api_url)
-        translator = RemoteTranslator(llm=llm, src_lang=src_lang, tgt_lang=tgt_lang)
+        translator = RemoteTranslator(llm=llm, tgt_lang=tgt_name)
 
     loop = asyncio.get_running_loop()
-    logger.debug(f"[translation/remote] Translating text with provider '{provider or 'LLM'}' and model '{model_name or 'default'}'")
-    result = await loop.run_in_executor(None, translator.translate, text, backward)
-    logger.debug(f"[translation/remote] Translation result: {result[:60]}{'...' if len(result) > 60 else ''}")  
+    logger.debug(f"[translation/remote] '{provider or 'LLM'}' → {tgt_name} | model='{model_name or 'default'}'")
+    # Always pass backward=False: direction is already encoded in tgt_name
+    result = await loop.run_in_executor(None, translator.translate, text, False)
+    logger.debug(f"[translation/remote] result: {result[:60]}{'...' if len(result) > 60 else ''}")
     return result
 
 
-async def call_translation_model(text: str, backward: bool = False) -> str:
+async def call_translation_model(text: str, backward: bool = False, target_lang: str | None = None) -> str:
     """
     Translate text.
 
-    backward=False: any → user language (forward)
-    backward=True:  any → English (for embedding)
+    backward=False: any → user language (forward); target_lang overrides the env-var default
+    backward=True:  any → English (for embedding); target_lang is ignored
     Returns translated text string.
     """
     trans_settings = Translation_Settings()
@@ -380,13 +393,13 @@ async def call_translation_model(text: str, backward: bool = False) -> str:
         task_id = str(uuid4())
         direction = "backward" if backward else "forward"
         logger.debug(f"[translation/{direction}] Submitting Huey task {task_id}")
-        call_local_translation_model(task_id, text, backward)
+        call_local_translation_model(task_id, text, backward, target_lang)
         raw = await _wait_result(task_id, label=f"translation/{direction}")
         translation = json.loads(raw).get("translation", "")
         logger.debug(f"[translation/{direction}] task {task_id}: {len(translation)} chars")
         return translation
     else:
-        return await _call_remote_translation(cfg or {}, text, backward=backward)
+        return await _call_remote_translation(cfg or {}, text, backward=backward, target_lang=target_lang)
 
 
 # ---------------------------------------------------------------------------

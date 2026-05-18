@@ -86,23 +86,36 @@ def rebuild_embeddings_vss(db, new_dimension: int) -> None:
 # ----------------------------
 def save_embedding(db, photo_embedding_id: int, embedding: List[float]) -> int:
     """
-    Saves embedding to the vector DB and return the rowid.
+    Saves embedding to the vector DB and returns the rowid.
+    Auto-rebuilds the VSS table if the dimension doesn't match the vector.
     """
-    try:
-        embedding_bytes = np.array(embedding, dtype=np.float32).flatten().tobytes()
+    embedding_bytes = np.array(embedding, dtype=np.float32).flatten().tobytes()
 
+    try:
         db.execute(text("""
             INSERT INTO photo_embeddings_vss(rowid, embedding)
             VALUES (:id, :embedding)
         """), {"id": photo_embedding_id, "embedding": embedding_bytes})
-
         db.commit()
-
         logger.info(f"Embedding saved, rowid={photo_embedding_id}")
         return photo_embedding_id
 
     except Exception as e:
         db.rollback()
+        if "Dimension mismatch" in str(e):
+            new_dim = len(embedding)
+            logger.warning(
+                f"[vector_db] Dimension mismatch — rebuilding VSS table with dim={new_dim} and retrying"
+            )
+            rebuild_embeddings_vss(db, new_dim)
+            # Retry once with the freshly recreated table
+            db.execute(text("""
+                INSERT INTO photo_embeddings_vss(rowid, embedding)
+                VALUES (:id, :embedding)
+            """), {"id": photo_embedding_id, "embedding": embedding_bytes})
+            db.commit()
+            logger.info(f"Embedding saved after rebuild, rowid={photo_embedding_id}")
+            return photo_embedding_id
         logger.error(f"Error saving embedding: {e}")
         raise
 

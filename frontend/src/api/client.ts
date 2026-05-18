@@ -140,6 +140,10 @@ export async function getSystemStatus(): Promise<SystemStatus> {
     return apiFetch<SystemStatus>('/api/system/status/')
 }
 
+export async function getReindexStatus(): Promise<{ needed: boolean; total: number; indexed: number }> {
+    return apiFetch('/api/system/reindex-status/')
+}
+
 export async function getWatchers(): Promise<Watcher[]> {
     return apiFetch<Watcher[]>('/api/watchers/')
 }

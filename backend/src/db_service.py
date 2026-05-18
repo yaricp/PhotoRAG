@@ -186,8 +186,9 @@ async def get_photos_by_vector(
     logger.info("Getting photos by vector")
     settings = Main_Settings()
 
-    if settings.DEFAULT_LANGUAGE != "en":
-        logger.info("Translating request text to English")
+    lang = get_setting(db, "default_language") or settings.DEFAULT_LANGUAGE
+    if lang != "en":
+        logger.info("Translating search query to English")
         request_text = await call_translation_model(request_text, backward=True)
 
     embedding = await call_embedding_model(text=request_text, purpose="search")

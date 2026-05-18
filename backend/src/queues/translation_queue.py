@@ -75,16 +75,16 @@ def warmup_translation_model() -> None:
 
 
 @translation_queue.task()
-def call_local_translation_model(task_id: str, text: str, backward: bool = False) -> None:
+def call_local_translation_model(task_id: str, text: str, backward: bool = False, target_lang: str | None = None) -> None:
     """
     Translate text and store the result in task_results.db.
 
-    backward=False: any language → user's DEFAULT_LANGUAGE (forward)
+    backward=False: English → target_lang (forward)
     backward=True:  any language → English (backward, for embedding)
 
     Result stored as JSON: {"translation": "<translated text>"}
     """
-    logger.info(f"[translation_queue] task_id={task_id} backward={backward} Translating text: {text[:30]}...")
+    logger.info(f"[translation_queue] task_id={task_id} backward={backward} target_lang={target_lang} text={text[:30]}...")
     start_time = time.time()
     try:
         model = _get_model()
@@ -92,7 +92,7 @@ def call_local_translation_model(task_id: str, text: str, backward: bool = False
             save_error(task_id, "translation model not loaded (mode=remote)")
             return
         with _lock:
-            translation = model.translate(text=text, backward=backward)
+            translation = model.translate(text=text, backward=backward, target_lang=target_lang)
         save_result(task_id, json.dumps({"translation": translation}))
         logger.info(f"[translation_queue] task_id={task_id} backward={backward} Translation completed in {time.time() - start_time:.2f}s")
     except Exception as exc:

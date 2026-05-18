@@ -238,3 +238,29 @@
     flex-direction: column;
     gap: 0.5rem;
 }
+
+/* Model config step — scrollable card list */
+.wizard-model-config-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: calc(100vh - 260px);
+    overflow-y: auto;
+    padding-right: 4px;
+    /* style the scrollbar subtly */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+
+.wizard-model-config-list::-webkit-scrollbar {
+    width: 5px;
+}
+
+.wizard-model-config-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.wizard-model-config-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+}

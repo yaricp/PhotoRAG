@@ -56,11 +56,16 @@ class Translator:
             self.model.eval()
             logger.info(f"Translator: {self.MODEL_ID} loaded on {self.device}")
 
-    def translate(self, text:str, backward: bool = False) -> str:
+    def translate(self, text: str, backward: bool = False, target_lang: str | None = None) -> str:
         self.load()
         if backward:
+            # backward always means → English (used for embedding queries)
             self.tokenizer.src_lang = self.translate_default_backward_direction["src_lang"]
             self.tokenizer.tgt_lang = self.translate_default_backward_direction["tgt_lang"]
+        elif target_lang and target_lang in self.LANG_DICT:
+            # Explicit target: descriptions are always generated in English
+            self.tokenizer.src_lang = "eng_Latn"
+            self.tokenizer.tgt_lang = self.LANG_DICT[target_lang]
         else:
             self.tokenizer.src_lang = self.translate_default_direction["src_lang"]
             self.tokenizer.tgt_lang = self.translate_default_direction["tgt_lang"]

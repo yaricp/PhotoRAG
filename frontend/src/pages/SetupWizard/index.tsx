@@ -2,25 +2,40 @@ import React, { useState } from 'react'
 import { StepWelcome } from './StepWelcome'
 import { StepInstallDeps } from './StepInstallDeps'
 import { StepInitDb } from './StepInitDb'
-import { StepModelPicker } from './StepModelPicker'
+import { StepModelConfig } from './StepModelConfig'
 import { StepDownloading } from './StepDownloading'
 import { StepDone } from './StepDone'
 import { MODELS } from './models'
 import './SetupWizard.css'
 
-type Step = 'welcome' | 'install-deps' | 'init-db' | 'model-picker' | 'downloading' | 'done'
+type Step = 'welcome' | 'install-deps' | 'init-db' | 'model-config' | 'downloading' | 'done'
 
-const STEP_ORDER: Step[] = ['welcome', 'install-deps', 'init-db', 'model-picker', 'downloading', 'done']
+const STEP_ORDER: Step[] = ['welcome', 'install-deps', 'init-db', 'model-config', 'downloading', 'done']
 const STEP_LABELS: Record<Step, string> = {
-    'welcome': 'Welcome',
+    'welcome':      'Welcome',
     'install-deps': 'Dependencies',
-    'init-db': 'Database',
-    'model-picker': 'Models',
-    'downloading': 'Downloading',
-    'done': 'Done',
+    'init-db':      'Database',
+    'model-config': 'AI Models',
+    'downloading':  'Downloading',
+    'done':         'Done',
 }
 
-const requiredModelIds = new Set(MODELS.filter(m => m.required).map(m => m.id))
+interface ModelConfig {
+    id: number
+    type: string
+    mode: 'local' | 'remote'
+    model_name: string
+    url?: string
+    api_key?: string
+    model_provider?: string
+    similarity_limit?: number
+}
+
+// DB type 'translator' maps to models.ts id 'translation'
+function dbTypeToModelId(dbType: string): string {
+    if (dbType === 'translator') return 'translation'
+    return dbType
+}
 
 interface Props {
     onComplete: () => void
@@ -28,11 +43,33 @@ interface Props {
 
 export function SetupWizard({ onComplete }: Props) {
     const [step, setStep] = useState<Step>('welcome')
-    const [selectedModels, setSelectedModels] = useState<Set<string>>(new Set(requiredModelIds))
+    const [selectedModels, setSelectedModels] = useState<Set<string>>(new Set())
 
     const advance = (to: Step) => setStep(to)
 
     const currentIndex = STEP_ORDER.indexOf(step)
+
+    // Models not selected for local download → written as *_MODE=remote in .env
+    const skippedModels = MODELS
+        .filter(m => !selectedModels.has(m.id))
+        .map(m => m.id)
+
+    const handleModelConfigDone = (configs: ModelConfig[]) => {
+        const localIds = new Set(
+            configs
+                .filter(c => c.mode === 'local')
+                .map(c => dbTypeToModelId(c.type))
+        )
+        // Downloadable = models that exist in the MODELS download list AND are local
+        const downloadable = new Set(MODELS.filter(m => localIds.has(m.id)).map(m => m.id))
+        setSelectedModels(downloadable)
+
+        if (downloadable.size === 0) {
+            advance('done')
+        } else {
+            advance('downloading')
+        }
+    }
 
     return (
         <div className="wizard-container">
@@ -58,14 +95,10 @@ export function SetupWizard({ onComplete }: Props) {
                     <StepInstallDeps onDone={() => advance('init-db')} />
                 )}
                 {step === 'init-db' && (
-                    <StepInitDb onDone={() => advance('model-picker')} />
+                    <StepInitDb onDone={() => advance('model-config')} />
                 )}
-                {step === 'model-picker' && (
-                    <StepModelPicker
-                        selected={selectedModels}
-                        onChange={setSelectedModels}
-                        onContinue={() => advance('downloading')}
-                    />
+                {step === 'model-config' && (
+                    <StepModelConfig onDone={handleModelConfigDone} />
                 )}
                 {step === 'downloading' && (
                     <StepDownloading
@@ -74,7 +107,10 @@ export function SetupWizard({ onComplete }: Props) {
                     />
                 )}
                 {step === 'done' && (
-                    <StepDone onComplete={onComplete} />
+                    <StepDone
+                        skippedModels={skippedModels}
+                        onComplete={onComplete}
+                    />
                 )}
             </div>
         </div>
