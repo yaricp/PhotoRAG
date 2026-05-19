@@ -1,0 +1,86 @@
+name: Build Windows
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-frontend:
+    name: Frontend tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: node --require ./scripts/crypto-polyfill.cjs ./node_modules/.bin/vitest run
+
+  test-backend:
+    name: Backend tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install pytest
+      - run: python -m pytest tests/test_data_dir.py tests/test_api_tesseract.py -v
+
+  build-nsis:
+    name: Build Windows NSIS Installer
+    runs-on: windows-latest
+    needs: [test-frontend, test-backend]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Download Windows Python runtime
+        # Windows Server 2022 tar supports zstd natively — no extra deps needed
+        shell: bash
+        run: bash scripts/download-python-win.sh
+
+      - name: Install npm dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build NSIS installer
+        working-directory: frontend
+        run: npm run dist:win
+        env:
+          # Uncomment and add secrets when a code-signing certificate is obtained:
+          # WIN_CSC_LINK: ${{ secrets.WIN_CERT_FILE }}
+          # WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CERT_PASSWORD }}
+
+      - name: Verify installer was produced
+        shell: bash
+        run: |
+          EXE=$(find frontend/dist-electron -name "*.exe" | head -1)
+          if [ -z "$EXE" ]; then
+            echo "ERROR: No .exe found in frontend/dist-electron/"
+            ls -la frontend/dist-electron/
+            exit 1
+          fi
+          SIZE=$(du -sh "$EXE" | cut -f1)
+          echo "Installer: $EXE ($SIZE)"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PhotoRAG-Windows-x64
+          path: frontend/dist-electron/*.exe
+          retention-days: 14

@@ -7,6 +7,15 @@ import { locatePython, locateBackend, startBackend, waitForBackend } from './bac
 // Mutable so setup:complete can update it after starting the backend.
 let currentPort = 0
 
+// Returns the path to a binary inside a venv, platform-aware.
+function venvBin(venvPath: string, name: string): string {
+    const dir = process.platform === 'win32' ? 'Scripts' : 'bin'
+    const ext = process.platform === 'win32' ? '.exe' : ''
+    // On Windows, the venv creates 'python.exe' (not 'python3.exe')
+    const resolvedName = process.platform === 'win32' && name === 'python3' ? 'python' : name
+    return join(venvPath, dir, resolvedName + ext)
+}
+
 export function registerIpcHandlers(port: number): void {
     currentPort = port
     console.log('[IPC] registering handlers, port =', port)
@@ -40,10 +49,16 @@ export function registerIpcHandlers(port: number): void {
         })
 
         // Step 2: pip install requirements (5→95%)
-        const pip = join(venvPath, 'bin', 'pip')
+        const pip = venvBin(venvPath, 'pip')
         const requirements = join(backend, 'requirements.txt')
+        const installArgs = ['install', '-r', requirements, '--progress-bar', 'off']
+        // On Windows, PyPI ships CUDA-enabled torch by default (~2.5 GB).
+        // Force CPU-only builds from the PyTorch index to keep the download small.
+        if (process.platform === 'win32') {
+            installArgs.push('--extra-index-url', 'https://download.pytorch.org/whl/cpu')
+        }
         let lineCount = 0
-        await spawnTracked(pip, ['install', '-r', requirements, '--progress-bar', 'off'], {}, (line) => {
+        await spawnTracked(pip, installArgs, {}, (line) => {
             lineCount++
             const percent = Math.min(95, 5 + lineCount * 0.5)
             event.sender.send('setup:install-deps-progress', { line, percent })
@@ -57,7 +72,7 @@ export function registerIpcHandlers(port: number): void {
     ipcMain.handle('setup:init-db', async () => {
         const userData = app.getPath('userData')
         const venvPath = join(userData, 'venv')
-        const python = join(venvPath, 'bin', 'python3')
+        const python = venvBin(venvPath, 'python3')
         const backend = locateBackend()
         await spawnTracked(python, ['init_db_only.py'], {
             cwd: backend,
@@ -74,7 +89,7 @@ export function registerIpcHandlers(port: number): void {
     ipcMain.handle('setup:download-model', async (event, { modelId }: { modelId: string }) => {
         const userData = app.getPath('userData')
         const venvPath = join(userData, 'venv')
-        const python = join(venvPath, 'bin', 'python3')
+        const python = venvBin(venvPath, 'python3')
         const backend = locateBackend()
 
         activeDownload = spawnTracked(
@@ -185,7 +200,7 @@ export function registerIpcHandlers(port: number): void {
     ipcMain.handle('setup:get-model-configs', async () => {
         const userData = app.getPath('userData')
         const venvPath = join(userData, 'venv')
-        const python = join(venvPath, 'bin', 'python3')
+        const python = venvBin(venvPath, 'python3')
         const backend = locateBackend()
         const script = `
 import json, sys
@@ -219,7 +234,7 @@ finally:
     ipcMain.handle('setup:save-model-configs', async (_, configs: any[]) => {
         const userData = app.getPath('userData')
         const venvPath = join(userData, 'venv')
-        const python = join(venvPath, 'bin', 'python3')
+        const python = venvBin(venvPath, 'python3')
         const backend = locateBackend()
         const script = `
 import json, os, sys

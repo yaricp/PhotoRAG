@@ -36,6 +36,9 @@ def resolve_app_data_dir() -> Path:
         path = Path(override)
     elif sys.platform == "darwin":
         path = Path.home() / "Library" / "Application Support" / APP_NAME
+    elif sys.platform == "win32":
+        appdata = os.environ.get("APPDATA") or str(Path.home() / "AppData" / "Roaming")
+        path = Path(appdata) / APP_NAME
     else:
         path = Path.home() / ".local" / "share" / APP_NAME
     path.mkdir(parents=True, exist_ok=True)

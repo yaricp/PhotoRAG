@@ -10,6 +10,8 @@
         "dist": "npm run build && electron-builder",
         "predist:mac": "bash ../scripts/download-python.sh",
         "dist:mac": "npm run build && electron-builder --mac --universal",
+        "predist:win": "bash ../scripts/download-python-win.sh",
+        "dist:win": "npm run build && electron-builder --win --x64",
         "test": "node --require ./scripts/crypto-polyfill.cjs ./node_modules/.bin/vitest",
         "test:ui": "node --require ./scripts/crypto-polyfill.cjs ./node_modules/.bin/vitest --ui",
         "test:coverage": "node --require ./scripts/crypto-polyfill.cjs ./node_modules/.bin/vitest run --coverage",
@@ -45,6 +47,22 @@
                 "filter": ["**/*", "!.venv/**", "!__pycache__/**", "!*.pyc", "!.env", "!tests/**", "!data/**"]
             }
         ],
+        "win": {
+            "target": [{ "target": "nsis", "arch": ["x64"] }],
+            "icon": "resources/icon.ico",
+            "artifactName": "${productName}-Setup-${version}-${arch}.${ext}"
+        },
+        "nsis": {
+            "oneClick": false,
+            "allowToChangeInstallationDirectory": true,
+            "createDesktopShortcut": true,
+            "createStartMenuShortcut": true,
+            "shortcutName": "PhotoRAG",
+            "installerIcon": "resources/icon.ico",
+            "uninstallerIcon": "resources/icon.ico",
+            "installerHeaderIcon": "resources/icon.ico",
+            "deleteAppDataOnUninstall": false
+        },
         "afterSign": "../scripts/notarize.js",
         "files": [
             "out/**/*",

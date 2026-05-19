@@ -8,14 +8,20 @@ let _port: number | null = null
 
 export function locatePython(): string {
     if (app.isPackaged) {
-        return path.join(process.resourcesPath, 'python', 'bin', 'python3')
+        const bin = process.platform === 'win32'
+            ? 'python.exe'
+            : path.join('bin', 'python3')
+        return path.join(process.resourcesPath, 'python', bin)
     }
-    return 'python3'
+    return process.platform === 'win32' ? 'python' : 'python3'
 }
 
 // Returns the venv Python created during setup (has all pip packages installed).
 export function locateVenvPython(): string {
-    return path.join(app.getPath('userData'), 'venv', 'bin', 'python3')
+    const rel = process.platform === 'win32'
+        ? path.join('Scripts', 'python.exe')
+        : path.join('bin', 'python3')
+    return path.join(app.getPath('userData'), 'venv', rel)
 }
 
 export function locateBackend(): string {
@@ -67,6 +73,7 @@ export async function startBackend(): Promise<number> {
     backendProcess = spawn(python, ['run.py'], {
         cwd: backendDir,
         detached: true,
+        windowsHide: true,
         env: {
             ...process.env,
             APP_DATA_DIR: appDataDir,
@@ -92,13 +99,16 @@ export async function startBackend(): Promise<number> {
 
 export function stopBackend(): void {
     if (backendProcess?.pid) {
-        try {
-            process.kill(-backendProcess.pid, 'SIGTERM')
-            const pid = backendProcess.pid
+        const pid = backendProcess.pid
+        if (process.platform === 'win32') {
+            // Kill the entire process tree (/T) forcefully (/F)
+            spawn('taskkill', ['/F', '/T', '/PID', String(pid)], { windowsHide: true })
+        } else {
+            try { process.kill(-pid, 'SIGTERM') } catch { /* already gone */ }
             setTimeout(() => {
                 try { process.kill(-pid, 'SIGKILL') } catch { /* already gone */ }
             }, 5000)
-        } catch { /* already gone */ }
+        }
         backendProcess = null
     }
     _port = null
