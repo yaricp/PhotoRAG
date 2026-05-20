@@ -145,6 +145,25 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.warning(f"[startup] Could not seed prompts (table may not exist yet — run install): {exc}")
 
+    # Remove duplicate embedding rows — a photo should have at most one vector.
+    # Duplicates accumulate when the pipeline runs more than once for the same photo
+    # without the old vector being deleted first (fixed in store_photo_embedding,
+    # but existing DBs may already have stale rows).
+    try:
+        from sqlalchemy import text as _text
+        dupes_removed = db.execute(_text("""
+            DELETE FROM photo_embedding_map
+            WHERE id NOT IN (
+                SELECT MIN(id) FROM photo_embedding_map GROUP BY photo_id
+            )
+        """)).rowcount
+        if dupes_removed:
+            db.commit()
+            logger.info(f"[startup] Removed {dupes_removed} duplicate embedding map row(s)")
+    except Exception as exc:
+        db.rollback()
+        logger.warning(f"[startup] Could not clean duplicate embedding rows: {exc}")
+
     # Ensure the VSS table dimension matches the configured embedding model.
     # This matters when the model was changed via the setup wizard (which writes
     # directly to the DB, bypassing the API endpoint that normally triggers a rebuild).

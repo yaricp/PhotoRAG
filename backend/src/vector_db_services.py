@@ -151,10 +151,30 @@ def store_photo_embedding(
 ) -> int:
     """
     One-step helper: save embedding + link to photo.
+    Replaces any previously stored embedding for this photo so a photo
+    never has more than one vector in the VSS table.
     """
+    existing = db.execute(
+        text("SELECT id FROM photo_embedding_map WHERE photo_id = :pid"),
+        {"pid": photo_id},
+    ).fetchall()
+    if existing:
+        for row in existing:
+            try:
+                db.execute(
+                    text("DELETE FROM photo_embeddings_vss WHERE rowid = :rid"),
+                    {"rid": row[0]},
+                )
+            except Exception:
+                pass
+        db.execute(
+            text("DELETE FROM photo_embedding_map WHERE photo_id = :pid"),
+            {"pid": photo_id},
+        )
+        db.commit()
+
     photo_embedding_id = link_photo_embedding(db, photo_id, model)
     rowid = save_embedding(db, photo_embedding_id, embedding)
-    
     return rowid
 
 
@@ -200,7 +220,15 @@ def search_similar_photos(
 
         logger.info(f"Vector search returned {len(rows)} results (threshold={threshold:.3f})")
 
-        return [(r[0], r[1]) for r in rows]
+        # Deduplicate by photo_id — keep only the closest match per photo.
+        # A photo can have multiple VSS rows if it was re-embedded without
+        # the old vector being deleted first; deduplication here prevents
+        # the same photo appearing several times in search results.
+        seen: dict[int, float] = {}
+        for photo_id, distance in rows:
+            if photo_id not in seen or distance < seen[photo_id]:
+                seen[photo_id] = distance
+        return list(seen.items())
 
     except Exception as e:
         logger.error(f"Error searching embeddings: {e}")
