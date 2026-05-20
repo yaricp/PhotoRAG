@@ -29,7 +29,14 @@
             "icon": "resources/icon.icns",
             "hardenedRuntime": false,
             "gatekeeperAssess": false,
-            "x64ArchFiles": "**/python/**"
+            "x64ArchFiles": "**/python/**",
+            "extendInfo": {
+                "NSDesktopFolderUsageDescription": "PhotoRAG needs access to your Desktop folder to find and process photos stored there.",
+                "NSDocumentsFolderUsageDescription": "PhotoRAG needs access to your Documents folder to find and process photos stored there.",
+                "NSDownloadsFolderUsageDescription": "PhotoRAG needs access to your Downloads folder to find and process photos stored there.",
+                "NSPhotoLibraryUsageDescription": "PhotoRAG needs access to your Photos library to process your photos.",
+                "NSRemovableVolumesUsageDescription": "PhotoRAG needs access to removable volumes to find and process photos stored there."
+            }
         },
         "dmg": {
             "background": "resources/dmg-background.png",
