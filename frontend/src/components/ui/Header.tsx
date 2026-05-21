@@ -51,7 +51,7 @@ export function Header({ sidebarState, onToggleSidebar }: Props) {
             {/* TODO: Add logo here */}
 
             <div className="app-header__title">
-                {current?.label || 'Photo Describer'}
+                {current?.label || 'PhotoRAG'}
             </div>
 
         </header>
