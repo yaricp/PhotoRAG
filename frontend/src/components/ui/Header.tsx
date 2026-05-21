@@ -1,6 +1,7 @@
 import React from 'react'
 import { useLocation } from 'react-router-dom'
 import './Header.css'
+import icon from '../../assets/icon.png'
 
 type SidebarState = 'full' | 'compact' | 'hidden'
 
@@ -48,10 +49,13 @@ export function Header({ sidebarState, onToggleSidebar }: Props) {
                 </button>
             </div>
 
-            {/* TODO: Add logo here */}
+            <div className="app-header__logo">
+                <img src={icon} alt="PhotoRAG" className="app-header__logo-img" />
+                <span className="app-header__logo-name">PhotoRAG</span>
+            </div>
 
             <div className="app-header__title">
-                {current?.label || 'PhotoRAG'}
+                {current?.label || ''}
             </div>
 
         </header>
