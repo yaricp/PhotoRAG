@@ -39,6 +39,7 @@
             }
         },
         "dmg": {
+            "icon": "resources/icon.icns",
             "background": "resources/dmg-background.png",
             "window": { "width": 540, "height": 380 },
             "contents": [
