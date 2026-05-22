@@ -40,8 +40,8 @@ src/i18n/
 ### Backend
 - `translator.py`: language-agnostic direction logic (supports any pair via `LANG_DICT`)
 - `LANG_DICT` extended with `es: "spa_Latn"` (and trivially extensible)
-- Batch re-translation task: iterates all photos, calls translator, overwrites `translated_description`
-- Status endpoint for re-translation progress
+- Batch re-translation: dedicated pipeline (`retranslation_pipeline.py`) that creates
+  `PipelineTask` rows per photo — visible on Processing Page like any other pipeline job
 - Chat system prompt: language injected at request time
 - OCR embedding: translate OCR text to English before embedding if needed
 
@@ -132,55 +132,132 @@ This mirrors the existing pattern in `db_service.py:190-192` for search queries.
 
 ---
 
-## Phase 8.3 — Backend: Batch Re-Translation on Language Change
+## Phase 8.3 — Backend: Re-Translation Pipeline
 
 ### Problem
-When user switches from Russian to Spanish, all existing `translated_description` values contain
-Russian text. We need to re-translate all photos to the new language in the background.
+When the user switches language, all existing `translated_description` values are in the
+old language. We need to re-translate every photo. This must be visible on the Processing
+Page as individual per-photo tasks — not a silent background job.
+
+### Design
+A new dedicated pipeline (`retranslation_pipeline.py`) mirrors the structure of
+`incoming_pipeline.py`. It uses the **same** `PipelineTask` table and `pipeline_tracker`
+infrastructure, with a new phase name `"retranslation"`. Each photo gets one task row:
+`translate_description_task`. The Processing Page already polls for pending/running tasks,
+so retranslation tasks appear there automatically, alongside any other active pipeline work.
+
+```
+User changes language → PUT /api/settings/default_language
+                      → POST /api/translation/retranslate-all
+                      → retranslation_pipeline.start_retranslation(new_lang)
+                           ├─ fetch all photo IDs with a description
+                           ├─ for each: init_pipeline_tasks(photo_id, "retranslation", [...])
+                           └─ run with same concurrency limiter as run_pipelines_batch
+                                └─ translate_description_task (via translation_queue)
+                                     └─ track_task(photo_id, "retranslation", "translate_description_task")
+                                          └─ overwrites translated_description
+```
+
+Key distinction from normal pipeline:
+- Phase name is `"retranslation"` (not `"phase_2"`) — no collision with ongoing ingestion
+- Skipped entirely when `new_lang == "en"` (description IS the text)
+- `translate_description_task` already uses `track_task` — we just change the phase argument
 
 ### TDD Tests
-File: `backend/tests/test_translation_tasks.py`
+File: `backend/tests/test_retranslation_pipeline.py`
 
 ```python
-async def test_retranslate_all_skips_when_language_is_english():
-    # When: new_lang="en", no translation calls made, returns immediately
+async def test_retranslation_skips_when_english(mock_db, mock_init_tasks):
+    await start_retranslation("en")
+    mock_init_tasks.assert_not_called()
 
-async def test_retranslate_all_queues_all_photos(mock_db, mock_translation):
-    # Given: 3 photos with descriptions
-    # When: retranslate_all_photos(new_lang="es") called
-    # Then: translation called 3 times with target_lang="es"
-    # And: each photo's translated_description updated
+async def test_retranslation_creates_pipeline_tasks_per_photo(mock_db_with_3_photos, mock_init_tasks, mock_translate):
+    await start_retranslation("es")
+    assert mock_init_tasks.call_count == 3
+    for call in mock_init_tasks.call_args_list:
+        assert call.args[1] == "retranslation"
+        assert "translate_description_task" in call.args[2]
 
-def test_retranslate_status_endpoint_returns_progress(client, mock_db):
-    # GET /api/translation/status → { "total": 3, "done": 1, "running": true }
+async def test_retranslation_tasks_tracked_in_pipeline_tracker(mock_db_with_1_photo, mock_translate):
+    await start_retranslation("ru")
+    task = PipelineTask.query.filter_by(phase="retranslation").first()
+    assert task.status in ("done", "running", "pending")
+
+async def test_retranslation_overwrites_translated_description(mock_db, mock_nllb):
+    photo = make_photo(description="A cat", translated_description="Кот")
+    await start_retranslation("es")
+    assert photo.translated_description == "<Spanish translation of 'A cat'>"
+
+def test_retranslate_all_endpoint_starts_pipeline(client):
+    # POST /api/translation/retranslate-all → 202, pipeline task enqueued
+    resp = client.post("/api/translation/retranslate-all")
+    assert resp.status_code == 202
+    assert resp.json()["status"] == "started"
 ```
 
-### New Files
-**`backend/src/tasks/retranslation_tasks.py`**
+### New File: `backend/src/retranslation_pipeline.py`
+
 ```python
-async def retranslate_all_photos(new_lang: str) -> None:
-    """Translate all photos to new_lang, overwriting translated_description."""
+"""
+Re-translation pipeline.
+
+Triggered when the user changes the UI language. Translates every photo's
+description to the new language and shows progress on the Processing Page
+via the standard PipelineTask / pipeline_tracker mechanism.
+"""
+_RETRANSLATION_TASKS = ["translate_description_task"]
+
+async def start_retranslation(new_lang: str, max_concurrent: int = 4) -> None:
     if new_lang == "en":
-        return  # English = no translation needed, description IS the text
-    # Fetch all photo IDs with a description
-    # For each: call translate_description_task(photo_id) with new target lang
-    # Update progress in a simple counter stored in the main DB (or in-memory)
+        return  # description column is always English; no translation needed
+
+    db = SessionLocal()
+    try:
+        photo_ids = db.execute(
+            text("SELECT id FROM photos WHERE description IS NOT NULL")
+        ).scalars().all()
+    finally:
+        db.close()
+
+    if not photo_ids:
+        return
+
+    semaphore = asyncio.Semaphore(max_concurrent)
+
+    async def _translate_one(photo_id: int) -> None:
+        async with semaphore:
+            init_pipeline_tasks(photo_id, "retranslation", _RETRANSLATION_TASKS)
+            await translate_description_task_for_retranslation(photo_id, new_lang)
+
+    await asyncio.gather(*[_translate_one(pid) for pid in photo_ids])
 ```
 
-### New API Endpoints in `main.py`
+### Update: `backend/src/tasks/translation_tasks.py`
+The existing `translate_description_task(photo_id)` is hardcoded to `"phase_2"` as the
+tracker phase. Add a sibling function that accepts the phase as a parameter:
+
 ```python
-@app.post("/api/translation/retranslate-all")
-async def trigger_retranslate_all(background_tasks: BackgroundTasks, db: Session):
-    """Kick off background re-translation for all photos."""
-    new_lang = get_setting(db, "default_language") or "en"
-    background_tasks.add_task(retranslate_all_photos, new_lang)
-    return {"status": "started"}
-
-@app.get("/api/translation/status")
-async def get_translation_status():
-    """Return progress of ongoing re-translation."""
-    return {"total": ..., "done": ..., "running": ...}
+async def translate_description_task_for_retranslation(photo_id: int, target_lang: str) -> None:
+    async with track_task(photo_id, "retranslation", "translate_description_task"):
+        description = await asyncio.to_thread(_get_description_sync, photo_id)
+        if not description:
+            return
+        translated = await call_translation_model(description, backward=False, target_lang=target_lang)
+        await asyncio.to_thread(_save_translation_sync, photo_id, translated)
 ```
+
+### New API Endpoint in `main.py`
+```python
+@app.post("/api/translation/retranslate-all", status_code=202)
+async def trigger_retranslate_all(background_tasks: BackgroundTasks, db: Session):
+    """Start the retranslation pipeline for all photos in the selected language."""
+    new_lang = get_setting(db, "default_language") or "en"
+    background_tasks.add_task(start_retranslation, new_lang)
+    return {"status": "started", "language": new_lang}
+```
+
+No separate status endpoint needed — the Processing Page already shows all active
+`PipelineTask` rows including those with `phase="retranslation"`.
 
 ---
 
@@ -464,28 +541,48 @@ export function StepLanguage({ onContinue }: { onContinue: () => void }) {
 
 ---
 
-## Phase 8.8 — Frontend: Language Change Triggers Re-Translation
+## Phase 8.8 — Frontend: Language Change Triggers Re-Translation Pipeline
 
 ### Changes to `SettingsPage.tsx`
 When `default_language` changes and is saved:
 1. Call `PUT /api/settings/default_language` (existing)
 2. If new language ≠ `"en"`, call `POST /api/translation/retranslate-all`
-3. Show a non-blocking progress banner: "Translating photo descriptions… (47 / 312)"
-4. Poll `GET /api/translation/status` every 5 seconds until `running: false`
-5. On completion, show success notification
+3. Show a one-time toast/banner (not polling):
+   > "Description translation started. Track progress on the Processing page."
+   — with a direct link to `/processing`
+4. No polling needed — the Processing Page already shows per-photo task status
+
+This is intentionally minimal on the Settings side. The Processing Page is the
+single source of truth for all background work, including retranslation.
 
 ### TDD Tests
 ```typescript
 test('changing language to Russian triggers retranslate-all API call', async () => {
     const retranslate = vi.fn().mockResolvedValue({ status: 'started' })
-    // select Russian → save → verify retranslate called
+    // select Russian → save → verify retranslate called once
 })
 
-test('translation progress banner shows while running', async () => {
-    // mock GET /api/translation/status → { running: true, done: 10, total: 100 }
-    // verify banner visible with "10 / 100"
+test('banner with Processing page link appears after language change', async () => {
+    // select Spanish → save
+    // expect: toast/banner visible containing a link to /processing
+    // expect: no polling calls to /api/translation/status
+})
+
+test('retranslate-all not called when switching back to English', async () => {
+    // start in Russian, select English → save
+    // expect: retranslate-all endpoint NOT called
 })
 ```
+
+### Processing Page: retranslation phase visibility
+The Processing Page reads `PipelineTask` rows from `GET /api/pipeline/tasks` (or equivalent).
+Retranslation tasks have `phase = "retranslation"` and `task_name = "translate_description_task"`.
+
+If the Processing Page currently only shows certain phase names, ensure `"retranslation"` is
+included — or better, show all phases without an allowlist. Each retranslation row should
+display the photo thumbnail (if available), phase label "Translation", task name, and status.
+
+No new backend endpoint is needed — the existing pipeline task API already returns these rows.
 
 ---
 
@@ -616,7 +713,8 @@ async def test_full_translation_pipeline_es(client, mock_db, mock_nllb):
 ## Files Created / Modified
 
 ### Backend (new)
-- `backend/src/tasks/retranslation_tasks.py`
+- `backend/src/retranslation_pipeline.py` — dedicated pipeline, visible on Processing Page
+- `backend/tests/test_retranslation_pipeline.py`
 - `backend/tests/test_translator.py`
 - `backend/tests/test_translation_tasks.py`
 - `backend/tests/test_embedding_pipeline.py`
@@ -625,7 +723,8 @@ async def test_full_translation_pipeline_es(client, mock_db, mock_nllb):
 
 ### Backend (modified)
 - `backend/src/ai/translator.py` — generalize direction logic, add Spanish
-- `backend/src/main.py` — new API endpoints, bootstrap reader at startup
+- `backend/src/tasks/translation_tasks.py` — add `translate_description_task_for_retranslation`
+- `backend/src/main.py` — POST /api/translation/retranslate-all endpoint, bootstrap reader at startup
 
 ### Frontend (new)
 - `frontend/src/i18n/index.ts`
