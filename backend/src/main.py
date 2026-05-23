@@ -35,6 +35,7 @@ from src.db_service import (
     get_quality_summary,
     get_photos_by_issue_type,
     get_all_settings,
+    get_setting,
     set_setting,
     get_history_actions,
     perform_undo,
@@ -764,6 +765,23 @@ def update_setting_endpoint(
 ) -> AppSettingSchema:
     setting = set_setting(db, key, request.value)
     return AppSettingSchema(key=setting.key, value=setting.value)
+
+
+@app.post("/api/translation/retranslate-all", tags=["Settings"], status_code=202)
+async def retranslate_all_endpoint(
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+) -> Dict[str, str]:
+    """
+    Start re-translating all photo descriptions to the currently configured language.
+    Each photo appears as a task on the Processing Page (phase='retranslation').
+    Returns immediately; translation runs in the background.
+    """
+    from src.retranslation_pipeline import start_retranslation
+    lang = get_setting(db, "default_language") or "en"
+    if lang != "en":
+        background_tasks.add_task(start_retranslation, lang)
+    return {"status": "started", "language": lang}
 
 
 # ---------------------------------------------------------------------------

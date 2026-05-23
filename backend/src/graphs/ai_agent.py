@@ -7,6 +7,8 @@ from langgraph.prebuilt import ToolNode
 from langgraph.checkpoint.memory import MemorySaver
 
 from src.ai.prompts import get_prompt
+from src.db.database import SessionLocal
+from src.db_service import get_setting
 from src.graphs.state import AgentState
 from src.graphs.tools import (
     get_categories,
@@ -105,13 +107,28 @@ editing_tool_node = ToolNode(editing_tools)
 
 
 # 3. Define Nodes
+_LANG_INSTRUCTIONS: dict[str, str] = {
+    "ru": "Отвечай на русском языке.",
+    "es": "Responde en español.",
+}
+
+
+def _get_ui_language() -> str:
+    """Read the current UI language from settings; fall back to English."""
+    with SessionLocal() as db:
+        return get_setting(db, "default_language") or "en"
+
+
 def call_model(state: AgentState):
     """Call the LLM with the current state."""
     logger.info(f"[ai_agent] state: {state}")
     messages = state["messages"]
 
     if not any(isinstance(m, SystemMessage) for m in messages):
-        system_msg = SystemMessage(content=get_prompt("chat_agent.system_message"))
+        base_prompt = get_prompt("chat_agent.system_message")
+        lang = _get_ui_language()
+        lang_suffix = f"\n\n{_LANG_INSTRUCTIONS[lang]}" if lang in _LANG_INSTRUCTIONS else ""
+        system_msg = SystemMessage(content=base_prompt + lang_suffix)
         messages = [system_msg] + messages
         
     logger.info(f"[ai_agent] current messages: {messages}")

@@ -1,9 +1,8 @@
-
 from loguru import logger
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 import torch
 
-from src.config import Translation_Settings as ML_Settings, Main_Settings
+from src.config import Translation_Settings as ML_Settings
 from src.schemas import TranslateRequest
 
 
@@ -11,30 +10,16 @@ class Translator:
 
     ml_settings = ML_Settings()
     MODEL_ID = ml_settings.TRANSLATOR_MODEL
-    main_settings = Main_Settings()
+
     LANG_DICT = {
         "en": "eng_Latn",
         "ru": "rus_Cyrl",
+        "es": "spa_Latn",
     }
 
     def __init__(self):
         self.model = None
         self.tokenizer = None
-        self.translate_default_direction = {}
-        if self.main_settings.DEFAULT_LANGUAGE == "en":
-            self.translate_default_direction["src_lang"] = "rus_Cyrl"
-            self.translate_default_direction["tgt_lang"] = "eng_Latn"
-        elif self.main_settings.DEFAULT_LANGUAGE == "ru":
-            self.translate_default_direction["src_lang"] = "eng_Latn"
-            self.translate_default_direction["tgt_lang"] = "rus_Cyrl"
-
-        self.translate_default_backward_direction  = {}
-        if self.main_settings.DEFAULT_LANGUAGE == "en":
-            self.translate_default_backward_direction["src_lang"] = "eng_Latn"
-            self.translate_default_backward_direction["tgt_lang"] = "rus_Cyrl"
-        elif self.main_settings.DEFAULT_LANGUAGE == "ru":
-            self.translate_default_backward_direction["src_lang"] = "rus_Cyrl"
-            self.translate_default_backward_direction["tgt_lang"] = "eng_Latn"
 
         if torch.cuda.is_available():
             self.device = "cuda"
@@ -57,40 +42,50 @@ class Translator:
             logger.info(f"Translator: {self.MODEL_ID} loaded on {self.device}")
 
     def translate(self, text: str, backward: bool = False, target_lang: str | None = None) -> str:
-        self.load()
+        """
+        Translate text.
+
+        backward=False: English → target_lang (for displaying descriptions).
+                        Returns text unchanged if target_lang is unknown or None.
+        backward=True:  user language → English (for embedding/search queries).
+                        target_lang specifies the source language; defaults to "ru" if omitted.
+        """
         if backward:
-            # backward always means → English (used for embedding queries)
-            self.tokenizer.src_lang = self.translate_default_backward_direction["src_lang"]
-            self.tokenizer.tgt_lang = self.translate_default_backward_direction["tgt_lang"]
+            # Always translate → English; source = user's current language
+            src_code = self.LANG_DICT.get(target_lang, "rus_Cyrl") if target_lang else "rus_Cyrl"
+            self.load()
+            self.tokenizer.src_lang = src_code
+            self.tokenizer.tgt_lang = "eng_Latn"
         elif target_lang and target_lang in self.LANG_DICT:
-            # Explicit target: descriptions are always generated in English
+            # Descriptions are always generated in English
+            self.load()
             self.tokenizer.src_lang = "eng_Latn"
             self.tokenizer.tgt_lang = self.LANG_DICT[target_lang]
         else:
-            self.tokenizer.src_lang = self.translate_default_direction["src_lang"]
-            self.tokenizer.tgt_lang = self.translate_default_direction["tgt_lang"]
+            logger.warning(f"Translator.translate: unknown or missing target_lang={target_lang!r}, returning text unchanged")
+            return text
+
         logger.debug(f"Translator: {self.tokenizer.src_lang} -> {self.tokenizer.tgt_lang} | {text}")
         inputs = self.tokenizer(text, return_tensors="pt").to(self.device)
         target_lang_id = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tgt_lang)
-        outputs = self.model.generate(**inputs,forced_bos_token_id=target_lang_id)
+        outputs = self.model.generate(**inputs, forced_bos_token_id=target_lang_id)
         result = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
         logger.debug(f"Translator result: {result}")
         return result
 
     def _build_supported_languages_from_model(self):
         self.supported_languages = {
-            "en": {
-                "lang_code": "eng_Latn",
-                "lang_name": "English",
-            },
-            "ru": {
-                "lang_code": "rus_Cyrl",
-                "lang_name": "Russian",
-            },
+            code: {"lang_code": nllb_code, "lang_name": self._lang_name(code)}
+            for code, nllb_code in self.LANG_DICT.items()
+            if code != "en"
         }
+
+    @staticmethod
+    def _lang_name(code: str) -> str:
+        return {"ru": "Russian", "es": "Spanish"}.get(code, code.upper())
 
     def get_supported_languages(self):
         """Returns the list of supported languages."""
-        if not self.supported_languages:
+        if not getattr(self, "supported_languages", None):
             self._build_supported_languages_from_model()
         return self.supported_languages

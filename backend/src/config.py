@@ -16,7 +16,7 @@ load_dotenv(override=False)
 
 
 class Main_Settings(BaseSettings):
-    LANGUAGES: list[str] = ["en", "ru"]
+    LANGUAGES: list[str] = ["en", "ru", "es"]
     DEFAULT_LANGUAGE: str = "en"
 
 

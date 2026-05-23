@@ -3,9 +3,9 @@ import asyncio
 import os
 from loguru import logger
 
-from src.config import Embedding_Settings
+from src.config import Embedding_Settings, Main_Settings
 from src.db.database import SessionLocal
-from src.db_service import get_photo_by_id
+from src.db_service import get_photo_by_id, get_setting
 from src.model_services import call_embedding_model, call_translation_model
 from src.pipeline_tracker import track_task
 from src.vector_db_services import store_photo_embedding
@@ -109,7 +109,12 @@ async def embedding_document_text_task(photo_id: int) -> None:
             logger.info(f"[embedding/doc] Photo {photo_id}: skipping (not a doc or no OCR text)")
             return
 
-        doc_text_en = await call_translation_model(ocr_text, backward=True)
+        db_lang = SessionLocal()
+        try:
+            lang = get_setting(db_lang, "default_language") or Main_Settings().DEFAULT_LANGUAGE
+        finally:
+            db_lang.close()
+        doc_text_en = await call_translation_model(ocr_text, backward=True, target_lang=lang)
         embedding = await call_embedding_model(text=doc_text_en, purpose="save")
         await asyncio.to_thread(_save_embedding_sync, photo_id, embedding)
         logger.info(f"[embedding/doc] Photo {photo_id}: doc vector saved ✓")

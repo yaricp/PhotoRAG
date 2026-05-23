@@ -41,6 +41,24 @@ def _get_target_language() -> str:
         db.close()
 
 
+async def translate_description_task_for_retranslation(photo_id: int, target_lang: str) -> None:
+    """
+    Re-translate a photo description to target_lang.
+    Used by retranslation_pipeline; tracked under phase="retranslation" so it
+    appears on the Processing Page separately from the normal ingestion pipeline.
+    """
+    logger.info(f"[retranslation] Start: photo_id={photo_id} lang={target_lang}")
+    async with track_task(photo_id, "retranslation", "translate_description_task"):
+        description = await asyncio.to_thread(_get_description_sync, photo_id)
+        if not description:
+            logger.info(f"[retranslation] Photo {photo_id}: no description, skipping")
+            return
+
+        translated = await call_translation_model(description, backward=False, target_lang=target_lang)
+        await asyncio.to_thread(_save_translation_sync, photo_id, translated)
+        logger.info(f"[retranslation] Photo {photo_id}: translation saved ✓")
+
+
 async def translate_description_task(photo_id: int) -> None:
     """Translate the photo description into the user's configured language."""
     logger.info(f"[translate] Start: photo_id={photo_id}")
