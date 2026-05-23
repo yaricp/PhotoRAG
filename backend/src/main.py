@@ -136,6 +136,13 @@ async def lifespan(app: FastAPI):
     db = SessionLocal()
     watcher_service.start_all(db)
 
+    # Apply installer bootstrap (language choice written by NSIS on Windows)
+    try:
+        from src.bootstrap import apply_bootstrap_settings
+        apply_bootstrap_settings(db)
+    except Exception as exc:
+        logger.warning(f"[startup] Bootstrap read failed (non-fatal): {exc}")
+
     # Seed prompts table from prompts.json for new rows (idempotent — user edits preserved)
     try:
         from pathlib import Path

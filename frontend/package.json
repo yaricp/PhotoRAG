@@ -106,7 +106,10 @@
             "installerIcon": "resources/icon.ico",
             "uninstallerIcon": "resources/icon.ico",
             "installerHeaderIcon": "resources/icon.ico",
-            "deleteAppDataOnUninstall": false
+            "deleteAppDataOnUninstall": false,
+            "multiLanguageInstaller": true,
+            "installerLanguages": ["English", "Russian", "SpanishInternational"],
+            "include": "build/installer.nsh"
         },
         "afterSign": "../scripts/notarize.js",
         "files": [
