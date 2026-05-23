@@ -54,19 +54,13 @@ export async function getPhotos(params: GetPhotosParams = {}): Promise<Paginated
     if (params.month !== undefined) query.set('month', String(params.month))
     if (params.day !== undefined) query.set('day', String(params.day))
 
-    console.log("query1", query)
-    // ✅ MULTI TAGS (ВАЖНО)
     params.tag_ids?.forEach(id => {
         query.append('tag_ids', String(id))
     })
-    console.log("query2", query)
-    // ✅ MULTI CATEGORIES
     params.category_ids?.forEach(id => {
         query.append('category_ids', String(id))
     })
-    console.log("query3", query)
     const qs = query.toString() ? `?${query}` : ''
-    console.log(qs)
     return apiFetch<PaginatedPhotos>(`/api/photos/${qs}`)
 }
 

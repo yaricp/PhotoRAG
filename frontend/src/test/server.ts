@@ -69,8 +69,24 @@ export const handlers = [
         HttpResponse.json(makeJob({ photo_id: Number(params.photoId) }))
     ),
 
+    http.get(`${BASE}/api/jobs/:photoId`, ({ params }) =>
+        HttpResponse.json(makeJob({ photo_id: Number(params.photoId) }))
+    ),
+
+    http.post(`${BASE}/api/watchers/`, () =>
+        HttpResponse.json(makeWatcher())
+    ),
+
     http.get(`${BASE}/api/stream/`, () =>
         new HttpResponse(null, { status: 200 })
+    ),
+
+    http.get(`${BASE}/api/photos/available-dates/`, () =>
+        HttpResponse.json([])
+    ),
+
+    http.get(`${BASE}/api/system/tesseract/`, () =>
+        HttpResponse.json({ available: true })
     ),
 
     http.get(`${BASE}/api/settings/`, () =>
@@ -83,6 +99,14 @@ export const handlers = [
 
     http.post(`${BASE}/api/history/undo/`, () =>
         HttpResponse.json({ status: 'ok', detail: 'No action to undo.' })
+    ),
+
+    http.get(`${BASE}/api/models/`, () =>
+        HttpResponse.json([])
+    ),
+
+    http.get(`${BASE}/api/system/reindex-status/`, () =>
+        HttpResponse.json({ needed: false, total: 0, indexed: 0 })
     ),
 ]
 

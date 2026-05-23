@@ -24,8 +24,8 @@ describe('api client', () => {
                 })
             )
             const { getPhotos } = await import('../client')
-            await getPhotos({ page: 2, is_doc: true })
-            expect(capturedUrl).toContain('page=2')
+            await getPhotos({ skip: 20, is_doc: true })
+            expect(capturedUrl).toContain('skip=20')
             expect(capturedUrl).toContain('is_doc=true')
         })
 
@@ -70,7 +70,7 @@ describe('api client', () => {
             const { sendChat } = await import('../client')
             const res = await sendChat({ message: 'show docs' })
             expect(res.thread_id).toBeTruthy()
-            expect(res.message).toBeTruthy()
+            expect(res.response).toBeTruthy()
         })
     })
 
@@ -92,13 +92,13 @@ describe('api client', () => {
         it('addWatcher posts path', async () => {
             let body: any = null
             server.use(
-                http.post('http://localhost:8000/api/watch/', async ({ request }) => {
+                http.post('http://localhost:8000/api/watchers/', async ({ request }) => {
                     body = await request.json()
                     return HttpResponse.json({})
                 })
             )
             const { addWatcher } = await import('../client')
-            await addWatcher('/Users/test/NewPhotos')
+            await addWatcher('/Users/test/NewPhotos', '')
             expect(body.path).toBe('/Users/test/NewPhotos')
         })
     })

@@ -22,7 +22,9 @@
       "image_width": "Ancho"
     },
     "perPage": "{{count}} / pág.",
-    "reset": "Restablecer"
+    "reset": "Restablecer",
+    "empty": "No se encontraron fotos",
+    "error": "Error al cargar las fotos"
   },
   "chat": {
     "selectAll": "Seleccionar todo",

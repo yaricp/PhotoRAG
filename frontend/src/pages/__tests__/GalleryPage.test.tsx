@@ -53,17 +53,17 @@ describe('GalleryPage', () => {
         )
     })
 
-    it('filters by is_doc when Documents filter clicked', async () => {
+    it('refetches with ascending order when sort toggle clicked', async () => {
         let capturedUrl = ''
         server.use(
             http.get('http://localhost:8000/api/photos/', ({ request }) => {
                 capturedUrl = request.url
-                return HttpResponse.json(makePaginatedPhotos([makePhoto({ is_doc: true })]))
+                return HttpResponse.json(makePaginatedPhotos([makePhoto()]))
             })
         )
         renderGallery()
         await waitFor(() => screen.getAllByRole('article'))
-        await userEvent.click(screen.getByRole('button', { name: /documents only/i }))
-        await waitFor(() => expect(capturedUrl).toContain('is_doc=true'))
+        await userEvent.click(screen.getByRole('button', { name: '↓' }))
+        await waitFor(() => expect(capturedUrl).toContain('sort_order=asc'))
     })
 })

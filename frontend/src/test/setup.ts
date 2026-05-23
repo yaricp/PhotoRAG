@@ -1,9 +1,11 @@
 import '@testing-library/jest-dom'
 import { beforeAll, afterAll, afterEach } from 'vitest'
+import '../i18n'
 
-// msw 2.x requires Node ≥ 18 (BroadcastChannel, native fetch, etc.).
+// msw 2.x requires Node ≥ 18 (BroadcastChannel, WritableStream, native fetch, etc.).
 // On older runtimes, skip MSW server setup so pure unit tests can still run.
 const canUseMsw = typeof globalThis.BroadcastChannel !== 'undefined'
+    && typeof globalThis.ReadableStream !== 'undefined'
 
 let server: { listen: Function; resetHandlers: Function; close: Function } | null = null
 

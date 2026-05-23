@@ -35,6 +35,7 @@ export function GalleryPage() {
 
     const [availableDates, setAvailableDates] = useState<AvailableDate[]>([])
     const [removedIds, setRemovedIds] = useState<Set<number>>(new Set())
+    const [error, setError] = useState<string | null>(null)
 
     function removeFromGallery(id: number) {
         setRemovedIds(prev => { const next = new Set(prev); next.add(id); return next })
@@ -58,6 +59,7 @@ export function GalleryPage() {
     // Main query
     useEffect(() => {
         setLoading(true)
+        setError(null)
         setRemovedIds(new Set())
         getPhotos({
             skip: page * limit,
@@ -73,6 +75,7 @@ export function GalleryPage() {
             day: selectedDay ?? undefined,
         })
             .then(setData)
+            .catch(err => setError(err instanceof Error ? err.message : String(err)))
             .finally(() => setLoading(false))
     }, [page, limit, selectedCategories, selectedTags, selectedCamera, selectedGeo, selectedYear, selectedMonth, selectedDay, sortBy, sortOrder])
 
@@ -112,7 +115,7 @@ export function GalleryPage() {
     }, [data, limit])
 
     return (
-        <div className="gallery-layout">
+        <div className="gallery-layout" data-testid="page-gallery">
             <FilterBar
                 selectedTags={selectedTags}
                 selectedCategories={selectedCategories}
@@ -140,6 +143,14 @@ export function GalleryPage() {
                 <div className="gallery-center">
                     <Spinner size="lg" />
                 </div>
+            )}
+
+            {!loading && error && (
+                <div className="gallery-center">{t('gallery.error')}</div>
+            )}
+
+            {!loading && !error && data && data.items.length === 0 && (
+                <div className="gallery-center">{t('gallery.empty')}</div>
             )}
 
             {!loading && data && (() => {

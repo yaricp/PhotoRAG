@@ -103,6 +103,8 @@ export const makeModelStatus = (overrides?: Partial<ModelStatus>): ModelStatus =
 })
 
 export const makeSystemStatus = (overrides?: Partial<SystemStatus>): SystemStatus => ({
+    ready: true,
+    chat_ready: true,
     models: [
         makeModelStatus({ name: 'clip' }),
         makeModelStatus({ name: 'easyocr' }),
@@ -112,7 +114,7 @@ export const makeSystemStatus = (overrides?: Partial<SystemStatus>): SystemStatu
 })
 
 export const makeChatResponse = (overrides?: Partial<ChatResponse>): ChatResponse => ({
-    message: 'Here are some matching photos.',
+    response: 'Here are some matching photos.',
     thread_id: 'thread-abc-123',
     photos: [makePhoto()],
     ...overrides

@@ -31,28 +31,30 @@ export function DateFilterButton({
             : String(selectedYear)
         : 'Date'
 
+    const dates = Array.isArray(availableDates) ? availableDates : []
+
     const uniqueYears = useMemo(
-        () => [...new Set(availableDates.map(d => d.year))].sort((a, b) => b - a),
-        [availableDates]
+        () => [...new Set(dates.map(d => d.year))].sort((a, b) => b - a),
+        [dates]
     )
 
     const availableMonths = useMemo(
-        () => [...new Set(availableDates
+        () => [...new Set(dates
             .filter(d => selectedYear == null || d.year === selectedYear)
             .map(d => d.month)
         )].sort((a, b) => a - b),
-        [availableDates, selectedYear]
+        [dates, selectedYear]
     )
 
     const availableDays = useMemo(
-        () => [...new Set(availableDates
+        () => [...new Set(dates
             .filter(d =>
                 (selectedYear == null || d.year === selectedYear) &&
                 (selectedMonth == null || d.month === selectedMonth)
             )
             .map(d => d.day)
         )].sort((a, b) => a - b),
-        [availableDates, selectedYear, selectedMonth]
+        [dates, selectedYear, selectedMonth]
     )
 
     function openModal() {

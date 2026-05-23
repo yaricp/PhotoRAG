@@ -22,7 +22,9 @@
       "image_width": "Width"
     },
     "perPage": "{{count}} / page",
-    "reset": "Reset"
+    "reset": "Reset",
+    "empty": "No photos found",
+    "error": "Error loading photos"
   },
   "chat": {
     "selectAll": "Select all",

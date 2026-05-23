@@ -61,7 +61,7 @@ describe('ChatPage', () => {
         fireEvent.change(textarea, { target: { value: 'find' } })
         fireEvent.click(screen.getByRole('button', { name: /send/i }))
         await waitFor(() =>
-            expect(screen.getByRole('checkbox')).toBeInTheDocument()
+            expect(screen.getAllByRole('checkbox').length).toBeGreaterThan(1)
         )
     })
 
