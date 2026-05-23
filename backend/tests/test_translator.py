@@ -13,6 +13,11 @@ _mock_torch.backends.mps.is_available.return_value = False
 sys.modules.setdefault("torch", _mock_torch)
 sys.modules.setdefault("transformers", MagicMock())
 
+# Other test files (api/tool) set src.ai and src.ai.translator to MagicMocks.
+# Evict them so we import the real translator module (with mocked torch/transformers).
+sys.modules.pop("src.ai", None)
+sys.modules.pop("src.ai.translator", None)
+
 
 # ---------------------------------------------------------------------------
 # LANG_DICT completeness

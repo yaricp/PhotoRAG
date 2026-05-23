@@ -29,7 +29,7 @@ export function Sidebar({ state = 'full' }: Props) {
     if (state === 'hidden') return null
 
     return (
-        <nav className={`sidebar sidebar--${state}`}>
+        <nav className={`sidebar sidebar--${state}`} data-testid="sidebar">
 
             <div className="sidebar__content">
                 <ul className="sidebar__nav">

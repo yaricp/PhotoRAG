@@ -8,10 +8,18 @@ Tests cover:
 - call_vision_model routes to local Huey task when mode=local
 - call_vision_model routes to remote when mode=remote
 """
+import sys
 import base64
 import json
 import pytest
 from unittest.mock import patch, MagicMock, AsyncMock
+
+# Earlier test files set src.model_services, src.queues.*, and src.queues.queue_config
+# to MagicMocks.  Evict them so we always import the real lightweight modules here.
+for _m in ['src.model_services', 'src.task_notifier',
+           'src.queues', 'src.queues.vision_queue', 'src.queues.queue_config']:
+    sys.modules.pop(_m, None)
+
 import src.queues.vision_queue  # noqa: pre-import so patch can resolve
 
 

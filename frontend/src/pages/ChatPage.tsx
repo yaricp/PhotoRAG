@@ -52,7 +52,8 @@ export function ChatPage() {
     }, [stopPolling])
 
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+        if (typeof messagesEndRef.current?.scrollIntoView === 'function')
+            messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
     }, [messages, loading])
 
     useEffect(() => {
@@ -147,7 +148,7 @@ export function ChatPage() {
         : t('chat.confirmArchiveMessage')
 
     return (
-        <div className="chat-page">
+        <div className="chat-page" data-testid="page-chat">
 
             {/* LEFT — context panel */}
             <div className="chat-page__context">

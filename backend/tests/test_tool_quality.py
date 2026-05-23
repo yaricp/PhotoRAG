@@ -5,25 +5,25 @@ import sqlalchemy.types
 
 mock_pgvector = MagicMock()
 mock_pgvector.sqlalchemy.Vector = lambda size: sqlalchemy.types.JSON()
-sys.modules['pgvector'] = mock_pgvector
-sys.modules['pgvector.sqlalchemy'] = mock_pgvector.sqlalchemy
+sys.modules.setdefault('pgvector', mock_pgvector)
+sys.modules.setdefault('pgvector.sqlalchemy', mock_pgvector.sqlalchemy)
 
 for _mod in [
     'sqlite_vec', 'langgraph', 'langgraph.graph',
-    'src.database', 'src.vector_db_services', 'src.config',
+    'src.database', 'src.vector_db_services',
     'src.ai', 'src.ai.registry', 'src.ai.prompts', 'src.ai.translator',
-    'src.graphs.ai_agent',
     'src.queues', 'src.queues.folder_scan_queue', 'src.queues.clip_queue',
     'src.queues.vision_queue', 'src.queues.embedding_queue',
-    'src.queues.translation_queue',
+    'src.queues.translation_queue', 'src.queues.queue_config',
     'src.tasks', 'src.tasks.utils', 'src.tasks.folder_scanners',
     'src.tasks.vision_tasks', 'src.tasks.embedding_tasks',
     'src.tasks.clip_tasks', 'src.tasks.translation_tasks',
+    'src.model_services',
     'src.deps',
     # heavy optional deps not installed in test env
     'exifread',
 ]:
-    sys.modules[_mod] = MagicMock()
+    sys.modules.setdefault(_mod, MagicMock())
 
 import pytest
 import numpy as np
@@ -111,45 +111,41 @@ def test_estimate_quality_quick_flags_tiny_image(tmp_path, db, db_factory):
 # estimate_photo_quality_deep
 # ---------------------------------------------------------------------------
 
-def _make_mock_registry():
-    """Return a mock registry with a working encode_image / encode_text."""
-    mock_reg = MagicMock()
-    def _fake_encode(img_or_text):
-        return np.random.rand(512).tolist()
-    mock_reg.clip_tagger.model.encode_image.side_effect = _fake_encode
-    mock_reg.clip_tagger.model.encode_text.side_effect = _fake_encode
-    return mock_reg
-
-
-def test_estimate_quality_deep_returns_probe_scores(tmp_path, db, db_factory):
+@pytest.mark.asyncio
+async def test_estimate_quality_deep_returns_probe_scores(tmp_path, db, db_factory):
     from src.graphs.tools import estimate_photo_quality_deep
+    from unittest.mock import AsyncMock
     photo = _make_photo(db, tmp_path, "deep.jpg")
-    mock_reg = _make_mock_registry()
+    vec = np.ones(512).tolist()
 
     with patch("src.graphs.tools.SessionLocal", side_effect=db_factory), \
-         patch("src.graphs.tools.registry", mock_reg):
-        result = estimate_photo_quality_deep.invoke({"photo_id": photo.id})
+         patch("src.graphs.tools.call_clip_model", new_callable=AsyncMock, return_value=vec):
+        result = await estimate_photo_quality_deep.ainvoke({"photo_id": photo.id})
 
     assert "a blurry photo" in result
     assert "Verdict" in result
 
 
-def test_estimate_quality_deep_not_found(db_factory):
+@pytest.mark.asyncio
+async def test_estimate_quality_deep_not_found(db_factory):
     from src.graphs.tools import estimate_photo_quality_deep
-    mock_reg = _make_mock_registry()
+    from unittest.mock import AsyncMock
     with patch("src.graphs.tools.SessionLocal", side_effect=db_factory), \
-         patch("src.graphs.tools.registry", mock_reg):
-        result = estimate_photo_quality_deep.invoke({"photo_id": 9999})
+         patch("src.graphs.tools.call_clip_model", new_callable=AsyncMock,
+               return_value=np.ones(512).tolist()):
+        result = await estimate_photo_quality_deep.ainvoke({"photo_id": 9999})
     assert "not found" in result.lower()
 
 
-def test_estimate_quality_deep_verdict_present(tmp_path, db, db_factory):
+@pytest.mark.asyncio
+async def test_estimate_quality_deep_verdict_present(tmp_path, db, db_factory):
     from src.graphs.tools import estimate_photo_quality_deep
+    from unittest.mock import AsyncMock
     photo = _make_photo(db, tmp_path, "deep2.jpg")
-    mock_reg = _make_mock_registry()
+    vec = np.ones(512).tolist()
     with patch("src.graphs.tools.SessionLocal", side_effect=db_factory), \
-         patch("src.graphs.tools.registry", mock_reg):
-        result = estimate_photo_quality_deep.invoke({"photo_id": photo.id})
+         patch("src.graphs.tools.call_clip_model", new_callable=AsyncMock, return_value=vec):
+        result = await estimate_photo_quality_deep.ainvoke({"photo_id": photo.id})
     assert any(v in result for v in ("likely garbage", "good quality"))
 
 

@@ -22,10 +22,12 @@ export function StepLanguage({ onContinue }: Props) {
         try {
             await i18n.changeLanguage(selected)
             await updateSetting('default_language', selected)
+        } catch {
+            // best-effort save; always advance
         } finally {
             setSaving(false)
+            onContinue()
         }
-        onContinue()
     }
 
     return (

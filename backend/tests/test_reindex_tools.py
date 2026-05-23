@@ -9,8 +9,8 @@ from unittest.mock import MagicMock, patch
 # Mock heavy deps before any src import
 mock_pgvector = MagicMock()
 mock_pgvector.sqlalchemy.Vector = lambda size: sqlalchemy.types.JSON()
-sys.modules['pgvector'] = mock_pgvector
-sys.modules['pgvector.sqlalchemy'] = mock_pgvector.sqlalchemy
+sys.modules.setdefault('pgvector', mock_pgvector)
+sys.modules.setdefault('pgvector.sqlalchemy', mock_pgvector.sqlalchemy)
 
 for _mod in [
     'sqlite_vec', 'langgraph', 'langgraph.graph',
@@ -22,9 +22,10 @@ for _mod in [
     'src.tasks', 'src.tasks.utils', 'src.tasks.folder_scanners',
     'src.tasks.vision_tasks', 'src.tasks.embedding_tasks',
     'src.tasks.clip_tasks', 'src.tasks.translation_tasks',
+    'src.model_services',
     'src.deps',
 ]:
-    sys.modules[_mod] = MagicMock()
+    sys.modules.setdefault(_mod, MagicMock())
 
 import pytest
 from sqlalchemy import create_engine

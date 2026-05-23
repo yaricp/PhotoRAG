@@ -5,27 +5,27 @@ import sqlalchemy.types
 
 mock_pgvector = MagicMock()
 mock_pgvector.sqlalchemy.Vector = lambda size: sqlalchemy.types.JSON()
-sys.modules['pgvector'] = mock_pgvector
-sys.modules['pgvector.sqlalchemy'] = mock_pgvector.sqlalchemy
+sys.modules.setdefault('pgvector', mock_pgvector)
+sys.modules.setdefault('pgvector.sqlalchemy', mock_pgvector.sqlalchemy)
 
 for _mod in [
     'sqlite_vec', 'langgraph', 'langgraph.graph',
-    'src.database', 'src.vector_db_services', 'src.config',
+    'src.database', 'src.vector_db_services',
     'src.ai', 'src.ai.registry', 'src.ai.prompts', 'src.ai.translator',
-    'src.graphs.ai_agent',
     'src.queues', 'src.queues.folder_scan_queue', 'src.queues.clip_queue',
     'src.queues.vision_queue', 'src.queues.embedding_queue',
-    'src.queues.translation_queue',
+    'src.queues.translation_queue', 'src.queues.queue_config',
     'src.tasks', 'src.tasks.utils', 'src.tasks.folder_scanners',
     'src.tasks.vision_tasks', 'src.tasks.embedding_tasks',
     'src.tasks.clip_tasks', 'src.tasks.translation_tasks',
+    'src.model_services',
     'src.deps',
     # geopy is not installed in the test environment
     'geopy', 'geopy.geocoders', 'geopy.exc',
     # exifread is not installed in the test environment
     'exifread',
 ]:
-    sys.modules[_mod] = MagicMock()
+    sys.modules.setdefault(_mod, MagicMock())
 
 import pytest
 from PIL import Image

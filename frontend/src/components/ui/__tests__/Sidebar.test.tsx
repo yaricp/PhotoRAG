@@ -16,7 +16,7 @@ describe('Sidebar', () => {
         expect(screen.getByText('Gallery')).toBeInTheDocument()
         expect(screen.getByText('Search')).toBeInTheDocument()
         expect(screen.getByText('Documents')).toBeInTheDocument()
-        expect(screen.getByText('Chat')).toBeInTheDocument()
+        expect(screen.getByText('Agent AI')).toBeInTheDocument()
         expect(screen.getByText('Settings')).toBeInTheDocument()
     })
 

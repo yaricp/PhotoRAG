@@ -5,23 +5,23 @@ import sqlalchemy.types
 
 mock_pgvector = MagicMock()
 mock_pgvector.sqlalchemy.Vector = lambda size: sqlalchemy.types.JSON()
-sys.modules['pgvector'] = mock_pgvector
-sys.modules['pgvector.sqlalchemy'] = mock_pgvector.sqlalchemy
+sys.modules.setdefault('pgvector', mock_pgvector)
+sys.modules.setdefault('pgvector.sqlalchemy', mock_pgvector.sqlalchemy)
 
 for _mod in [
     'sqlite_vec', 'langgraph', 'langgraph.graph',
-    'src.database', 'src.vector_db_services', 'src.config',
+    'src.database', 'src.vector_db_services',
     'src.ai', 'src.ai.registry', 'src.ai.prompts', 'src.ai.translator',
-    'src.graphs.ai_agent',
     'src.queues', 'src.queues.folder_scan_queue', 'src.queues.clip_queue',
     'src.queues.vision_queue', 'src.queues.embedding_queue',
-    'src.queues.translation_queue',
+    'src.queues.translation_queue', 'src.queues.queue_config',
     'src.tasks', 'src.tasks.utils', 'src.tasks.folder_scanners',
     'src.tasks.vision_tasks', 'src.tasks.embedding_tasks',
     'src.tasks.clip_tasks', 'src.tasks.translation_tasks',
+    'src.model_services',
     'src.deps',
 ]:
-    sys.modules[_mod] = MagicMock()
+    sys.modules.setdefault(_mod, MagicMock())
 
 # imagehash is not installed in the test environment — provide a stub that
 # returns valid 16-char hex strings so _hamming_distance can parse them.
@@ -145,35 +145,30 @@ def test_compare_photos_quick_not_found(tmp_path, db, db_factory):
 # compare_photos_deep
 # ---------------------------------------------------------------------------
 
-def _make_mock_registry():
-    mock_reg = MagicMock()
-    call_count = [0]
-    def _encode(img):
-        call_count[0] += 1
-        vec = np.ones(512) * (0.9 if call_count[0] == 1 else 0.9)
-        return vec.tolist()
-    mock_reg.clip_tagger.model.encode_image.side_effect = _encode
-    return mock_reg
-
-
-def test_compare_photos_deep_returns_similarity(tmp_path, db, db_factory):
+@pytest.mark.asyncio
+async def test_compare_photos_deep_returns_similarity(tmp_path, db, db_factory):
     from src.graphs.tools import compare_photos_deep
+    from unittest.mock import AsyncMock
+    import numpy as _np
     p1 = _make_photo(db, tmp_path, "d1.jpg")
     p2 = _make_photo(db, tmp_path, "d2.jpg")
-    mock_reg = _make_mock_registry()
+    vec = _np.ones(512).tolist()
 
     with patch("src.graphs.tools.SessionLocal", side_effect=db_factory), \
-         patch("src.graphs.tools.registry", mock_reg):
-        result = compare_photos_deep.invoke({"photo_id_a": p1.id, "photo_id_b": p2.id})
+         patch("src.graphs.tools.call_clip_model", new_callable=AsyncMock,
+               return_value=vec):
+        result = await compare_photos_deep.ainvoke({"photo_id_a": p1.id, "photo_id_b": p2.id})
 
     assert "Cosine similarity" in result
     assert "Verdict" in result
 
 
-def test_compare_photos_deep_not_found(db_factory):
+@pytest.mark.asyncio
+async def test_compare_photos_deep_not_found(db_factory):
     from src.graphs.tools import compare_photos_deep
-    mock_reg = _make_mock_registry()
+    from unittest.mock import AsyncMock
     with patch("src.graphs.tools.SessionLocal", side_effect=db_factory), \
-         patch("src.graphs.tools.registry", mock_reg):
-        result = compare_photos_deep.invoke({"photo_id_a": 9999, "photo_id_b": 9998})
+         patch("src.graphs.tools.call_clip_model", new_callable=AsyncMock,
+               return_value=[0.1] * 512):
+        result = await compare_photos_deep.ainvoke({"photo_id_a": 9999, "photo_id_b": 9998})
     assert "not found" in result.lower()

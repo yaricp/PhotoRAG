@@ -7,7 +7,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from src.models import Base, Photo, ProcessingJob, ModelState
-from backend.src.db.database import SessionLocal
+from src.db.database import SessionLocal
 from src.observer import PhotoEventHandler
 from src.tasks.utils import phase_logic, _dispatch_tasks
 import src.queues.clip_queue

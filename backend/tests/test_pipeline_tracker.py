@@ -11,11 +11,11 @@ import sqlalchemy.types
 # Mock pgvector before any src.* import so models.py doesn't fail
 mock_pgvector = MagicMock()
 mock_pgvector.sqlalchemy.Vector = lambda size: sqlalchemy.types.JSON()
-sys.modules['pgvector'] = mock_pgvector
-sys.modules['pgvector.sqlalchemy'] = mock_pgvector.sqlalchemy
+sys.modules.setdefault('pgvector', mock_pgvector)
+sys.modules.setdefault('pgvector.sqlalchemy', mock_pgvector.sqlalchemy)
 
 # Mock sqlite_vec so src.db.database can be imported in the test environment
-sys.modules['sqlite_vec'] = MagicMock()
+sys.modules.setdefault('sqlite_vec', MagicMock())
 
 import pytest
 from sqlalchemy import create_engine

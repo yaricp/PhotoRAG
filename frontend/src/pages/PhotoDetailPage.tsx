@@ -74,11 +74,11 @@ export function PhotoDetailPage() {
     }
 
     if (loading) {
-        return <div className="pd__center"><Spinner size="lg" /></div>
+        return <div className="pd__center" data-testid="page-photo-detail"><Spinner size="lg" /></div>
     }
 
     if (!photo) {
-        return <div className="pd__center">{t('photoDetail.notFound')}</div>
+        return <div className="pd__center" data-testid="page-photo-detail">{t('photoDetail.notFound')}</div>
     }
 
     const filename = photo.file_path.split('/').pop() ?? photo.file_path
@@ -88,7 +88,7 @@ export function PhotoDetailPage() {
     const categories = photo.categories_rel ?? []
 
     return (
-        <div className="pd">
+        <div className="pd" data-testid="page-photo-detail">
             {/* HEADER */}
             <div className="pd__header">
                 <button className="pd__back-btn" onClick={() => navigate(-1)}>{t('photoDetail.back')}</button>

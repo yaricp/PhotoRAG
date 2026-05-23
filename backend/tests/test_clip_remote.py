@@ -11,9 +11,18 @@ Tests cover:
 - call_clip_model routes to local Huey task when mode=local
 - call_clip_model routes to remote when mode=remote
 """
+import sys
 import json
 import pytest
 from unittest.mock import patch, MagicMock, AsyncMock
+
+# Earlier test files set src.ai, src.ai.clip_remote, src.model_services, and
+# src.queues.* to MagicMocks.  Evict them so the real modules are imported.
+for _m in ['src.model_services', 'src.task_notifier',
+           'src.ai', 'src.ai.clip_remote',
+           'src.queues', 'src.queues.clip_queue', 'src.queues.queue_config']:
+    sys.modules.pop(_m, None)
+
 import src.queues.clip_queue  # noqa: pre-import so patch can resolve
 
 

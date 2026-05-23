@@ -18,6 +18,7 @@ class AIModelRegistry:
 
     def __init__(self):
         self.settings = Chat_Settings()
+        self.embedding_settings = Embedding_Settings()
         self._clip_tagger = None
         self._vision_generator = None
         self._nomic_embedder = None

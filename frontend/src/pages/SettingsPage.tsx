@@ -68,7 +68,7 @@ export function SettingsPage() {
     }
 
     return (
-        <div className="settings-page">
+        <div className="settings-page" data-testid="page-settings">
             <h1 className="settings-page__title">{t('settings.title')}</h1>
 
             <div className="settings-section">

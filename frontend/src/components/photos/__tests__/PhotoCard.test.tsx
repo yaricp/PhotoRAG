@@ -37,7 +37,7 @@ describe('PhotoCard', () => {
 
     it('shows top tag name', () => {
         const photo = makePhoto({
-            tags: [makePhotoTag({ tag: { id: 1, name: 'invoice' }, confidence_score: 0.95 })]
+            tags_rel: [makePhotoTag({ tag: { id: 1, name: 'invoice' }, confidence_score: 0.95 })]
         })
         renderCard(photo)
         expect(screen.getByText('invoice')).toBeInTheDocument()

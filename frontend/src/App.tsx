@@ -80,7 +80,7 @@ export default function App() {
             <div className="app-body">
                 <Sidebar state={sidebarState} />
 
-                <main className={`app-main app-main--${sidebarState}`}>
+                <main className={`app-main app-main--${sidebarState}`} data-testid="main-content">
                     <AppRoutes />
                 </main>
             </div>

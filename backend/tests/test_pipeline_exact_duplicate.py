@@ -15,20 +15,22 @@ import sqlalchemy.types
 
 mock_pgvector = MagicMock()
 mock_pgvector.sqlalchemy.Vector = lambda size: sqlalchemy.types.JSON()
-sys.modules['pgvector'] = mock_pgvector
-sys.modules['pgvector.sqlalchemy'] = mock_pgvector.sqlalchemy
+sys.modules.setdefault('pgvector', mock_pgvector)
+sys.modules.setdefault('pgvector.sqlalchemy', mock_pgvector.sqlalchemy)
 
 # Native extensions and heavy dependencies unavailable in the test environment
 for _mod in [
-    'sqlite_vec', 'src.database', 'src.vector_db_services', 'src.config',
+    'sqlite_vec', 'src.database', 'src.vector_db_services',
     'src.ai', 'src.ai.registry', 'src.ai.prompts',
     'src.queues', 'src.queues.folder_scan_queue',
     'src.queues.vision_queue', 'src.queues.embedding_queue',
     'src.queues.clip_queue', 'src.queues.translation_queue',
+    'src.queues.queue_config',
     'src.tasks.utils', 'src.tasks.vision_tasks', 'src.tasks.embedding_tasks',
     'src.tasks.clip_tasks', 'src.tasks.translation_tasks',
+    'src.model_services',
 ]:
-    sys.modules[_mod] = MagicMock()
+    sys.modules.setdefault(_mod, MagicMock())
 
 import os
 import pytest

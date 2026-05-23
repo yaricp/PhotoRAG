@@ -1,4 +1,10 @@
+import sys
 from unittest.mock import MagicMock, patch
+
+# src.observer → src.incoming_pipeline → src.tasks.quality_tasks (not installed).
+# Mock before src.observer is imported so the import chain resolves cleanly.
+sys.modules.setdefault('src.incoming_pipeline', MagicMock())
+
 from src.observer import PhotoEventHandler
 
 @patch('src.observer.os.stat')
@@ -19,7 +25,7 @@ def test_on_created_triggers_4_parallel_tasks(mock_hash, mock_pipeline, mock_cre
     mock_stat_res.st_birthtime = 1600000000.0
     mock_stat.return_value = mock_stat_res
     
-    handler = PhotoEventHandler()
+    handler = PhotoEventHandler(destination_root_folder="/dest")
     mock_event = MagicMock()
     mock_event.is_directory = False
     mock_event.src_path = "test_photo.jpg"
@@ -35,7 +41,7 @@ def test_on_created_triggers_4_parallel_tasks(mock_hash, mock_pipeline, mock_cre
 
 @patch('src.observer.start_pipeline')
 def test_on_created_ignores_non_photos(mock_pipeline):
-    handler = PhotoEventHandler()
+    handler = PhotoEventHandler(destination_root_folder="/dest")
     mock_event = MagicMock()
     mock_event.is_directory = False
     mock_event.src_path = "test_data.txt"

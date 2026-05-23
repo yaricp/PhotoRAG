@@ -92,6 +92,7 @@ describe('startBackend', () => {
 
     it('uses venv python path when packaged', async () => {
         isPackaged = true
+        vi.stubGlobal('process', { ...process, resourcesPath: '/mock/resources' })
         const { startBackend } = await import('../backend')
         const cp = await import('child_process')
         await startBackend()

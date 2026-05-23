@@ -1,15 +1,20 @@
+import sys
 import pytest
 from unittest.mock import MagicMock, patch
+
+sys.modules.setdefault('open_clip', MagicMock())
+sys.modules.setdefault('sentence_transformers', MagicMock())
+sys.modules.setdefault('transformers', MagicMock())
+
 from src.ai.registry import AIModelRegistry
-from src.config import ML_Settings
 
 @pytest.fixture
 def mock_settings():
-    settings = MagicMock(spec=ML_Settings)
+    settings = MagicMock()
     settings.CHAT_MODEL_MODE = "local"
     settings.CHAT_LOCAL_MODEL = "llama3"
     settings.CHAT_MODEL = "gpt-4o-mini"
-    settings.CHAT_API_KEY = "test_key"  # Added this
+    settings.CHAT_API_KEY = "test_key"
     settings.VISION_MODE = "remote"
     settings.EMBEDDING_MODE = "remote"
     settings.TRANSLATOR_MODE = "remote"
@@ -39,12 +44,17 @@ def test_registry_chat_model_local(mock_settings):
 def test_registry_chat_model_remote(mock_settings):
     """Test that registry returns ChatOpenAI (init_chat_model) in remote mode"""
     mock_settings.CHAT_MODEL_MODE = "remote"
-    
-    with patch("src.ai.registry.ML_Settings", return_value=mock_settings):
+    mock_settings.CHAT_MODEL = "gpt-4o-mini"
+    mock_settings.CHAT_API_KEY = "test_key"
+    mock_settings.CHAT_API_URL = None
+
+    AIModelRegistry._instance = None
+    with patch("src.ai.registry.Chat_Settings", return_value=mock_settings), \
+         patch("src.ai.registry.Embedding_Settings", return_value=MagicMock()):
         registry = AIModelRegistry()
-        registry._settings = mock_settings
-        
-        with patch("langchain.chat_models.init_chat_model") as mock_init:
+
+        with patch.object(registry, "get_model_config", return_value=None), \
+             patch("langchain.chat_models.init_chat_model") as mock_init:
             model = registry.chat_model
             mock_init.assert_called_once_with(
                 model="gpt-4o-mini",

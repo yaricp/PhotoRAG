@@ -4,7 +4,7 @@ import os
 import sys
 
 # ATOMIC MOCK
-sys.modules['sentence_transformers'] = MagicMock()
+sys.modules.setdefault('sentence_transformers', MagicMock())
 
 from src.tasks.embedding_tasks import final_embedding_task
 from src.models import Photo, PhotoTag, PhotoCategory, Tag, Category, Geoposition

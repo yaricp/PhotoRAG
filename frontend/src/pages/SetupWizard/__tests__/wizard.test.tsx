@@ -43,13 +43,24 @@ beforeEach(() => {
 })
 
 describe('SetupWizard', () => {
-    it('starts at welcome step', () => {
+    it('starts at language step', () => {
         render(<SetupWizard onComplete={vi.fn()} />)
+        expect(screen.getByText(/choose your language/i)).toBeInTheDocument()
+    })
+
+    it('advances to welcome step after language continue', async () => {
+        render(<SetupWizard onComplete={vi.fn()} />)
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: /continue/i }))
+        })
         expect(screen.getByText(/welcome to photorag/i)).toBeInTheDocument()
     })
 
-    it('advances to install-deps on continue', () => {
+    it('advances to install-deps from welcome step', async () => {
         render(<SetupWizard onComplete={vi.fn()} />)
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: /continue/i }))
+        })
         fireEvent.click(screen.getByRole('button', { name: /get started/i }))
         expect(screen.getByText(/install dependencies/i)).toBeInTheDocument()
     })
