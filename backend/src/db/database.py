@@ -13,7 +13,8 @@ if settings.DATABASE_DIALECT == "sqlite":
     DATABASE_URL: str = f"sqlite:///{settings.DATABASE_NAME}"
 else:
     DATABASE_URL: str = f"{settings.DATABASE_DIALECT}+{settings.DATABASE_DRIVER}://{settings.DATABASE_USER}:{settings.DATABASE_PASSWORD}@{settings.DATABASE_HOST}:{settings.DATABASE_PORT}/{settings.DATABASE_NAME}"
-engine = create_engine(DATABASE_URL)
+_connect_args = {"timeout": 30} if settings.DATABASE_DIALECT == "sqlite" else {}
+engine = create_engine(DATABASE_URL, connect_args=_connect_args)
 SessionLocal: sessionmaker[Session] = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
@@ -26,6 +27,11 @@ def load_sqlite_extensions(dbapi_connection, connection_record):
         logger.info("✅ sqlite-vec loaded successfully")
     except Exception as e:
         logger.error(f"Failed to load sqlite-vec: {e}")
+    try:
+        dbapi_connection.execute("PRAGMA journal_mode=WAL")
+        dbapi_connection.execute("PRAGMA busy_timeout=30000")
+    except Exception as e:
+        logger.error(f"Failed to set SQLite pragmas: {e}")
 
 
 @event.listens_for(Engine, "close")
