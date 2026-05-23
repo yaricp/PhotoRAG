@@ -1,4 +1,5 @@
 import React from 'react'
+import { useTranslation } from 'react-i18next'
 import { TagsFilterButton } from './TagsFilterButton'
 import { CategoriesFilterButton } from './CategoriesFilterButton'
 import { CamerasFilterButton } from './CamerasFilterButton'
@@ -39,6 +40,7 @@ export function FilterBar({
     onTagToggle, onCategoryToggle, onCameraSelect, onGeoSelect, onDateSelect,
     onSortByChange, onSortOrderToggle, onLimitChange, onReset,
 }: FilterBarProps) {
+    const { t } = useTranslation()
     return (
         <div className="filter-bar">
             <div className="filter-bar__filters">
@@ -61,10 +63,10 @@ export function FilterBar({
                     value={sortBy}
                     onChange={e => onSortByChange(e.target.value)}
                 >
-                    <option value="created_at">Created</option>
-                    <option value="captured_at">Captured</option>
-                    <option value="file_created_at">File</option>
-                    <option value="image_width">Width</option>
+                    <option value="created_at">{t('gallery.sort.created_at')}</option>
+                    <option value="captured_at">{t('gallery.sort.captured_at')}</option>
+                    <option value="file_created_at">{t('gallery.sort.file_created_at')}</option>
+                    <option value="image_width">{t('gallery.sort.image_width')}</option>
                 </select>
 
                 <button className="filter-bar__sort-order" onClick={onSortOrderToggle}>
@@ -77,12 +79,12 @@ export function FilterBar({
                     onChange={e => onLimitChange(Number(e.target.value))}
                 >
                     {[5, 10, 20, 50, 100].map(v => (
-                        <option key={v} value={v}>{v} / page</option>
+                        <option key={v} value={v}>{t('gallery.perPage', { count: v })}</option>
                     ))}
                 </select>
 
                 <Button size="sm" variant="ghost" onClick={onReset}>
-                    Reset
+                    {t('gallery.reset')}
                 </Button>
             </div>
         </div>

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { sendChat, undoLastAction, archivePhotos, deletePhoto, getSystemStatus } from '@/api/client'
 import { PhotoCard } from '@/components/photos/PhotoCard'
 import { Spinner } from '@/components/ui/Spinner'
@@ -132,15 +133,18 @@ export function ChatPage() {
         }
     }
 
+    const { t } = useTranslation()
+
     const isBusy = busyPhotoIds.size > 0
     const selCount = selectedPhotoIds.size
 
+    const plural = selCount !== 1 ? 's' : ''
     const confirmTitle = pending?.type === 'delete'
-        ? `Delete ${selCount} photo${selCount !== 1 ? 's' : ''}?`
-        : `Archive ${selCount} photo${selCount !== 1 ? 's' : ''}?`
+        ? t('chat.confirmDeleteTitle', { count: selCount, plural })
+        : t('chat.confirmArchiveTitle', { count: selCount, plural })
     const confirmMessage = pending?.type === 'delete'
-        ? 'The files will be permanently removed from disk.'
-        : 'The photos will be marked as archived.'
+        ? t('chat.confirmDeleteMessage')
+        : t('chat.confirmArchiveMessage')
 
     return (
         <div className="chat-page">
@@ -160,8 +164,8 @@ export function ChatPage() {
                         />
                         <span>
                             {someSelected
-                                ? `${selCount} of ${contextPhotos.length} selected`
-                                : 'Select all'}
+                                ? t('chat.selected', { count: selCount, total: contextPhotos.length })
+                                : t('chat.selectAll')}
                         </span>
                     </label>
 
@@ -172,14 +176,14 @@ export function ChatPage() {
                                 onClick={() => setPending({ type: 'archive', ids: [...selectedPhotoIds] })}
                                 disabled={isBusy}
                             >
-                                Archive
+                                {t('chat.archive')}
                             </button>
                             <button
                                 className="chat-page__ctx-btn chat-page__ctx-btn--delete"
                                 onClick={() => setPending({ type: 'delete', ids: [...selectedPhotoIds] })}
                                 disabled={isBusy}
                             >
-                                Delete
+                                {t('chat.delete')}
                             </button>
                         </div>
                     )}
@@ -209,7 +213,7 @@ export function ChatPage() {
                 {chatReady === false && !bannerDismissed && (
                     <div className="chat-page__warming-banner">
                         <Spinner size="sm" />
-                        <span>The AI chat model is still warming up. Your first message may take a moment.</span>
+                        <span>{t('chat.warming')}</span>
                         <button className="chat-page__warming-dismiss" onClick={() => setBannerDismissed(true)}>✕</button>
                     </div>
                 )}
@@ -230,15 +234,15 @@ export function ChatPage() {
                         onKeyDown={(e) => {
                             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSend() }
                         }}
-                        placeholder="Ask something about your photos..."
+                        placeholder={t('chat.placeholder')}
                     />
-                    <button className="chat-page__undo-btn" onClick={onUndo} disabled={loading} title="Undo last action">
-                        ↩ Undo
+                    <button className="chat-page__undo-btn" onClick={onUndo} disabled={loading} title={t('chat.undo')}>
+                        {t('chat.undo')}
                     </button>
-                    <button onClick={onSend} disabled={loading}>Send</button>
+                    <button onClick={onSend} disabled={loading}>{t('chat.send')}</button>
                     {messages.length > 0 && (
-                        <button className="chat-page__clear-btn" onClick={clearConversation} disabled={loading} title="Start a new conversation">
-                            New chat
+                        <button className="chat-page__clear-btn" onClick={clearConversation} disabled={loading}>
+                            {t('chat.newChat')}
                         </button>
                     )}
                 </div>

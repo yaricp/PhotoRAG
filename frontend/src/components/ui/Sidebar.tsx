@@ -1,5 +1,6 @@
 import React from 'react'
 import { NavLink } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import './Sidebar.css'
 
 type SidebarState = 'full' | 'compact' | 'hidden'
@@ -9,20 +10,22 @@ type Props = {
 }
 
 const links = [
-    { to: '/', label: 'Gallery', icon: '🖼️', end: true },
-    { to: '/search', label: 'Search', icon: '🔍' },
-    { to: '/documents', label: 'Documents', icon: '📄' },
-    { to: '/duplicates', label: 'Duplicates', icon: '⊕' },
-    { to: '/garbage', label: 'Garbage', icon: '🗑️' },
-    { to: '/chat', label: 'Agent AI(Chat)', icon: '💬' },
-    { to: '/processing', label: 'Processing', icon: '📹' },
-    { to: '/folders', label: 'Folders', icon: '📁' },
-    { to: '/models', label: 'Models', icon: '🤖' },
-    { to: '/prompts', label: 'Prompts', icon: '📝' },
-    { to: '/settings', label: 'Settings', icon: '⚙️' },
+    { to: '/', key: 'gallery', icon: '🖼️', end: true },
+    { to: '/search', key: 'search', icon: '🔍' },
+    { to: '/documents', key: 'documents', icon: '📄' },
+    { to: '/duplicates', key: 'duplicates', icon: '⊕' },
+    { to: '/garbage', key: 'garbage', icon: '🗑️' },
+    { to: '/chat', key: 'chat', icon: '💬' },
+    { to: '/processing', key: 'processing', icon: '📹' },
+    { to: '/folders', key: 'folders', icon: '📁' },
+    { to: '/models', key: 'models', icon: '🤖' },
+    { to: '/prompts', key: 'prompts', icon: '📝' },
+    { to: '/settings', key: 'settings', icon: '⚙️' },
 ]
 
 export function Sidebar({ state = 'full' }: Props) {
+    const { t } = useTranslation()
+
     if (state === 'hidden') return null
 
     return (
@@ -30,7 +33,7 @@ export function Sidebar({ state = 'full' }: Props) {
 
             <div className="sidebar__content">
                 <ul className="sidebar__nav">
-                    {links.map(({ to, label, icon, end }) => (
+                    {links.map(({ to, key, icon, end }) => (
                         <li key={to}>
                             <NavLink
                                 to={to}
@@ -42,7 +45,7 @@ export function Sidebar({ state = 'full' }: Props) {
                                 <span className="sidebar__icon">{icon}</span>
 
                                 {state === 'full' && (
-                                    <span className="sidebar__label">{label}</span>
+                                    <span className="sidebar__label">{t(`sidebar.${key}`)}</span>
                                 )}
                             </NavLink>
                         </li>

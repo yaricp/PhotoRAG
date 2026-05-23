@@ -1,4 +1,6 @@
 import React, { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { StepLanguage } from './StepLanguage'
 import { StepWelcome } from './StepWelcome'
 import { StepInstallDeps } from './StepInstallDeps'
 import { StepInitDb } from './StepInitDb'
@@ -8,17 +10,9 @@ import { StepDone } from './StepDone'
 import { MODELS } from './models'
 import './SetupWizard.css'
 
-type Step = 'welcome' | 'install-deps' | 'init-db' | 'model-config' | 'downloading' | 'done'
+type Step = 'language' | 'welcome' | 'install-deps' | 'init-db' | 'model-config' | 'downloading' | 'done'
 
-const STEP_ORDER: Step[] = ['welcome', 'install-deps', 'init-db', 'model-config', 'downloading', 'done']
-const STEP_LABELS: Record<Step, string> = {
-    'welcome':      'Welcome',
-    'install-deps': 'Dependencies',
-    'init-db':      'Database',
-    'model-config': 'AI Models',
-    'downloading':  'Downloading',
-    'done':         'Done',
-}
+const STEP_ORDER: Step[] = ['language', 'welcome', 'install-deps', 'init-db', 'model-config', 'downloading', 'done']
 
 interface ModelConfig {
     id: number
@@ -42,7 +36,8 @@ interface Props {
 }
 
 export function SetupWizard({ onComplete }: Props) {
-    const [step, setStep] = useState<Step>('welcome')
+    const { t } = useTranslation()
+    const [step, setStep] = useState<Step>('language')
     const [selectedModels, setSelectedModels] = useState<Set<string>>(new Set())
 
     const advance = (to: Step) => setStep(to)
@@ -82,12 +77,15 @@ export function SetupWizard({ onComplete }: Props) {
                             i < currentIndex ? 'wizard-stepper__dot--done' : '',
                             i === currentIndex ? 'wizard-stepper__dot--active' : '',
                         ].join(' ')}
-                        title={STEP_LABELS[s]}
+                        title={t(`wizard.steps.${s}`)}
                     />
                 ))}
             </div>
 
             <div className="wizard-content">
+                {step === 'language' && (
+                    <StepLanguage onContinue={() => advance('welcome')} />
+                )}
                 {step === 'welcome' && (
                     <StepWelcome onContinue={() => advance('install-deps')} />
                 )}

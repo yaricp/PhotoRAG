@@ -1,0 +1,165 @@
+{
+  "sidebar": {
+    "gallery": "Галерея",
+    "search": "Поиск",
+    "documents": "Документы",
+    "duplicates": "Дубликаты",
+    "garbage": "Мусор",
+    "chat": "Агент ИИ",
+    "processing": "Обработка",
+    "folders": "Папки",
+    "models": "Модели",
+    "prompts": "Промпты",
+    "settings": "Настройки"
+  },
+  "gallery": {
+    "prev": "Назад",
+    "next": "Вперёд",
+    "sort": {
+      "created_at": "Добавлено",
+      "captured_at": "Снято",
+      "file_created_at": "Файл",
+      "image_width": "Ширина"
+    },
+    "perPage": "{{count}} / стр.",
+    "reset": "Сбросить"
+  },
+  "chat": {
+    "selectAll": "Выбрать все",
+    "selected": "{{count}} из {{total}} выбрано",
+    "archive": "Архивировать",
+    "delete": "Удалить",
+    "warming": "Модель ИИ ещё загружается. Первый ответ может занять некоторое время.",
+    "placeholder": "Спросите что-нибудь о ваших фотографиях...",
+    "undo": "↩ Отменить",
+    "send": "Отправить",
+    "newChat": "Новый чат",
+    "confirmArchiveTitle": "Архивировать {{count}} фото?",
+    "confirmArchiveMessage": "Фотографии будут помечены как архивные.",
+    "confirmDeleteTitle": "Удалить {{count}} фото?",
+    "confirmDeleteMessage": "Файлы будут безвозвратно удалены с диска."
+  },
+  "photoDetail": {
+    "back": "← Назад",
+    "edit": "Редактировать",
+    "dateTaken": "Дата съёмки",
+    "camera": "Камера",
+    "description": "Описание",
+    "translation": "Перевод",
+    "tags": "Теги",
+    "categories": "Категории",
+    "trash": "Мусор",
+    "document": "Документ",
+    "documentText": "Текст документа",
+    "additionalData": "Дополнительно",
+    "fileCreated": "Создан",
+    "captured": "Снято",
+    "indexed": "Индексировано",
+    "width": "Ширина",
+    "height": "Высота",
+    "iso": "ISO",
+    "aperture": "Диафрагма",
+    "focalLength": "Фокусное расстояние",
+    "shutterSpeed": "Выдержка",
+    "offsetTime": "Смещение времени",
+    "archive": "Архивировать",
+    "delete": "Удалить",
+    "notFound": "Фото не найдено",
+    "archiveConfirmTitle": "Архивировать фото?",
+    "archiveConfirmMessage": "Фото будет заархивировано и удалено из библиотеки.",
+    "deleteConfirmTitle": "Удалить фото?",
+    "deleteConfirmMessage": "Фото будет безвозвратно удалено."
+  },
+  "photoEdit": {
+    "backToPhoto": "← Вернуться к фото",
+    "ocrText": "Текст OCR",
+    "descriptionEn": "Описание (EN)",
+    "translation": "Перевод",
+    "manageTags": "+ Управление тегами",
+    "manageCategories": "+ Управление категориями",
+    "save": "Сохранить",
+    "saving": "Сохранение…",
+    "saved": "Сохранено ✓",
+    "reindexSearch": "Переиндексировать",
+    "queuing": "В очереди…",
+    "queued": "В очереди ✓",
+    "runPipeline": "Запустить пайплайн",
+    "starting": "Запуск…",
+    "started": "Запущено ✓",
+    "notFound": "Фото не найдено"
+  },
+  "processing": {
+    "title": "Обработка",
+    "active": "Активные",
+    "recent": "Недавние",
+    "noActive": "Нет активной обработки",
+    "activeCount": "{{count}} активное фото",
+    "activeCountPlural": "{{count}} активных фото"
+  },
+  "documents": {
+    "noDocuments": "Нет документов",
+    "noDocumentsDesc": "Документы появятся здесь автоматически",
+    "failedToLoad": "Не удалось загрузить документы"
+  },
+  "prompts": {
+    "title": "Промпты",
+    "subtitle": "Редактируйте промпты для ИИ моделей. Изменения вступают в силу при следующем запросе.",
+    "saving": "Сохранение…",
+    "save": "Сохранить",
+    "saved": "Сохранено",
+    "loading": "Загрузка промптов…"
+  },
+  "settings": {
+    "title": "Настройки",
+    "general": "Общие",
+    "defaultLanguage": "Язык по умолчанию",
+    "defaultFolder": "Папка по умолчанию",
+    "defaultFolderHint": "Используется агентом (создать папку, переместить фото, архивировать). По умолчанию — домашняя папка.",
+    "save": "Сохранить",
+    "saving": "Сохранение…",
+    "saved": "Сохранено",
+    "clipVocabulary": "Словарь CLIP",
+    "templateTags": "Шаблонные теги",
+    "templateTagsDesc": "Управляйте словарём тегов для CLIP",
+    "templateCategories": "Шаблонные категории",
+    "templateCategoriesDesc": "Управляйте списком категорий для CLIP",
+    "dangerZone": "Опасная зона",
+    "uninstall": "Удалить PhotoRAG",
+    "uninstallDesc": "Удаляет приложение, базу данных, ИИ модели и все настройки. Ваши оригинальные фото не затрагиваются.",
+    "uninstalling": "Удаление…",
+    "retranslating": "Перевод фотографий…",
+    "retranslateSuccess": "Перевод запущен. Прогресс — на странице Обработка."
+  },
+  "languages": {
+    "en": "English",
+    "ru": "Русский",
+    "es": "Español"
+  },
+  "wizard": {
+    "steps": {
+      "language": "Язык",
+      "welcome": "Добро пожаловать",
+      "install-deps": "Зависимости",
+      "init-db": "База данных",
+      "model-config": "ИИ Модели",
+      "downloading": "Загрузка",
+      "done": "Готово"
+    },
+    "language": {
+      "title": "Выберите язык",
+      "subtitle": "Выберите язык интерфейса PhotoRAG. Можно изменить позже в Настройках.",
+      "continue": "Продолжить"
+    },
+    "welcome": {
+      "title": "Добро пожаловать в PhotoRAG",
+      "subtitle": "Давайте настроим вашу библиотеку фотографий с ИИ. Это займёт несколько минут.",
+      "installDeps": "Установить зависимости Python",
+      "initDb": "Инициализировать базу данных",
+      "downloadModels": "Загрузить ИИ модели на ваш выбор",
+      "getStarted": "Начать"
+    }
+  },
+  "common": {
+    "openInMaps": "Открыть в Google Maps ↗"
+  }
+}

@@ -25,7 +25,14 @@
         },
         "mac": {
             "category": "public.app-category.photography",
-            "target": [{ "target": "dmg", "arch": ["universal"] }],
+            "target": [
+                {
+                    "target": "dmg",
+                    "arch": [
+                        "universal"
+                    ]
+                }
+            ],
             "icon": "resources/icon.icns",
             "hardenedRuntime": false,
             "gatekeeperAssess": false,
@@ -41,22 +48,52 @@
         "dmg": {
             "icon": "resources/icon.icns",
             "background": "resources/dmg-background.png",
-            "window": { "width": 540, "height": 380 },
+            "window": {
+                "width": 540,
+                "height": 380
+            },
             "contents": [
-                { "x": 130, "y": 220, "type": "file" },
-                { "x": 410, "y": 220, "type": "link", "path": "/Applications" }
+                {
+                    "x": 130,
+                    "y": 220,
+                    "type": "file"
+                },
+                {
+                    "x": 410,
+                    "y": 220,
+                    "type": "link",
+                    "path": "/Applications"
+                }
             ]
         },
         "extraResources": [
-            { "from": "resources/python", "to": "python" },
+            {
+                "from": "resources/python",
+                "to": "python"
+            },
             {
                 "from": "../backend",
                 "to": "backend",
-                "filter": ["**/*", "!.venv/**", "!__pycache__/**", "!*.pyc", "!.env", "!tests/**", "!data/**"]
+                "filter": [
+                    "**/*",
+                    "!.venv/**",
+                    "!__pycache__/**",
+                    "!*.pyc",
+                    "!.env",
+                    "!tests/**",
+                    "!data/**"
+                ]
             }
         ],
         "win": {
-            "target": [{ "target": "nsis", "arch": ["x64"] }],
+            "target": [
+                {
+                    "target": "nsis",
+                    "arch": [
+                        "x64"
+                    ]
+                }
+            ],
             "icon": "resources/icon.ico",
             "artifactName": "${productName}-Setup-${version}-${arch}.${ext}"
         },
@@ -79,8 +116,10 @@
     },
     "dependencies": {
         "@heroicons/react": "^2.2.0",
+        "i18next": "^26.2.0",
         "react": "^18.3.1",
         "react-dom": "^18.3.1",
+        "react-i18next": "^17.0.8",
         "react-router-dom": "^6.23.1",
         "zustand": "^4.5.2"
     },

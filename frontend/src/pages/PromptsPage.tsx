@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { getPrompts, updatePrompt } from '@/api/client'
 import type { Prompt } from '@/types/api'
 import './PromptsPage.css'
@@ -11,6 +12,7 @@ interface PromptState {
 }
 
 export function PromptsPage() {
+    const { t } = useTranslation()
     const [prompts, setPrompts] = useState<Prompt[]>([])
     const [loading, setLoading] = useState(true)
     const [states, setStates] = useState<Record<string, PromptState>>({})
@@ -48,17 +50,15 @@ export function PromptsPage() {
     }
 
     if (loading) {
-        return <div className="prompts-page"><p className="prompts-loading">Loading prompts…</p></div>
+        return <div className="prompts-page"><p className="prompts-loading">{t('prompts.loading')}</p></div>
     }
 
     const groups = Array.from(new Set(prompts.map(p => p.group))).sort()
 
     return (
         <div className="prompts-page">
-            <h1 className="prompts-page__title">Prompts</h1>
-            <p className="prompts-page__subtitle">
-                Edit the prompts used by AI models. Changes take effect on the next request — no restart needed.
-            </p>
+            <h1 className="prompts-page__title">{t('prompts.title')}</h1>
+            <p className="prompts-page__subtitle">{t('prompts.subtitle')}</p>
 
             {groups.map(group => (
                 <section key={group} className="prompts-group">
@@ -90,9 +90,9 @@ export function PromptsPage() {
                                             onClick={() => handleSave(p.key)}
                                             disabled={s?.saving || !dirty}
                                         >
-                                            {s?.saving ? 'Saving…' : 'Save'}
+                                            {s?.saving ? t('prompts.saving') : t('prompts.save')}
                                         </button>
-                                        {s?.saved && <span className="prompt-card__saved">Saved</span>}
+                                        {s?.saved && <span className="prompt-card__saved">{t('prompts.saved')}</span>}
                                         {s?.error && <span className="prompt-card__error">{s.error}</span>}
                                     </div>
                                 </div>

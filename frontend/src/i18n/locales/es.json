@@ -1,0 +1,165 @@
+{
+  "sidebar": {
+    "gallery": "Galería",
+    "search": "Buscar",
+    "documents": "Documentos",
+    "duplicates": "Duplicados",
+    "garbage": "Basura",
+    "chat": "Agente IA",
+    "processing": "Procesando",
+    "folders": "Carpetas",
+    "models": "Modelos",
+    "prompts": "Prompts",
+    "settings": "Ajustes"
+  },
+  "gallery": {
+    "prev": "Anterior",
+    "next": "Siguiente",
+    "sort": {
+      "created_at": "Creado",
+      "captured_at": "Capturado",
+      "file_created_at": "Archivo",
+      "image_width": "Ancho"
+    },
+    "perPage": "{{count}} / pág.",
+    "reset": "Restablecer"
+  },
+  "chat": {
+    "selectAll": "Seleccionar todo",
+    "selected": "{{count}} de {{total}} seleccionados",
+    "archive": "Archivar",
+    "delete": "Eliminar",
+    "warming": "El modelo de IA aún se está cargando. Tu primer mensaje puede tardar un momento.",
+    "placeholder": "Pregunta algo sobre tus fotos...",
+    "undo": "↩ Deshacer",
+    "send": "Enviar",
+    "newChat": "Nuevo chat",
+    "confirmArchiveTitle": "¿Archivar {{count}} foto{{plural}}?",
+    "confirmArchiveMessage": "Las fotos serán marcadas como archivadas.",
+    "confirmDeleteTitle": "¿Eliminar {{count}} foto{{plural}}?",
+    "confirmDeleteMessage": "Los archivos serán eliminados permanentemente del disco."
+  },
+  "photoDetail": {
+    "back": "← Atrás",
+    "edit": "Editar",
+    "dateTaken": "Fecha de captura",
+    "camera": "Cámara",
+    "description": "Descripción",
+    "translation": "Traducción",
+    "tags": "Etiquetas",
+    "categories": "Categorías",
+    "trash": "Basura",
+    "document": "Documento",
+    "documentText": "Texto del documento",
+    "additionalData": "Datos adicionales",
+    "fileCreated": "Archivo creado",
+    "captured": "Capturado",
+    "indexed": "Indexado",
+    "width": "Ancho",
+    "height": "Alto",
+    "iso": "ISO",
+    "aperture": "Apertura",
+    "focalLength": "Focal",
+    "shutterSpeed": "Velocidad",
+    "offsetTime": "Desfase",
+    "archive": "Archivar",
+    "delete": "Eliminar",
+    "notFound": "Foto no encontrada",
+    "archiveConfirmTitle": "¿Archivar foto?",
+    "archiveConfirmMessage": "La foto será comprimida y eliminada de la biblioteca.",
+    "deleteConfirmTitle": "¿Eliminar foto?",
+    "deleteConfirmMessage": "La foto será eliminada permanentemente."
+  },
+  "photoEdit": {
+    "backToPhoto": "← Volver a la foto",
+    "ocrText": "Texto OCR",
+    "descriptionEn": "Descripción (EN)",
+    "translation": "Traducción",
+    "manageTags": "+ Gestionar etiquetas",
+    "manageCategories": "+ Gestionar categorías",
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "saved": "Guardado ✓",
+    "reindexSearch": "Reindexar búsqueda",
+    "queuing": "En cola…",
+    "queued": "En cola ✓",
+    "runPipeline": "Ejecutar pipeline",
+    "starting": "Iniciando…",
+    "started": "Iniciado ✓",
+    "notFound": "Foto no encontrada"
+  },
+  "processing": {
+    "title": "Procesando",
+    "active": "Activos",
+    "recent": "Recientes",
+    "noActive": "Sin procesamiento activo",
+    "activeCount": "{{count}} foto activa",
+    "activeCountPlural": "{{count}} fotos activas"
+  },
+  "documents": {
+    "noDocuments": "Sin documentos",
+    "noDocumentsDesc": "Los documentos aparecerán aquí automáticamente",
+    "failedToLoad": "No se pudieron cargar los documentos"
+  },
+  "prompts": {
+    "title": "Prompts",
+    "subtitle": "Edita los prompts usados por los modelos de IA. Los cambios tienen efecto en la próxima solicitud.",
+    "saving": "Guardando…",
+    "save": "Guardar",
+    "saved": "Guardado",
+    "loading": "Cargando prompts…"
+  },
+  "settings": {
+    "title": "Ajustes",
+    "general": "General",
+    "defaultLanguage": "Idioma predeterminado",
+    "defaultFolder": "Carpeta predeterminada",
+    "defaultFolderHint": "Usada por herramientas del agente (crear carpeta, mover fotos, archivar). Por defecto la carpeta de inicio.",
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "saved": "Guardado",
+    "clipVocabulary": "Vocabulario CLIP",
+    "templateTags": "Etiquetas de plantilla",
+    "templateTagsDesc": "Gestiona el vocabulario de etiquetas para la detección CLIP",
+    "templateCategories": "Categorías de plantilla",
+    "templateCategoriesDesc": "Gestiona la lista de categorías para la clasificación CLIP",
+    "dangerZone": "Zona de peligro",
+    "uninstall": "Desinstalar PhotoRAG",
+    "uninstallDesc": "Elimina la app, la base de datos, modelos de IA y ajustes. Tus fotos originales no se ven afectadas.",
+    "uninstalling": "Desinstalando…",
+    "retranslating": "Traduciendo fotos…",
+    "retranslateSuccess": "Traducción iniciada. Ve a Procesando para ver el progreso."
+  },
+  "languages": {
+    "en": "English",
+    "ru": "Русский",
+    "es": "Español"
+  },
+  "wizard": {
+    "steps": {
+      "language": "Idioma",
+      "welcome": "Bienvenida",
+      "install-deps": "Dependencias",
+      "init-db": "Base de datos",
+      "model-config": "Modelos IA",
+      "downloading": "Descargando",
+      "done": "Listo"
+    },
+    "language": {
+      "title": "Elige tu idioma",
+      "subtitle": "Selecciona el idioma de la interfaz de PhotoRAG. Puedes cambiarlo después en Ajustes.",
+      "continue": "Continuar"
+    },
+    "welcome": {
+      "title": "Bienvenido a PhotoRAG",
+      "subtitle": "Vamos a configurar tu biblioteca de fotos con IA. Esto llevará unos minutos.",
+      "installDeps": "Instalar dependencias de Python",
+      "initDb": "Inicializar la base de datos",
+      "downloadModels": "Descargar modelos de IA de tu elección",
+      "getStarted": "Empezar"
+    }
+  },
+  "common": {
+    "openInMaps": "Abrir en Google Maps ↗"
+  }
+}

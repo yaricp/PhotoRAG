@@ -1,25 +1,25 @@
 import React from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
     onContinue: () => void
 }
 
 export function StepWelcome({ onContinue }: Props) {
+    const { t } = useTranslation()
     return (
         <div className="wizard-step">
             <div className="wizard-icon">📷</div>
-            <h1>Welcome to PhotoRAG</h1>
-            <p className="wizard-subtitle">
-                Let's set up your AI-powered photo library. This will take a few minutes.
-            </p>
+            <h1>{t('wizard.welcome.title')}</h1>
+            <p className="wizard-subtitle">{t('wizard.welcome.subtitle')}</p>
             <ul className="wizard-checklist">
-                <li>Install Python dependencies</li>
-                <li>Initialise the database</li>
-                <li>Download AI models of your choice</li>
+                <li>{t('wizard.welcome.installDeps')}</li>
+                <li>{t('wizard.welcome.initDb')}</li>
+                <li>{t('wizard.welcome.downloadModels')}</li>
             </ul>
             <div className="wizard-actions">
                 <button className="wizard-btn wizard-btn--primary" onClick={onContinue}>
-                    Get Started
+                    {t('wizard.welcome.getStarted')}
                 </button>
             </div>
         </div>

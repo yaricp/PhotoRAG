@@ -1,0 +1,165 @@
+{
+  "sidebar": {
+    "gallery": "Gallery",
+    "search": "Search",
+    "documents": "Documents",
+    "duplicates": "Duplicates",
+    "garbage": "Garbage",
+    "chat": "Agent AI",
+    "processing": "Processing",
+    "folders": "Folders",
+    "models": "Models",
+    "prompts": "Prompts",
+    "settings": "Settings"
+  },
+  "gallery": {
+    "prev": "Prev",
+    "next": "Next",
+    "sort": {
+      "created_at": "Created",
+      "captured_at": "Captured",
+      "file_created_at": "File",
+      "image_width": "Width"
+    },
+    "perPage": "{{count}} / page",
+    "reset": "Reset"
+  },
+  "chat": {
+    "selectAll": "Select all",
+    "selected": "{{count}} of {{total}} selected",
+    "archive": "Archive",
+    "delete": "Delete",
+    "warming": "The AI chat model is still warming up. Your first message may take a moment.",
+    "placeholder": "Ask something about your photos...",
+    "undo": "↩ Undo",
+    "send": "Send",
+    "newChat": "New chat",
+    "confirmArchiveTitle": "Archive {{count}} photo{{plural}}?",
+    "confirmArchiveMessage": "The photos will be marked as archived.",
+    "confirmDeleteTitle": "Delete {{count}} photo{{plural}}?",
+    "confirmDeleteMessage": "The files will be permanently removed from disk."
+  },
+  "photoDetail": {
+    "back": "← Back",
+    "edit": "Edit",
+    "dateTaken": "Date taken",
+    "camera": "Camera",
+    "description": "Description",
+    "translation": "Translation",
+    "tags": "Tags",
+    "categories": "Categories",
+    "trash": "Trash",
+    "document": "Document",
+    "documentText": "Document text",
+    "additionalData": "Additional data",
+    "fileCreated": "File created",
+    "captured": "Captured",
+    "indexed": "Indexed",
+    "width": "Width",
+    "height": "Height",
+    "iso": "ISO",
+    "aperture": "Aperture",
+    "focalLength": "Focal length",
+    "shutterSpeed": "Shutter speed",
+    "offsetTime": "Offset time",
+    "archive": "Archive",
+    "delete": "Delete",
+    "notFound": "Photo not found",
+    "archiveConfirmTitle": "Archive photo?",
+    "archiveConfirmMessage": "The photo will be zipped and removed from the library.",
+    "deleteConfirmTitle": "Delete photo?",
+    "deleteConfirmMessage": "The photo will be permanently deleted."
+  },
+  "photoEdit": {
+    "backToPhoto": "← Back to photo",
+    "ocrText": "OCR Text",
+    "descriptionEn": "Description (EN)",
+    "translation": "Translation",
+    "manageTags": "+ Manage Tags",
+    "manageCategories": "+ Manage Categories",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Saved ✓",
+    "reindexSearch": "Re-index Search",
+    "queuing": "Queuing…",
+    "queued": "Queued ✓",
+    "runPipeline": "Run Full Pipeline",
+    "starting": "Starting…",
+    "started": "Started ✓",
+    "notFound": "Photo not found"
+  },
+  "processing": {
+    "title": "Processing",
+    "active": "Active",
+    "recent": "Recent",
+    "noActive": "No active processing",
+    "activeCount": "{{count}} active photo",
+    "activeCountPlural": "{{count}} active photos"
+  },
+  "documents": {
+    "noDocuments": "No documents",
+    "noDocumentsDesc": "Documents will appear here automatically",
+    "failedToLoad": "Failed to load documents"
+  },
+  "prompts": {
+    "title": "Prompts",
+    "subtitle": "Edit the prompts used by AI models. Changes take effect on the next request — no restart needed.",
+    "saving": "Saving…",
+    "save": "Save",
+    "saved": "Saved",
+    "loading": "Loading prompts…"
+  },
+  "settings": {
+    "title": "Settings",
+    "general": "General",
+    "defaultLanguage": "Default language",
+    "defaultFolder": "Default folder",
+    "defaultFolderHint": "Used by agent tools (create folder, move photos, archive). Falls back to home directory if empty.",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "clipVocabulary": "CLIP Vocabulary",
+    "templateTags": "Template Tags",
+    "templateTagsDesc": "Manage the tag vocabulary used by CLIP detection",
+    "templateCategories": "Template Categories",
+    "templateCategoriesDesc": "Manage the category list used by CLIP classification",
+    "dangerZone": "Danger Zone",
+    "uninstall": "Uninstall PhotoRAG",
+    "uninstallDesc": "Removes the app, database, AI models, and all settings. Your original photos are not affected.",
+    "uninstalling": "Uninstalling…",
+    "retranslating": "Re-translating photos…",
+    "retranslateSuccess": "Translation started. See Processing page for progress."
+  },
+  "languages": {
+    "en": "English",
+    "ru": "Русский",
+    "es": "Español"
+  },
+  "wizard": {
+    "steps": {
+      "language": "Language",
+      "welcome": "Welcome",
+      "install-deps": "Dependencies",
+      "init-db": "Database",
+      "model-config": "AI Models",
+      "downloading": "Downloading",
+      "done": "Done"
+    },
+    "language": {
+      "title": "Choose Your Language",
+      "subtitle": "Select the language you want to use for PhotoRAG. You can change it later in Settings.",
+      "continue": "Continue"
+    },
+    "welcome": {
+      "title": "Welcome to PhotoRAG",
+      "subtitle": "Let's set up your AI-powered photo library. This will take a few minutes.",
+      "installDeps": "Install Python dependencies",
+      "initDb": "Initialise the database",
+      "downloadModels": "Download AI models of your choice",
+      "getStarted": "Get Started"
+    }
+  },
+  "common": {
+    "openInMaps": "Open in Google Maps ↗"
+  }
+}

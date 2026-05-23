@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { getPhotos, getAvailableDates, archivePhotos, deletePhoto } from '@/api/client'
 import type { AvailableDate } from '@/api/client'
 import { PhotoCard } from '@/components/photos/PhotoCard'
@@ -14,6 +15,7 @@ type SortOrder = 'asc' | 'desc'
 const DEFAULT_LIMIT = 20
 
 export function GalleryPage() {
+    const { t } = useTranslation()
     const [data, setData] = useState<PaginatedPhotos | null>(null)
     const [loading, setLoading] = useState(true)
 
@@ -147,14 +149,14 @@ export function GalleryPage() {
                             disabled={page === 0}
                             onClick={() => setPage(p => Math.max(0, p - 1))}
                         >
-                            Prev
+                            {t('gallery.prev')}
                         </Button>
                         <span>{page + 1} / {totalPages}</span>
                         <Button
                             disabled={page + 1 >= totalPages}
                             onClick={() => setPage(p => p + 1)}
                         >
-                            Next
+                            {t('gallery.next')}
                         </Button>
                     </div>
                 )

@@ -264,3 +264,47 @@
     background: rgba(255, 255, 255, 0.15);
     border-radius: 3px;
 }
+
+/* Language step */
+.wizard-lang-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    width: 100%;
+    max-width: 320px;
+    margin: 1.5rem 0;
+}
+
+.wizard-lang-option {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1.25rem;
+    border-radius: 8px;
+    border: 2px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    color: #e0e0e0;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    text-align: left;
+}
+
+.wizard-lang-option:hover {
+    border-color: rgba(108, 143, 248, 0.5);
+    background: rgba(108, 143, 248, 0.08);
+}
+
+.wizard-lang-option--selected {
+    border-color: #6c8ff8;
+    background: rgba(108, 143, 248, 0.15);
+}
+
+.wizard-lang-flag {
+    font-size: 1.5rem;
+    line-height: 1;
+}
+
+.wizard-lang-name {
+    font-weight: 500;
+}
