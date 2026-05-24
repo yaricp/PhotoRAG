@@ -24,6 +24,9 @@ test_output.txt
 **/Pictures
 data/
 .github/skills/
+.claude/skills/
+.claude/worktrees/
+planning/
 
 # macOS installer build artifacts
 frontend/resources/python/
