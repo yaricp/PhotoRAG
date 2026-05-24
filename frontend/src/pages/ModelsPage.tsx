@@ -4,6 +4,7 @@ import { getModelConfigs, updateModelConfig, getSystemStatus } from '@/api/clien
 import type { AIModelConfig } from '@/types/api'
 import { ServerIcon, CloudIcon } from '@heroicons/react/24/outline'
 import { Spinner } from '@/components/ui/Spinner'
+import { PrivacyWarning } from '@/components/ui/PrivacyWarning'
 import './ModelsPage.css'
 
 type ModelStatusMap = Record<string, string>  // model type → status
@@ -171,6 +172,8 @@ export function ModelsPage() {
             </p>
 
             {error && <div className="models-page__error">{error}</div>}
+
+            <div className="models-page__layout">
 
             {savedType && (
                 <div className="model-modal-overlay" onClick={() => setSavedType(null)}>
@@ -391,6 +394,8 @@ export function ModelsPage() {
                         </div>
                     </div>
                 ))}
+            </div>
+                <PrivacyWarning />
             </div>
         </div>
     )

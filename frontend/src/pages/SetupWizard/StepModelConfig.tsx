@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ServerIcon, CloudIcon } from '@heroicons/react/24/outline'
+import { PrivacyWarning } from '@/components/ui/PrivacyWarning'
 
 interface ModelConfig {
     id: number
@@ -125,6 +126,7 @@ export function StepModelConfig({ onDone }: Props) {
 
             {error && <div className="models-page__error">{error}</div>}
 
+            <div className="wizard-model-config-layout">
             <div className="wizard-model-config-list">
                 {configs.map(config => (
                     <div key={config.id} className="model-card">
@@ -274,6 +276,8 @@ export function StepModelConfig({ onDone }: Props) {
                         )}
                     </div>
                 ))}
+            </div>
+            <PrivacyWarning />
             </div>
 
             <div className="wizard-actions">

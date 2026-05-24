@@ -308,3 +308,23 @@
 .wizard-lang-name {
     font-weight: 500;
 }
+
+/* Two-column layout in StepModelConfig: model list left, PrivacyWarning right */
+.wizard-model-config-layout {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    width: 100%;
+}
+
+.wizard-model-config-layout .wizard-model-config-list {
+    flex: 1;
+    min-width: 0;
+}
+
+.wizard-model-config-layout .privacy-warning {
+    width: 260px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 16px;
+}

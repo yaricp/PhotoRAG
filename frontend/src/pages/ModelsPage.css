@@ -410,3 +410,22 @@
     color: var(--color-accent);
     border-color: var(--color-accent);
 }
+
+/* Two-column layout: model grid on the left, PrivacyWarning on the right */
+.models-page__layout {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+.models-page__layout .models-grid {
+    flex: 1;
+    min-width: 0;
+}
+
+.models-page__layout .privacy-warning {
+    width: 280px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 16px;
+}

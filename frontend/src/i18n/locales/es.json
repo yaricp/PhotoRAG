@@ -284,10 +284,11 @@
     "modelName": "Nombre del modelo"
   },
   "privacy": {
-    "warning_short": "⚠️ Los modelos en la nube comparten datos con los proveedores",
-    "warning_title": "Aviso de privacidad de datos",
-    "expand": "Ver aviso completo",
-    "collapse": "Ocultar",
-    "warning_full": "Al usar modelos basados en la nube (OpenAI, Anthropic, Google, Ollama remoto), el contenido de tus fotos y descripciones se envía a los servidores de esos proveedores. Para máxima privacidad, considera usar solo modelos locales que corran en tu dispositivo."
+    "shortTitle": "⚠ Aviso de privacidad",
+    "shortText": "Los modelos remotos de IA envían sus fotos y descripciones a proveedores externos.",
+    "expandButton": "Ver advertencia completa",
+    "fullTitle": "Aviso de privacidad — Modelos de IA remotos",
+    "fullText": "Al configurar modelos de IA remotos (OpenAI, Google Gemini, Anthropic Claude, Groq, etc.), sus fotos y los metadatos generados por esta aplicación pueden enviarse a los servidores de esos proveedores y procesarse según sus políticas de privacidad. Pueden almacenar o usar estos datos de acuerdo con sus términos de servicio.\n\nPara proteger su privacidad:\n• Modelos locales — se ejecutan en su dispositivo; los datos no salen de su computadora.\n• Modelos autoalojados — Ollama o vLLM en un servidor bajo su control.\n• Proveedores con acuerdos — aquellos que ofrecen garantías explícitas de retención de datos.\n\nSi no está seguro, elegir todos los modelos locales es la opción más segura.",
+    "closeButton": "Cerrar"
   }
 }
