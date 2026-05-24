@@ -32,13 +32,3 @@ def load_sqlite_extensions(dbapi_connection, connection_record):
         dbapi_connection.execute("PRAGMA busy_timeout=30000")
     except Exception as e:
         logger.error(f"Failed to set SQLite pragmas: {e}")
-
-
-@event.listens_for(Engine, "close")
-def checkpoint_on_close(dbapi_connection, connection_record):
-    """Flush WAL back into the main DB file whenever a connection is returned to the pool."""
-    try:
-        dbapi_connection.execute("PRAGMA wal_checkpoint(TRUNCATE)")
-    except Exception:
-        pass
-
