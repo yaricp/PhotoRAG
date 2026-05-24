@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ServerIcon, CloudIcon } from '@heroicons/react/24/outline'
-import '../ModelsPage.css'
 
 interface ModelConfig {
     id: number
@@ -11,15 +11,6 @@ interface ModelConfig {
     api_key?: string
     model_provider?: string
     similarity_limit?: number
-}
-
-const MODEL_LABELS: Record<string, string> = {
-    vision:     'Vision',
-    clip:       'CLIP',
-    ocr:        'OCR',
-    embedding:  'Embedding',
-    translator: 'Translator',
-    chat:       'Chat',
 }
 
 const PREFERRED_ORDER = ['vision', 'clip', 'ocr', 'embedding', 'translator', 'chat']
@@ -65,10 +56,20 @@ interface Props {
 }
 
 export function StepModelConfig({ onDone }: Props) {
+    const { t } = useTranslation()
     const [configs, setConfigs] = useState<ModelConfig[]>([])
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState<string | null>(null)
+
+    const MODEL_LABELS: Record<string, string> = {
+        vision:     t('wizard.stepModelConfig.labelVision'),
+        clip:       t('wizard.stepModelConfig.labelClip'),
+        ocr:        t('wizard.stepModelConfig.labelOcr'),
+        embedding:  t('wizard.stepModelConfig.labelEmbedding'),
+        translator: t('wizard.stepModelConfig.labelTranslator'),
+        chat:       t('wizard.stepModelConfig.labelChat'),
+    }
 
     useEffect(() => {
         window.electronAPI.getModelConfigs()
@@ -110,16 +111,16 @@ export function StepModelConfig({ onDone }: Props) {
         return (
             <div className="wizard-step">
                 <div className="wizard-spinner" />
-                <p>Loading model configurations…</p>
+                <p>{t('wizard.stepModelConfig.loadingModels')}</p>
             </div>
         )
     }
 
     return (
         <div className="wizard-step">
-            <h2>Configure AI Models</h2>
+            <h2>{t('wizard.stepModelConfig.title')}</h2>
             <p className="wizard-subtitle">
-                Choose local (runs on your Mac) or remote (API key required) for each task.
+                {t('wizard.stepModelConfig.subtitle')}
             </p>
 
             {error && <div className="models-page__error">{error}</div>}
@@ -136,32 +137,34 @@ export function StepModelConfig({ onDone }: Props) {
                                 {MODEL_LABELS[config.type] ?? config.type}
                             </h2>
                             <span className={`model-card__badge model-card__badge--${config.mode}`}>
-                                {config.mode}
+                                {config.mode === 'local'
+                                    ? t('wizard.stepModelConfig.localMode')
+                                    : t('wizard.stepModelConfig.remoteMode')}
                             </span>
                         </div>
 
                         <div className="model-card__form">
                             <div className="model-field">
-                                <label className="model-field__label">Processing mode</label>
+                                <label className="model-field__label">{t('wizard.stepModelConfig.processingMode')}</label>
                                 <select
                                     className="model-field__select"
                                     value={config.mode}
                                     onChange={e => handleChange(config.type, 'mode', e.target.value)}
                                 >
-                                    <option value="local">Local (GPU / CPU)</option>
-                                    <option value="remote">Remote (API)</option>
+                                    <option value="local">{t('wizard.stepModelConfig.localMode')}</option>
+                                    <option value="remote">{t('wizard.stepModelConfig.remoteMode')}</option>
                                 </select>
                             </div>
 
                             <div className="model-field">
-                                <label className="model-field__label">Model name / HuggingFace ID</label>
+                                <label className="model-field__label">{t('wizard.stepModelConfig.modelName')}</label>
                                 <input
                                     className="model-field__input"
                                     value={config.model_name}
                                     onChange={e => handleChange(config.type, 'model_name', e.target.value)}
                                     placeholder={config.mode === 'local'
-                                        ? 'e.g. Qwen/Qwen2-VL-2B-Instruct'
-                                        : 'e.g. gpt-4o-mini'
+                                        ? t('wizard.stepModelConfig.localPlaceholder')
+                                        : t('wizard.stepModelConfig.remotePlaceholder')
                                     }
                                 />
                                 {config.mode === 'remote' && config.model_provider && (() => {
@@ -169,7 +172,7 @@ export function StepModelConfig({ onDone }: Props) {
                                     if (!suggestions.length) return null
                                     return (
                                         <div className="model-suggestions">
-                                            <span className="model-suggestions__label">Suggestions:</span>
+                                            <span className="model-suggestions__label">{t('wizard.stepModelConfig.suggestions')}</span>
                                             {suggestions.map(name => (
                                                 <button
                                                     key={name}
@@ -188,13 +191,13 @@ export function StepModelConfig({ onDone }: Props) {
                             {config.mode === 'remote' && (
                                 <div className="model-card__remote">
                                     <div className="model-field">
-                                        <label className="model-field__label">Provider</label>
+                                        <label className="model-field__label">{t('wizard.stepModelConfig.provider')}</label>
                                         <select
                                             className="model-field__select"
                                             value={config.model_provider || ''}
                                             onChange={e => handleChange(config.type, 'model_provider', e.target.value)}
                                         >
-                                            <option value="">— auto-detect —</option>
+                                            <option value="">{t('wizard.stepModelConfig.autoDetect')}</option>
                                             <option value="openai">OpenAI</option>
                                             {(config.type === 'chat' || config.type === 'vision' || config.type === 'clip' || config.type === 'ocr' || config.type === 'translator') && (
                                                 <option value="anthropic">Anthropic (Claude)</option>
@@ -209,21 +212,23 @@ export function StepModelConfig({ onDone }: Props) {
                                             {config.type === 'translator' && <option value="libretranslate">LibreTranslate (self-hosted)</option>}
                                         </select>
                                         {config.model_provider === 'ollama' && (
-                                            <p className="model-field__hint">No API key needed. Set the base URL to your Ollama server.</p>
+                                            <p className="model-field__hint">{t('wizard.stepModelConfig.ollamaHint')}</p>
                                         )}
                                         {config.type === 'clip' && config.mode === 'remote' && (
                                             <p className="model-field__hint">
-                                                Remote CLIP uses a vision LLM to classify tags. You can reuse your vision model here.
+                                                {t('wizard.stepModelConfig.remoteClipHint')}
                                             </p>
                                         )}
                                         {config.model_provider === 'deepl' && (
-                                            <p className="model-field__hint">Enter your DeepL API key below. Model name is not used.</p>
+                                            <p className="model-field__hint">{t('wizard.stepModelConfig.deepLHint')}</p>
                                         )}
                                     </div>
 
                                     <div className="model-field">
                                         <label className="model-field__label">
-                                            {config.model_provider === 'ollama' ? 'Ollama server URL' : 'API base URL (optional)'}
+                                            {config.model_provider === 'ollama'
+                                                ? t('wizard.stepModelConfig.ollamaUrl')
+                                                : t('wizard.stepModelConfig.baseUrl')}
                                         </label>
                                         <input
                                             className="model-field__input"
@@ -235,7 +240,7 @@ export function StepModelConfig({ onDone }: Props) {
 
                                     {config.model_provider !== 'ollama' && config.model_provider !== 'google_vertexai' && (
                                         <div className="model-field">
-                                            <label className="model-field__label">API key</label>
+                                            <label className="model-field__label">{t('wizard.stepModelConfig.apiKey')}</label>
                                             <input
                                                 className="model-field__input"
                                                 type="password"
@@ -251,7 +256,7 @@ export function StepModelConfig({ onDone }: Props) {
 
                         {config.type === 'embedding' && (
                             <div className="model-field">
-                                <label className="model-field__label">Similarity threshold</label>
+                                <label className="model-field__label">{t('wizard.stepModelConfig.similarityThreshold')}</label>
                                 <input
                                     className="model-field__input"
                                     type="number"
@@ -263,8 +268,7 @@ export function StepModelConfig({ onDone }: Props) {
                                     placeholder="auto (scaled by dimension)"
                                 />
                                 <p className="model-field__hint">
-                                    L2 distance cutoff — lower is stricter. Leave blank to auto-scale.
-                                    Recommended: nomic 768d → 0.75, text-embedding-3-small → 1.05.
+                                    {t('wizard.stepModelConfig.similarityHint')}
                                 </p>
                             </div>
                         )}
@@ -278,7 +282,7 @@ export function StepModelConfig({ onDone }: Props) {
                     onClick={handleContinue}
                     disabled={saving}
                 >
-                    {saving ? 'Saving…' : 'Continue'}
+                    {saving ? t('wizard.stepModelConfig.saving') : t('wizard.stepModelConfig.continueButton')}
                 </button>
             </div>
         </div>

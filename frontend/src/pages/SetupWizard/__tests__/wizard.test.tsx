@@ -3,6 +3,7 @@ import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import { SetupWizard } from '../index'
 import { StepInstallDeps } from '../StepInstallDeps'
 import { StepModelPicker } from '../StepModelPicker'
+import { StepModelConfig } from '../StepModelConfig'
 import { StepDownloading } from '../StepDownloading'
 import { StepInitDb } from '../StepInitDb'
 import { StepDone } from '../StepDone'
@@ -21,6 +22,8 @@ const mockApi = {
     downloadModel: vi.fn().mockResolvedValue(undefined),
     cancelDownload: vi.fn().mockResolvedValue(undefined),
     completeSetup: vi.fn().mockResolvedValue(undefined),
+    getModelConfigs: vi.fn().mockResolvedValue([]),
+    saveModelConfigs: vi.fn().mockResolvedValue(undefined),
     onInstallDepsProgress: vi.fn().mockImplementation((cb: ProgressCb) => progressListeners.push(cb)),
     onDownloadModelProgress: vi.fn().mockImplementation((cb: DownloadCb) => downloadListeners.push(cb)),
 }
@@ -37,6 +40,8 @@ beforeEach(() => {
     mockApi.downloadModel.mockResolvedValue(undefined)
     mockApi.cancelDownload.mockResolvedValue(undefined)
     mockApi.completeSetup.mockResolvedValue(undefined)
+    mockApi.getModelConfigs.mockResolvedValue([])
+    mockApi.saveModelConfigs.mockResolvedValue(undefined)
     mockApi.onInstallDepsProgress.mockImplementation((cb: ProgressCb) => progressListeners.push(cb))
     mockApi.onDownloadModelProgress.mockImplementation((cb: DownloadCb) => downloadListeners.push(cb))
     Object.defineProperty(window, 'electronAPI', {
@@ -185,5 +190,31 @@ describe('i18n — Russian titles', () => {
         i18n.changeLanguage('ru')
         render(<StepDone onComplete={vi.fn()} />)
         expect(screen.getByRole('heading', { name: 'Установка завершена!' })).toBeInTheDocument()
+    })
+})
+
+describe('StepModelConfig i18n', () => {
+    it('renders Russian title', async () => {
+        i18n.changeLanguage('ru')
+        render(<StepModelConfig onDone={vi.fn()} />)
+        await waitFor(() =>
+            expect(screen.getByRole('heading', { name: /Настройка моделей ИИ/i })).toBeInTheDocument()
+        )
+    })
+
+    it('renders Russian Continue button', async () => {
+        i18n.changeLanguage('ru')
+        render(<StepModelConfig onDone={vi.fn()} />)
+        await waitFor(() =>
+            expect(screen.getByRole('button', { name: /Продолжить/i })).toBeInTheDocument()
+        )
+    })
+
+    it('renders Spanish title', async () => {
+        i18n.changeLanguage('es')
+        render(<StepModelConfig onDone={vi.fn()} />)
+        await waitFor(() =>
+            expect(screen.getByRole('heading', { name: /Configurar modelos de IA/i })).toBeInTheDocument()
+        )
     })
 })
