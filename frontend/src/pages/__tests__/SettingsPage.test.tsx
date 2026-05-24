@@ -68,4 +68,37 @@ describe('SettingsPage', () => {
         render(<MemoryRouter><SettingsPage /></MemoryRouter>)
         await waitFor(() => expect(i18n.language).toBe('ru'))
     })
+
+    it('applies language change immediately even when DB save fails', async () => {
+        server.use(
+            http.get('http://localhost:8000/api/settings/', () =>
+                HttpResponse.json({ default_language: 'en', default_folder: '' })
+            ),
+            http.put('http://localhost:8000/api/settings/:key', () =>
+                HttpResponse.json({ error: 'database is locked' }, { status: 500 })
+            )
+        )
+        render(<MemoryRouter><SettingsPage /></MemoryRouter>)
+        await waitFor(() => screen.getByRole('button', { name: /save/i }))
+        fireEvent.change(screen.getByRole('combobox'), { target: { value: 'ru' } })
+        fireEvent.click(screen.getByRole('button', { name: /save/i }))
+        await waitFor(() => expect(i18n.language).toBe('ru'))
+    })
+
+    it('does not re-load settings from DB when i18n language changes externally', async () => {
+        let getSettingsCalls = 0
+        server.use(
+            http.get('http://localhost:8000/api/settings/', () => {
+                getSettingsCalls++
+                return HttpResponse.json({ default_language: 'en', default_folder: '' })
+            })
+        )
+        render(<MemoryRouter><SettingsPage /></MemoryRouter>)
+        await waitFor(() => expect(getSettingsCalls).toBe(1))
+        // Simulate external language change (e.g. from another component)
+        await i18n.changeLanguage('ru')
+        // Give React time to process any potential effect re-runs
+        await new Promise(r => setTimeout(r, 150))
+        expect(getSettingsCalls).toBe(1)  // must NOT have re-fetched
+    })
 })

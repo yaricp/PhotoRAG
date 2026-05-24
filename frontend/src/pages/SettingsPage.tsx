@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
 import { getSettings, updateSetting } from '@/api/client'
 import { getBaseUrl } from '@/api/base'
 import './SettingsPage.css'
@@ -17,9 +16,12 @@ export function SettingsPage() {
     const [language, setLanguage] = useState('en')
     const [saving, setSaving] = useState(false)
     const [saved, setSaved] = useState(false)
+    const [saveError, setSaveError] = useState<string | null>(null)
     const [uninstalling, setUninstalling] = useState(false)
     const [retranslating, setRetranslating] = useState(false)
 
+    // Load settings once on mount. Dependency array is intentionally [] — re-reading
+    // from DB every time i18n changes creates a feedback loop that reverts the language.
     useEffect(() => {
         let cancelled = false
         getSettings().then(async s => {
@@ -30,7 +32,6 @@ export function SettingsPage() {
             await i18n.changeLanguage(savedLanguage)
         }).catch(() => {
             if (cancelled) return
-            // fallback to localStorage if API not available
             const stored = localStorage.getItem('settings')
             if (stored) {
                 const s = JSON.parse(stored)
@@ -41,26 +42,31 @@ export function SettingsPage() {
             }
         })
         return () => { cancelled = true }
-    }, [i18n])
+    }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
     async function handleSave() {
         setSaving(true)
         setSaved(false)
+        setSaveError(null)
         const prevLang = i18n.language
+        // Apply language change immediately so titles update even if DB save fails.
+        if (language !== prevLang) {
+            await i18n.changeLanguage(language)
+        }
         try {
             await updateSetting('default_folder', defaultFolder)
             await updateSetting('default_language', language)
-            if (language !== prevLang) {
-                await i18n.changeLanguage(language)
-                if (language !== 'en') {
-                    setRetranslating(true)
-                    const base = await getBaseUrl()
-                    await fetch(`${base}/api/translation/retranslate-all`, { method: 'POST' })
-                    setRetranslating(false)
-                }
+            if (language !== prevLang && language !== 'en') {
+                setRetranslating(true)
+                const base = await getBaseUrl()
+                await fetch(`${base}/api/translation/retranslate-all`, { method: 'POST' })
+                setRetranslating(false)
             }
             setSaved(true)
             setTimeout(() => setSaved(false), 2500)
+        } catch (err) {
+            setSaveError(err instanceof Error ? err.message : String(err))
+            setRetranslating(false)
         } finally {
             setSaving(false)
         }
@@ -124,6 +130,7 @@ export function SettingsPage() {
                     {retranslating ? t('settings.retranslating') : saving ? t('settings.saving') : t('settings.save')}
                 </button>
                 {saved && <span className="settings-saved">{t('settings.saved')}</span>}
+                {saveError && <span className="settings-save-error">{saveError}</span>}
             </div>
 
             <div className="settings-section">
