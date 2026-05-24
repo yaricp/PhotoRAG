@@ -1,11 +1,14 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { server } from '@/test/server'
 import { http, HttpResponse } from 'msw'
 import { SettingsPage } from '../SettingsPage'
+import i18n from '@/i18n'
 
 vi.mock('@/api/base', () => ({ getBaseUrl: async () => 'http://localhost:8000' }))
+
+afterEach(async () => { await i18n.changeLanguage('en') })
 
 const renderPage = () =>
     render(
@@ -48,5 +51,21 @@ describe('SettingsPage', () => {
         fireEvent.change(input, { target: { value: '/new' } })
         fireEvent.click(screen.getByRole('button', { name: /save/i }))
         await waitFor(() => expect(folderBody).toContain('/new'))
+    })
+
+    it('renders Russian settings title when language is ru', () => {
+        i18n.changeLanguage('ru')
+        render(<MemoryRouter><SettingsPage /></MemoryRouter>)
+        expect(screen.getByRole('heading', { name: 'Настройки' })).toBeInTheDocument()
+    })
+
+    it('syncs i18n language when saved setting is ru', async () => {
+        server.use(
+            http.get('http://localhost:8000/api/settings/', () =>
+                HttpResponse.json({ default_language: 'ru', default_folder: '' })
+            )
+        )
+        render(<MemoryRouter><SettingsPage /></MemoryRouter>)
+        await waitFor(() => expect(i18n.language).toBe('ru'))
     })
 })

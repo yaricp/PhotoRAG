@@ -1,4 +1,5 @@
 import React from 'react'
+import { useTranslation } from 'react-i18next'
 import { MODELS, formatSizeMB, totalSizeLabel } from './models'
 
 interface Props {
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export function StepModelPicker({ selected, onChange, onContinue, localOnlyTypes }: Props) {
+    const { t } = useTranslation()
     const visibleModels = localOnlyTypes
         ? MODELS.filter(m => localOnlyTypes.has(m.id))
         : MODELS
@@ -36,11 +38,11 @@ export function StepModelPicker({ selected, onChange, onContinue, localOnlyTypes
     if (visibleModels.length === 0) {
         return (
             <div className="wizard-step">
-                <h2>Download Models</h2>
-                <p>All models are configured to use remote APIs — no local downloads needed.</p>
+                <h2>{t('wizard.stepModelPicker.title')}</h2>
+                <p>{t('wizard.stepModelPicker.noLocalModels')}</p>
                 <div className="wizard-actions">
                     <button className="wizard-btn wizard-btn--primary" onClick={onContinue}>
-                        Continue
+                        {t('wizard.stepModelPicker.continueButton')}
                     </button>
                 </div>
             </div>
@@ -49,8 +51,8 @@ export function StepModelPicker({ selected, onChange, onContinue, localOnlyTypes
 
     return (
         <div className="wizard-step">
-            <h2>Choose Models to Download</h2>
-            <p>Required models are always installed. Optional models add extra features.</p>
+            <h2>{t('wizard.stepModelPicker.title')}</h2>
+            <p>{t('wizard.stepModelPicker.subtitle')}</p>
 
             <div className="wizard-model-list">
                 {visibleModels.map(model => (
@@ -77,21 +79,21 @@ export function StepModelPicker({ selected, onChange, onContinue, localOnlyTypes
                     <input
                         type="checkbox"
                         id="skip-all-optional"
-                        aria-label="Skip all optional"
+                        aria-label={t('wizard.stepModelPicker.skipAllOptional')}
                         checked={allOptionalSkipped}
                         onChange={e => handleSkipAll(e.target.checked)}
                     />
-                    Skip all optional models
+                    {t('wizard.stepModelPicker.skipAllOptional')}
                 </label>
             )}
 
             <p className="wizard-total-size">
-                Total download: <strong>{totalSizeLabel(selected)}</strong>
+                {t('wizard.stepModelPicker.totalDownload', { size: totalSizeLabel(selected) })}
             </p>
 
             <div className="wizard-actions">
                 <button className="wizard-btn wizard-btn--primary" onClick={onContinue}>
-                    Continue
+                    {t('wizard.stepModelPicker.continueButton')}
                 </button>
             </div>
         </div>

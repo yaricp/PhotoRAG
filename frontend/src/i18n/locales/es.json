@@ -1,7 +1,7 @@
 {
   "sidebar": {
     "gallery": "Galería",
-    "search": "Buscar",
+    "search": "Búsqueda",
     "documents": "Documentos",
     "duplicates": "Duplicados",
     "garbage": "Basura",
@@ -10,7 +10,7 @@
     "folders": "Carpetas",
     "models": "Modelos",
     "prompts": "Prompts",
-    "settings": "Ajustes"
+    "settings": "Configuración"
   },
   "gallery": {
     "prev": "Anterior",
@@ -24,14 +24,15 @@
     "perPage": "{{count}} / pág.",
     "reset": "Restablecer",
     "empty": "No se encontraron fotos",
-    "error": "Error al cargar las fotos"
+    "error": "Error al cargar fotos",
+    "documentsOnly": "Solo documentos"
   },
   "chat": {
     "selectAll": "Seleccionar todo",
-    "selected": "{{count}} de {{total}} seleccionados",
+    "selected": "{{count}} de {{total}} seleccionado",
     "archive": "Archivar",
     "delete": "Eliminar",
-    "warming": "El modelo de IA aún se está cargando. Tu primer mensaje puede tardar un momento.",
+    "warming": "El modelo de IA todavía se está iniciando. El primer mensaje puede tardar un momento.",
     "placeholder": "Pregunta algo sobre tus fotos...",
     "undo": "↩ Deshacer",
     "send": "Enviar",
@@ -39,7 +40,8 @@
     "confirmArchiveTitle": "¿Archivar {{count}} foto{{plural}}?",
     "confirmArchiveMessage": "Las fotos serán marcadas como archivadas.",
     "confirmDeleteTitle": "¿Eliminar {{count}} foto{{plural}}?",
-    "confirmDeleteMessage": "Los archivos serán eliminados permanentemente del disco."
+    "confirmDeleteMessage": "Los archivos serán eliminados permanentemente del disco.",
+    "title": "Agente IA"
   },
   "photoDetail": {
     "back": "← Atrás",
@@ -50,7 +52,7 @@
     "translation": "Traducción",
     "tags": "Etiquetas",
     "categories": "Categorías",
-    "trash": "Basura",
+    "trash": "Papelera",
     "document": "Documento",
     "documentText": "Texto del documento",
     "additionalData": "Datos adicionales",
@@ -61,9 +63,9 @@
     "height": "Alto",
     "iso": "ISO",
     "aperture": "Apertura",
-    "focalLength": "Focal",
-    "shutterSpeed": "Velocidad",
-    "offsetTime": "Desfase",
+    "focalLength": "Longitud focal",
+    "shutterSpeed": "Velocidad de obturación",
+    "offsetTime": "Desfase horario",
     "archive": "Archivar",
     "delete": "Eliminar",
     "notFound": "Foto no encontrada",
@@ -85,15 +87,15 @@
     "reindexSearch": "Reindexar búsqueda",
     "queuing": "En cola…",
     "queued": "En cola ✓",
-    "runPipeline": "Ejecutar pipeline",
+    "runPipeline": "Ejecutar pipeline completo",
     "starting": "Iniciando…",
     "started": "Iniciado ✓",
     "notFound": "Foto no encontrada"
   },
   "processing": {
     "title": "Procesando",
-    "active": "Activos",
-    "recent": "Recientes",
+    "active": "Activo",
+    "recent": "Reciente",
     "noActive": "Sin procesamiento activo",
     "activeCount": "{{count}} foto activa",
     "activeCountPlural": "{{count}} fotos activas"
@@ -101,30 +103,31 @@
   "documents": {
     "noDocuments": "Sin documentos",
     "noDocumentsDesc": "Los documentos aparecerán aquí automáticamente",
-    "failedToLoad": "No se pudieron cargar los documentos"
+    "failedToLoad": "Error al cargar documentos",
+    "title": "Documentos"
   },
   "prompts": {
     "title": "Prompts",
-    "subtitle": "Edita los prompts usados por los modelos de IA. Los cambios tienen efecto en la próxima solicitud.",
+    "subtitle": "Edita los prompts usados por los modelos de IA. Los cambios tienen efecto en la siguiente solicitud — no es necesario reiniciar.",
     "saving": "Guardando…",
     "save": "Guardar",
     "saved": "Guardado",
     "loading": "Cargando prompts…"
   },
   "settings": {
-    "title": "Ajustes",
+    "title": "Configuración",
     "general": "General",
     "defaultLanguage": "Idioma predeterminado",
     "defaultFolder": "Carpeta predeterminada",
-    "defaultFolderHint": "Usada por herramientas del agente (crear carpeta, mover fotos, archivar). Por defecto la carpeta de inicio.",
+    "defaultFolderHint": "Usado por herramientas del agente. Si está vacío, se usa el directorio personal.",
     "save": "Guardar",
     "saving": "Guardando…",
     "saved": "Guardado",
     "clipVocabulary": "Vocabulario CLIP",
     "templateTags": "Etiquetas de plantilla",
-    "templateTagsDesc": "Gestiona el vocabulario de etiquetas para la detección CLIP",
+    "templateTagsDesc": "Gestiona el vocabulario de etiquetas para detección CLIP",
     "templateCategories": "Categorías de plantilla",
-    "templateCategoriesDesc": "Gestiona la lista de categorías para la clasificación CLIP",
+    "templateCategoriesDesc": "Gestiona la lista de categorías para clasificación CLIP",
     "dangerZone": "Zona de peligro",
     "uninstall": "Desinstalar PhotoRAG",
     "uninstallDesc": "Elimina la app, la base de datos, modelos de IA y ajustes. Tus fotos originales no se ven afectadas.",
@@ -140,7 +143,7 @@
   "wizard": {
     "steps": {
       "language": "Idioma",
-      "welcome": "Bienvenida",
+      "welcome": "Bienvenido",
       "install-deps": "Dependencias",
       "init-db": "Base de datos",
       "model-config": "Modelos IA",
@@ -149,19 +152,123 @@
     },
     "language": {
       "title": "Elige tu idioma",
-      "subtitle": "Selecciona el idioma de la interfaz de PhotoRAG. Puedes cambiarlo después en Ajustes.",
+      "subtitle": "Selecciona el idioma para PhotoRAG. Puedes cambiarlo después en Configuración.",
       "continue": "Continuar"
     },
     "welcome": {
       "title": "Bienvenido a PhotoRAG",
-      "subtitle": "Vamos a configurar tu biblioteca de fotos con IA. Esto llevará unos minutos.",
+      "subtitle": "Vamos a configurar tu biblioteca de fotos con IA. Esto tomará unos minutos.",
       "installDeps": "Instalar dependencias de Python",
       "initDb": "Inicializar la base de datos",
-      "downloadModels": "Descargar modelos de IA de tu elección",
-      "getStarted": "Empezar"
+      "downloadModels": "Descargar modelos de IA",
+      "getStarted": "Comenzar"
+    },
+    "stepInstallDeps": {
+      "title": "Instalar dependencias",
+      "subtitle": "Instalaremos los paquetes Python necesarios en un entorno virtual aislado.",
+      "installButton": "Instalar",
+      "installing": "Instalando…",
+      "retryButton": "Reintentar",
+      "errorMessage": "Instalación fallida: {{error}}"
+    },
+    "stepInitDb": {
+      "title": "Inicializando base de datos",
+      "initializing": "Configurando la base de datos de la biblioteca de fotos…",
+      "retryButton": "Reintentar",
+      "errorMessage": "Error al inicializar la base de datos: {{error}}"
+    },
+    "stepDownloading": {
+      "title": "Descargando modelos",
+      "cancelButton": "Cancelar",
+      "errorMessage": "Error de descarga: {{error}}"
+    },
+    "stepModelPicker": {
+      "title": "Elegir modelos para descargar",
+      "subtitle": "Los modelos requeridos siempre se instalan. Los opcionales añaden funciones extra.",
+      "skipAllOptional": "Omitir todos los opcionales",
+      "totalDownload": "Descarga total: {{size}}",
+      "continueButton": "Continuar",
+      "noLocalModels": "Todos los modelos están configurados para usar APIs remotas — no se necesitan descargas locales."
+    },
+    "stepModelConfig": {
+      "title": "Configurar modelos de IA",
+      "subtitle": "Elige local (corre en tu Mac) o remoto (requiere clave API) para cada tarea.",
+      "loadingModels": "Cargando configuraciones de modelos…",
+      "errorLoadingModels": "Error al cargar configuraciones",
+      "processingMode": "Modo de procesamiento",
+      "localMode": "Local (GPU / CPU)",
+      "remoteMode": "Remoto (API)",
+      "modelName": "Nombre del modelo / HuggingFace ID",
+      "continueButton": "Continuar",
+      "saving": "Guardando…",
+      "errorSaving": "Error al guardar configuraciones"
+    },
+    "stepDone": {
+      "title": "¡Configuración completa!",
+      "subtitle": "PhotoRAG está listo. Haz clic en Lanzar para abrir tu biblioteca de fotos.",
+      "launchButton": "Lanzar",
+      "launching": "Lanzando…"
     }
   },
   "common": {
     "openInMaps": "Abrir en Google Maps ↗"
+  },
+  "search": {
+    "title": "Búsqueda semántica",
+    "placeholder": "Buscar en tus fotos…",
+    "button": "Buscar",
+    "results": "Resultados",
+    "noResults": "No se encontraron resultados",
+    "error": "Error en la búsqueda"
+  },
+  "duplicates": {
+    "title": "Duplicados",
+    "exact": "Duplicados exactos",
+    "perceptual": "Fotos similares",
+    "loading": "Cargando duplicados…",
+    "noResults": "No se encontraron duplicados",
+    "archive": "Archivar",
+    "delete": "Eliminar",
+    "dismiss": "Descartar",
+    "error": "Error al cargar duplicados"
+  },
+  "garbage": {
+    "title": "Basura",
+    "noResults": "Sin fotos basura",
+    "archive": "Archivar",
+    "delete": "Eliminar",
+    "unmark": "No es basura",
+    "loading": "Cargando…",
+    "error": "Error al cargar fotos basura"
+  },
+  "folders": {
+    "title": "Carpetas",
+    "add": "Añadir carpeta",
+    "remove": "Eliminar",
+    "empty": "No hay carpetas configuradas",
+    "watching": "Vigilando",
+    "destination": "Destino"
+  },
+  "models": {
+    "title": "Modelos de IA",
+    "local": "Local",
+    "remote": "Remoto (API)",
+    "loading": "Cargando configuraciones de modelos…",
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "saved": "Guardado",
+    "error": "Error al cargar modelos",
+    "errorSaving": "Error al guardar configuraciones",
+    "provider": "Proveedor",
+    "apiKey": "Clave API",
+    "baseUrl": "URL base",
+    "modelName": "Nombre del modelo"
+  },
+  "privacy": {
+    "warning_short": "⚠️ Los modelos en la nube comparten datos con los proveedores",
+    "warning_title": "Aviso de privacidad de datos",
+    "expand": "Ver aviso completo",
+    "collapse": "Ocultar",
+    "warning_full": "Al usar modelos basados en la nube (OpenAI, Anthropic, Google, Ollama remoto), el contenido de tus fotos y descripciones se envía a los servidores de esos proveedores. Para máxima privacidad, considera usar solo modelos locales que corran en tu dispositivo."
   }
 }

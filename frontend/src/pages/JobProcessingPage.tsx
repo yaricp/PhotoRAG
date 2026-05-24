@@ -138,7 +138,7 @@ export function JobProcessingPage() {
     return (
         <div className="jobs-page">
             <div className="jobs-page__header">
-                <h2>{t('processing.title')}</h2>
+                <h1>{t('processing.title')}</h1>
                 <span>{activeGroups.length !== 1
                     ? t('processing.activeCountPlural', { count: activeGroups.length })
                     : t('processing.activeCount', { count: activeGroups.length })}</span>

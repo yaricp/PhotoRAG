@@ -47,6 +47,7 @@ export const makePhoto = (overrides?: Partial<Photo>): Photo => ({
     id: 1,
     file_path: '/Users/test/Photos/doc1.png',
     description: 'A formal document with text',
+    translated_description: null,
     is_doc: false,
     is_trash: false,
     ocr_text: null,
@@ -82,16 +83,20 @@ export const makePaginatedPhotos = (
 export const makeWatcher = (overrides?: Partial<Watcher>): Watcher => ({
     id: 1,
     path: '/Users/test/Photos',
-    is_active: true,
-    created_at: '2024-01-01T00:00:00Z',
+    status: 'active',
+    updated_at: '2024-01-01T00:00:00Z',
+    destination_path: '',
     ...overrides
 })
 
 export const makeJob = (overrides?: Partial<Job>): Job => ({
     id: 1,
     photo_id: 1,
-    status: 'processing',
+    phase: 'processing',
+    tasks: '[]',
     created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+    file_path: '/photos/img1.png',
     ...overrides
 })
 

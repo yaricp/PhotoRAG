@@ -1,10 +1,11 @@
-import { describe, it, expect, vi, beforeAll } from 'vitest'
+import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { server } from '@/test/server'
 import { http, HttpResponse } from 'msw'
 import { makeChatResponse, makePhoto } from '@/test/factories'
 import { ChatPage } from '../ChatPage'
+import i18n from '@/i18n'
 
 vi.mock('@/api/base', () => ({ getBaseUrl: async () => 'http://localhost:8000' }))
 
@@ -12,6 +13,8 @@ beforeAll(() => {
     // jsdom doesn't implement scrollIntoView
     window.HTMLElement.prototype.scrollIntoView = vi.fn()
 })
+
+afterEach(() => { i18n.changeLanguage('en') })
 
 const renderPage = () =>
     render(
@@ -76,5 +79,11 @@ describe('ChatPage', () => {
         await waitFor(() =>
             expect(screen.getByText(/Undone: create_folder/i)).toBeInTheDocument()
         )
+    })
+
+    it('renders Russian agent title', () => {
+        i18n.changeLanguage('ru')
+        renderPage()
+        expect(screen.getByRole('heading', { name: 'Агент ИИ' })).toBeInTheDocument()
     })
 })

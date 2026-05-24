@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { MODELS, formatSizeMB } from './models'
 
 interface Props {
@@ -12,6 +13,7 @@ interface ModelProgress {
 }
 
 export function StepDownloading({ selectedModels, onDone }: Props) {
+    const { t } = useTranslation()
     const models = MODELS.filter(m => selectedModels.has(m.id))
     const [progress, setProgress] = useState<Record<string, ModelProgress>>({})
     const [cancelled, setCancelled] = useState(false)
@@ -42,7 +44,7 @@ export function StepDownloading({ selectedModels, onDone }: Props) {
 
     return (
         <div className="wizard-step">
-            <h2>Downloading Models</h2>
+            <h2>{t('wizard.stepDownloading.title')}</h2>
 
             {models.map(model => {
                 const p = progress[model.id]
@@ -68,12 +70,12 @@ export function StepDownloading({ selectedModels, onDone }: Props) {
                 )
             })}
 
-            {error && <p className="wizard-error">Download error: {error}</p>}
+            {error && <p className="wizard-error">{t('wizard.stepDownloading.errorMessage', { error })}</p>}
 
             {!cancelled && (
                 <div className="wizard-actions">
                     <button className="wizard-btn wizard-btn--secondary" onClick={handleCancel}>
-                        Cancel
+                        {t('wizard.stepDownloading.cancelButton')}
                     </button>
                 </div>
             )}

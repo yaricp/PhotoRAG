@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
     skippedModels?: string[]
@@ -6,6 +7,7 @@ interface Props {
 }
 
 export function StepDone({ skippedModels, onComplete }: Props) {
+    const { t } = useTranslation()
     const [launching, setLaunching] = useState(false)
 
     const handleLaunch = async () => {
@@ -21,15 +23,15 @@ export function StepDone({ skippedModels, onComplete }: Props) {
     return (
         <div className="wizard-step">
             <div className="wizard-icon">✅</div>
-            <h2>Setup Complete!</h2>
-            <p>PhotoRAG is ready. Click Launch to open your photo library.</p>
+            <h2>{t('wizard.stepDone.title')}</h2>
+            <p>{t('wizard.stepDone.subtitle')}</p>
             <div className="wizard-actions">
                 <button
                     className="wizard-btn wizard-btn--primary"
                     onClick={handleLaunch}
                     disabled={launching}
                 >
-                    {launching ? 'Launching…' : 'Launch'}
+                    {launching ? t('wizard.stepDone.launching') : t('wizard.stepDone.launchButton')}
                 </button>
             </div>
         </div>

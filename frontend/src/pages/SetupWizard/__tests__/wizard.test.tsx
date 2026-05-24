@@ -1,10 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import { SetupWizard } from '../index'
 import { StepInstallDeps } from '../StepInstallDeps'
 import { StepModelPicker } from '../StepModelPicker'
 import { StepDownloading } from '../StepDownloading'
+import { StepInitDb } from '../StepInitDb'
 import { StepDone } from '../StepDone'
+import i18n from '@/i18n'
 
 type ProgressCb = (data: { line: string; percent: number }) => void
 type DownloadCb = (data: { modelId: string; percent: number; bytes: number }) => void
@@ -22,6 +24,8 @@ const mockApi = {
     onInstallDepsProgress: vi.fn().mockImplementation((cb: ProgressCb) => progressListeners.push(cb)),
     onDownloadModelProgress: vi.fn().mockImplementation((cb: DownloadCb) => downloadListeners.push(cb)),
 }
+
+afterEach(() => { i18n.changeLanguage('en') })
 
 beforeEach(() => {
     progressListeners.length = 0
@@ -149,5 +153,37 @@ describe('StepDone', () => {
         fireEvent.click(screen.getByRole('button', { name: /launch/i }))
         expect(mockApi.completeSetup).toHaveBeenCalled()
         await waitFor(() => expect(onComplete).toHaveBeenCalled())
+    })
+})
+
+describe('i18n — Russian titles', () => {
+    it('StepInstallDeps renders Russian title', () => {
+        i18n.changeLanguage('ru')
+        render(<StepInstallDeps onDone={vi.fn()} />)
+        expect(screen.getByRole('heading', { name: 'Установка зависимостей' })).toBeInTheDocument()
+    })
+
+    it('StepModelPicker renders Russian title', () => {
+        i18n.changeLanguage('ru')
+        render(<StepModelPicker selected={new Set(['clip', 'embedding'])} onChange={vi.fn()} onContinue={vi.fn()} />)
+        expect(screen.getByRole('heading', { name: 'Выбор моделей для загрузки' })).toBeInTheDocument()
+    })
+
+    it('StepDownloading renders Russian title', () => {
+        i18n.changeLanguage('ru')
+        render(<StepDownloading selectedModels={new Set(['clip'])} onDone={vi.fn()} />)
+        expect(screen.getByRole('heading', { name: 'Загрузка моделей' })).toBeInTheDocument()
+    })
+
+    it('StepInitDb renders Russian title', () => {
+        i18n.changeLanguage('ru')
+        render(<StepInitDb onDone={vi.fn()} />)
+        expect(screen.getByRole('heading', { name: 'Инициализация базы данных' })).toBeInTheDocument()
+    })
+
+    it('StepDone renders Russian title', () => {
+        i18n.changeLanguage('ru')
+        render(<StepDone onComplete={vi.fn()} />)
+        expect(screen.getByRole('heading', { name: 'Установка завершена!' })).toBeInTheDocument()
     })
 })

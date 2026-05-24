@@ -4,6 +4,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { getPhoto, deletePhoto, archivePhotos, updatePhotoFlags } from '@/api/client'
 import { Spinner } from '@/components/ui/Spinner'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
+import { OcrPanel } from './OcrPanel'
 import type { Photo } from '@/types/api'
 import { photoImageUrl } from '@/api/images'
 import './PhotoDetailPage.css'
@@ -152,7 +153,12 @@ export function PhotoDetailPage() {
                         <div className="pd__desc-label">{t('photoDetail.tags')}</div>
                         <div className="pd__tag-list">
                             {tags.map(pt => (
-                                <span key={pt.tag?.id} className="pd__tag">{pt.tag?.name}</span>
+                                <span key={pt.tag?.id} className="pd__tag">
+                                    {pt.tag?.name}
+                                    {pt.confidence_score != null && (
+                                        <span className="pd__tag-score"> {Math.round(pt.confidence_score * 100)}%</span>
+                                    )}
+                                </span>
                             ))}
                         </div>
                     </div>
@@ -196,7 +202,7 @@ export function PhotoDetailPage() {
             {photo.is_doc && photo.ocr_text && (
                 <div className="pd__section">
                     <CollapsibleRow title={t('photoDetail.documentText')}>
-                        <div className="pd__ocr-text">{photo.ocr_text}</div>
+                        <OcrPanel text={photo.ocr_text} />
                     </CollapsibleRow>
                 </div>
             )}

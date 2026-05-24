@@ -45,7 +45,7 @@ describe('PhotoCard', () => {
 
     it('shows Processing badge when job prop provided', () => {
         const photo = makePhoto()
-        const job = makeJob({ status: 'processing' })
+        const job = makeJob()
         render(
             <MemoryRouter>
                 <PhotoCard photo={photo} job={job} />

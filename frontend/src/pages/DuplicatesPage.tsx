@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { getDuplicates, deletePhoto, archivePhotos, deleteDuplicateRecord } from '@/api/client'
 import type { DuplicatesResponse, DuplicateGroup, ExactDuplicateEntry, PerceptualDuplicateEntry } from '@/api/client'
 import { photoImageUrl } from '@/api/images'
@@ -29,6 +30,8 @@ function DupPhotoCard({
     checked?: boolean
     onCheck?: () => void
 }) {
+    const { t } = useTranslation()
+
     return (
         <div className={`dup-card${checked ? ' dup-card--selected' : ''}`}>
             <div className="dup-card__image-wrap">
@@ -59,12 +62,12 @@ function DupPhotoCard({
                     <div className="dup-card__actions">
                         {onArchive && (
                             <button className="dup-card__btn dup-card__btn--archive" onClick={onArchive}>
-                                Archive
+                                {t('duplicates.archive')}
                             </button>
                         )}
                         {onDelete && (
                             <button className="dup-card__btn dup-card__btn--delete" onClick={onDelete}>
-                                Delete
+                                {t('duplicates.delete')}
                             </button>
                         )}
                     </div>
@@ -80,6 +83,7 @@ function ExactDuplicatesSection({ groups, onReload }: {
     groups: DuplicateGroup<ExactDuplicateEntry>[]
     onReload: () => void
 }) {
+    const { t } = useTranslation()
     // Flat set of all selected duplicate record IDs across all groups
     const [selected, setSelected] = useState<Set<number>>(new Set())
     const [deleting, setDeleting] = useState(false)
@@ -132,7 +136,7 @@ function ExactDuplicatesSection({ groups, onReload }: {
                         title="Select / deselect all duplicates"
                     />
                 )}
-                Exact duplicates
+                {t('duplicates.exact')}
                 <span className="dup-section__count">{totalExact}</span>
                 <button
                     className="dup-section__delete-btn"
@@ -241,6 +245,7 @@ function PerceptualGroup({ group, onReload }: {
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export function DuplicatesPage() {
+    const { t } = useTranslation()
     const [data, setData] = useState<DuplicatesResponse | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -251,7 +256,7 @@ export function DuplicatesPage() {
         try {
             setData(await getDuplicates())
         } catch {
-            setError('Failed to load duplicates')
+            setError(t('duplicates.error'))
         } finally {
             setLoading(false)
         }
@@ -259,33 +264,36 @@ export function DuplicatesPage() {
 
     useEffect(() => { load() }, [load])
 
-    if (loading) return <div className="dup-page"><Spinner /></div>
-    if (error) return <div className="dup-page dup-page--error">{error}</div>
-    if (!data) return null
-
-    const totalPerceptual = data.perceptual.reduce((s, g) => s + g.duplicates.length, 0)
-
     return (
         <div className="dup-page">
-            <h1 className="dup-page__title">Duplicates</h1>
+            <h1 className="dup-page__title">{t('duplicates.title')}</h1>
 
-            <ExactDuplicatesSection groups={data.exact} onReload={load} />
+            {loading && <Spinner />}
+            {error && <div className="dup-page--error">{error}</div>}
 
-            <div className="dup-divider" />
+            {!loading && !error && data && (
+                <>
+                    <ExactDuplicatesSection groups={data.exact} onReload={load} />
 
-            <section className="dup-section">
-                <h2 className="dup-section__heading">
-                    Near-duplicates
-                    <span className="dup-section__count">{totalPerceptual}</span>
-                </h2>
-                {data.perceptual.length === 0 ? (
-                    <p className="dup-section__empty">No near-duplicates found.</p>
-                ) : (
-                    data.perceptual.map((g, i) => (
-                        <PerceptualGroup key={i} group={g} onReload={load} />
-                    ))
-                )}
-            </section>
+                    <div className="dup-divider" />
+
+                    <section className="dup-section">
+                        <h2 className="dup-section__heading">
+                            {t('duplicates.perceptual')}
+                            <span className="dup-section__count">
+                                {data.perceptual.reduce((s, g) => s + g.duplicates.length, 0)}
+                            </span>
+                        </h2>
+                        {data.perceptual.length === 0 ? (
+                            <p className="dup-section__empty">No near-duplicates found.</p>
+                        ) : (
+                            data.perceptual.map((g, i) => (
+                                <PerceptualGroup key={i} group={g} onReload={load} />
+                            ))
+                        )}
+                    </section>
+                </>
+            )}
         </div>
     )
 }

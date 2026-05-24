@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
     getWatchers, addWatcher, deleteWatcher,
     getFolderScanners, addFolderScanner, deleteFolderScanner,
@@ -11,6 +12,7 @@ import type { FolderScanner, Watcher } from '@/types/api'
 import './FoldersPage.css'
 
 export function FoldersPage() {
+    const { t } = useTranslation()
     const [watchers, setWatchers] = useState<Watcher[]>([])
     const [scanners, setScanners] = useState<FolderScanner[]>([])
     const [loading, setLoading] = useState(true)
@@ -65,6 +67,7 @@ export function FoldersPage() {
 
     return (
         <div className="folders-page">
+            <h1 className="page-title">{t('folders.title')}</h1>
 
             {/* ── WATCHERS ─────────────────────────────── */}
             <hr className="border border-gray-700" />

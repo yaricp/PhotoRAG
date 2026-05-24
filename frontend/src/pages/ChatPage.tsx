@@ -10,6 +10,7 @@ import './ChatPage.css'
 type PendingAction = { type: 'archive' | 'delete'; ids: number[] } | null
 
 export function ChatPage() {
+    const { t } = useTranslation()
     const { messages, threadId, contextPhotos, addMessage, setThreadId, setContextPhotos, clearConversation } =
         useChatStore()
 
@@ -134,8 +135,6 @@ export function ChatPage() {
         }
     }
 
-    const { t } = useTranslation()
-
     const isBusy = busyPhotoIds.size > 0
     const selCount = selectedPhotoIds.size
 
@@ -211,6 +210,7 @@ export function ChatPage() {
 
             {/* RIGHT — chat */}
             <div className="chat-page__chat">
+                <h1 className="chat-page__title">{t('chat.title')}</h1>
                 {chatReady === false && !bannerDismissed && (
                     <div className="chat-page__warming-banner">
                         <Spinner size="sm" />

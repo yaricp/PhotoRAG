@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { getModelConfigs, updateModelConfig, getSystemStatus } from '@/api/client'
 import type { AIModelConfig } from '@/types/api'
 import { ServerIcon, CloudIcon } from '@heroicons/react/24/outline'
@@ -84,6 +85,7 @@ function ModelStatusBadge({ status }: { status: string | undefined }) {
 }
 
 export function ModelsPage() {
+    const { t } = useTranslation()
     const [configs, setConfigs] = useState<AIModelConfig[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -156,13 +158,13 @@ export function ModelsPage() {
     if (loading) return (
         <div className="models-page models-page--loading">
             <Spinner size="lg" />
-            <p className="models-page__loading-text">Loading model configurations…</p>
+            <p className="models-page__loading-text">{t('models.loading')}</p>
         </div>
     )
 
     return (
         <div className="models-page">
-            <h1 className="models-page__title">AI Models</h1>
+            <h1 className="models-page__title">{t('models.title')}</h1>
             <p className="models-page__desc">
                 Configure which models run each task.
                 Local models are downloaded automatically on first use.
@@ -382,9 +384,9 @@ export function ModelsPage() {
                                             <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" opacity="0.25" />
                                             <path fill="currentColor" opacity="0.75" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                                         </svg>
-                                        Saving…
+                                        {t('models.saving')}
                                     </>
-                                ) : 'Save'}
+                                ) : t('models.save')}
                             </button>
                         </div>
                     </div>

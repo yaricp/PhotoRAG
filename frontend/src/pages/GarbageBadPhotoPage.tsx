@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { getGarbageSummary, getGarbagePhotos, archivePhotos, deletePhoto, unmarkGarbage } from '@/api/client'
 import type { PaginatedPhotos } from '@/types/api'
 import { PhotoCard } from '@/components/photos/PhotoCard'
@@ -133,6 +134,7 @@ function PlaceholderSection({ title }: { title: string }) {
 }
 
 export function GarbageBadPhotoPage() {
+    const { t } = useTranslation()
     const [counts, setCounts] = useState<Record<string, number>>({})
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -144,7 +146,7 @@ export function GarbageBadPhotoPage() {
             const summary = await getGarbageSummary()
             setCounts(summary.counts ?? {})
         } catch {
-            setError('Failed to load garbage summary')
+            setError(t('garbage.error'))
         } finally {
             setLoading(false)
         }
@@ -152,38 +154,42 @@ export function GarbageBadPhotoPage() {
 
     useEffect(() => { load() }, [load])
 
-    if (loading) return <div className="gbp-page"><Spinner /></div>
-    if (error) return <div className="gbp-page gbp-page--error">{error}</div>
-
     return (
         <div className="gbp-page">
-            <h1 className="gbp-page__title">Garbage &amp; Bad Photos</h1>
+            <h1 className="gbp-page__title">{t('garbage.title')}</h1>
 
-            <section className="gbp-section">
-                <h2 className="gbp-section__heading">Technical Garbage</h2>
-                <div className="gbp-issues">
-                    {TECHNICAL_ISSUES.map(issue => (
-                        <IssueSection
-                            key={issue.type}
-                            issue={issue}
-                            count={counts[issue.type] ?? 0}
-                            onPhotoRemoved={() =>
-                                setCounts(prev => ({
-                                    ...prev,
-                                    [issue.type]: Math.max(0, (prev[issue.type] ?? 0) - 1),
-                                }))
-                            }
-                        />
-                    ))}
-                </div>
-            </section>
+            {loading && <Spinner />}
+            {error && <div className="gbp-page--error">{error}</div>}
 
-            <div className="gbp-divider" />
-            <PlaceholderSection title="Semantic Garbage" />
-            <div className="gbp-divider" />
-            <PlaceholderSection title="Temporary Garbage" />
-            <div className="gbp-divider" />
-            <PlaceholderSection title="Subjective Garbage" />
+            {!loading && !error && (
+                <>
+                    <section className="gbp-section">
+                        <h2 className="gbp-section__heading">Technical Garbage</h2>
+                        <div className="gbp-issues">
+                            {TECHNICAL_ISSUES.map(issue => (
+                                <IssueSection
+                                    key={issue.type}
+                                    issue={issue}
+                                    count={counts[issue.type] ?? 0}
+                                    onPhotoRemoved={() =>
+                                        setCounts(prev => ({
+                                            ...prev,
+                                            [issue.type]: Math.max(0, (prev[issue.type] ?? 0) - 1),
+                                        }))
+                                    }
+                                />
+                            ))}
+                        </div>
+                    </section>
+
+                    <div className="gbp-divider" />
+                    <PlaceholderSection title="Semantic Garbage" />
+                    <div className="gbp-divider" />
+                    <PlaceholderSection title="Temporary Garbage" />
+                    <div className="gbp-divider" />
+                    <PlaceholderSection title="Subjective Garbage" />
+                </>
+            )}
         </div>
     )
 }

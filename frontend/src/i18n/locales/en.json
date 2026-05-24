@@ -24,7 +24,8 @@
     "perPage": "{{count}} / page",
     "reset": "Reset",
     "empty": "No photos found",
-    "error": "Error loading photos"
+    "error": "Error loading photos",
+    "documentsOnly": "Documents only"
   },
   "chat": {
     "selectAll": "Select all",
@@ -39,7 +40,8 @@
     "confirmArchiveTitle": "Archive {{count}} photo{{plural}}?",
     "confirmArchiveMessage": "The photos will be marked as archived.",
     "confirmDeleteTitle": "Delete {{count}} photo{{plural}}?",
-    "confirmDeleteMessage": "The files will be permanently removed from disk."
+    "confirmDeleteMessage": "The files will be permanently removed from disk.",
+    "title": "Agent AI"
   },
   "photoDetail": {
     "back": "← Back",
@@ -101,7 +103,8 @@
   "documents": {
     "noDocuments": "No documents",
     "noDocumentsDesc": "Documents will appear here automatically",
-    "failedToLoad": "Failed to load documents"
+    "failedToLoad": "Failed to load documents",
+    "title": "Documents"
   },
   "prompts": {
     "title": "Prompts",
@@ -159,9 +162,113 @@
       "initDb": "Initialise the database",
       "downloadModels": "Download AI models of your choice",
       "getStarted": "Get Started"
+    },
+    "stepInstallDeps": {
+      "title": "Install Dependencies",
+      "subtitle": "We'll install the required Python packages into an isolated virtual environment.",
+      "installButton": "Install",
+      "installing": "Installing…",
+      "retryButton": "Retry",
+      "errorMessage": "Installation failed: {{error}}"
+    },
+    "stepInitDb": {
+      "title": "Initialising Database",
+      "initializing": "Setting up the photo library database…",
+      "retryButton": "Retry",
+      "errorMessage": "Database initialisation failed: {{error}}"
+    },
+    "stepDownloading": {
+      "title": "Downloading Models",
+      "cancelButton": "Cancel",
+      "errorMessage": "Download error: {{error}}"
+    },
+    "stepModelPicker": {
+      "title": "Choose Models to Download",
+      "subtitle": "Required models are always installed. Optional models add extra features.",
+      "skipAllOptional": "Skip all optional models",
+      "totalDownload": "Total download: {{size}}",
+      "continueButton": "Continue",
+      "noLocalModels": "All models are configured to use remote APIs — no local downloads needed."
+    },
+    "stepModelConfig": {
+      "title": "Configure AI Models",
+      "subtitle": "Choose local (runs on your Mac) or remote (API key required) for each task.",
+      "loadingModels": "Loading model configurations…",
+      "errorLoadingModels": "Failed to load model configurations",
+      "processingMode": "Processing mode",
+      "localMode": "Local (GPU / CPU)",
+      "remoteMode": "Remote (API)",
+      "modelName": "Model name / HuggingFace ID",
+      "continueButton": "Continue",
+      "saving": "Saving…",
+      "errorSaving": "Failed to save model configurations"
+    },
+    "stepDone": {
+      "title": "Setup Complete!",
+      "subtitle": "PhotoRAG is ready. Click Launch to open your photo library.",
+      "launchButton": "Launch",
+      "launching": "Launching…"
     }
   },
   "common": {
     "openInMaps": "Open in Google Maps ↗"
+  },
+  "search": {
+    "title": "Semantic Search",
+    "placeholder": "Search your photos…",
+    "button": "Search",
+    "results": "Results",
+    "noResults": "No results found",
+    "error": "Search failed"
+  },
+  "duplicates": {
+    "title": "Duplicates",
+    "exact": "Exact duplicates",
+    "perceptual": "Similar photos",
+    "loading": "Loading duplicates…",
+    "noResults": "No duplicates found",
+    "archive": "Archive",
+    "delete": "Delete",
+    "dismiss": "Dismiss",
+    "error": "Failed to load duplicates"
+  },
+  "garbage": {
+    "title": "Garbage",
+    "noResults": "No garbage photos",
+    "archive": "Archive",
+    "delete": "Delete",
+    "unmark": "Not garbage",
+    "loading": "Loading…",
+    "error": "Failed to load garbage photos"
+  },
+  "folders": {
+    "title": "Folders",
+    "add": "Add folder",
+    "remove": "Remove",
+    "empty": "No folders configured",
+    "watching": "Watching",
+    "destination": "Destination"
+  },
+  "models": {
+    "title": "AI Models",
+    "local": "Local",
+    "remote": "Remote (API)",
+    "loading": "Loading model configurations…",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "error": "Failed to load models",
+    "errorSaving": "Failed to save model configurations",
+    "provider": "Provider",
+    "apiKey": "API key",
+    "baseUrl": "Base URL",
+    "modelName": "Model name"
+  },
+  "privacy": {
+    "warning_short": "⚠️ Cloud models share data with providers",
+    "warning_title": "Data Privacy Notice",
+    "expand": "Show Full Warning",
+    "collapse": "Hide",
+    "warning_full": "When using cloud-based models (OpenAI, Anthropic, Google, Ollama remote), your photo content and descriptions are sent to those providers' servers for processing. For maximum privacy and data protection, consider using only local models that run on your device."
   }
 }

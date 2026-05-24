@@ -32,12 +32,13 @@ export default function App() {
 
     // Sync UI language from settings DB on startup
     useEffect(() => {
-        getSettings()
-            .then(s => {
-                const lang = s['default_language']
-                if (lang && lang !== i18n.language) i18n.changeLanguage(lang)
-            })
-            .catch(() => { /* backend not ready yet — keep default */ })
+        let cancelled = false
+        getSettings().then(s => {
+            if (cancelled) return
+            const lang = s['default_language']
+            if (lang && lang !== i18n.language) i18n.changeLanguage(lang)
+        }).catch(() => {})
+        return () => { cancelled = true }
     }, [])
 
     // Fetch tesseract status once the main app is ready.

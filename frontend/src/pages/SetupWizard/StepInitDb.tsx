@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
     onDone: () => void
 }
 
 export function StepInitDb({ onDone }: Props) {
+    const { t } = useTranslation()
     const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
@@ -15,21 +17,21 @@ export function StepInitDb({ onDone }: Props) {
 
     return (
         <div className="wizard-step">
-            <h2>Initialising Database</h2>
+            <h2>{t('wizard.stepInitDb.title')}</h2>
             {!error && (
                 <>
                     <div className="wizard-spinner" aria-label="Loading" />
-                    <p>Setting up the photo library database…</p>
+                    <p>{t('wizard.stepInitDb.initializing')}</p>
                 </>
             )}
             {error && (
                 <div className="wizard-error">
-                    <p>Database initialisation failed: {error}</p>
+                    <p>{t('wizard.stepInitDb.errorMessage', { error })}</p>
                     <button
                         className="wizard-btn wizard-btn--primary"
                         onClick={() => { setError(null) }}
                     >
-                        Retry
+                        {t('wizard.stepInitDb.retryButton')}
                     </button>
                 </div>
             )}

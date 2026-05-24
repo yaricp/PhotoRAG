@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { getSettings, updateSetting } from '@/api/client'
@@ -20,19 +21,27 @@ export function SettingsPage() {
     const [retranslating, setRetranslating] = useState(false)
 
     useEffect(() => {
-        getSettings().then(s => {
+        let cancelled = false
+        getSettings().then(async s => {
+            if (cancelled) return
+            const savedLanguage = s['default_language'] ?? 'en'
             setDefaultFolder(s['default_folder'] ?? '')
-            setLanguage(s['default_language'] ?? 'en')
+            setLanguage(savedLanguage)
+            await i18n.changeLanguage(savedLanguage)
         }).catch(() => {
+            if (cancelled) return
             // fallback to localStorage if API not available
             const stored = localStorage.getItem('settings')
             if (stored) {
                 const s = JSON.parse(stored)
+                const savedLanguage = s.default_language ?? 'en'
                 setDefaultFolder(s.default_folder ?? '')
-                setLanguage(s.default_language ?? 'en')
+                setLanguage(savedLanguage)
+                i18n.changeLanguage(savedLanguage)
             }
         })
-    }, [])
+        return () => { cancelled = true }
+    }, [i18n])
 
     async function handleSave() {
         setSaving(true)

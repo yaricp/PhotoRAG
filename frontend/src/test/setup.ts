@@ -14,6 +14,7 @@ if (canUseMsw) {
         const m = await import('./server')
         server = m.server
         server!.listen({ onUnhandledRequest: 'error' })
+        window.HTMLElement.prototype.scrollIntoView = () => {}
     })
     afterEach(() => server?.resetHandlers())
     afterAll(() => server?.close())

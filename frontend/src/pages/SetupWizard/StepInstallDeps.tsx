@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
     onDone: () => void
 }
 
 export function StepInstallDeps({ onDone }: Props) {
+    const { t } = useTranslation()
     const [installing, setInstalling] = useState(false)
     const [progress, setProgress] = useState(0)
     const [logLine, setLogLine] = useState('')
@@ -31,8 +33,8 @@ export function StepInstallDeps({ onDone }: Props) {
 
     return (
         <div className="wizard-step">
-            <h2>Install Dependencies</h2>
-            <p>We'll install the required Python packages into an isolated virtual environment.</p>
+            <h2>{t('wizard.stepInstallDeps.title')}</h2>
+            <p>{t('wizard.stepInstallDeps.subtitle')}</p>
 
             {!installing && !error && (
                 <div className="wizard-actions">
@@ -40,7 +42,7 @@ export function StepInstallDeps({ onDone }: Props) {
                         className="wizard-btn wizard-btn--primary"
                         onClick={handleInstall}
                     >
-                        Install
+                        {t('wizard.stepInstallDeps.installButton')}
                     </button>
                 </div>
             )}
@@ -62,12 +64,12 @@ export function StepInstallDeps({ onDone }: Props) {
 
             {error && (
                 <div className="wizard-error">
-                    <p>Installation failed: {error}</p>
+                    <p>{t('wizard.stepInstallDeps.errorMessage', { error })}</p>
                     <button
                         className="wizard-btn wizard-btn--primary"
                         onClick={handleInstall}
                     >
-                        Retry
+                        {t('wizard.stepInstallDeps.retryButton')}
                     </button>
                 </div>
             )}
