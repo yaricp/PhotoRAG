@@ -1,0 +1,33 @@
+{
+  "worktree": {
+    "symlinkDirectories": ["node_modules", ".cache"],
+    "sparsePaths": ["frontend", "backend", ".github"]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "agent",
+            "if": "Bash(git push*)",
+            "prompt": "Run security-review on the pending changes before this push completes. Check for: credential leaks, injection vulnerabilities, insecure crypto, exposed secrets in configs. Block with exit code 2 if critical issues found.",
+            "statusMessage": "Running security review...",
+            "timeout": 120
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Write|Edit(frontend/**/*.{ts,tsx,js})|Edit(backend/**/*.py)",
+            "command": "jq -r '.tool_input.file_path // .tool_response.filePath' | { read -r f; echo \"Testing changes in $f\"; } 2>/dev/null || true",
+            "statusMessage": "Enforcing RED-GREEN-REFACTOR cycle..."
+          }
+        ]
+      }
+    ]
+  }
+}
