@@ -25,7 +25,9 @@ from src.db_service import (
     get_all_model_configs,
     get_model_config,
     update_model_config,
-    init_default_model_configs
+    init_default_model_configs,
+    set_setting,
+    get_all_settings,
 )
 from src.schemas import AIModelConfigUpdate
 
@@ -125,3 +127,39 @@ def test_model_configs_crud(db_session):
     re_fetched = get_model_config(db_session, "vision")
     assert re_fetched.mode == "remote"
     assert re_fetched.url == "http://api.com"
+
+
+def test_set_setting_creates_and_updates(db_session):
+    result = set_setting(db_session, 'default_language', 'ru')
+    assert result.key == 'default_language'
+    assert result.value == 'ru'
+
+    result2 = set_setting(db_session, 'default_language', 'es')
+    assert result2.value == 'es'
+
+    settings = get_all_settings(db_session)
+    assert settings['default_language'] == 'es'
+
+
+def test_set_setting_retries_on_locked_db(db_session):
+    """set_setting must retry up to 3× on OperationalError: database is locked."""
+    from unittest.mock import patch, call
+    from sqlalchemy.exc import OperationalError
+
+    locked_error = OperationalError("database is locked", None, None)
+    call_count = 0
+
+    original_commit = db_session.commit
+
+    def flaky_commit():
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            raise locked_error
+        return original_commit()
+
+    with patch.object(db_session, 'commit', side_effect=flaky_commit):
+        result = set_setting(db_session, 'retry_key', 'ok')
+
+    assert result.value == 'ok'
+    assert call_count == 2  # failed once, succeeded on second attempt

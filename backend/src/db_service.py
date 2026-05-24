@@ -865,15 +865,26 @@ def get_setting(db: Session, key: str) -> Optional[str]:
 
 
 def set_setting(db: Session, key: str, value: str) -> AppSetting:
-    row = db.query(AppSetting).filter(AppSetting.key == key).first()
-    if row:
-        row.value = value
-    else:
-        row = AppSetting(key=key, value=value)
-        db.add(row)
-    db.commit()
-    db.refresh(row)
-    return row
+    import time
+    from sqlalchemy.exc import OperationalError
+
+    for attempt in range(3):
+        try:
+            row = db.query(AppSetting).filter(AppSetting.key == key).first()
+            if row:
+                row.value = value
+            else:
+                row = AppSetting(key=key, value=value)
+                db.add(row)
+            db.commit()
+            db.refresh(row)
+            return row
+        except OperationalError as e:
+            if 'database is locked' in str(e) and attempt < 2:
+                db.rollback()
+                time.sleep(0.1 * (attempt + 1))
+            else:
+                raise
 
 
 def get_all_settings(db: Session) -> dict:
