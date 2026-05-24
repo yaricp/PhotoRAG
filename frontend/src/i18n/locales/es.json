@@ -112,7 +112,8 @@
     "saving": "Guardando…",
     "save": "Guardar",
     "saved": "Guardado",
-    "loading": "Cargando prompts…"
+    "loading": "Cargando prompts…",
+    "errorSaving": "Error al guardar"
   },
   "settings": {
     "title": "Configuración",
@@ -230,7 +231,13 @@
     }
   },
   "common": {
-    "openInMaps": "Abrir en Google Maps ↗"
+    "openInMaps": "Abrir en Google Maps ↗",
+    "confirmDeletePhotoTitle": "¿Eliminar foto?",
+    "confirmDeletePhotoMessage": "Este archivo será eliminado permanentemente del disco.",
+    "confirmArchivePhotoTitle": "¿Archivar foto?",
+    "confirmArchivePhotoMessage": "Esta foto será marcada como archivada.",
+    "delete": "Eliminar",
+    "archive": "Archivar"
   },
   "search": {
     "title": "Búsqueda semántica",
@@ -246,19 +253,45 @@
     "perceptual": "Fotos similares",
     "loading": "Cargando duplicados…",
     "noResults": "No se encontraron duplicados",
+    "noExact": "No se encontraron duplicados exactos.",
+    "noNear": "No se encontraron fotos similares.",
+    "original": "Original",
+    "selectAll": "Seleccionar / deseleccionar todos los duplicados",
+    "deleting": "Eliminando…",
+    "deleteSelected": "Eliminar seleccionados ({{count}})",
+    "deleteSelectedEmpty": "Eliminar seleccionados",
     "archive": "Archivar",
     "delete": "Eliminar",
     "dismiss": "Descartar",
-    "error": "Error al cargar duplicados"
+    "error": "Error al cargar duplicados",
+    "confirmDeleteCountTitle": "¿Eliminar {{count}} duplicado(s)?",
+    "confirmBulkDeleteMessage": "Los registros duplicados seleccionados serán eliminados permanentemente del disco."
   },
   "garbage": {
     "title": "Basura",
     "noResults": "Sin fotos basura",
+    "noFlagged": "No hay fotos marcadas.",
+    "notGarbage": "No es basura",
+    "notGarbageTitle": "Eliminar todas las marcas de basura de esta foto",
     "archive": "Archivar",
     "delete": "Eliminar",
     "unmark": "No es basura",
     "loading": "Cargando…",
-    "error": "Error al cargar fotos basura"
+    "error": "Error al cargar fotos basura",
+    "technical": "Basura técnica",
+    "semantic": "Basura semántica",
+    "temporary": "Basura temporal",
+    "subjective": "Basura subjetiva",
+    "comingSoon": "Próximamente",
+    "issues": {
+      "thumbnail": "Miniaturas (resolución demasiado pequeña)",
+      "no_exif": "Sin EXIF (posible copia de internet)",
+      "brightness": "Brillo anormal",
+      "edge_density": "Baja densidad de bordes (sin rasgos)",
+      "blur": "Borroso (Laplaciano)",
+      "entropy": "Baja entropía (poca información)",
+      "screenshot": "Capturas de pantalla (UI detectado)"
+    }
   },
   "folders": {
     "title": "Carpetas",
@@ -266,10 +299,30 @@
     "remove": "Eliminar",
     "empty": "No hay carpetas configuradas",
     "watching": "Vigilando",
-    "destination": "Destino"
+    "destination": "Destino",
+    "watchers": "Vigilantes",
+    "watchersDesc": "Monitorea una carpeta en busca de nuevas fotos y las mueve a una carpeta de destino estructurada.",
+    "activeCount": "{{count}} activos",
+    "sourceFolder": "Carpeta de origen",
+    "destinationFolder": "Carpeta de destino",
+    "addButton": "Agregar",
+    "noWatchers": "No hay vigilantes activos",
+    "scanners": "Escáneres",
+    "scannersDesc": "Escanea todos los subdirectorios una vez y procesa las fotos encontradas. Muestra el progreso.",
+    "scanFolder": "Carpeta a escanear",
+    "startScan": "Iniciar escaneo",
+    "noScanners": "No hay escaneos activos",
+    "source": "Origen",
+    "target": "Destino",
+    "updatedAt": "Actualizado:",
+    "delete": "Eliminar",
+    "scanningFolder": "Carpeta en escaneo",
+    "done": "Completado",
+    "scanning": "Escaneando…"
   },
   "models": {
     "title": "Modelos de IA",
+    "desc": "Configure qué modelos ejecutan cada tarea. Los modelos locales se descargan automáticamente en el primer uso.",
     "local": "Local",
     "remote": "Remoto (API)",
     "loading": "Cargando configuraciones de modelos…",
@@ -281,7 +334,19 @@
     "provider": "Proveedor",
     "apiKey": "Clave API",
     "baseUrl": "URL base",
-    "modelName": "Nombre del modelo"
+    "modelName": "Nombre del modelo",
+    "configSaved": "Configuración guardada",
+    "modelLoading": "cargando en segundo plano. Las actualizaciones de estado se muestran en esta página.",
+    "modelRemote": "ahora usa la API remota.",
+    "reindexNeeded": "El modelo de embedding cambió — todas las fotos deben re-indexarse. Ejecute el pipeline de nuevo en sus carpetas de fotos.",
+    "gotIt": "Entendido",
+    "status": {
+      "ready": "Listo",
+      "loading": "Cargando…",
+      "downloading": "Descargando…",
+      "pending": "Pendiente",
+      "error": "Error"
+    }
   },
   "privacy": {
     "shortTitle": "⚠ Aviso de privacidad",

@@ -112,7 +112,8 @@
     "saving": "Saving…",
     "save": "Save",
     "saved": "Saved",
-    "loading": "Loading prompts…"
+    "loading": "Loading prompts…",
+    "errorSaving": "Save failed"
   },
   "settings": {
     "title": "Settings",
@@ -230,7 +231,13 @@
     }
   },
   "common": {
-    "openInMaps": "Open in Google Maps ↗"
+    "openInMaps": "Open in Google Maps ↗",
+    "confirmDeletePhotoTitle": "Delete photo?",
+    "confirmDeletePhotoMessage": "This file will be permanently removed from disk.",
+    "confirmArchivePhotoTitle": "Archive photo?",
+    "confirmArchivePhotoMessage": "This photo will be marked as archived.",
+    "delete": "Delete",
+    "archive": "Archive"
   },
   "search": {
     "title": "Semantic Search",
@@ -246,19 +253,45 @@
     "perceptual": "Similar photos",
     "loading": "Loading duplicates…",
     "noResults": "No duplicates found",
+    "noExact": "No exact duplicates found.",
+    "noNear": "No near-duplicates found.",
+    "original": "Original",
+    "selectAll": "Select / deselect all duplicates",
+    "deleting": "Deleting…",
+    "deleteSelected": "Delete selected ({{count}})",
+    "deleteSelectedEmpty": "Delete selected",
     "archive": "Archive",
     "delete": "Delete",
     "dismiss": "Dismiss",
-    "error": "Failed to load duplicates"
+    "error": "Failed to load duplicates",
+    "confirmDeleteCountTitle": "Delete {{count}} duplicate(s)?",
+    "confirmBulkDeleteMessage": "The selected duplicate records will be permanently deleted from disk."
   },
   "garbage": {
     "title": "Garbage",
     "noResults": "No garbage photos",
+    "noFlagged": "No photos flagged.",
+    "notGarbage": "Not garbage",
+    "notGarbageTitle": "Remove all garbage flags from this photo",
     "archive": "Archive",
     "delete": "Delete",
     "unmark": "Not garbage",
     "loading": "Loading…",
-    "error": "Failed to load garbage photos"
+    "error": "Failed to load garbage photos",
+    "technical": "Technical Garbage",
+    "semantic": "Semantic Garbage",
+    "temporary": "Temporary Garbage",
+    "subjective": "Subjective Garbage",
+    "comingSoon": "Coming soon",
+    "issues": {
+      "thumbnail": "Thumbnails (resolution too small)",
+      "no_exif": "No EXIF (possible internet copy)",
+      "brightness": "Abnormal brightness",
+      "edge_density": "Low edge density (featureless)",
+      "blur": "Blurry (Laplacian)",
+      "entropy": "Low entropy (low information)",
+      "screenshot": "Screenshots (UI detected)"
+    }
   },
   "folders": {
     "title": "Folders",
@@ -266,10 +299,30 @@
     "remove": "Remove",
     "empty": "No folders configured",
     "watching": "Watching",
-    "destination": "Destination"
+    "destination": "Destination",
+    "watchers": "Watchers",
+    "watchersDesc": "Monitors a folder for new photos and moves them into a structured destination folder.",
+    "activeCount": "{{count}} active",
+    "sourceFolder": "Source folder",
+    "destinationFolder": "Destination folder",
+    "addButton": "Add",
+    "noWatchers": "No active watchers",
+    "scanners": "Scanners",
+    "scannersDesc": "Scans all subdirectories once and processes found photos. Shows progress.",
+    "scanFolder": "Folder to scan",
+    "startScan": "Start scanning",
+    "noScanners": "No active scans",
+    "source": "Source",
+    "target": "Target",
+    "updatedAt": "Updated:",
+    "delete": "Delete",
+    "scanningFolder": "Folder being scanned",
+    "done": "Done",
+    "scanning": "Scanning…"
   },
   "models": {
     "title": "AI Models",
+    "desc": "Configure which models run each task. Local models are downloaded automatically on first use.",
     "local": "Local",
     "remote": "Remote (API)",
     "loading": "Loading model configurations…",
@@ -281,7 +334,19 @@
     "provider": "Provider",
     "apiKey": "API key",
     "baseUrl": "Base URL",
-    "modelName": "Model name"
+    "modelName": "Model name",
+    "configSaved": "Configuration saved",
+    "modelLoading": "loading in the background. Status updates are shown on this page.",
+    "modelRemote": "now using the remote API.",
+    "reindexNeeded": "The embedding model changed — all photos need to be re-indexed. Run the pipeline again on your photo folders to rebuild the search index.",
+    "gotIt": "Got it",
+    "status": {
+      "ready": "Ready",
+      "loading": "Loading…",
+      "downloading": "Downloading…",
+      "pending": "Pending",
+      "error": "Error"
+    }
   },
   "privacy": {
     "shortTitle": "⚠ Privacy Notice",

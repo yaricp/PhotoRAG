@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
     getWatchers, addWatcher, deleteWatcher,
@@ -74,24 +74,22 @@ export function FoldersPage() {
             <section className="folders-section">
                 <div className="folders-section__header">
                     <div>
-                        <h2 className="folders-section__title">Watchers</h2>
-                        <p className="folders-section__desc">
-                            Следит за новыми фото в папке и перекладывает их в структурированную целевую папку.
-                        </p>
+                        <h2 className="folders-section__title">{t('folders.watchers')}</h2>
+                        <p className="folders-section__desc">{t('folders.watchersDesc')}</p>
                     </div>
-                    <span className="folders-section__count">{watchers.length} active</span>
+                    <span className="folders-section__count">{t('folders.activeCount', { count: watchers.length })}</span>
                 </div>
 
                 <div className="folders-add-form">
                     <div className="folders-add-form__row">
                         <div className="folders-add-form__field">
-                            <label className="folders-add-form__label">Исходная папка</label>
+                            <label className="folders-add-form__label">{t('folders.sourceFolder')}</label>
                             <FolderSelector onSelect={setNewWatchSrc} />
                             {newWatchSrc && <p className="folders-add-form__path">{newWatchSrc}</p>}
                         </div>
                         <div className="folders-add-form__arrow">→</div>
                         <div className="folders-add-form__field">
-                            <label className="folders-add-form__label">Целевая папка</label>
+                            <label className="folders-add-form__label">{t('folders.destinationFolder')}</label>
                             <FolderSelector onSelect={setNewWatchDst} />
                             {newWatchDst && <p className="folders-add-form__path">{newWatchDst}</p>}
                         </div>
@@ -100,7 +98,7 @@ export function FoldersPage() {
                             disabled={addingWatcher || !newWatchSrc || !newWatchDst}
                             loading={addingWatcher}
                         >
-                            Добавить
+                            {t('folders.addButton')}
                         </Button>
                     </div>
                 </div>
@@ -108,7 +106,7 @@ export function FoldersPage() {
                 {loading && <div className="folders-center"><Spinner size="lg" /></div>}
 
                 {!loading && watchers.length === 0 && (
-                    <div className="folders-empty">Нет активных вотчеров</div>
+                    <div className="folders-empty">{t('folders.noWatchers')}</div>
                 )}
 
                 {!loading && watchers.length > 0 && (
@@ -135,18 +133,16 @@ export function FoldersPage() {
             <section className="folders-section">
                 <div className="folders-section__header">
                     <div>
-                        <h2 className="folders-section__title">Scanners</h2>
-                        <p className="folders-section__desc">
-                            Однократно обходит все подпапки и обрабатывает найденные фото. Показывает прогресс.
-                        </p>
+                        <h2 className="folders-section__title">{t('folders.scanners')}</h2>
+                        <p className="folders-section__desc">{t('folders.scannersDesc')}</p>
                     </div>
-                    <span className="folders-section__count">{scanners.length} active</span>
+                    <span className="folders-section__count">{t('folders.activeCount', { count: scanners.length })}</span>
                 </div>
 
                 <div className="folders-add-form">
                     <div className="folders-add-form__row">
                         <div className="folders-add-form__field">
-                            <label className="folders-add-form__label">Папка для сканирования</label>
+                            <label className="folders-add-form__label">{t('folders.scanFolder')}</label>
                             <FolderSelector onSelect={setNewScanPath} />
                             {newScanPath && <p className="folders-add-form__path">{newScanPath}</p>}
                         </div>
@@ -155,7 +151,7 @@ export function FoldersPage() {
                             disabled={addingScanner || !newScanPath}
                             loading={addingScanner}
                         >
-                            Запустить сканирование
+                            {t('folders.startScan')}
                         </Button>
                     </div>
                 </div>
@@ -163,7 +159,7 @@ export function FoldersPage() {
                 {loading && <div className="folders-center"><Spinner size="lg" /></div>}
 
                 {!loading && scanners.length === 0 && (
-                    <div className="folders-empty">Нет активных сканирований</div>
+                    <div className="folders-empty">{t('folders.noScanners')}</div>
                 )}
 
                 {!loading && scanners.length > 0 && (
@@ -187,6 +183,7 @@ export function FoldersPage() {
 }
 
 function WatcherCard({ watcher: w, onDelete }: { watcher: Watcher; onDelete: () => void }) {
+    const { t } = useTranslation()
     const statusVariant = w.status === 'active' ? 'success'
         : w.status === 'error' ? 'error'
             : 'processing'
@@ -196,28 +193,29 @@ function WatcherCard({ watcher: w, onDelete }: { watcher: Watcher; onDelete: () 
             <div className="folder-card__body">
                 <div className="folder-card__paths">
                     <div className="folder-card__path-item">
-                        <span className="folder-card__path-label">Исходная</span>
+                        <span className="folder-card__path-label">{t('folders.source')}</span>
                         <span className="folder-card__path-value">📁 {w.path}</span>
                     </div>
                     <div className="folder-card__path-arrow">→</div>
                     <div className="folder-card__path-item">
-                        <span className="folder-card__path-label">Целевая</span>
+                        <span className="folder-card__path-label">{t('folders.target')}</span>
                         <span className="folder-card__path-value">📁 {w.destination_path}</span>
                     </div>
                 </div>
                 <div className="folder-card__meta">
                     <Badge variant={statusVariant}>{w.status}</Badge>
                     <span className="folder-card__time">
-                        Обновлён: {new Date(w.updated_at).toLocaleString()}
+                        {t('folders.updatedAt')} {new Date(w.updated_at).toLocaleString()}
                     </span>
                 </div>
             </div>
-            <Button variant="danger" onClick={onDelete}>Удалить</Button>
+            <Button variant="danger" onClick={onDelete}>{t('folders.delete')}</Button>
         </div>
     )
 }
 
 function ScannerCard({ scanner: s, onDelete }: { scanner: FolderScanner; onDelete: () => void }) {
+    const { t } = useTranslation()
     const progress = typeof s.progress === 'number' ? s.progress : 0
     const isDone = progress >= 100
 
@@ -226,14 +224,14 @@ function ScannerCard({ scanner: s, onDelete }: { scanner: FolderScanner; onDelet
             <div className="folder-card__body">
 
                 <div className="folder-card__path-item">
-                    <span className="folder-card__path-label">Сканируемая папка</span>
+                    <span className="folder-card__path-label">{t('folders.scanningFolder')}</span>
                     <span className="folder-card__path-value">📁 {s.path}</span>
                 </div>
 
                 <div className="scanner-progress">
                     <div className="scanner-progress__header">
                         <span className="scanner-progress__label">
-                            {isDone ? 'Завершено' : 'Сканирование...'}
+                            {isDone ? t('folders.done') : t('folders.scanning')}
                         </span>
                         <span className="scanner-progress__pct">{Math.round(progress)}%</span>
                     </div>
@@ -246,7 +244,7 @@ function ScannerCard({ scanner: s, onDelete }: { scanner: FolderScanner; onDelet
                 </div>
 
             </div>
-            <Button variant="danger" onClick={onDelete}>Удалить</Button>
+            <Button variant="danger" onClick={onDelete}>{t('folders.delete')}</Button>
         </div>
     )
 }

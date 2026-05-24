@@ -1,5 +1,6 @@
 import React from 'react'
 import { useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import './Header.css'
 import icon from '../../assets/icon.png'
 
@@ -10,21 +11,25 @@ type Props = {
     onToggleSidebar: () => void
 }
 
-const routes = [
-    { path: '/', label: 'Gallery' },
-    { path: '/search', label: 'Semantic Photo Search' },
-    { path: '/documents', label: 'Documents' },
-    { path: '/chat', label: 'Chat AI' },
-    { path: '/processing', label: 'Video Processing' },
-    { path: '/watchers', label: 'Watchers' },
-    { path: '/models', label: 'Models' },
-    { path: '/settings', label: 'Settings' },
+const ROUTE_KEYS: { path: string; key: string }[] = [
+    { path: '/',            key: 'sidebar.gallery' },
+    { path: '/search',      key: 'search.title' },
+    { path: '/documents',   key: 'documents.title' },
+    { path: '/duplicates',  key: 'duplicates.title' },
+    { path: '/garbage',     key: 'garbage.title' },
+    { path: '/chat',        key: 'chat.title' },
+    { path: '/processing',  key: 'processing.title' },
+    { path: '/folders',     key: 'folders.title' },
+    { path: '/models',      key: 'models.title' },
+    { path: '/prompts',     key: 'prompts.title' },
+    { path: '/settings',    key: 'settings.title' },
 ]
 
 export function Header({ sidebarState, onToggleSidebar }: Props) {
     const location = useLocation()
+    const { t } = useTranslation()
 
-    const current = routes.find(r => location.pathname === r.path)
+    const current = ROUTE_KEYS.find(r => location.pathname === r.path)
 
     const getIcon = () => {
         switch (sidebarState) {
@@ -55,7 +60,7 @@ export function Header({ sidebarState, onToggleSidebar }: Props) {
             </div>
 
             <div className="app-header__title">
-                {current?.label || ''}
+                {current ? t(current.key) : ''}
             </div>
 
         </header>

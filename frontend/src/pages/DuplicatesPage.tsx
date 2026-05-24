@@ -118,7 +118,7 @@ function ExactDuplicatesSection({ groups, onReload }: {
     }
 
     const originalBadge = (
-        <span className="dup-card__badge dup-card__badge--original">Original</span>
+        <span className="dup-card__badge dup-card__badge--original">{t('duplicates.original')}</span>
     )
 
     const totalExact = groups.reduce((s, g) => s + g.duplicates.length, 0)
@@ -133,7 +133,7 @@ function ExactDuplicatesSection({ groups, onReload }: {
                         checked={allSelected}
                         ref={el => { if (el) el.indeterminate = someSelected }}
                         onChange={toggleAll}
-                        title="Select / deselect all duplicates"
+                        title={t('duplicates.selectAll')}
                     />
                 )}
                 {t('duplicates.exact')}
@@ -144,13 +144,15 @@ function ExactDuplicatesSection({ groups, onReload }: {
                     disabled={deleting || selected.size === 0}
                 >
                     {deleting
-                        ? 'Deleting…'
-                        : `Delete selected${selected.size > 0 ? ` (${selected.size})` : ''}`}
+                        ? t('duplicates.deleting')
+                        : selected.size > 0
+                            ? t('duplicates.deleteSelected', { count: selected.size })
+                            : t('duplicates.deleteSelectedEmpty')}
                 </button>
             </h2>
 
             {groups.length === 0 ? (
-                <p className="dup-section__empty">No exact duplicates found.</p>
+                <p className="dup-section__empty">{t('duplicates.noExact')}</p>
             ) : (
                 groups.map((g, i) => (
                     <div key={i} className="dup-group">
@@ -171,9 +173,9 @@ function ExactDuplicatesSection({ groups, onReload }: {
 
             <ConfirmModal
                 open={confirmOpen}
-                title={`Delete ${selected.size} duplicate${selected.size !== 1 ? 's' : ''}?`}
-                message="The selected duplicate records will be permanently deleted from disk."
-                confirmLabel="Delete"
+                title={t('duplicates.confirmDeleteCountTitle', { count: selected.size })}
+                message={t('duplicates.confirmBulkDeleteMessage')}
+                confirmLabel={t('duplicates.delete')}
                 variant="danger"
                 onConfirm={handleDeleteSelected}
                 onClose={() => setConfirmOpen(false)}
@@ -188,6 +190,7 @@ function PerceptualGroup({ group, onReload }: {
     group: DuplicateGroup<PerceptualDuplicateEntry>
     onReload: () => void
 }) {
+    const { t } = useTranslation()
     const [busy, setBusy] = useState<Record<number, 'delete' | 'archive'>>({})
     const [pending, setPending] = useState<{ id: number; type: 'delete' | 'archive' } | null>(null)
 
@@ -229,11 +232,9 @@ function PerceptualGroup({ group, onReload }: {
 
             <ConfirmModal
                 open={pending !== null}
-                title={pending?.type === 'delete' ? 'Delete photo?' : 'Archive photo?'}
-                message={pending?.type === 'delete'
-                    ? 'This file will be permanently removed from disk.'
-                    : 'This photo will be marked as archived.'}
-                confirmLabel={pending?.type === 'delete' ? 'Delete' : 'Archive'}
+                title={pending?.type === 'delete' ? t('common.confirmDeletePhotoTitle') : t('common.confirmArchivePhotoTitle')}
+                message={pending?.type === 'delete' ? t('common.confirmDeletePhotoMessage') : t('common.confirmArchivePhotoMessage')}
+                confirmLabel={pending?.type === 'delete' ? t('common.delete') : t('common.archive')}
                 variant={pending?.type === 'delete' ? 'danger' : 'warning'}
                 onConfirm={executeAction}
                 onClose={() => setPending(null)}
@@ -285,7 +286,7 @@ export function DuplicatesPage() {
                             </span>
                         </h2>
                         {data.perceptual.length === 0 ? (
-                            <p className="dup-section__empty">No near-duplicates found.</p>
+                            <p className="dup-section__empty">{t('duplicates.noNear')}</p>
                         ) : (
                             data.perceptual.map((g, i) => (
                                 <PerceptualGroup key={i} group={g} onReload={load} />

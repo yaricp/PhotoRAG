@@ -45,7 +45,7 @@ export function PromptsPage() {
                 setStates(prev => ({ ...prev, [key]: { ...prev[key], saved: false } }))
             }, 2500)
         } catch (e: any) {
-            setStates(prev => ({ ...prev, [key]: { ...prev[key], saving: false, error: e.message ?? 'Save failed' } }))
+            setStates(prev => ({ ...prev, [key]: { ...prev[key], saving: false, error: e.message ?? t('prompts.errorSaving') } }))
         }
     }
 
