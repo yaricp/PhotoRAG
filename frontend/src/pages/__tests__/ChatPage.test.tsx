@@ -81,9 +81,9 @@ describe('ChatPage', () => {
         )
     })
 
-    it('renders Russian agent title', () => {
+    it('renders Russian agent UI', () => {
         i18n.changeLanguage('ru')
         renderPage()
-        expect(screen.getByRole('heading', { name: 'Агент ИИ' })).toBeInTheDocument()
+        expect(screen.getByPlaceholderText('Спросите что-нибудь о ваших фотографиях...')).toBeInTheDocument()
     })
 })

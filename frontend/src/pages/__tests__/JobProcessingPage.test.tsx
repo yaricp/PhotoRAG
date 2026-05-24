@@ -9,9 +9,9 @@ vi.mock('@/api/base', () => ({ getBaseUrl: async () => 'http://localhost:8000' }
 afterEach(() => { i18n.changeLanguage('en') })
 
 describe('JobProcessingPage i18n', () => {
-    it('renders Russian processing title', () => {
+    it('renders Russian processing UI', async () => {
         i18n.changeLanguage('ru')
         render(<MemoryRouter><JobProcessingPage /></MemoryRouter>)
-        expect(screen.getByRole('heading', { name: 'Обработка' })).toBeInTheDocument()
+        expect(await screen.findByText('Нет активной обработки')).toBeInTheDocument()
     })
 })

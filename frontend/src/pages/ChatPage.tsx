@@ -210,7 +210,6 @@ export function ChatPage() {
 
             {/* RIGHT — chat */}
             <div className="chat-page__chat">
-                <h1 className="chat-page__title">{t('chat.title')}</h1>
                 {chatReady === false && !bannerDismissed && (
                     <div className="chat-page__warming-banner">
                         <Spinner size="sm" />

@@ -168,7 +168,6 @@ export function ModelsPage() {
 
     return (
         <div className="models-page">
-            <h1 className="page-title">{t('models.title')}</h1>
             <p className="models-page__desc">{t('models.desc')}</p>
 
             {error && <div className="models-page__error">{error}</div>}

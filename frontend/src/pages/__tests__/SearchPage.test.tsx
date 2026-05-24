@@ -9,9 +9,9 @@ vi.mock('@/api/base', () => ({ getBaseUrl: async () => 'http://localhost:8000' }
 afterEach(() => { i18n.changeLanguage('en') })
 
 describe('SearchPage i18n', () => {
-    it('renders Russian title when language is ru', () => {
+    it('renders Russian UI when language is ru', () => {
         i18n.changeLanguage('ru')
         render(<MemoryRouter><SearchPage /></MemoryRouter>)
-        expect(screen.getByText('Семантический поиск')).toBeInTheDocument()
+        expect(screen.getByPlaceholderText('Поиск по фотографиям…')).toBeInTheDocument()
     })
 })

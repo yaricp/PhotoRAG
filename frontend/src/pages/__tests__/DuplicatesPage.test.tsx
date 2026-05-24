@@ -9,9 +9,9 @@ vi.mock('@/api/base', () => ({ getBaseUrl: async () => 'http://localhost:8000' }
 afterEach(() => { i18n.changeLanguage('en') })
 
 describe('DuplicatesPage i18n', () => {
-    it('renders Russian duplicates title', () => {
+    it('renders Russian duplicates error when API fails', async () => {
         i18n.changeLanguage('ru')
         render(<MemoryRouter><DuplicatesPage /></MemoryRouter>)
-        expect(screen.getByRole('heading', { name: 'Дубликаты' })).toBeInTheDocument()
+        expect(await screen.findByText('Не удалось загрузить дубликаты')).toBeInTheDocument()
     })
 })

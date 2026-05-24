@@ -35,11 +35,11 @@ function mockPhotos(issueType: string, photos = [makePhoto()]) {
 }
 
 describe('GarbageBadPhotoPage', () => {
-    it('renders the page title', async () => {
+    it('renders section headings', async () => {
         mockSummary({})
         renderPage()
         await waitFor(() =>
-            expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument()
+            expect(screen.getAllByRole('heading', { level: 2 }).length).toBeGreaterThan(0)
         )
     })
 
@@ -79,12 +79,12 @@ describe('GarbageBadPhotoPage', () => {
         )
     })
 
-    it('renders Russian garbage title', async () => {
+    it('renders Russian garbage section headings', async () => {
         mockSummary({})
         i18n.changeLanguage('ru')
         render(<MemoryRouter><GarbageBadPhotoPage /></MemoryRouter>)
         await waitFor(() =>
-            expect(screen.getByRole('heading', { name: 'Мусор' })).toBeInTheDocument()
+            expect(screen.getByText('Технический мусор')).toBeInTheDocument()
         )
     })
 })

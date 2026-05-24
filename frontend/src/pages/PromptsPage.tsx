@@ -57,7 +57,6 @@ export function PromptsPage() {
 
     return (
         <div className="prompts-page">
-            <h1 className="page-title">{t('prompts.title')}</h1>
             <p className="prompts-page__subtitle">{t('prompts.subtitle')}</p>
 
             {groups.map(group => (

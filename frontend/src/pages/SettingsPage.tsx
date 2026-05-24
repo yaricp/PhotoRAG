@@ -84,8 +84,6 @@ export function SettingsPage() {
 
     return (
         <div className="settings-page" data-testid="page-settings">
-            <h1 className="page-title">{t('settings.title')}</h1>
-
             <div className="settings-section">
                 <p className="settings-section__heading">{t('settings.general')}</p>
 

@@ -53,10 +53,10 @@ describe('SettingsPage', () => {
         await waitFor(() => expect(folderBody).toContain('/new'))
     })
 
-    it('renders Russian settings title when language is ru', () => {
+    it('renders Russian settings labels when language is ru', () => {
         i18n.changeLanguage('ru')
         render(<MemoryRouter><SettingsPage /></MemoryRouter>)
-        expect(screen.getByRole('heading', { name: 'Настройки' })).toBeInTheDocument()
+        expect(screen.getByText('Язык по умолчанию')).toBeInTheDocument()
     })
 
     it('syncs i18n language when saved setting is ru', async () => {

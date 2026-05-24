@@ -9,9 +9,9 @@ vi.mock('@/api/base', () => ({ getBaseUrl: async () => 'http://localhost:8000' }
 afterEach(() => { i18n.changeLanguage('en') })
 
 describe('FoldersPage i18n', () => {
-    it('renders Russian folders title', () => {
+    it('renders Russian folders UI', () => {
         i18n.changeLanguage('ru')
         render(<MemoryRouter><FoldersPage /></MemoryRouter>)
-        expect(screen.getByRole('heading', { name: 'Папки' })).toBeInTheDocument()
+        expect(screen.getByRole('heading', { name: 'Наблюдатели' })).toBeInTheDocument()
     })
 })

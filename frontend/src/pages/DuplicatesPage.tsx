@@ -267,8 +267,6 @@ export function DuplicatesPage() {
 
     return (
         <div className="dup-page">
-            <h1 className="dup-page__title">{t('duplicates.title')}</h1>
-
             {loading && <Spinner />}
             {error && <div className="dup-page--error">{error}</div>}
 

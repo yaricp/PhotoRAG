@@ -9,9 +9,9 @@ vi.mock('@/api/base', () => ({ getBaseUrl: async () => 'http://localhost:8000' }
 afterEach(() => { i18n.changeLanguage('en') })
 
 describe('ModelsPage i18n', () => {
-    it('renders Russian models title', async () => {
+    it('renders Russian models description', async () => {
         i18n.changeLanguage('ru')
         render(<MemoryRouter><ModelsPage /></MemoryRouter>)
-        expect(await screen.findByRole('heading', { name: 'Модели ИИ' })).toBeInTheDocument()
+        expect(await screen.findByText(/Настройте модели/)).toBeInTheDocument()
     })
 })

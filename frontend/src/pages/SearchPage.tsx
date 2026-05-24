@@ -35,7 +35,6 @@ export function SearchPage() {
 
     return (
         <div data-testid="page-search" className="search-page">
-            <h1 className="page-title">{t('search.title')}</h1>
             <div className="search-page__toolbar">
                 <input
                     className="search-page__input"

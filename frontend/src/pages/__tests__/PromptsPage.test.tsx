@@ -9,9 +9,9 @@ vi.mock('@/api/base', () => ({ getBaseUrl: async () => 'http://localhost:8000' }
 afterEach(() => { i18n.changeLanguage('en') })
 
 describe('PromptsPage i18n', () => {
-    it('renders Russian prompts title', async () => {
+    it('renders Russian prompts subtitle', async () => {
         i18n.changeLanguage('ru')
         render(<MemoryRouter><PromptsPage /></MemoryRouter>)
-        expect(await screen.findByRole('heading', { name: 'Промпты' })).toBeInTheDocument()
+        expect(await screen.findByText(/Редактируйте промпты/)).toBeInTheDocument()
     })
 })

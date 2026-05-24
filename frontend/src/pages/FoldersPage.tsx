@@ -67,8 +67,6 @@ export function FoldersPage() {
 
     return (
         <div className="folders-page">
-            <h1 className="page-title">{t('folders.title')}</h1>
-
             {/* ── WATCHERS ─────────────────────────────── */}
             <hr className="border border-gray-700" />
             <section className="folders-section">
