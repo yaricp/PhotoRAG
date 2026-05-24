@@ -292,22 +292,14 @@ def get_or_create_tag(db: Session, name: str):
 
 
 def add_photo_tag_with_score(db: Session, photo_id: int, tag_name: str, score: float):
-    logger.info(f"Adding tag: {tag_name} with score: {score}")
     tag = get_or_create_tag(db, tag_name)
-    logger.info(f"Tag: {tag.id}")
     photo = get_photo_by_id(db, photo_id)
-    logger.info(f"Photo: {photo}")
     photo_tag = db.query(PhotoTag).filter_by(photo_id=photo_id, tag_id=tag.id).first()
-    logger.info(f"Photo tag: {photo_tag}")
     if not photo_tag:
         photo_tag = PhotoTag(photo=photo, tag=tag, confidence_score=score)
         db.add(photo_tag)
-        logger.info(f"Added photo tag")
     else:
         photo_tag.confidence_score = score
-    db.commit()
-    logger.info(f"Committed photo tag")
-    photo_tag = db.query(PhotoTag).filter_by(photo_id=photo_id, tag_id=tag.id).first()
     return photo_tag
 
 
@@ -352,7 +344,6 @@ def add_photo_category_with_score(db: Session, photo_id: int, cat_id: int, score
         db.add(photo_cat)
     else:
         photo_cat.confidence_score = score
-    db.commit()
     return photo_cat
 
 

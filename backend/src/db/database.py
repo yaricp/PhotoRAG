@@ -1,8 +1,8 @@
 import sqlite_vec
 from sqlalchemy import create_engine
 from sqlalchemy import event
-from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.pool import NullPool
 from loguru import logger
 
 from src.config import Database_Settings
@@ -13,12 +13,14 @@ if settings.DATABASE_DIALECT == "sqlite":
     DATABASE_URL: str = f"sqlite:///{settings.DATABASE_NAME}"
 else:
     DATABASE_URL: str = f"{settings.DATABASE_DIALECT}+{settings.DATABASE_DRIVER}://{settings.DATABASE_USER}:{settings.DATABASE_PASSWORD}@{settings.DATABASE_HOST}:{settings.DATABASE_PORT}/{settings.DATABASE_NAME}"
+
 _connect_args = {"timeout": 30} if settings.DATABASE_DIALECT == "sqlite" else {}
-engine = create_engine(DATABASE_URL, connect_args=_connect_args)
+_pool_kwargs = {"poolclass": NullPool} if settings.DATABASE_DIALECT == "sqlite" else {}
+engine = create_engine(DATABASE_URL, connect_args=_connect_args, **_pool_kwargs)
 SessionLocal: sessionmaker[Session] = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
-@event.listens_for(Engine, "connect")
+@event.listens_for(engine, "connect")
 def load_sqlite_extensions(dbapi_connection, connection_record):
     try:
         dbapi_connection.enable_load_extension(True)
