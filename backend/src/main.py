@@ -165,8 +165,8 @@ async def lifespan(app: FastAPI):
                 SELECT MIN(id) FROM photo_embedding_map GROUP BY photo_id
             )
         """)).rowcount
+        db.commit()
         if dupes_removed:
-            db.commit()
             logger.info(f"[startup] Removed {dupes_removed} duplicate embedding map row(s)")
     except Exception as exc:
         db.rollback()
