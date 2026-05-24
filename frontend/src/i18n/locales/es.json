@@ -113,7 +113,33 @@
     "save": "Guardar",
     "saved": "Guardado",
     "loading": "Cargando prompts…",
-    "errorSaving": "Error al guardar"
+    "errorSaving": "Error al guardar",
+    "groups": {
+      "vision_analysis": "Análisis visual",
+      "chat_agent": "Agente de chat"
+    },
+    "meta": {
+      "vision_analysis": {
+        "system_prompt": {
+          "title": "Visión — Aviso de sistema",
+          "description": "Define el rol del IA para todas las tareas de análisis visual. Se aplica como mensaje de sistema al modelo de visión local."
+        },
+        "describe_scene": {
+          "title": "Visión — Describir escena",
+          "description": "Se usa al generar una descripción en lenguaje natural de una foto."
+        },
+        "is_document": {
+          "title": "Visión — ¿Es documento?",
+          "description": "Clasifica si una foto es un documento de texto. Debe devolver solo 'yes' o 'no'."
+        }
+      },
+      "chat_agent": {
+        "system_message": {
+          "title": "Agente de chat — Mensaje de sistema",
+          "description": "Mensaje de sistema principal del agente de búsqueda de fotos. Controla las reglas de uso de herramientas y el idioma de respuesta."
+        }
+      }
+    }
   },
   "settings": {
     "title": "Configuración",
@@ -232,6 +258,7 @@
   },
   "common": {
     "openInMaps": "Abrir en Google Maps ↗",
+    "chooseFolder": "Elegir carpeta",
     "confirmDeletePhotoTitle": "¿Eliminar foto?",
     "confirmDeletePhotoMessage": "Este archivo será eliminado permanentemente del disco.",
     "confirmArchivePhotoTitle": "¿Archivar foto?",

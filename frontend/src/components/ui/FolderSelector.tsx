@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import './FolderSelector.css'
 
 type Props = {
@@ -6,6 +7,7 @@ type Props = {
 }
 
 export function FolderSelector({ onSelect }: Props) {
+    const { t } = useTranslation()
     const [path, setPath] = useState('')
 
     const handlePick = async () => {
@@ -20,7 +22,7 @@ export function FolderSelector({ onSelect }: Props) {
     return (
         <div className="folder-selector">
             <button className="folder-selector__button" onClick={handlePick}>
-                📁 Choose folder
+                📁 {t('common.chooseFolder')}
             </button>
 
             {path && (

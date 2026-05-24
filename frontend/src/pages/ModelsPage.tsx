@@ -104,7 +104,7 @@ export function ModelsPage() {
             s.models.forEach(m => { map[m.name] = m.status })
             setModelStatuses(map)
             // stop polling when nothing is actively loading
-            const busy = s.models.some(m => m.status === 'loading' || m.status === 'downloading')
+            const busy = s.models.some(m => m.status === 'loading')
             if (!busy && pollRef.current) {
                 clearInterval(pollRef.current)
                 pollRef.current = null
@@ -168,7 +168,7 @@ export function ModelsPage() {
 
     return (
         <div className="models-page">
-            <h1 className="models-page__title">{t('models.title')}</h1>
+            <h1 className="page-title">{t('models.title')}</h1>
             <p className="models-page__desc">{t('models.desc')}</p>
 
             {error && <div className="models-page__error">{error}</div>}

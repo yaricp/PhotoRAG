@@ -113,7 +113,33 @@
     "save": "Save",
     "saved": "Saved",
     "loading": "Loading prompts…",
-    "errorSaving": "Save failed"
+    "errorSaving": "Save failed",
+    "groups": {
+      "vision_analysis": "Vision Analysis",
+      "chat_agent": "Chat Agent"
+    },
+    "meta": {
+      "vision_analysis": {
+        "system_prompt": {
+          "title": "Vision — System Prompt",
+          "description": "Sets the AI persona for all vision analysis tasks. Applied as the system message to the local vision model."
+        },
+        "describe_scene": {
+          "title": "Vision — Describe Scene",
+          "description": "Used when generating a natural-language description of a photo."
+        },
+        "is_document": {
+          "title": "Vision — Is Document?",
+          "description": "Classifies whether a photo is a text document. Must return only 'yes' or 'no'."
+        }
+      },
+      "chat_agent": {
+        "system_message": {
+          "title": "Chat Agent — System Message",
+          "description": "Main system message for the AI photo search agent. Controls tool usage rules and response language."
+        }
+      }
+    }
   },
   "settings": {
     "title": "Settings",
@@ -232,6 +258,7 @@
   },
   "common": {
     "openInMaps": "Open in Google Maps ↗",
+    "chooseFolder": "Choose folder",
     "confirmDeletePhotoTitle": "Delete photo?",
     "confirmDeletePhotoMessage": "This file will be permanently removed from disk.",
     "confirmArchivePhotoTitle": "Archive photo?",

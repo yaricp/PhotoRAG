@@ -151,7 +151,7 @@ export function GarbageBadPhotoPage() {
 
     return (
         <div className="gbp-page">
-            <h1 className="gbp-page__title">{t('garbage.title')}</h1>
+            <h1 className="page-title">{t('garbage.title')}</h1>
 
             {loading && <Spinner />}
             {error && <div className="gbp-page--error">{error}</div>}

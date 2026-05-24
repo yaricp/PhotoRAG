@@ -34,8 +34,7 @@ export function DocumentsPage() {
 
     return (
         <div data-testid="page-documents" className="documents-page">
-
-            <h1 className="documents-page__title">{t('documents.title')}</h1>
+            <h1 className="page-title">{t('documents.title')}</h1>
 
             {/* LOADING */}
             {loading && (

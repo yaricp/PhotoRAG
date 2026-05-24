@@ -57,25 +57,31 @@ export function PromptsPage() {
 
     return (
         <div className="prompts-page">
-            <h1 className="prompts-page__title">{t('prompts.title')}</h1>
+            <h1 className="page-title">{t('prompts.title')}</h1>
             <p className="prompts-page__subtitle">{t('prompts.subtitle')}</p>
 
             {groups.map(group => (
                 <section key={group} className="prompts-group">
-                    <h2 className="prompts-group__name">{group.replace('_', ' ')}</h2>
+                    <h2 className="prompts-group__name">
+                        {t(`prompts.groups.${group}`, { defaultValue: group.replace(/_/g, ' ') })}
+                    </h2>
                     {prompts
                         .filter(p => p.group === group)
                         .map(p => {
                             const s = states[p.key]
                             const dirty = s?.text !== p.text
+                            const title = t(`prompts.meta.${p.key}.title`, { defaultValue: p.title })
+                            const description = p.description
+                                ? t(`prompts.meta.${p.key}.description`, { defaultValue: p.description })
+                                : null
                             return (
                                 <div key={p.key} className="prompt-card">
                                     <div className="prompt-card__header">
-                                        <span className="prompt-card__title">{p.title}</span>
+                                        <span className="prompt-card__title">{title}</span>
                                         <code className="prompt-card__key">{p.key}</code>
                                     </div>
-                                    {p.description && (
-                                        <p className="prompt-card__desc">{p.description}</p>
+                                    {description && (
+                                        <p className="prompt-card__desc">{description}</p>
                                     )}
                                     <textarea
                                         className="prompt-card__textarea"
