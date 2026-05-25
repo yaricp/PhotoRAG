@@ -1,6 +1,5 @@
 import React, { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { updateSetting } from '@/api/client'
 
 const LANGUAGES = [
     { code: 'en', flag: '🇬🇧', native: 'English' },
@@ -9,25 +8,16 @@ const LANGUAGES = [
 ]
 
 interface Props {
-    onContinue: () => void
+    onContinue: (lang: string) => void
 }
 
 export function StepLanguage({ onContinue }: Props) {
     const { t, i18n } = useTranslation()
     const [selected, setSelected] = useState(i18n.language ?? 'en')
-    const [saving, setSaving] = useState(false)
 
     async function handleContinue() {
-        setSaving(true)
-        try {
-            await i18n.changeLanguage(selected)
-            await updateSetting('default_language', selected)
-        } catch {
-            // best-effort save; always advance
-        } finally {
-            setSaving(false)
-            onContinue()
-        }
+        await i18n.changeLanguage(selected)
+        onContinue(selected)
     }
 
     return (
@@ -53,7 +43,6 @@ export function StepLanguage({ onContinue }: Props) {
                 <button
                     className="wizard-btn wizard-btn--primary"
                     onClick={handleContinue}
-                    disabled={saving}
                 >
                     {t('wizard.language.continue')}
                 </button>

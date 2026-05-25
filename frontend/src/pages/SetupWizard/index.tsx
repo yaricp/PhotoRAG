@@ -37,9 +37,10 @@ interface Props {
 }
 
 export function SetupWizard({ onComplete }: Props) {
-    const { t } = useTranslation()
+    const { t, i18n } = useTranslation()
     const [step, setStep] = useState<Step>('language')
     const [selectedModels, setSelectedModels] = useState<Set<string>>(new Set())
+    const [selectedLanguage, setSelectedLanguage] = useState(i18n.language ?? 'en')
 
     const advance = (to: Step) => setStep(to)
 
@@ -89,7 +90,7 @@ export function SetupWizard({ onComplete }: Props) {
 
             <div className="wizard-content">
                 {step === 'language' && (
-                    <StepLanguage onContinue={() => advance('welcome')} />
+                    <StepLanguage onContinue={(lang) => { setSelectedLanguage(lang); advance('welcome') }} />
                 )}
                 {step === 'welcome' && (
                     <StepWelcome onContinue={() => advance('install-deps')} />
@@ -113,6 +114,7 @@ export function SetupWizard({ onComplete }: Props) {
                 {step === 'done' && (
                     <StepDone
                         skippedModels={skippedModels}
+                        selectedLanguage={selectedLanguage}
                         onComplete={onComplete}
                     />
                 )}

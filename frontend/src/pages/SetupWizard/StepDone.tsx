@@ -3,20 +3,20 @@ import { useTranslation } from 'react-i18next'
 
 interface Props {
     skippedModels?: string[]
+    selectedLanguage?: string
     onComplete: () => void
 }
 
-export function StepDone({ skippedModels, onComplete }: Props) {
+export function StepDone({ skippedModels, selectedLanguage, onComplete }: Props) {
     const { t } = useTranslation()
     const [launching, setLaunching] = useState(false)
 
     const handleLaunch = async () => {
         setLaunching(true)
-        await window.electronAPI.completeSetup(
-            skippedModels && skippedModels.length > 0
-                ? { skippedModels }
-                : undefined
-        )
+        await window.electronAPI.completeSetup({
+            skippedModels: skippedModels && skippedModels.length > 0 ? skippedModels : undefined,
+            language: selectedLanguage,
+        })
         onComplete()
     }
 

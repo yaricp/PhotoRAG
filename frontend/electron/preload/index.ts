@@ -16,7 +16,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     initDb: () => ipcRenderer.invoke('setup:init-db'),
     downloadModel: (payload: { modelId: string }) => ipcRenderer.invoke('setup:download-model', payload),
     cancelDownload: () => ipcRenderer.invoke('setup:cancel-download'),
-    completeSetup: (payload?: { skippedModels?: string[] }) => ipcRenderer.invoke('setup:complete', payload),
+    completeSetup: (payload?: { skippedModels?: string[]; language?: string }) => ipcRenderer.invoke('setup:complete', payload),
     uninstall: () => ipcRenderer.invoke('app:uninstall'),
 
     // Setup wizard — model config and status (runs before backend starts)

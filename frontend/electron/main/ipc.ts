@@ -1,4 +1,4 @@
-import { ipcMain, dialog, shell, app, WebContents } from 'electron'
+import { ipcMain, dialog, shell, app } from 'electron'
 import { existsSync, writeFileSync, readFileSync, rmSync } from 'fs'
 import { join } from 'path'
 import { spawn } from 'child_process'
@@ -94,7 +94,7 @@ export function registerIpcHandlers(port: number): void {
 
         const dl = spawnTracked(
             python,
-            ['-c', buildDownloadScript(modelId, userData)],
+            ['-c', buildDownloadScript(modelId)],
             {
                 cwd: backend,
                 env: {
@@ -170,9 +170,21 @@ except Exception:
 
     // Write marker + env stubs, start the backend, then return so the renderer
     // can switch to app mode knowing the backend is ready.
-    ipcMain.handle('setup:complete', async (_, payload?: { skippedModels?: string[] }) => {
+    ipcMain.handle('setup:complete', async (_, payload?: { skippedModels?: string[]; language?: string }) => {
         const userData = app.getPath('userData')
         writeFileSync(join(userData, 'setup_done'), new Date().toISOString())
+
+        // Persist the language chosen in StepLanguage so apply_bootstrap_settings()
+        // can write it to the DB on the very first backend startup. Without this,
+        // the backend never learns the non-English language and all translations
+        // silently fall back to English.
+        const language = payload?.language
+        if (language && language !== 'en') {
+            writeFileSync(
+                join(userData, 'bootstrap.json'),
+                JSON.stringify({ default_language: language })
+            )
+        }
 
         const skipped = new Set(payload?.skippedModels ?? [])
         const envLines: string[] = []
@@ -375,7 +387,7 @@ function spawnTracked(
     return cancellable
 }
 
-function buildDownloadScript(modelId: string, userData: string): string {
+function buildDownloadScript(modelId: string): string {
     return `
 import sys, os, traceback
 sys.path.insert(0, '.')
