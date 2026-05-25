@@ -110,7 +110,7 @@ export function StepModelConfig({ onDone }: Props) {
 
     if (loading) {
         return (
-            <div className="wizard-step">
+            <div className="wizard-step wizard-step--wide">
                 <div className="wizard-spinner" />
                 <p>{t('wizard.stepModelConfig.loadingModels')}</p>
             </div>
@@ -118,7 +118,7 @@ export function StepModelConfig({ onDone }: Props) {
     }
 
     return (
-        <div className="wizard-step">
+        <div className="wizard-step wizard-step--wide">
             <h2>{t('wizard.stepModelConfig.title')}</h2>
             <p className="wizard-subtitle">
                 {t('wizard.stepModelConfig.subtitle')}

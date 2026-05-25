@@ -102,6 +102,7 @@ export function SetupWizard({ onComplete }: Props) {
                     <StepDownloading
                         selectedModels={selectedModels}
                         onDone={() => advance('done')}
+                        onBack={() => advance('model-config')}
                     />
                 )}
                 {step === 'done' && (

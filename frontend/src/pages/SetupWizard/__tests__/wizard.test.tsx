@@ -10,7 +10,7 @@ import { StepDone } from '../StepDone'
 import i18n from '@/i18n'
 
 type ProgressCb = (data: { line: string; percent: number }) => void
-type DownloadCb = (data: { modelId: string; percent: number; bytes: number }) => void
+type DownloadCb = (data: { modelId: string; bytes: number; done: boolean }) => void
 
 const progressListeners: ProgressCb[] = []
 const downloadListeners: DownloadCb[] = []
@@ -22,6 +22,7 @@ const mockApi = {
     downloadModel: vi.fn().mockResolvedValue(undefined),
     cancelDownload: vi.fn().mockResolvedValue(undefined),
     completeSetup: vi.fn().mockResolvedValue(undefined),
+    getModelStatuses: vi.fn().mockResolvedValue({}),
     getModelConfigs: vi.fn().mockResolvedValue([]),
     saveModelConfigs: vi.fn().mockResolvedValue(undefined),
     onInstallDepsProgress: vi.fn().mockImplementation((cb: ProgressCb) => progressListeners.push(cb)),
@@ -40,6 +41,7 @@ beforeEach(() => {
     mockApi.downloadModel.mockResolvedValue(undefined)
     mockApi.cancelDownload.mockResolvedValue(undefined)
     mockApi.completeSetup.mockResolvedValue(undefined)
+    mockApi.getModelStatuses.mockResolvedValue({})
     mockApi.getModelConfigs.mockResolvedValue([])
     mockApi.saveModelConfigs.mockResolvedValue(undefined)
     mockApi.onInstallDepsProgress.mockImplementation((cb: ProgressCb) => progressListeners.push(cb))
@@ -132,21 +134,146 @@ describe('StepModelPicker', () => {
 describe('StepDownloading', () => {
     const selectedModels = new Set(['clip', 'embedding'])
 
-    it('shows per-model progress bars', () => {
+    it('shows per-model progress bars', async () => {
         render(<StepDownloading selectedModels={selectedModels} onDone={vi.fn()} />)
+        await waitFor(() => expect(mockApi.getModelStatuses).toHaveBeenCalled())
 
         act(() => {
-            downloadListeners.forEach(cb => cb({ modelId: 'clip', percent: 75, bytes: 247_500_000 }))
+            downloadListeners.forEach(cb => cb({ modelId: 'clip', bytes: 247_500_000, done: false }))
         })
 
         const progressBars = screen.getAllByRole('progressbar')
         expect(progressBars.length).toBeGreaterThanOrEqual(2)
     })
 
-    it('cancel download calls IPC', () => {
+    it('cancel download calls IPC', async () => {
+        // Keep download pending so the cancel button stays visible
+        mockApi.downloadModel.mockReturnValue(new Promise(() => {}))
         render(<StepDownloading selectedModels={selectedModels} onDone={vi.fn()} />)
+        await waitFor(() => expect(mockApi.getModelStatuses).toHaveBeenCalled())
+        await waitFor(() => expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument())
         fireEvent.click(screen.getByRole('button', { name: /cancel/i }))
         expect(mockApi.cancelDownload).toHaveBeenCalled()
+    })
+
+    it('shows static model size before any progress event', async () => {
+        render(<StepDownloading selectedModels={new Set(['clip'])} onDone={vi.fn()} />)
+        await waitFor(() => expect(mockApi.getModelStatuses).toHaveBeenCalled())
+        // CLIP is 330 MB in models.ts — should show immediately, not 0 MB
+        expect(screen.getByText(/330 MB/i)).toBeInTheDocument()
+    })
+
+    it('computes percent from bytes against known model size', async () => {
+        render(<StepDownloading selectedModels={new Set(['clip'])} onDone={vi.fn()} />)
+        await waitFor(() => expect(mockApi.getModelStatuses).toHaveBeenCalled())
+
+        act(() => {
+            // 165 MB out of 330 MB = 50%
+            downloadListeners.forEach(cb => cb({ modelId: 'clip', bytes: 165 * 1_048_576, done: false }))
+        })
+
+        const bar = screen.getByRole('progressbar', { name: /CLIP/i })
+        expect(bar).toHaveAttribute('aria-valuenow', '50')
+    })
+
+    it('reaches 100% on done event', async () => {
+        render(<StepDownloading selectedModels={new Set(['clip'])} onDone={vi.fn()} />)
+        await waitFor(() => expect(mockApi.getModelStatuses).toHaveBeenCalled())
+
+        act(() => {
+            downloadListeners.forEach(cb => cb({ modelId: 'clip', bytes: 330 * 1_048_576, done: true }))
+        })
+
+        const bar = screen.getByRole('progressbar', { name: /CLIP/i })
+        expect(bar).toHaveAttribute('aria-valuenow', '100')
+    })
+
+    it('starts at 0% before any progress event', async () => {
+        render(<StepDownloading selectedModels={new Set(['clip'])} onDone={vi.fn()} />)
+        await waitFor(() => expect(mockApi.getModelStatuses).toHaveBeenCalled())
+
+        const bar = screen.getByRole('progressbar', { name: /CLIP/i })
+        expect(bar).toHaveAttribute('aria-valuenow', '0')
+    })
+
+    it('launches all downloads in parallel (not sequentially)', async () => {
+        let resolveClip!: () => void
+        let resolveEmbedding!: () => void
+        mockApi.downloadModel.mockImplementation(({ modelId }: { modelId: string }) => {
+            if (modelId === 'clip') return new Promise<void>(res => { resolveClip = res })
+            if (modelId === 'embedding') return new Promise<void>(res => { resolveEmbedding = res })
+            return Promise.resolve()
+        })
+
+        render(<StepDownloading selectedModels={selectedModels} onDone={vi.fn()} />)
+
+        // Both download calls should be initiated before either resolves
+        await waitFor(() => expect(mockApi.downloadModel).toHaveBeenCalledTimes(2))
+        expect(mockApi.downloadModel).toHaveBeenCalledWith({ modelId: 'clip' })
+        expect(mockApi.downloadModel).toHaveBeenCalledWith({ modelId: 'embedding' })
+
+        resolveClip()
+        resolveEmbedding()
+    })
+
+    it('skips already-ready models and shows them at 100%', async () => {
+        mockApi.getModelStatuses.mockResolvedValue({ clip: 'ready' })
+
+        render(<StepDownloading selectedModels={selectedModels} onDone={vi.fn()} />)
+        await waitFor(() => expect(mockApi.getModelStatuses).toHaveBeenCalled())
+
+        // clip should not be downloaded
+        await waitFor(() => expect(mockApi.downloadModel).not.toHaveBeenCalledWith({ modelId: 'clip' }))
+        // clip should show 100%
+        await waitFor(() => {
+            const bar = screen.getByRole('progressbar', { name: /CLIP/i })
+            expect(bar).toHaveAttribute('aria-valuenow', '100')
+        })
+        // embedding should still be downloaded
+        await waitFor(() => expect(mockApi.downloadModel).toHaveBeenCalledWith({ modelId: 'embedding' }))
+    })
+
+    it('calls onDone immediately when all selected models are already ready', async () => {
+        mockApi.getModelStatuses.mockResolvedValue({ clip: 'ready', embedding: 'ready' })
+        const onDone = vi.fn()
+
+        render(<StepDownloading selectedModels={selectedModels} onDone={onDone} />)
+
+        await waitFor(() => expect(onDone).toHaveBeenCalled())
+        expect(mockApi.downloadModel).not.toHaveBeenCalled()
+    })
+
+    it('shows Back button when onBack provided', async () => {
+        mockApi.downloadModel.mockReturnValue(new Promise(() => {}))
+        render(<StepDownloading selectedModels={selectedModels} onDone={vi.fn()} onBack={vi.fn()} />)
+        await waitFor(() => expect(mockApi.getModelStatuses).toHaveBeenCalled())
+        await waitFor(() => expect(screen.getByRole('button', { name: /back/i })).toBeInTheDocument())
+    })
+
+    it('Back button calls cancelDownload and onBack', async () => {
+        mockApi.downloadModel.mockReturnValue(new Promise(() => {}))
+        const onBack = vi.fn()
+        render(<StepDownloading selectedModels={selectedModels} onDone={vi.fn()} onBack={onBack} />)
+        await waitFor(() => expect(mockApi.getModelStatuses).toHaveBeenCalled())
+        await waitFor(() => screen.getByRole('button', { name: /back/i }))
+
+        fireEvent.click(screen.getByRole('button', { name: /back/i }))
+
+        expect(mockApi.cancelDownload).toHaveBeenCalled()
+        expect(onBack).toHaveBeenCalled()
+    })
+
+    it('hides Back button after all downloads complete', async () => {
+        const onDone = vi.fn()
+        render(<StepDownloading selectedModels={new Set(['clip'])} onDone={onDone} onBack={vi.fn()} />)
+        await waitFor(() => expect(mockApi.getModelStatuses).toHaveBeenCalled())
+
+        act(() => {
+            downloadListeners.forEach(cb => cb({ modelId: 'clip', bytes: 330 * 1_048_576, done: true }))
+        })
+        await waitFor(() => expect(onDone).toHaveBeenCalled())
+
+        expect(screen.queryByRole('button', { name: /back/i })).not.toBeInTheDocument()
     })
 })
 

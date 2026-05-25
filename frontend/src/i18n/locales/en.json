@@ -207,6 +207,7 @@
     "stepDownloading": {
       "title": "Downloading Models",
       "cancelButton": "Cancel",
+      "backButton": "← Back to model selection",
       "errorMessage": "Download error: {{error}}"
     },
     "stepModelPicker": {

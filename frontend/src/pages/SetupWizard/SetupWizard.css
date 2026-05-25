@@ -43,6 +43,11 @@
     gap: 1rem;
 }
 
+.wizard-step--wide {
+    max-width: 860px;
+    width: 100%;
+}
+
 .wizard-step h1,
 .wizard-step h2 {
     margin: 0;
