@@ -8,6 +8,7 @@ import { StepModelConfig } from './StepModelConfig'
 import { StepDownloading } from './StepDownloading'
 import { StepDone } from './StepDone'
 import { MODELS } from './models'
+import icon from '../../assets/icon.png'
 import './SetupWizard.css'
 
 type Step = 'language' | 'welcome' | 'install-deps' | 'init-db' | 'model-config' | 'downloading' | 'done'
@@ -68,6 +69,10 @@ export function SetupWizard({ onComplete }: Props) {
 
     return (
         <div className="wizard-container">
+            <div className="wizard-logo">
+                <img src={icon} alt="PhotoRAG" className="wizard-logo__img" />
+                <span className="wizard-logo__name">PhotoRAG</span>
+            </div>
             <div className="wizard-stepper">
                 {STEP_ORDER.map((s, i) => (
                     <div
