@@ -382,5 +382,43 @@
     "fullTitle": "Aviso de privacidad — Modelos de IA remotos",
     "fullText": "Al configurar modelos de IA remotos (OpenAI, Google Gemini, Anthropic Claude, Groq, etc.), sus fotos y los metadatos generados por esta aplicación pueden enviarse a los servidores de esos proveedores y procesarse según sus políticas de privacidad. Pueden almacenar o usar estos datos de acuerdo con sus términos de servicio.\n\nPara proteger su privacidad:\n• Modelos locales — se ejecutan en su dispositivo; los datos no salen de su computadora.\n• Modelos autoalojados — Ollama o vLLM en un servidor bajo su control.\n• Proveedores con acuerdos — aquellos que ofrecen garantías explícitas de retención de datos.\n\nSi no está seguro, elegir todos los modelos locales es la opción más segura.",
     "closeButton": "Cerrar"
+  },
+  "vocab": {
+    "name": "Nombre",
+    "clipPrompt": "Prompt CLIP",
+    "cancel": "Cancelar",
+    "add": "Agregar",
+    "adding": "Agregando…",
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "prev": "← Anterior",
+    "next": "Siguiente →",
+    "pageInfo": "Página {{page}} de {{total}}",
+    "tags": {
+      "title": "Etiquetas de plantilla",
+      "desc": "Etiquetas que CLIP detecta en las fotos. Cada entrada tiene un nombre (mostrado en UI) y un prompt CLIP (para el modelo). Los cambios activan un recálculo automático de embeddings.",
+      "addBtn": "+ Agregar etiqueta",
+      "namePlaceholder": "ej. perro",
+      "promptPlaceholder": "ej. una foto de un perro",
+      "empty": "No hay etiquetas. Haz clic en \"Agregar etiqueta\" para crear la primera.",
+      "errorLoad": "Error al cargar las etiquetas de plantilla",
+      "errorCreate": "Error al crear la etiqueta",
+      "errorUpdate": "Error al actualizar la etiqueta",
+      "errorDelete": "Error al eliminar la etiqueta"
+    },
+    "categories": {
+      "title": "Categorías de plantilla",
+      "desc": "Categorías que CLIP asigna a las fotos. Cada entrada tiene un nombre (mostrado en UI) y un prompt CLIP (para el modelo). Los cambios activan un recálculo automático de embeddings.",
+      "addBtn": "+ Agregar categoría",
+      "namePlaceholder": "ej. comida",
+      "promptPlaceholder": "ej. una foto de comida",
+      "empty": "No hay categorías. Haz clic en \"Agregar categoría\" para crear la primera.",
+      "errorLoad": "Error al cargar las categorías de plantilla",
+      "errorCreate": "Error al crear la categoría",
+      "errorUpdate": "Error al actualizar la categoría",
+      "errorDelete": "Error al eliminar la categoría"
+    }
   }
 }
