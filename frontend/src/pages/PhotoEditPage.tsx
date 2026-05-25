@@ -109,7 +109,7 @@ export function PhotoEditPage() {
         <div className="pe">
             {/* HEADER */}
             <div className="pe__header">
-                <button className="pe__back-btn" onClick={() => navigate(`/photo/${photo.id}`)}>
+                <button className="pe__back-btn" onClick={() => navigate(-1)}>
                     {t('photoEdit.backToPhoto')}
                 </button>
             </div>

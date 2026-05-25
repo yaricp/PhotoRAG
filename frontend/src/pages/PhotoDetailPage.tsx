@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import { getPhoto, deletePhoto, archivePhotos, updatePhotoFlags } from '@/api/client'
 import { Spinner } from '@/components/ui/Spinner'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
@@ -38,6 +38,8 @@ export function PhotoDetailPage() {
     const { t } = useTranslation()
     const { id } = useParams()
     const navigate = useNavigate()
+    const location = useLocation()
+    const backTo = (location.state as { from?: string } | null)?.from ?? '/'
     const [photo, setPhoto] = useState<Photo | null>(null)
     const [loading, setLoading] = useState(true)
     const [pending, setPending] = useState<PendingAction>(null)
@@ -65,13 +67,13 @@ export function PhotoDetailPage() {
     async function handleArchive() {
         if (!photo) return
         await archivePhotos([photo.id])
-        navigate(-1)
+        navigate(backTo)
     }
 
     async function handleDelete() {
         if (!photo) return
         await deletePhoto(photo.id)
-        navigate(-1)
+        navigate(backTo)
     }
 
     if (loading) {
@@ -92,7 +94,7 @@ export function PhotoDetailPage() {
         <div className="pd" data-testid="page-photo-detail">
             {/* HEADER */}
             <div className="pd__header">
-                <button className="pd__back-btn" onClick={() => navigate(-1)}>{t('photoDetail.back')}</button>
+                <button className="pd__back-btn" onClick={() => navigate(backTo)}>{t('photoDetail.back')}</button>
                 <Link className="pd__edit-btn" to={`/photo/${photo.id}/edit`}>{t('photoDetail.edit')}</Link>
             </div>
 

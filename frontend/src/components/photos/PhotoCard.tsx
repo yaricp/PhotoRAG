@@ -1,5 +1,5 @@
 import React from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { Badge } from '@/components/ui/Badge'
 import { photoImageUrl } from '@/api/images'
 import type { Photo, Job } from '@/types/api'
@@ -14,6 +14,7 @@ interface PhotoCardProps {
 
 export function PhotoCard({ photo, job, onArchive, onDelete }: PhotoCardProps) {
     const navigate = useNavigate()
+    const location = useLocation()
 
     const filename =
         photo?.file_path?.split('/').pop() ?? photo?.file_path ?? 'Unknown file'
@@ -25,7 +26,7 @@ export function PhotoCard({ photo, job, onArchive, onDelete }: PhotoCardProps) {
     return (
         <article
             className="photo-card"
-            onClick={() => navigate(`/photo/${photo.id}`)}
+            onClick={() => navigate(`/photo/${photo.id}`, { state: { from: location.pathname } })}
             role="article"
         >
             <div className="photo-card__image-wrap">
