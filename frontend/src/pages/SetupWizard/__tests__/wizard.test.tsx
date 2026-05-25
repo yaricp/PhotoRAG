@@ -142,8 +142,11 @@ describe('StepDownloading', () => {
     })
 
     it('cancel download calls IPC', async () => {
+        // Keep download pending so the cancel button stays visible
+        mockApi.downloadModel.mockReturnValue(new Promise(() => {}))
         render(<StepDownloading selectedModels={selectedModels} onDone={vi.fn()} />)
         await waitFor(() => expect(mockApi.getModelStatuses).toHaveBeenCalled())
+        await waitFor(() => expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument())
         fireEvent.click(screen.getByRole('button', { name: /cancel/i }))
         expect(mockApi.cancelDownload).toHaveBeenCalled()
     })
@@ -236,15 +239,18 @@ describe('StepDownloading', () => {
     })
 
     it('shows Back button when onBack provided', async () => {
+        mockApi.downloadModel.mockReturnValue(new Promise(() => {}))
         render(<StepDownloading selectedModels={selectedModels} onDone={vi.fn()} onBack={vi.fn()} />)
         await waitFor(() => expect(mockApi.getModelStatuses).toHaveBeenCalled())
-        expect(screen.getByRole('button', { name: /back/i })).toBeInTheDocument()
+        await waitFor(() => expect(screen.getByRole('button', { name: /back/i })).toBeInTheDocument())
     })
 
     it('Back button calls cancelDownload and onBack', async () => {
+        mockApi.downloadModel.mockReturnValue(new Promise(() => {}))
         const onBack = vi.fn()
         render(<StepDownloading selectedModels={selectedModels} onDone={vi.fn()} onBack={onBack} />)
         await waitFor(() => expect(mockApi.getModelStatuses).toHaveBeenCalled())
+        await waitFor(() => screen.getByRole('button', { name: /back/i }))
 
         fireEvent.click(screen.getByRole('button', { name: /back/i }))
 

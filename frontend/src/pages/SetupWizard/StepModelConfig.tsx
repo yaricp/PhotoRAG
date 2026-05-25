@@ -108,7 +108,7 @@ export function StepModelConfig({ onDone }: Props) {
 
     if (loading) {
         return (
-            <div className="wizard-step">
+            <div className="wizard-step wizard-step--wide">
                 <div className="wizard-spinner" />
                 <p>Loading model configurations…</p>
             </div>
@@ -116,7 +116,7 @@ export function StepModelConfig({ onDone }: Props) {
     }
 
     return (
-        <div className="wizard-step">
+        <div className="wizard-step wizard-step--wide">
             <h2>Configure AI Models</h2>
             <p className="wizard-subtitle">
                 Choose local (runs on your Mac) or remote (API key required) for each task.

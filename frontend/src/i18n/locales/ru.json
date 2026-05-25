@@ -180,6 +180,7 @@
     "stepDownloading": {
       "title": "Загрузка моделей",
       "cancelButton": "Отмена",
+      "backButton": "← Назад к выбору моделей",
       "errorMessage": "Ошибка загрузки: {{error}}"
     },
     "stepModelPicker": {

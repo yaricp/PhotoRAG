@@ -92,7 +92,7 @@ export function registerIpcHandlers(port: number): void {
         const python = venvBin(venvPath, 'python3')
         const backend = locateBackend()
 
-        activeDownload = spawnTracked(
+        const dl = spawnTracked(
             python,
             ['-c', buildDownloadScript(modelId, userData)],
             {
@@ -105,26 +105,66 @@ export function registerIpcHandlers(port: number): void {
                 },
             },
             (line) => {
-                const m = line.match(/PROGRESS:(\d+(?:\.\d+)?):(\d+)/)
-                if (m) {
-                    const percent = parseFloat(m[1])
-                    const bytes = parseInt(m[2], 10)
-                    console.log(`[progress:${modelId}] ${percent.toFixed(1)}% ${bytes}B`)
-                    event.sender.send('setup:download-model-progress', { modelId, percent, bytes })
+                const mBytes = line.match(/^PROGRESS:BYTES:(\d+)$/)
+                if (mBytes) {
+                    const bytes = parseInt(mBytes[1], 10)
+                    console.log(`[progress:${modelId}] ${bytes}B`)
+                    event.sender.send('setup:download-model-progress', { modelId, bytes, done: false })
+                } else if (line === 'PROGRESS:DONE:0') {
+                    event.sender.send('setup:download-model-progress', { modelId, bytes: -1, done: true })
                 } else if (line.trim()) {
                     console.log(`[download:${modelId}]`, line)
                 }
             }
         )
-        await activeDownload
-        activeDownload = null
+        activeDownloads.set(modelId, dl)
+        try {
+            await dl
+        } finally {
+            activeDownloads.delete(modelId)
+        }
     })
 
-    // Cancel current download.
+    // Cancel all active downloads.
     ipcMain.handle('setup:cancel-download', () => {
-        if (activeDownload) {
-            activeDownload.cancel?.()
-            activeDownload = null
+        for (const [, dl] of activeDownloads) dl.cancel?.()
+        activeDownloads.clear()
+    })
+
+    // Read model statuses from the DB (runs during setup, before backend starts).
+    ipcMain.handle('setup:get-model-statuses', async () => {
+        const userData = app.getPath('userData')
+        const venvPath = join(userData, 'venv')
+        const python = venvBin(venvPath, 'python3')
+        const backend = locateBackend()
+        const script = `
+import json, sys
+sys.path.insert(0, '.')
+try:
+    from src.db.database import SessionLocal
+    from src.db_service import get_all_model_states
+    db = SessionLocal()
+    try:
+        states = get_all_model_states(db)
+        # DB uses 'translator', wizard uses 'translation'
+        result = {}
+        for s in states:
+            key = 'translation' if s.name == 'translator' else s.name
+            result[key] = s.status
+        print(json.dumps(result), flush=True)
+    finally:
+        db.close()
+except Exception:
+    print('{}', flush=True)
+`
+        try {
+            const out = await spawnCaptured(python, ['-c', script], {
+                cwd: backend,
+                env: { ...process.env, APP_DATA_DIR: userData, QUEUE_DB_DIR: userData },
+            })
+            return JSON.parse(out.trim() || '{}')
+        } catch {
+            return {}
         }
     })
 
@@ -268,8 +308,8 @@ print('OK')
     console.log('[IPC] done')
 }
 
-// Tracks the current download so it can be cancelled.
-let activeDownload: (Promise<void> & { cancel?: () => void }) | null = null
+// Tracks active downloads by modelId so parallel downloads can be cancelled.
+const activeDownloads = new Map<string, Promise<void> & { cancel?: () => void }>()
 
 // Runs a process and resolves with captured stdout, rejects on non-zero exit.
 function spawnCaptured(
@@ -336,37 +376,41 @@ function spawnTracked(
 }
 
 function buildDownloadScript(modelId: string, userData: string): string {
-    // Patch tqdm BEFORE importing any ML library so HuggingFace download
-    // chunks emit real PROGRESS:<percent>:<bytes> lines to stdout.
-    // disable=True silences tqdm's own stderr output; update() still
-    // increments self.n (tqdm behaviour when disabled).
     return `
 import sys, os, traceback
 sys.path.insert(0, '.')
 
-# Patch tqdm before any ML import so HF download progress is captured.
+# Patch tqdm before any ML import so HuggingFace download progress is captured.
+# Uses cumulative bytes across all tqdm instances so multi-file models (e.g.
+# translator) don't appear to restart from 0 for each individual file.
 from tqdm import tqdm as _Orig
+
+_completed_bytes = 0
 
 class _Reporter(_Orig):
     def __init__(self, *args, **kwargs):
         # Force enabled and redirect tqdm output to devnull.
         # Subclasses like hf_tqdm auto-set disable=True via isatty() when
-        # running in a subprocess (no TTY). Disabled tqdm returns early from
-        # __init__ without setting self.unit or incrementing self.n, which
-        # breaks our update(). Forcing disable=False + devnull fixes both.
+        # running in a subprocess (no TTY). Forcing disable=False + devnull
+        # keeps self.n accurate without polluting stdout.
         kwargs['file'] = open(os.devnull, 'w')
         kwargs['disable'] = False
         super().__init__(*args, **kwargs)
+
     def update(self, n=1):
-        super().update(n)  # increments self.n; writes to devnull
-        if getattr(self, 'unit', None) == 'B' and getattr(self, 'total', None) and n:
-            pct = min(99.0, self.n / self.total * 100)
-            print(f'PROGRESS:{pct:.1f}:{int(self.n)}', flush=True)
+        super().update(n)
+        if getattr(self, 'unit', None) == 'B' and n:
+            total_so_far = _completed_bytes + int(self.n)
+            print(f'PROGRESS:BYTES:{total_so_far}', flush=True)
+
+    def close(self):
+        global _completed_bytes
+        if getattr(self, 'unit', None) == 'B':
+            _completed_bytes += int(getattr(self, 'n', 0))
+        super().close()
 
 import tqdm as _tm, tqdm.auto as _ta
 _tm.tqdm = _ta.tqdm = _Reporter
-
-print('PROGRESS:1:0', flush=True)
 
 try:
     from src.install import (
@@ -395,6 +439,8 @@ try:
         fn(db)
     finally:
         db.close()
+
+    print('PROGRESS:DONE:0', flush=True)
 
 except Exception:
     print('ERROR: ' + traceback.format_exc(), flush=True)
