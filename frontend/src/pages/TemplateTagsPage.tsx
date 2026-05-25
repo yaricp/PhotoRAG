@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
     getTemplateTags, createTemplateTag, updateTemplateTag, deleteTemplateTag,
@@ -12,6 +13,7 @@ const PAGE_SIZE = 50
 
 export function TemplateTagsPage() {
     const { t } = useTranslation()
+    const navigate = useNavigate()
     const [items, setItems] = useState<TemplateTag[]>([])
     const [total, setTotal] = useState(0)
     const [page, setPage] = useState(0)
@@ -106,6 +108,9 @@ export function TemplateTagsPage() {
 
     return (
         <div className="vocab-page">
+            <button className="vocab-btn vocab-btn--ghost vocab-back-btn" onClick={() => navigate(-1)}>
+                {t('photoDetail.back')}
+            </button>
             <div className="vocab-page__header">
                 <div className="vocab-page__titles">
                     <h1 className="vocab-page__title">
