@@ -40,4 +40,19 @@ describe('routing', () => {
         renderAt('/photo/42')
         expect(screen.getByTestId('page-photo-detail')).toBeInTheDocument()
     })
+
+    it('/help redirects to /help/getting-started', () => {
+        renderAt('/help')
+        expect(screen.getByTestId('page-help')).toBeInTheDocument()
+    })
+
+    it('/help/:topic renders HelpPage', () => {
+        renderAt('/help/gallery')
+        expect(screen.getByTestId('page-help')).toBeInTheDocument()
+    })
+
+    it('/help/unknown-topic renders HelpPage with fallback', () => {
+        renderAt('/help/nonexistent-topic')
+        expect(screen.getByTestId('page-help')).toBeInTheDocument()
+    })
 })
