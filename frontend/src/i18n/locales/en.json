@@ -431,7 +431,7 @@
         "title": "Getting Started",
         "intro": "Welcome to PhotoRAG — an AI-powered photo management system.",
         "body": "PhotoRAG helps you organise, describe, and search your entire photo library using local and remote AI models.\n\nDuring first launch, the Setup Wizard guides you through installing Python dependencies, initialising the database, and choosing which AI models to use (local or remote via API key). Configure models later on the [Models](/help/models) page.\n\nOnce setup is complete, the main application opens automatically. Add photo folders from the [Folders](/help/folders) page and monitor analysis progress on the [Processing](/help/processing) page. When processing finishes, browse your library in the [Gallery](/help/gallery).",
-        "examples": "Example: install PhotoRAG, run the Setup Wizard, add your 'Vacation 2024' folder in Folders, then go to Processing and click 'Run' — PhotoRAG will automatically generate English descriptions, extract any text visible in photos, and index everything for search."
+        "examples": "Example: install PhotoRAG, run the Setup Wizard, then add your 'Vacation 2024' folder on the [Folders](/help/folders) page — configure it as a Watcher (automatically detects new photos) or run a one-time Scan. PhotoRAG will generate descriptions, extract any text visible in photos, and index everything for search. Once done, browse results in the [Gallery](/help/gallery)."
       },
       "gallery": {
         "title": "Gallery",

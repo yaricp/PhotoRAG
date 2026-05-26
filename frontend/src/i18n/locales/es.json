@@ -431,7 +431,7 @@
         "title": "Primeros pasos",
         "intro": "Bienvenido a PhotoRAG — un sistema de gestión de fotos impulsado por IA.",
         "body": "PhotoRAG te ayuda a organizar, describir y buscar tu biblioteca de fotos con modelos de IA locales y remotos.\n\nEl Asistente de configuración guía la instalación de dependencias, base de datos y elección de modelos. Los modelos se pueden cambiar después en la página [Modelos](/help/models).\n\nUna vez completada la configuración, añade carpetas desde la página [Carpetas](/help/folders) y monitoriza el progreso en [Procesamiento](/help/processing). Cuando termine, explora tu biblioteca en la [Galería](/help/gallery).",
-        "examples": "Ejemplo: instala PhotoRAG, ejecuta el Asistente de configuración, añade tu carpeta 'Vacaciones 2024' en Carpetas, luego ve a Procesamiento y haz clic en 'Ejecutar' — PhotoRAG generará automáticamente descripciones en inglés, extraerá el texto visible en las fotos e indexará todo para la búsqueda."
+        "examples": "Ejemplo: instala PhotoRAG, ejecuta el Asistente de configuración, luego añade tu carpeta 'Vacaciones 2024' en la página [Carpetas](/help/folders) — configúrala como Observador (detecta nuevas fotos automáticamente) o ejecuta un Escaneo puntual. PhotoRAG generará descripciones, extraerá el texto visible en las fotos e indexará todo para la búsqueda. Cuando termine, explora los resultados en la [Galería](/help/gallery)."
       },
       "gallery": {
         "title": "Galería",
