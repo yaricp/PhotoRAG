@@ -422,5 +422,95 @@
       "errorUpdate": "Failed to update category",
       "errorDelete": "Failed to delete category"
     }
+  },
+  "help": {
+    "title": "Help",
+    "examplesHeading": "Examples",
+    "topics": {
+      "getting-started": {
+        "title": "Getting Started",
+        "intro": "Welcome to PhotoRAG — an AI-powered photo management system.",
+        "body": "PhotoRAG helps you organise, describe, and search your entire photo library using local and remote AI models.\n\nDuring first launch, the Setup Wizard guides you through installing Python dependencies, initialising the database, and choosing which AI models to use (local or remote via API key).\n\nOnce setup is complete, the main application opens automatically. You can add photo folders from the Folders page and start processing with the Processing page.",
+        "examples": "Example: install PhotoRAG, run the Setup Wizard, add your 'Vacation 2024' folder in Folders, then go to Processing and click 'Run' — PhotoRAG will automatically generate English descriptions, extract any text visible in photos, and index everything for search."
+      },
+      "gallery": {
+        "title": "Gallery",
+        "intro": "The Gallery is the main view of your photo library.",
+        "body": "All processed photos appear as cards in the Gallery grid. Each card shows a thumbnail, the auto-generated description, and any tags or categories assigned.\n\nYou can sort photos by date, filter by folder or processing status, and click any card to open the Photo Detail page.\n\nPhotos that have not yet been processed show a pending indicator.",
+        "examples": "Example: open the Gallery and type a filter tag like 'sunset' in the search bar — only photos tagged with 'sunset' appear in the grid. Click a card to see the full description and linked documents."
+      },
+      "search": {
+        "title": "Search",
+        "intro": "Find photos using natural language or keyword queries.",
+        "body": "PhotoRAG uses vector embeddings to enable semantic search: you describe what you are looking for in plain language and the system returns the most visually and conceptually similar photos, even if your exact words do not appear in any description.\n\nKeyword search matches exact words in descriptions, tags, and extracted text. You can combine semantic and keyword modes.\n\nResults are ranked by similarity score. Click any result to open the Photo Detail page.",
+        "examples": "Example: type 'dog running on a beach at sunset' — PhotoRAG returns photos matching that scene even if no description contains all those words exactly. Or type 'birthday' to find all photos where birthday-related text was detected or described."
+      },
+      "photo-detail": {
+        "title": "Photo Detail",
+        "intro": "View the full information for a single photo.",
+        "body": "The Photo Detail page shows the original image alongside its AI-generated description, assigned tags, categories, and any documents (extracted text) linked to the photo.\n\nYou can navigate to the next or previous photo in the current view and open the Photo Edit page to modify metadata.\n\nIf translation is enabled and your language is not English, descriptions are shown in your selected language.",
+        "examples": "Example: click a photo in the Gallery, see its English description alongside the Russian translation (if you set Russian in Settings), and view any text extracted from a receipt or document visible in the photo."
+      },
+      "photo-edit": {
+        "title": "Photo Edit",
+        "intro": "Manually edit a photo's title, description, and tags.",
+        "body": "On the Photo Edit page you can override the AI-generated description with your own text, add or remove tags, and change the category.\n\nAfter saving, the photo is re-indexed so it immediately appears in updated search results. You can also trigger a re-run of AI analysis to regenerate the description from scratch using the current prompt template.",
+        "examples": "Example: the AI described a photo as 'a group of people indoors' but you know it is your team at a product launch. Edit the description to 'Team at the 2024 product launch, office, evening', add tags 'team work launch', and save."
+      },
+      "documents": {
+        "title": "Documents",
+        "intro": "Browse text documents extracted from your photos.",
+        "body": "When photos contain visible text (receipts, invoices, signs, whiteboards, book pages), PhotoRAG uses OCR to extract that text and stores it as a Document linked to the photo.\n\nThe Documents page lists all extracted documents. You can search document content, view which photo a document belongs to, and filter by document type.\n\nDocuments are also included in semantic search results.",
+        "examples": "Example: photograph a whiteboard from a meeting. PhotoRAG extracts the text into a Document. Later, search for 'Q3 roadmap' — the meeting whiteboard photo appears in results because its extracted document contains that phrase."
+      },
+      "duplicates": {
+        "title": "Duplicates",
+        "intro": "Find and resolve duplicate photos in your library.",
+        "body": "PhotoRAG detects duplicate photos using a combination of perceptual hashing (for exact or near-exact copies) and semantic similarity (for visually similar but not identical shots).\n\nThe Duplicates page groups photos into duplicate clusters. For each cluster you can choose which copy to keep and mark the rest for deletion, or keep all copies.\n\nDeletion moves photos to the Garbage page for review before permanent removal.",
+        "examples": "Example: you copied a folder of photos twice by mistake. Open Duplicates — PhotoRAG groups all 200 pairs. Select 'Keep latest' for each group and click 'Remove duplicates' to clean up without losing any unique photos."
+      },
+      "garbage": {
+        "title": "Garbage / Bad Photos",
+        "intro": "Review and remove low-quality or unwanted photos.",
+        "body": "PhotoRAG automatically detects and flags low-quality photos — blurry shots, overexposed or underexposed images, accidental captures, and photos the AI model rates as uninformative.\n\nFlagged photos appear on the Garbage page. You review each one and either restore it to the Gallery or permanently delete it.\n\nPhotos sent to Garbage from the Duplicates page also appear here.",
+        "examples": "Example: after importing 1 000 holiday photos, 47 are flagged as blurry or accidental. Open Garbage, review the thumbnails, restore the 5 that are actually fine, and permanently delete the remaining 42 with one click."
+      },
+      "chat": {
+        "title": "Chat (Agent AI)",
+        "intro": "Ask questions about your photo library in natural language.",
+        "body": "The Chat page provides a RAG (Retrieval-Augmented Generation) interface powered by the configured language model. You type a question, PhotoRAG searches your photo library for relevant context, and the AI answers using that context.\n\nThe model can describe groups of photos, compare scenes, answer questions about visible content, and summarise events across date ranges.\n\nConversation history is maintained within a session so you can ask follow-up questions.",
+        "examples": "Example: ask 'What did our team look like in 2023?' — the AI retrieves team photos from 2023, summarises who is in them, and describes the settings. Then ask 'Which of those were taken outdoors?' for a refined answer."
+      },
+      "processing": {
+        "title": "Processing",
+        "intro": "Manage the AI pipeline that analyses your photos.",
+        "body": "The Processing page shows the current state of the photo analysis queue. Each photo passes through multiple pipeline stages: description generation, translation (if a non-English language is set), OCR text extraction, duplicate detection, and quality scoring.\n\nYou can start, pause, and restart processing, and see which jobs are running, queued, or have failed.\n\nFailed jobs show error details and can be retried individually or in bulk.",
+        "examples": "Example: you add a new folder with 500 photos. Go to Processing and click 'Run'. Watch the queue drain as photos are described and indexed. If 3 jobs fail due to a network error fetching the remote model, click 'Retry failed' to re-run just those 3."
+      },
+      "folders": {
+        "title": "Folders",
+        "intro": "Configure which photo folders PhotoRAG monitors.",
+        "body": "On the Folders page you add the directories containing your photos. PhotoRAG scans each folder recursively for image files (JPEG, PNG, HEIC, WebP, and more).\n\nYou can add multiple folders, remove folders, and trigger a re-scan at any time. When you add a new folder, newly found photos are queued for processing automatically.\n\nChanging a folder's path updates all linked photos in the database.",
+        "examples": "Example: add '/Users/me/Pictures/Holidays' and '/Users/me/Desktop/Work photos'. PhotoRAG finds 1 200 photos across both folders and queues them. Later you add a new subfolder — click 'Rescan' and only new photos are processed."
+      },
+      "models": {
+        "title": "Models",
+        "intro": "Configure the AI models used for description, translation, and search.",
+        "body": "PhotoRAG uses separate models for different tasks: a vision model for generating photo descriptions, a language model for chat and re-writing, a translation model for multilingual support, and an embedding model for semantic search.\n\nEach model can run locally (downloaded to your machine) or remotely via an API key (OpenAI, Anthropic, etc.).\n\nThe Models page lets you switch between local and remote mode, enter API keys, and check model download status.",
+        "examples": "Example: switch the vision model from local LLaVA to remote GPT-4o by selecting 'Remote' mode, entering your OpenAI API key, and clicking Save. New photo descriptions will now be generated by GPT-4o without downloading anything locally."
+      },
+      "prompts": {
+        "title": "Prompts & Templates",
+        "intro": "Customise the instructions given to the AI when describing photos.",
+        "body": "Prompt templates control what the AI writes in photo descriptions. You can create templates for different categories of photos (portraits, landscapes, documents, receipts) and assign them as the default for a folder or globally.\n\nTemplates support variables like {language} which is filled in automatically. You can also define category tags that are suggested when editing photos.\n\nChanging the active template and re-running AI analysis will regenerate descriptions for all affected photos.",
+        "examples": "Example: create a template 'Describe this photo as a professional archivist would, noting date cues, attire, and setting' and assign it to your family history folder. Re-run analysis — all descriptions become more archivally detailed."
+      },
+      "settings": {
+        "title": "Settings",
+        "intro": "Configure global application preferences.",
+        "body": "The Settings page lets you change the default language for descriptions and the UI, set the default photo folder used when adding new photos, configure the backend API base URL (useful when running PhotoRAG server on a different machine), and toggle automatic processing when new photos are detected.\n\nLanguage changes take effect immediately in the UI. If you change to a non-English language and descriptions have already been generated, click 'Re-translate all' to translate existing descriptions.",
+        "examples": "Example: change Default Language to Russian, click Save, then click 'Re-translate all'. All existing English descriptions are queued for translation. Future photos are automatically described and translated into Russian."
+      }
+    }
   }
 }

@@ -422,5 +422,95 @@
       "errorUpdate": "Error al actualizar la categoría",
       "errorDelete": "Error al eliminar la categoría"
     }
+  },
+  "help": {
+    "title": "Ayuda",
+    "examplesHeading": "Ejemplos",
+    "topics": {
+      "getting-started": {
+        "title": "Primeros pasos",
+        "intro": "Bienvenido a PhotoRAG — un sistema de gestión de fotos impulsado por IA.",
+        "body": "PhotoRAG te ayuda a organizar, describir y buscar toda tu biblioteca de fotos usando modelos de IA locales y remotos.\n\nEn el primer inicio, el Asistente de configuración te guía para instalar las dependencias de Python, inicializar la base de datos y elegir qué modelos de IA usar (locales o remotos mediante clave API).\n\nUna vez completada la configuración, la aplicación principal se abre automáticamente. Puedes añadir carpetas de fotos desde la página «Carpetas» e iniciar el procesamiento desde la página «Procesamiento».",
+        "examples": "Ejemplo: instala PhotoRAG, ejecuta el Asistente de configuración, añade tu carpeta 'Vacaciones 2024' en Carpetas, luego ve a Procesamiento y haz clic en 'Ejecutar' — PhotoRAG generará automáticamente descripciones en inglés, extraerá el texto visible en las fotos e indexará todo para la búsqueda."
+      },
+      "gallery": {
+        "title": "Galería",
+        "intro": "La Galería es la vista principal de tu biblioteca de fotos.",
+        "body": "Todas las fotos procesadas aparecen como tarjetas en la cuadrícula de la Galería. Cada tarjeta muestra una miniatura, la descripción generada automáticamente y las etiquetas asignadas.\n\nPuedes ordenar las fotos por fecha, filtrar por carpeta o estado de procesamiento, y hacer clic en cualquier tarjeta para abrir la página «Detalles de la foto».\n\nLas fotos que aún no han sido procesadas muestran un indicador pendiente.",
+        "examples": "Ejemplo: abre la Galería y escribe una etiqueta de filtro como 'atardecer' en la barra de búsqueda — solo aparecerán las fotos etiquetadas con 'atardecer'. Haz clic en una tarjeta para ver la descripción completa y los documentos vinculados."
+      },
+      "search": {
+        "title": "Búsqueda",
+        "intro": "Encuentra fotos usando consultas en lenguaje natural o palabras clave.",
+        "body": "PhotoRAG usa embeddings vectoriales para habilitar la búsqueda semántica: describes lo que buscas en lenguaje natural y el sistema devuelve las fotos visualmente y conceptualmente más similares, aunque tus palabras exactas no aparezcan en ninguna descripción.\n\nLa búsqueda por palabras clave encuentra coincidencias exactas en descripciones, etiquetas y texto extraído. Puedes combinar ambos modos.\n\nLos resultados se clasifican por puntuación de similitud. Haz clic en cualquier resultado para abrir la página «Detalles de la foto».",
+        "examples": "Ejemplo: escribe 'perro corriendo en la playa al atardecer' — PhotoRAG devuelve fotos que coinciden con esa escena aunque ninguna descripción contenga exactamente esas palabras. O escribe 'cumpleaños' para encontrar todas las fotos con texto relacionado."
+      },
+      "photo-detail": {
+        "title": "Detalles de la foto",
+        "intro": "Ve la información completa de una sola foto.",
+        "body": "La página «Detalles de la foto» muestra la imagen original junto con la descripción generada por IA, las etiquetas asignadas, categorías y cualquier documento (texto extraído) vinculado a la foto.\n\nPuedes navegar a la foto siguiente o anterior en la vista actual y abrir la página «Editar foto» para modificar metadatos.\n\nSi la traducción está habilitada y tu idioma no es inglés, las descripciones se muestran en el idioma seleccionado.",
+        "examples": "Ejemplo: haz clic en una foto en la Galería, ve su descripción en inglés junto a la traducción al español (si configuraste español en Ajustes), y visualiza cualquier texto extraído de un recibo o documento visible en la foto."
+      },
+      "photo-edit": {
+        "title": "Editar foto",
+        "intro": "Edita manualmente el título, descripción y etiquetas de una foto.",
+        "body": "En la página «Editar foto» puedes reemplazar la descripción generada por IA con tu propio texto, añadir o eliminar etiquetas, y cambiar la categoría.\n\nDespués de guardar, la foto se re-indexa para que aparezca inmediatamente en los resultados de búsqueda actualizados. También puedes activar un nuevo análisis de IA para regenerar la descripción desde cero usando la plantilla de prompt actual.",
+        "examples": "Ejemplo: la IA describió una foto como 'un grupo de personas en interiores' pero sabes que es tu equipo en el lanzamiento de un producto. Edita la descripción, añade etiquetas y guarda."
+      },
+      "documents": {
+        "title": "Documentos",
+        "intro": "Explora los documentos de texto extraídos de tus fotos.",
+        "body": "Cuando las fotos contienen texto visible (recibos, facturas, carteles, pizarras, páginas de libros), PhotoRAG usa OCR para extraer ese texto y lo almacena como un Documento vinculado a la foto.\n\nLa página «Documentos» lista todos los documentos extraídos. Puedes buscar en el contenido de los documentos, ver a qué foto pertenece cada uno, y filtrar por tipo de documento.\n\nLos documentos también se incluyen en los resultados de búsqueda semántica.",
+        "examples": "Ejemplo: fotografía una pizarra de una reunión. PhotoRAG extrae el texto en un Documento. Más tarde, busca 'hoja de ruta Q3' — la foto de la pizarra aparece en los resultados porque su documento extraído contiene esa frase."
+      },
+      "duplicates": {
+        "title": "Duplicados",
+        "intro": "Encuentra y resuelve fotos duplicadas en tu biblioteca.",
+        "body": "PhotoRAG detecta fotos duplicadas usando una combinación de hash perceptual (para copias exactas o casi exactas) y similitud semántica (para tomas visualmente similares pero no idénticas).\n\nLa página «Duplicados» agrupa las fotos en clústeres de duplicados. Para cada clúster puedes elegir qué copia conservar y marcar las demás para eliminar, o conservar todas las copias.\n\nLa eliminación mueve las fotos a la página «Papelera» para revisión antes del borrado permanente.",
+        "examples": "Ejemplo: copiaste por error una carpeta de fotos dos veces. Abre Duplicados — PhotoRAG agrupa los 200 pares. Selecciona 'Conservar la más reciente' para cada grupo y haz clic en 'Eliminar duplicados' para limpiar sin perder fotos únicas."
+      },
+      "garbage": {
+        "title": "Papelera / Fotos malas",
+        "intro": "Revisa y elimina fotos de baja calidad o no deseadas.",
+        "body": "PhotoRAG detecta y marca automáticamente las fotos de baja calidad: tomas borrosas, sobreexpuestas o subexpuestas, capturas accidentales, y fotos que el modelo de IA considera poco informativas.\n\nLas fotos marcadas aparecen en la página «Papelera». Revisas cada una y la restauras a la Galería o la eliminas permanentemente.\n\nLas fotos enviadas a la Papelera desde la página «Duplicados» también aparecen aquí.",
+        "examples": "Ejemplo: tras importar 1000 fotos de vacaciones, 47 son marcadas como borrosas o accidentales. Abre la Papelera, revisa las miniaturas, restaura las 5 que en realidad están bien y elimina permanentemente las 42 restantes con un clic."
+      },
+      "chat": {
+        "title": "Chat (Agente IA)",
+        "intro": "Haz preguntas sobre tu biblioteca de fotos en lenguaje natural.",
+        "body": "La página «Chat» proporciona una interfaz RAG (Generación Aumentada por Recuperación) impulsada por el modelo de lenguaje configurado. Escribes una pregunta, PhotoRAG busca contexto relevante en tu biblioteca de fotos y la IA responde usando ese contexto.\n\nEl modelo puede describir grupos de fotos, comparar escenas, responder preguntas sobre contenido visible y resumir eventos por rangos de fechas.\n\nEl historial de conversación se mantiene dentro de una sesión para preguntas de seguimiento.",
+        "examples": "Ejemplo: pregunta '¿Cómo era nuestro equipo en 2023?' — la IA recupera fotos del equipo de 2023, resume quiénes aparecen y describe los entornos. Luego pregunta '¿Cuáles de esas fueron tomadas al aire libre?' para una respuesta más refinada."
+      },
+      "processing": {
+        "title": "Procesamiento",
+        "intro": "Gestiona el pipeline de IA que analiza tus fotos.",
+        "body": "La página «Procesamiento» muestra el estado actual de la cola de análisis de fotos. Cada foto pasa por varias etapas del pipeline: generación de descripción, traducción (si se establece un idioma distinto al inglés), extracción de texto OCR, detección de duplicados y puntuación de calidad.\n\nPuedes iniciar, pausar y reiniciar el procesamiento, y ver qué trabajos están en ejecución, en cola o han fallado.\n\nLos trabajos fallidos muestran detalles del error y pueden reintentarse individualmente o en bloque.",
+        "examples": "Ejemplo: añades una nueva carpeta con 500 fotos. Ve a Procesamiento y haz clic en 'Ejecutar'. Observa cómo se vacía la cola mientras las fotos son descritas e indexadas. Si 3 trabajos fallan por un error de red, haz clic en 'Reintentar fallidos' para volver a ejecutar solo esos 3."
+      },
+      "folders": {
+        "title": "Carpetas",
+        "intro": "Configura qué carpetas de fotos monitoriza PhotoRAG.",
+        "body": "En la página «Carpetas» añades los directorios que contienen tus fotos. PhotoRAG escanea cada carpeta de forma recursiva en busca de archivos de imagen (JPEG, PNG, HEIC, WebP y más).\n\nPuedes añadir varias carpetas, eliminarlas y activar un nuevo escaneo en cualquier momento. Cuando añades una nueva carpeta, las fotos recién encontradas se ponen en cola para procesamiento automáticamente.\n\nCambiar la ruta de una carpeta actualiza todas las fotos vinculadas en la base de datos.",
+        "examples": "Ejemplo: añade '/Users/yo/Fotos/Vacaciones' y '/Users/yo/Escritorio/Fotos trabajo'. PhotoRAG encuentra 1200 fotos en ambas carpetas y las pone en cola. Más tarde añades una nueva subcarpeta — haz clic en 'Reescanear' y solo se procesan las fotos nuevas."
+      },
+      "models": {
+        "title": "Modelos",
+        "intro": "Configura los modelos de IA usados para descripción, traducción y búsqueda.",
+        "body": "PhotoRAG usa modelos separados para distintas tareas: un modelo de visión para generar descripciones de fotos, un modelo de lenguaje para el chat y la reescritura, un modelo de traducción para soporte multilingüe, y un modelo de embeddings para la búsqueda semántica.\n\nCada modelo puede ejecutarse localmente (descargado en tu máquina) o de forma remota mediante una clave API (OpenAI, Anthropic, etc.).\n\nLa página «Modelos» te permite cambiar entre el modo local y remoto, introducir claves API y comprobar el estado de descarga del modelo.",
+        "examples": "Ejemplo: cambia el modelo de visión de LLaVA local a GPT-4o remoto seleccionando el modo 'Remoto', introduciendo tu clave API de OpenAI y haciendo clic en Guardar. Las nuevas descripciones de fotos serán generadas por GPT-4o sin descargar nada localmente."
+      },
+      "prompts": {
+        "title": "Prompts y plantillas",
+        "intro": "Personaliza las instrucciones dadas a la IA al describir fotos.",
+        "body": "Las plantillas de prompt controlan lo que la IA escribe en las descripciones de fotos. Puedes crear plantillas para diferentes categorías de fotos (retratos, paisajes, documentos, recibos) y asignarlas como predeterminadas para una carpeta o globalmente.\n\nLas plantillas soportan variables como {language} que se rellena automáticamente. También puedes definir etiquetas de categoría que se sugieren al editar fotos.\n\nCambiar la plantilla activa y volver a ejecutar el análisis de IA regenerará las descripciones de todas las fotos afectadas.",
+        "examples": "Ejemplo: crea una plantilla 'Describe esta foto como lo haría un archivista profesional, señalando pistas de fecha, vestimenta y entorno' y asígnala a tu carpeta de historia familiar. Vuelve a ejecutar el análisis — todas las descripciones se vuelven más detalladas."
+      },
+      "settings": {
+        "title": "Ajustes",
+        "intro": "Configura las preferencias globales de la aplicación.",
+        "body": "La página «Ajustes» te permite cambiar el idioma predeterminado para descripciones e interfaz, establecer la carpeta de fotos predeterminada para nuevas importaciones, configurar la URL base de la API del servidor (útil cuando PhotoRAG server se ejecuta en otra máquina) y activar o desactivar el procesamiento automático al detectar nuevas fotos.\n\nLos cambios de idioma tienen efecto inmediato en la interfaz. Si cambias a un idioma distinto al inglés y las descripciones ya se han generado, haz clic en 'Retraducir todo' para traducir las descripciones existentes.",
+        "examples": "Ejemplo: cambia el Idioma predeterminado a Español, haz clic en Guardar, luego en 'Retraducir todo'. Todas las descripciones existentes en inglés se ponen en cola para traducción. Las fotos futuras reciben automáticamente descripciones y traducciones al español."
+      }
+    }
   }
 }
