@@ -12,6 +12,8 @@ export const HELP_TOPICS = [
     { id: 'folders' },
     { id: 'models' },
     { id: 'prompts' },
+    { id: 'template-tags' },
+    { id: 'template-categories' },
     { id: 'settings' },
 ]
 

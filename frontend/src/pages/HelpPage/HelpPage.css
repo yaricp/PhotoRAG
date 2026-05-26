@@ -96,3 +96,9 @@
     margin: 1.5rem 0 0.6rem;
     color: var(--color-accent);
 }
+
+.help-article__link {
+    color: var(--color-accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
