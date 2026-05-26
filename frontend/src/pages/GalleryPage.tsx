@@ -13,6 +13,13 @@ type SortField = 'created_at' | 'captured_at' | 'file_created_at' | 'image_width
 type SortOrder = 'asc' | 'desc'
 
 const DEFAULT_LIMIT = 20
+const GALLERY_LIMIT_KEY = 'gallery-limit'
+const VALID_LIMITS = [5, 10, 20, 50, 100]
+
+function getSavedLimit(): number {
+    const n = parseInt(localStorage.getItem(GALLERY_LIMIT_KEY) ?? '', 10)
+    return VALID_LIMITS.includes(n) ? n : DEFAULT_LIMIT
+}
 
 export function GalleryPage() {
     const { t } = useTranslation()
@@ -20,7 +27,7 @@ export function GalleryPage() {
     const [loading, setLoading] = useState(true)
 
     const [page, setPage] = useState(0)
-    const [limit, setLimit] = useState(DEFAULT_LIMIT)
+    const [limit, setLimit] = useState(getSavedLimit)
 
     const [selectedCategories, setSelectedCategories] = useState<number[]>([])
     const [selectedTags, setSelectedTags] = useState<number[]>([])
@@ -135,7 +142,7 @@ export function GalleryPage() {
                 onDateSelect={handleDateSelect}
                 onSortByChange={field => { setSortBy(field as SortField); setPage(0) }}
                 onSortOrderToggle={() => { setSortOrder(p => p === 'asc' ? 'desc' : 'asc'); setPage(0) }}
-                onLimitChange={val => { setLimit(val); setPage(0) }}
+                onLimitChange={val => { localStorage.setItem(GALLERY_LIMIT_KEY, String(val)); setLimit(val); setPage(0) }}
                 onReset={resetFilters}
             />
 

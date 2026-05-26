@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
@@ -17,6 +17,8 @@ const renderGallery = () =>
     )
 
 describe('GalleryPage', () => {
+    beforeEach(() => localStorage.clear())
+    afterEach(() => localStorage.clear())
     it('shows loading state initially', () => {
         renderGallery()
         expect(screen.getByTestId('spinner')).toBeInTheDocument()
@@ -51,6 +53,39 @@ describe('GalleryPage', () => {
         await waitFor(() =>
             expect(screen.getByText(/error/i)).toBeInTheDocument()
         )
+    })
+
+    it('uses default limit=20 when no localStorage value is set', async () => {
+        let capturedUrl = ''
+        server.use(
+            http.get('http://localhost:8000/api/photos/', ({ request }) => {
+                capturedUrl = request.url
+                return HttpResponse.json(makePaginatedPhotos([makePhoto()]))
+            })
+        )
+        renderGallery()
+        await waitFor(() => expect(capturedUrl).toContain('limit=20'))
+    })
+
+    it('restores saved limit from localStorage on mount', async () => {
+        localStorage.setItem('gallery-limit', '50')
+        let capturedUrl = ''
+        server.use(
+            http.get('http://localhost:8000/api/photos/', ({ request }) => {
+                capturedUrl = request.url
+                return HttpResponse.json(makePaginatedPhotos([makePhoto()]))
+            })
+        )
+        renderGallery()
+        await waitFor(() => expect(capturedUrl).toContain('limit=50'))
+    })
+
+    it('saves selected limit to localStorage', async () => {
+        renderGallery()
+        await waitFor(() => screen.getAllByRole('article'))
+        const selects = screen.getAllByRole('combobox')
+        await userEvent.selectOptions(selects[selects.length - 1], '50')
+        expect(localStorage.getItem('gallery-limit')).toBe('50')
     })
 
     it('refetches with ascending order when sort toggle clicked', async () => {
