@@ -15,6 +15,7 @@ export const HELP_TOPICS = [
     { id: 'template-tags' },
     { id: 'template-categories' },
     { id: 'settings' },
+    { id: 'agent-tools' },
 ]
 
 export const VALID_TOPIC_IDS = new Set(HELP_TOPICS.map(t => t.id))

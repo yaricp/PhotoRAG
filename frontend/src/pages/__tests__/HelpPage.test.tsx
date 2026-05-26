@@ -15,11 +15,11 @@ const renderAt = (path: string) =>
     )
 
 describe('HelpPage', () => {
-    it('renders help sidebar with all 16 topic links', () => {
+    it('renders help sidebar with all 17 topic links', () => {
         renderAt('/help/getting-started')
         const sidebar = screen.getByTestId('help-sidebar')
         const links = within(sidebar).getAllByRole('link')
-        expect(links).toHaveLength(16)
+        expect(links).toHaveLength(17)
     })
 
     it('renders article for the current topic', () => {
