@@ -51,8 +51,13 @@
     font-weight: 500;
 }
 
-.help-article {
+.help-article-scroll {
     overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.help-article {
     padding: 2rem 2.5rem;
     max-width: 720px;
     line-height: 1.7;
