@@ -1,5 +1,5 @@
 import React from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { GalleryPage } from './GalleryPage'
 import { SearchPage } from './SearchPage'
 import { DocumentsPage } from './DocumentsPage'
@@ -15,6 +15,7 @@ import { TemplateTagsPage } from './TemplateTagsPage'
 import { TemplateCategoriesPage } from './TemplateCategoriesPage'
 import { PhotoEditPage } from './PhotoEditPage'
 import { PromptsPage } from './PromptsPage'
+import { HelpPage } from './HelpPage'
 
 export function AppRoutes() {
     return (
@@ -34,6 +35,8 @@ export function AppRoutes() {
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/template-tags" element={<TemplateTagsPage />} />
             <Route path="/template-categories" element={<TemplateCategoriesPage />} />
+            <Route path="/help" element={<Navigate to="/help/getting-started" replace />} />
+            <Route path="/help/:topic" element={<HelpPage />} />
         </Routes>
     )
 }
