@@ -10,7 +10,8 @@
     "folders": "Carpetas",
     "models": "Modelos",
     "prompts": "Prompts",
-    "settings": "Configuración"
+    "settings": "Configuración",
+    "help": "Ayuda"
   },
   "gallery": {
     "prev": "Anterior",

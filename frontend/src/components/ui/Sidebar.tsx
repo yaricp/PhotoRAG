@@ -23,33 +23,41 @@ const links = [
     { to: '/settings', key: 'settings', icon: '⚙️' },
 ]
 
+const bottomLinks = [
+    { to: '/help', key: 'help', icon: '❓' },
+]
+
 export function Sidebar({ state = 'full' }: Props) {
     const { t } = useTranslation()
 
     if (state === 'hidden') return null
 
+    const renderLink = ({ to, key, icon, end }: { to: string; key: string; icon: string; end?: boolean }) => (
+        <li key={to}>
+            <NavLink
+                to={to}
+                end={end}
+                className={({ isActive }) =>
+                    `sidebar__link${isActive ? ' sidebar__link--active' : ''}`
+                }
+            >
+                <span className="sidebar__icon">{icon}</span>
+                {state === 'full' && (
+                    <span className="sidebar__label">{t(`sidebar.${key}`)}</span>
+                )}
+            </NavLink>
+        </li>
+    )
+
     return (
         <nav className={`sidebar sidebar--${state}`} data-testid="sidebar">
-
             <div className="sidebar__content">
                 <ul className="sidebar__nav">
-                    {links.map(({ to, key, icon, end }) => (
-                        <li key={to}>
-                            <NavLink
-                                to={to}
-                                end={end}
-                                className={({ isActive }) =>
-                                    `sidebar__link${isActive ? ' sidebar__link--active' : ''}`
-                                }
-                            >
-                                <span className="sidebar__icon">{icon}</span>
-
-                                {state === 'full' && (
-                                    <span className="sidebar__label">{t(`sidebar.${key}`)}</span>
-                                )}
-                            </NavLink>
-                        </li>
-                    ))}
+                    {links.map(renderLink)}
+                </ul>
+                <div className="sidebar__separator" />
+                <ul className="sidebar__nav">
+                    {bottomLinks.map(renderLink)}
                 </ul>
             </div>
         </nav>

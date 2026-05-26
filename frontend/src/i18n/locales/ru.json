@@ -10,7 +10,8 @@
     "folders": "Папки",
     "models": "Модели",
     "prompts": "Промпты",
-    "settings": "Настройки"
+    "settings": "Настройки",
+    "help": "Справка"
   },
   "gallery": {
     "prev": "Назад",

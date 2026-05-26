@@ -62,8 +62,8 @@ describe('Sidebar', () => {
     it('Help link appears after Settings in the DOM', () => {
         renderSidebar()
         const links = screen.getAllByRole('link')
-        const settingsIdx = links.findIndex(l => l.textContent === 'Settings')
-        const helpIdx = links.findIndex(l => l.textContent === 'Help')
+        const settingsIdx = links.findIndex(l => l.textContent?.includes('Settings'))
+        const helpIdx = links.findIndex(l => l.textContent?.includes('Help'))
         expect(helpIdx).toBeGreaterThan(settingsIdx)
     })
 
