@@ -70,6 +70,8 @@
     max-width: 700px;
     line-height: 1.75;
     color: var(--color-text);
+    -webkit-user-select: text;
+    user-select: text;
 }
 
 .help-article__title {
