@@ -19,7 +19,7 @@ describe('HelpPage', () => {
         renderAt('/help/getting-started')
         const sidebar = screen.getByTestId('help-sidebar')
         const links = within(sidebar).getAllByRole('link')
-        expect(links).toHaveLength(17)
+        expect(links).toHaveLength(18)
     })
 
     it('renders article for the current topic', () => {

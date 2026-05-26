@@ -16,6 +16,7 @@ export const HELP_TOPICS = [
     { id: 'template-categories' },
     { id: 'settings' },
     { id: 'agent-tools' },
+    { id: 'uninstall' },
 ]
 
 export const VALID_TOPIC_IDS = new Set(HELP_TOPICS.map(t => t.id))
