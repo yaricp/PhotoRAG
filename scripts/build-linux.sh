@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
 # build-linux.sh — Build the PhotoRAG Linux x86_64 AppImage.
 #
+# Works on:
+#   • Linux  — native build (requires libfuse2 to run the resulting AppImage)
+#   • macOS  — cross-compiles via electron-builder (no extra deps needed)
+#
 # Run from the project root:
 #   bash scripts/build-linux.sh
 #
 # Requirements:
 #   • Node.js 20+  (npm in PATH)
-#   • libfuse2     (Ubuntu 22.04+: sudo apt install libfuse2)
+#   • libfuse2     (Linux only, to RUN the AppImage: sudo apt install libfuse2)
 #
 # Output: frontend/dist-electron/PhotoRAG-<version>-x86_64.AppImage
 

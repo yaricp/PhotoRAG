@@ -48,8 +48,13 @@ if [[ ! -f "$PY_BIN" ]]; then
     exit 1
 fi
 
-"$PY_BIN" --version \
-    || { echo "[download-python-linux] ERROR: python3 --version failed"; exit 1; }
+# Execution check only works on Linux — the binary is ELF and won't run on macOS/Windows.
+if [[ "$(uname -s)" == "Linux" ]]; then
+    "$PY_BIN" --version \
+        || { echo "[download-python-linux] ERROR: python3 --version failed"; exit 1; }
+else
+    echo "[download-python-linux] Cross-compiling on $(uname -s) — skipping execution check (ELF binary)."
+fi
 
 # ── Write version stamp ───────────────────────────────────────────────────────
 echo "$TARGET_VERSION" > "$VERSION_FILE"
