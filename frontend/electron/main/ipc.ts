@@ -51,12 +51,7 @@ export function registerIpcHandlers(port: number): void {
         // Step 2: pip install requirements (5→95%)
         const pip = venvBin(venvPath, 'pip')
         const requirements = join(backend, 'requirements.txt')
-        const installArgs = ['install', '-r', requirements, '--progress-bar', 'off']
-        // On Windows, PyPI ships CUDA-enabled torch by default (~2.5 GB).
-        // Force CPU-only builds from the PyTorch index to keep the download small.
-        if (process.platform === 'win32') {
-            installArgs.push('--extra-index-url', 'https://download.pytorch.org/whl/cpu')
-        }
+        const installArgs = buildInstallArgs(process.platform, requirements)
         let lineCount = 0
         await spawnTracked(pip, installArgs, {}, (line) => {
             lineCount++
@@ -322,6 +317,18 @@ print('OK')
 
 // Tracks active downloads by modelId so parallel downloads can be cancelled.
 const activeDownloads = new Map<string, Promise<void> & { cancel?: () => void }>()
+
+// Builds pip install args. Exported for unit testing.
+// PyPI ships CUDA-enabled torch by default on Windows and Linux (~2.5 GB).
+// Force CPU-only builds from the PyTorch index to keep the download small.
+// macOS uses Metal via the default PyPI wheel so no override is needed.
+export function buildInstallArgs(platform: NodeJS.Platform, requirements: string): string[] {
+    const args = ['install', '-r', requirements, '--progress-bar', 'off']
+    if (platform === 'win32' || platform === 'linux') {
+        args.push('--extra-index-url', 'https://download.pytorch.org/whl/cpu')
+    }
+    return args
+}
 
 // Runs a process and resolves with captured stdout, rejects on non-zero exit.
 function spawnCaptured(
