@@ -108,7 +108,7 @@
             "oneClick": false,
             "allowToChangeInstallationDirectory": true,
             "perMachine": false,
-            "requestExecutionLevel": "user",
+            "allowElevation": false,
             "createDesktopShortcut": true,
             "createStartMenuShortcut": true,
             "shortcutName": "PhotoRAG",
