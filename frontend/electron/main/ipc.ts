@@ -340,6 +340,7 @@ function spawnCaptured(
         const child = spawn(cmd, args, {
             cwd: opts.cwd,
             env: opts.env ?? process.env,
+            windowsHide: true,
         })
         let stdout = ''
         let stderr = ''
@@ -370,6 +371,7 @@ function spawnTracked(
     const child = spawn(cmd, args, {
         cwd: opts.cwd,
         env: opts.env ?? process.env,
+        windowsHide: true,
     })
 
     let buf = ''

@@ -17,9 +17,13 @@ export function locatePython(): string {
 }
 
 // Returns the venv Python created during setup (has all pip packages installed).
-export function locateVenvPython(): string {
+// forServer=true returns pythonw.exe on Windows — a windowless variant that
+// never allocates a console, suitable for the background FastAPI process.
+// forServer=false returns python.exe, which allows stdout/stderr to be piped
+// during setup tasks (venv creation, pip install, init_db, model downloads).
+export function locateVenvPython(forServer = false): string {
     const rel = process.platform === 'win32'
-        ? path.join('Scripts', 'python.exe')
+        ? path.join('Scripts', forServer ? 'pythonw.exe' : 'python.exe')
         : path.join('bin', 'python3')
     return path.join(app.getPath('userData'), 'venv', rel)
 }
@@ -66,13 +70,16 @@ export async function waitForBackend(port: number, maxRetries = 60): Promise<voi
 export async function startBackend(): Promise<number> {
     const port = await findFreePort()
     const appDataDir = getAppDataDir()
-    // Packaged: use venv Python (has all pip packages). Dev: use system python3.
-    const python = app.isPackaged ? locateVenvPython() : 'python3'
+    // Packaged: use venv pythonw (windowless on Windows) for the background server.
+    const python = app.isPackaged ? locateVenvPython(true) : 'python3'
     const backendDir = locateBackend()
 
     backendProcess = spawn(python, ['run.py'], {
         cwd: backendDir,
-        detached: true,
+        // detached on macOS/Linux lets the backend survive a renderer crash.
+        // On Windows detached always allocates a new console window; windowsHide
+        // is unreliable when combined with detached, so skip it there.
+        detached: process.platform !== 'win32',
         windowsHide: true,
         env: {
             ...process.env,

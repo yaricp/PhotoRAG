@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, dialog } from 'electron'
 import { existsSync } from 'fs'
 import { join } from 'path'
 import { registerIpcHandlers } from './ipc'
@@ -53,6 +53,10 @@ app.whenReady().then(async () => {
         mainWindow = createMainWindow()
     } catch (err) {
         console.error('[startup] Failed to start backend:', err)
+        dialog.showErrorBox(
+            'PhotoRAG — startup error',
+            `The Python backend failed to start.\n\n${err instanceof Error ? err.message : String(err)}\n\nCheck that the installation completed successfully via the Setup Wizard.`
+        )
         app.quit()
     }
 })
