@@ -217,7 +217,8 @@
       "skipAllOptional": "Omitir todos los opcionales",
       "totalDownload": "Descarga total: {{size}}",
       "continueButton": "Continuar",
-      "noLocalModels": "Todos los modelos están configurados para usar APIs remotas — no se necesitan descargas locales."
+      "noLocalModels": "Todos los modelos están configurados para usar APIs remotas — no se necesitan descargas locales.",
+      "nllbNotice": "⚠️ NLLB-200 (modelo de traducción) está licenciado bajo CC BY-NC 4.0 — solo uso no comercial. Para uso comercial, cambia a una API de traducción remota en el siguiente paso."
     },
     "stepModelConfig": {
       "title": "Configurar modelos de IA",
@@ -496,7 +497,7 @@
       "models": {
         "title": "Modelos",
         "intro": "Configura los modelos de IA usados para descripción, traducción y búsqueda.",
-        "body": "PhotoRAG usa modelos separados: visión para describir fotos, lenguaje para chat y reescritura, traducción para soporte multilingüe y embeddings para búsqueda semántica.\n\nCada modelo puede ejecutarse localmente o de forma remota mediante clave API (OpenAI, Anthropic, Google, etc.).\n\nLa página «Modelos» permite cambiar modos, introducir claves API y comprobar el estado. Configura el idioma de las descripciones en [Ajustes](/help/settings) y verifica el estado en [Procesamiento](/help/processing).\n\n⚠️ Privacidad de datos: con modelo local, todos los datos — imágenes, descripciones, texto extraído y consultas — permanecen en tu máquina y nunca se envían a servidores externos. Con modelo remoto, la imagen o su descripción se envía al proveedor de la API elegido para su procesamiento. Tus fotos podrían ser almacenadas o registradas por ese proveedor según su política de privacidad. Si la privacidad es prioritaria, usa solo modelos locales o revisa la política del proveedor antes de habilitar el modo remoto.",
+        "body": "PhotoRAG usa modelos separados: visión para describir fotos, lenguaje para chat y reescritura, traducción para soporte multilingüe y embeddings para búsqueda semántica.\n\nCada modelo puede ejecutarse localmente o de forma remota mediante clave API (OpenAI, Anthropic, Google, etc.).\n\nLa página «Modelos» permite cambiar modos, introducir claves API y comprobar el estado. Configura el idioma de las descripciones en [Ajustes](/help/settings) y verifica el estado en [Procesamiento](/help/processing).\n\n⚠️ Restricción no comercial: el modelo de traducción local predeterminado (NLLB-200 de Meta AI) está licenciado bajo CC BY-NC 4.0, que solo permite uso no comercial. Para uso comercial, configura una API de traducción remota (OpenAI, Google Translate, Anthropic o un modelo Ollama propio) en lugar del NLLB-200 incluido. Todos los demás modelos de PhotoRAG tienen licencias comerciales.\n\n⚠️ Privacidad de datos: con modelo local, todos los datos — imágenes, descripciones, texto extraído y consultas — permanecen en tu máquina y nunca se envían a servidores externos. Con modelo remoto, la imagen o su descripción se envía al proveedor de la API elegido para su procesamiento. Tus fotos podrían ser almacenadas o registradas por ese proveedor según su política de privacidad. Si la privacidad es prioritaria, usa solo modelos locales o revisa la política del proveedor antes de habilitar el modo remoto.",
         "examples": "Ejemplo: cambia el modelo de visión de LLaVA local a GPT-4o remoto seleccionando el modo 'Remoto', introduciendo tu clave API de OpenAI y haciendo clic en Guardar. Las nuevas descripciones de fotos serán generadas por GPT-4o sin descargar nada localmente."
       },
       "prompts": {
