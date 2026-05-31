@@ -12,8 +12,12 @@
         "dist:mac": "npm run build && electron-builder --mac --universal",
         "predist:win": "bash ../scripts/download-python-win.sh",
         "dist:win": "npm run build && electron-builder --win --x64",
-        "predist:linux": "bash ../scripts/download-python-linux.sh",
+        "predist:linux": "bash ../scripts/download-python-linux.sh x64",
         "dist:linux": "npm run build && electron-builder --linux --x64",
+        "predist:linux:arm64": "bash ../scripts/download-python-linux.sh arm64",
+        "dist:linux:arm64": "npm run build && electron-builder --linux --arm64",
+        "predist:win:arm64": "bash ../scripts/download-python-win-arm64.sh",
+        "dist:win:arm64": "npm run build && electron-builder --win --arm64",
         "test": "node --require ./scripts/crypto-polyfill.cjs ./node_modules/.bin/vitest",
         "test:ui": "node --require ./scripts/crypto-polyfill.cjs ./node_modules/.bin/vitest --ui",
         "test:coverage": "node --require ./scripts/crypto-polyfill.cjs ./node_modules/.bin/vitest run --coverage",
@@ -92,7 +96,8 @@
                 {
                     "target": "nsis",
                     "arch": [
-                        "x64"
+                        "x64",
+                        "arm64"
                     ]
                 }
             ],
@@ -102,6 +107,8 @@
         "nsis": {
             "oneClick": false,
             "allowToChangeInstallationDirectory": true,
+            "perMachine": false,
+            "requestExecutionLevel": "user",
             "createDesktopShortcut": true,
             "createStartMenuShortcut": true,
             "shortcutName": "PhotoRAG",
@@ -123,7 +130,7 @@
                 }
             ],
             "category": "Graphics",
-            "artifactName": "${productName}-${version}-x86_64.${ext}"
+            "artifactName": "${productName}-${version}-${arch}.${ext}"
         },
         "afterSign": "../scripts/notarize.js",
         "files": [
