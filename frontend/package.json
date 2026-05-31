@@ -117,7 +117,7 @@
             "installerHeaderIcon": "resources/icon.ico",
             "deleteAppDataOnUninstall": false,
             "multiLanguageInstaller": true,
-            "installerLanguages": ["English", "Russian", "SpanishInternational"],
+            "installerLanguages": ["en_US", "ru_RU", "es_ES"],
             "include": "build/installer.nsh"
         },
         "linux": {
