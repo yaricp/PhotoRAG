@@ -37,8 +37,8 @@ jobs:
       - run: pip install -r requirements-ci.txt
       - run: python -m pytest tests/ -v
 
-  build-nsis:
-    name: Build Windows NSIS Installer
+  build-nsis-x64:
+    name: Build Windows x64 NSIS Installer
     runs-on: windows-latest
     needs: [test-frontend, test-backend]
     steps:
@@ -50,8 +50,7 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Download Windows Python runtime
-        # Windows Server 2022 tar supports zstd natively — no extra deps needed
+      - name: Download Windows x64 Python runtime
         shell: bash
         run: bash scripts/download-python-win.sh
 
@@ -59,7 +58,7 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      - name: Build NSIS installer
+      - name: Build x64 NSIS installer
         working-directory: frontend
         run: npm run dist:win
         env:
@@ -70,17 +69,62 @@ jobs:
       - name: Verify installer was produced
         shell: bash
         run: |
-          EXE=$(find frontend/dist-electron -name "*.exe" | head -1)
+          EXE=$(find frontend/dist-electron -name "*x64*.exe" | head -1)
           if [ -z "$EXE" ]; then
-            echo "ERROR: No .exe found in frontend/dist-electron/"
+            echo "ERROR: No x64 .exe found in frontend/dist-electron/"
             ls -la frontend/dist-electron/
             exit 1
           fi
-          SIZE=$(du -sh "$EXE" | cut -f1)
-          echo "Installer: $EXE ($SIZE)"
+          echo "Installer: $EXE ($(du -sh "$EXE" | cut -f1))"
 
       - uses: actions/upload-artifact@v4
         with:
           name: PhotoRAG-Windows-x64
-          path: frontend/dist-electron/*.exe
+          path: frontend/dist-electron/*x64*.exe
+          retention-days: 14
+
+  build-nsis-arm64:
+    name: Build Windows ARM64 NSIS Installer
+    runs-on: windows-latest
+    needs: [test-frontend, test-backend]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Download Windows ARM64 Python runtime
+        shell: bash
+        run: bash scripts/download-python-win-arm64.sh
+
+      - name: Install npm dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build ARM64 NSIS installer
+        working-directory: frontend
+        run: npm run dist:win:arm64
+        env:
+          # Uncomment and add secrets when a code-signing certificate is obtained:
+          # WIN_CSC_LINK: ${{ secrets.WIN_CERT_FILE }}
+          # WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CERT_PASSWORD }}
+
+      - name: Verify installer was produced
+        shell: bash
+        run: |
+          EXE=$(find frontend/dist-electron -name "*arm64*.exe" | head -1)
+          if [ -z "$EXE" ]; then
+            echo "ERROR: No arm64 .exe found in frontend/dist-electron/"
+            ls -la frontend/dist-electron/
+            exit 1
+          fi
+          echo "Installer: $EXE ($(du -sh "$EXE" | cut -f1))"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PhotoRAG-Windows-arm64
+          path: frontend/dist-electron/*arm64*.exe
           retention-days: 14
