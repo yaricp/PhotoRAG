@@ -87,6 +87,12 @@ export function StepModelPicker({ selected, onChange, onContinue, localOnlyTypes
                 </label>
             )}
 
+            {visibleModels.some(m => m.id === 'translation') && (
+                <p className="wizard-notice wizard-notice--warning">
+                    {t('wizard.stepModelPicker.nllbNotice')}
+                </p>
+            )}
+
             <p className="wizard-total-size">
                 {t('wizard.stepModelPicker.totalDownload', { size: totalSizeLabel(selected) })}
             </p>

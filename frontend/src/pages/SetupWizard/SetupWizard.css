@@ -221,6 +221,20 @@
     margin-top: 0.25rem;
 }
 
+.wizard-notice {
+    font-size: 0.85rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    margin: 0.5rem 0 0;
+    line-height: 1.45;
+}
+
+.wizard-notice--warning {
+    background: rgba(255, 180, 0, 0.12);
+    border: 1px solid rgba(255, 180, 0, 0.35);
+    color: #c9a800;
+}
+
 .wizard-total-size {
     font-size: 0.9rem;
     color: #aaa;
