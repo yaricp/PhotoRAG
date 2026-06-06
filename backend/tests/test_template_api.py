@@ -2,40 +2,58 @@
 TDD API tests for /api/template-tags/ and /api/template-categories/ endpoints.
 Recompute trigger is mocked — we verify it's called, not that it actually runs.
 """
+
 import sys
 from unittest.mock import MagicMock, patch
+
 import sqlalchemy.types
 
 mock_pgvector = MagicMock()
 mock_pgvector.sqlalchemy.Vector = lambda size: sqlalchemy.types.JSON()
-sys.modules.setdefault('pgvector', mock_pgvector)
-sys.modules.setdefault('pgvector.sqlalchemy', mock_pgvector.sqlalchemy)
+sys.modules.setdefault("pgvector", mock_pgvector)
+sys.modules.setdefault("pgvector.sqlalchemy", mock_pgvector.sqlalchemy)
 
 for _mod in [
-    'sqlite_vec', 'langgraph', 'langgraph.graph',
-    'src.database', 'src.vector_db_services',
-    'src.ai', 'src.ai.registry', 'src.ai.prompts', 'src.ai.translator',
-    'src.queues', 'src.queues.folder_scan_queue', 'src.queues.clip_queue',
-    'src.queues.vision_queue', 'src.queues.embedding_queue',
-    'src.queues.translation_queue', 'src.queues.queue_config',
-    'src.tasks', 'src.tasks.utils', 'src.tasks.folder_scanners',
-    'src.tasks.vision_tasks', 'src.tasks.embedding_tasks',
-    'src.tasks.clip_tasks', 'src.tasks.translation_tasks',
-    'src.tasks.recompute_tasks',
-    'src.model_services', 'src.watcher_service', 'src.task_notifier',
-    'src.deps',
+    "sqlite_vec",
+    "langgraph",
+    "langgraph.graph",
+    "src.database",
+    "src.vector_db_services",
+    "src.ai",
+    "src.ai.registry",
+    "src.ai.prompts",
+    "src.ai.translator",
+    "src.queues",
+    "src.queues.folder_scan_queue",
+    "src.queues.clip_queue",
+    "src.queues.vision_queue",
+    "src.queues.embedding_queue",
+    "src.queues.translation_queue",
+    "src.queues.queue_config",
+    "src.tasks",
+    "src.tasks.utils",
+    "src.tasks.folder_scanners",
+    "src.tasks.vision_tasks",
+    "src.tasks.embedding_tasks",
+    "src.tasks.clip_tasks",
+    "src.tasks.translation_tasks",
+    "src.tasks.recompute_tasks",
+    "src.model_services",
+    "src.watcher_service",
+    "src.task_notifier",
+    "src.deps",
 ]:
     sys.modules.setdefault(_mod, MagicMock())
 
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
-from fastapi.testclient import TestClient
 
-from src.models import Base
-from src.main import app
 from src.deps import get_db
+from src.main import app
+from src.models import Base
 
 # StaticPool ensures all sessions share the same in-memory SQLite connection
 engine = create_engine(
@@ -50,6 +68,7 @@ TestSession = sessionmaker(bind=engine)
 @pytest.fixture(autouse=True)
 def override_db():
     """Replace get_db dependency with test SQLite session."""
+
     def _get_test_db():
         db = TestSession()
         try:
@@ -76,6 +95,7 @@ RECOMPUTE_CATS = "src.tasks.recompute_tasks.trigger_recompute_categories"
 
 
 # ── Template Tags ─────────────────────────────────────────────────────────────
+
 
 class TestListTemplateTags:
     def test_empty_list(self, client):
@@ -162,6 +182,7 @@ class TestDeleteTemplateTag:
 
 
 # ── Template Categories ───────────────────────────────────────────────────────
+
 
 class TestListTemplateCategories:
     def test_empty_list(self, client):

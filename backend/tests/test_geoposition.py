@@ -7,22 +7,25 @@ Behaviors under test:
 - different address at same coordinates creates a separate row
 - photo.geoposition_id is set after update
 """
+
 import sys
 from unittest.mock import MagicMock
+
 import sqlalchemy.types
 
 mock_pgvector = MagicMock()
 mock_pgvector.sqlalchemy.Vector = lambda size: sqlalchemy.types.JSON()
-sys.modules['pgvector'] = mock_pgvector
-sys.modules['pgvector.sqlalchemy'] = mock_pgvector.sqlalchemy
+sys.modules["pgvector"] = mock_pgvector
+sys.modules["pgvector.sqlalchemy"] = mock_pgvector.sqlalchemy
 
 import os
+
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from src.models import Base, Geoposition
 from src.db_service import create_photo_record, update_photo_geoposition
+from src.models import Base, Geoposition
 
 TEST_DB = "test_geoposition.sqlite3"
 _engine = create_engine(f"sqlite:///{TEST_DB}")
@@ -50,6 +53,7 @@ def db():
 
 # ── Rounding ────────────────────────────────────────────────────────────────
 
+
 def test_latitude_rounded_to_3_decimal_places(db):
     photo = create_photo_record(db, "hash_round_lat", "round_lat.jpg")
     geo = update_photo_geoposition(db, photo.id, 48.123456, 11.0, "City A")
@@ -71,6 +75,7 @@ def test_negative_coordinates_rounded(db):
 
 # ── Photo linking ────────────────────────────────────────────────────────────
 
+
 def test_photo_geoposition_id_is_set_after_update(db):
     photo = create_photo_record(db, "hash_link", "link.jpg")
     geo = update_photo_geoposition(db, photo.id, 48.0, 11.0, "Somewhere")
@@ -87,6 +92,7 @@ def test_photo_geoposition_relationship_is_accessible(db):
 
 
 # ── Deduplication ────────────────────────────────────────────────────────────
+
 
 def test_two_photos_at_same_location_share_one_geoposition_row(db):
     photo1 = create_photo_record(db, "hash_dedup1", "dedup1.jpg")

@@ -1,9 +1,9 @@
 # src/config.py
 
 import os
-from pathlib import Path
-from pydantic_settings import BaseSettings
+
 from dotenv import load_dotenv
+from pydantic_settings import BaseSettings
 
 from src.data_dir import resolve_app_data_dir
 
@@ -25,9 +25,9 @@ class TaskQueue_Settings(BaseSettings):
     # Must be large enough to cover (MAX_CONCURRENT_PIPELINES × slowest model time).
     # Vision on CPU can take 30s/photo; with 8 concurrent photos worst-case is 240s.
     TASK_RESULT_TIMEOUT: float = 600.0
-    TASK_RESULT_POLL_INTERVAL: float = 0.5     # seconds between polls
+    TASK_RESULT_POLL_INTERVAL: float = 0.5  # seconds between polls
     TASK_RESULT_DB_PATH: str = str(_APP_DATA_DIR / "task_results.db")
-    MAX_CONCURRENT_PIPELINES: int = 20          # max photos processed simultaneously
+    MAX_CONCURRENT_PIPELINES: int = 20  # max photos processed simultaneously
     # Log a "still waiting" heartbeat this often while polling (seconds)
     TASK_RESULT_LOG_INTERVAL: float = 30.0
 
@@ -59,7 +59,7 @@ def _data(name: str) -> str:
 
 class CLIP_Settings(BaseSettings):
     CLIP_MODEL: str = "ViT-B-32"
-    CLIP_MODE: str = "local"        # local | remote
+    CLIP_MODE: str = "local"  # local | remote
     CLIP_API_URL: str = ""
     CLIP_API_KEY: str = ""
     PRETRAINED: str = "laion2b_s34b_b79k"
@@ -89,7 +89,7 @@ class CLIP_Settings(BaseSettings):
 
 class Vision_Settings(BaseSettings):
     # Vision
-    VISION_MODE: str = "local"           # local | remote
+    VISION_MODE: str = "local"  # local | remote
     VISION_DESCRIBER_MODEL: str = "Qwen/Qwen2-VL-2B-Instruct"
     VISION_API_URL: str = ""
     VISION_API_KEY: str = ""
@@ -99,7 +99,7 @@ class Vision_Settings(BaseSettings):
 
 class Embedding_Settings(BaseSettings):
     # Embedding
-    EMBEDDING_MODE: str = "local"        # local | remote
+    EMBEDDING_MODE: str = "local"  # local | remote
     PHOTO_EMBEDDER_MODEL: str = "nomic-ai/nomic-embed-text-v1.5"
     EMBEDDING_API_URL: str = ""
     EMBEDDING_API_KEY: str = ""
@@ -124,7 +124,7 @@ class OCR_Settings(BaseSettings):
 
 class Chat_Settings(BaseSettings):
     # Chat
-    CHAT_MODEL_MODE: str = "remote"           # local | remote
+    CHAT_MODEL_MODE: str = "remote"  # local | remote
     CHAT_MODEL: str = "gpt-4o-mini"
     CHAT_LOCAL_MODEL: str = "Qwen/Qwen2.5-Coder-3B-Instruct"
     CHAT_API_URL: str = ""

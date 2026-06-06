@@ -1,12 +1,10 @@
 import sqlite_vec
-from sqlalchemy import create_engine
-from sqlalchemy import event
-from sqlalchemy.orm import sessionmaker, Session
-from sqlalchemy.pool import NullPool
 from loguru import logger
+from sqlalchemy import create_engine, event
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import NullPool
 
 from src.config import Database_Settings
-
 
 settings = Database_Settings()
 if settings.DATABASE_DIALECT == "sqlite":

@@ -1,20 +1,21 @@
+import asyncio
 import os
-from loguru import logger
 from datetime import datetime
 
+from loguru import logger
+
 from src.db.database import SessionLocal
-from src.models import FolderScanner
 from src.db_service import (
-    update_folder_scanner_progress,
     check_photo_hash_exists,
     create_photo_record,
     delete_folder_scanner,
     get_or_create_folder_scanner,
     record_exact_duplicate,
+    update_folder_scanner_progress,
 )
-import asyncio
-from src.utils import generate_file_hash, check_if_file_is_image
+from src.models import FolderScanner
 from src.queues.folder_scan_queue import folder_scan_queue
+from src.utils import check_if_file_is_image, generate_file_hash
 
 
 @folder_scan_queue.task()
@@ -43,9 +44,7 @@ def start_folder_scanner_task(path: str) -> bool:
             logger.info(f"File hash: {file_hash}")
             # 3. Get File System creation time (Sync Proxy)
             stat = os.stat(file_path)
-            file_created_at = datetime.fromtimestamp(
-                getattr(stat, 'st_birthtime', stat.st_ctime)
-            )
+            file_created_at = datetime.fromtimestamp(getattr(stat, "st_birthtime", stat.st_ctime))
             logger.info(f"File created at: {file_created_at}")
             # 4. Sync DB Check & Registration (Atomic)
             try:
@@ -61,6 +60,7 @@ def start_folder_scanner_task(path: str) -> bool:
                 photo = create_photo_record(db, file_hash, file_path, file_created_at)
                 logger.info(f"Photo {file_path} created in DB with ID: {photo.id}")
                 from src.incoming_pipeline import start_pipeline
+
                 asyncio.run(start_pipeline(photo.id, folder_scanner.id))
                 logger.debug(f"Pipeline started for photo {photo.id}")
             except Exception as e:

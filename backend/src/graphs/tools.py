@@ -1,28 +1,43 @@
-from loguru import logger
-from typing import List, Optional
 from pathlib import Path
+from typing import List, Optional
+
 from langchain_core.tools import tool
+from loguru import logger
 from pydantic import BaseModel, Field
 
-from src.db_service import (
-    get_photos_by_vector, get_all_photos, get_photo_by_id,
-    get_all_categories, get_all_tags, get_all_cameras,
-    get_all_geopositions, get_photos_by_category_id,
-    get_history_actions, perform_undo,
-    get_setting, create_history_action,
-    get_quality_summary, get_garbage_photos_with_issues, get_garbage_photo_paths,
-    get_photos_by_tag_id as _get_photos_by_tag_id,
-    search_photos_by_exif_params,
-    get_or_create_tag, add_photo_tag_with_score,
-    get_or_create_category, add_photo_category_with_score,
-    update_photo_geoposition, get_or_create_photo_hash,
-    record_perceptual_duplicate,
-)
 from src.db.database import SessionLocal
-from src.model_services import call_vision_model, call_clip_model, call_ocr_model
-from src.utils import extract_exif, resize_image, archive_photos_to_zip
+from src.db_service import (
+    add_photo_category_with_score,
+    add_photo_tag_with_score,
+    create_history_action,
+    get_all_cameras,
+    get_all_categories,
+    get_all_geopositions,
+    get_all_photos,
+    get_all_tags,
+    get_garbage_photo_paths,
+    get_garbage_photos_with_issues,
+    get_history_actions,
+    get_or_create_category,
+    get_or_create_photo_hash,
+    get_or_create_tag,
+    get_photo_by_id,
+    get_photos_by_category_id,
+    get_photos_by_vector,
+    get_quality_summary,
+    get_setting,
+    perform_undo,
+    record_perceptual_duplicate,
+    search_photos_by_exif_params,
+    update_photo_geoposition,
+)
+from src.db_service import (
+    get_photos_by_tag_id as _get_photos_by_tag_id,
+)
+from src.model_services import call_clip_model, call_ocr_model, call_vision_model
+from src.models import PhotoCategory, PhotoTag
 from src.schemas import Photo
-from src.models import PhotoTag, PhotoCategory
+from src.utils import archive_photos_to_zip, extract_exif, resize_image
 
 
 class SearchMetadataArgs(BaseModel):
@@ -111,7 +126,7 @@ def search_photos_metadata(
     geoposition_id: Optional[int] = None,
     camera_id: Optional[int] = None,
     is_doc: Optional[bool] = None,
-    limit: int = 10
+    limit: int = 10,
 ) -> str:
     """
     Search for photos using structured metadata filters (category, tag, camera, location).
@@ -142,7 +157,7 @@ def search_photos_metadata(
             geoposition_id=geoposition_id,
             camera_id=camera_id,
             is_doc=is_doc,
-            limit=limit
+            limit=limit,
         )
         if not photos:
             return "No photos found matching these criteria."
@@ -399,6 +414,7 @@ def create_folder(folder_name: str, parent_path: str = "") -> str:
     - "Сделай альбом 'Семья' внутри папки 2024"
     """
     import os
+
     logger.info(f"[tool] create_folder: {folder_name!r} in {parent_path!r}")
     if os.sep in folder_name or "/" in folder_name:
         return "Error: folder_name must not contain path separators."
@@ -451,6 +467,7 @@ def move_photos(photo_ids: List[int], destination_folder: str) -> str:
     - "Перенеси эти фотографии в альбом Отпуск"
     """
     import shutil
+
     logger.info(f"[tool] move_photos: {photo_ids} → {destination_folder!r}")
     db = SessionLocal()
     try:
@@ -582,6 +599,7 @@ def get_action_history() -> str:
     - "Что последнее было изменено?"
     """
     import json
+
     logger.info("[tool] get_action_history")
     db = SessionLocal()
     try:
@@ -717,6 +735,7 @@ async def recognize_text_in_photos(photo_ids: List[int]) -> str:
 # Group A — Garbage / Quality
 # =============================================================================
 
+
 @tool
 def get_garbage_photos(issue_type: str = "", limit: int = 20) -> str:
     """
@@ -771,6 +790,7 @@ def get_garbage_total_size(issue_type: str = "") -> str:
     - "Какой объём занимают размытые снимки?"
     """
     import os
+
     logger.info(f"[tool] get_garbage_total_size: issue_type={issue_type!r}")
     db = SessionLocal()
     try:
@@ -818,11 +838,17 @@ def estimate_photo_quality_quick(photo_id: int) -> str:
     - "Проверь качество фото номер 3"
     - "Стоит ли хранить фото 7?"
     """
-    from src.quality_checks import (
-        check_resolution, check_exif, check_brightness,
-        check_edge_density, check_blur, check_entropy, check_screenshot,
-    )
     from src.metadata import get_exif_data as _get_exif
+    from src.quality_checks import (
+        check_blur,
+        check_brightness,
+        check_edge_density,
+        check_entropy,
+        check_exif,
+        check_resolution,
+        check_screenshot,
+    )
+
     logger.info(f"[tool] estimate_photo_quality_quick: {photo_id}")
     db = SessionLocal()
     try:
@@ -885,6 +911,7 @@ async def estimate_photo_quality_deep(photo_id: int) -> str:
     - "AI-проверка: хорошее ли фото 5?"
     """
     import numpy as np
+
     logger.info(f"[tool] estimate_photo_quality_deep: {photo_id}")
     db = SessionLocal()
     try:
@@ -943,6 +970,7 @@ def get_photo_visual_metrics(photo_id: int) -> str:
     - "Покажи технические параметры снимка 9"
     """
     from src.quality_checks import get_visual_metrics
+
     logger.info(f"[tool] get_photo_visual_metrics: {photo_id}")
     db = SessionLocal()
     try:
@@ -961,6 +989,7 @@ def get_photo_visual_metrics(photo_id: int) -> str:
 # =============================================================================
 # Group B — Duplicate Comparison
 # =============================================================================
+
 
 @tool
 def compare_photos_quick(photo_id_a: int, photo_id_b: int) -> str:
@@ -986,6 +1015,7 @@ def compare_photos_quick(photo_id_a: int, photo_id_b: int) -> str:
     """
     import imagehash
     from PIL import Image
+
     logger.info(f"[tool] compare_photos_quick: {photo_id_a} vs {photo_id_b}")
     db = SessionLocal()
     try:
@@ -997,8 +1027,8 @@ def compare_photos_quick(photo_id_a: int, photo_id_b: int) -> str:
             return f"Photo {photo_id_b} not found."
 
         def _ensure_hashes(photo):
-            from src.db_service import _hamming_distance
             from src.models import PhotoHash as PH
+
             ph = db.query(PH).filter_by(photo_id=photo.id).first()
             if ph and ph.dhash:
                 return ph
@@ -1012,6 +1042,7 @@ def compare_photos_quick(photo_id_a: int, photo_id_b: int) -> str:
         hb = _ensure_hashes(photo_b)
 
         from src.db_service import _hamming_distance
+
         dist_d = _hamming_distance(ha.dhash, hb.dhash)
         dist_a = _hamming_distance(ha.ahash, hb.ahash)
         dist_p = _hamming_distance(ha.phash, hb.phash)
@@ -1047,6 +1078,7 @@ async def compare_photos_deep(photo_id_a: int, photo_id_b: int) -> str:
     - "Проверь с помощью AI: одинаковые ли фото 2 и 9?"
     """
     import numpy as np
+
     logger.info(f"[tool] compare_photos_deep: {photo_id_a} vs {photo_id_b}")
     db = SessionLocal()
     try:
@@ -1084,6 +1116,7 @@ async def compare_photos_deep(photo_id_a: int, photo_id_b: int) -> str:
 # =============================================================================
 # Group C — Annotation (all write — all require user confirmation)
 # =============================================================================
+
 
 @tool
 def add_tag_to_photos(photo_ids: List[int], tag_name: str) -> str:
@@ -1216,6 +1249,7 @@ def add_geoposition_to_photos(
     - "Поставь геолокацию для фото 8: Москва, Красная площадь"
     """
     from src.geo import GeoEnricher
+
     logger.info(f"[tool] add_geoposition_to_photos: ids={photo_ids} lat={latitude} lon={longitude} addr={address!r}")
     if latitude is None and longitude is None and not address:
         return "Error: provide either latitude+longitude or an address."
@@ -1281,6 +1315,7 @@ def geocode_photo_from_exif(photo_id: int) -> str:
     """
     from src.geo import GeoEnricher
     from src.metadata import get_exif_data as _exif_fn
+
     logger.info(f"[tool] geocode_photo_from_exif: {photo_id}")
     db = SessionLocal()
     try:
@@ -1356,6 +1391,7 @@ def mark_photos_as_duplicates(original_id: int, duplicate_ids: List[int]) -> str
 # Group D — Search & Filter
 # =============================================================================
 
+
 @tool
 def get_photos_by_tag_id(tag_id: int) -> str:
     """
@@ -1423,12 +1459,18 @@ def search_photos_by_exif(
     try:
         photos = search_photos_by_exif_params(
             db,
-            width_min=width_min, width_max=width_max,
-            height_min=height_min, height_max=height_max,
-            focal_length_min=focal_length_min, focal_length_max=focal_length_max,
-            aperture_min=aperture_min, aperture_max=aperture_max,
-            iso_min=iso_min, iso_max=iso_max,
-            camera_make=camera_make, camera_model=camera_model,
+            width_min=width_min,
+            width_max=width_max,
+            height_min=height_min,
+            height_max=height_max,
+            focal_length_min=focal_length_min,
+            focal_length_max=focal_length_max,
+            aperture_min=aperture_min,
+            aperture_max=aperture_max,
+            iso_min=iso_min,
+            iso_max=iso_max,
+            camera_make=camera_make,
+            camera_model=camera_model,
             limit=limit,
         )
         if not photos:
@@ -1497,6 +1539,7 @@ def filter_photos(
 # Re-index and pipeline re-run tools
 # ---------------------------------------------------------------------------
 
+
 @tool
 def reindex_photos(photo_ids: List[int]) -> str:
     """
@@ -1528,13 +1571,17 @@ def reindex_photos(photo_ids: List[int]) -> str:
 
     def _run():
         import asyncio
+
         from src.tasks.embedding_tasks import final_embedding_task
+
         async def _embed_all():
             for pid in photo_ids:
                 await final_embedding_task(pid)
+
         asyncio.run(_embed_all())
 
     import threading
+
     t = threading.Thread(target=_run, daemon=True)
     t.start()
     return f"Re-indexing started for {len(photo_ids)} photo(s). IDs: {photo_ids}."
@@ -1578,10 +1625,13 @@ def rerun_pipeline_for_photos(photo_ids: List[int]) -> str:
 
     def _run():
         import asyncio
+
         from src.incoming_pipeline import run_pipelines_batch
+
         asyncio.run(run_pipelines_batch(photo_ids))
 
     import threading
+
     t = threading.Thread(target=_run, daemon=True)
     t.start()
     return (

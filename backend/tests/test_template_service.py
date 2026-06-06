@@ -2,34 +2,38 @@
 TDD tests for template_tags and template_categories DB service functions.
 All tests use an in-memory SQLite DB — no external dependencies.
 """
+
 import sys
 from unittest.mock import MagicMock
+
 import sqlalchemy.types
 
 mock_pgvector = MagicMock()
 mock_pgvector.sqlalchemy.Vector = lambda size: sqlalchemy.types.JSON()
-sys.modules['pgvector'] = mock_pgvector
-sys.modules['pgvector.sqlalchemy'] = mock_pgvector.sqlalchemy
+sys.modules["pgvector"] = mock_pgvector
+sys.modules["pgvector.sqlalchemy"] = mock_pgvector.sqlalchemy
+
+import os
 
 import pytest
-import os
 import sqlalchemy.orm
 from sqlalchemy import create_engine
-from src.models import Base, TemplateTag, TemplateCategory
+
 from src.db_service import (
-    create_template_tag,
-    get_template_tag_by_id,
-    get_all_template_tags,
-    get_all_template_tags_ordered,
-    update_template_tag,
-    delete_template_tag,
     create_template_category,
-    get_template_category_by_id,
+    create_template_tag,
+    delete_template_category,
+    delete_template_tag,
     get_all_template_categories,
     get_all_template_categories_ordered,
+    get_all_template_tags,
+    get_all_template_tags_ordered,
+    get_template_category_by_id,
+    get_template_tag_by_id,
     update_template_category,
-    delete_template_category,
+    update_template_tag,
 )
+from src.models import Base
 
 TEST_DB = "test_template_service.sqlite3"
 engine = create_engine(f"sqlite:///{TEST_DB}")
@@ -60,6 +64,7 @@ def db():
 
 
 # ── TemplateTag ────────────────────────────────────────────────────────────────
+
 
 class TestCreateTemplateTag:
     def test_creates_with_name_and_prompt(self, db):
@@ -135,6 +140,7 @@ class TestUpdateTemplateTag:
 
     def test_updated_at_changes(self, db):
         import time
+
         tag = create_template_tag(db, name="ts_tag", clip_prompt="ts")
         before = tag.updated_at
         time.sleep(0.01)
@@ -155,6 +161,7 @@ class TestDeleteTemplateTag:
 
 
 # ── TemplateCategory ───────────────────────────────────────────────────────────
+
 
 class TestCreateTemplateCategory:
     def test_creates_with_name_and_prompt(self, db):

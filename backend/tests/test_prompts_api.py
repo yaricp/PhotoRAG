@@ -2,17 +2,19 @@
 API-level tests for /api/prompts/ endpoints.
 Written before implementation (TDD).
 """
+
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from src.main import app
-from src.deps import get_db
-from src.models import Base, Prompt
 from src.db_service import seed_prompts_from_json
-from pathlib import Path
+from src.deps import get_db
+from src.main import app
+from src.models import Base, Prompt
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 engine = create_engine(

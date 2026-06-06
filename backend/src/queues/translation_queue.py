@@ -7,24 +7,25 @@ Responsibilities:
 - Accept tasks: translate text forward (EN → user language) or backward (any → EN).
 - Save results to task_results.db. Zero access to the main photo DB.
 """
-import os
-import time
+
 import json
+import os
 import threading
+import time
 
 from huey import SqliteHuey
 from loguru import logger
 
-from src.db.task_results import save_result, save_error
+from src.config import Database_Settings as _DB_Settings
+from src.db.task_results import save_error, save_result
 from src.queues.queue_config import read_model_config_from_db, update_model_status_raw
 
-from src.config import Database_Settings as _DB_Settings
 _DB_PATH = _DB_Settings().DATABASE_PATH
 _DEFAULT_MODEL_NAME = "facebook/nllb-200-distilled-600M"
 
 translation_queue = SqliteHuey(
     "translation",
-    filename=os.path.join(os.environ.get("QUEUE_DB_DIR", os.path.join(os.getcwd(), "..")), "translation.sqlite3")
+    filename=os.path.join(os.environ.get("QUEUE_DB_DIR", os.path.join(os.getcwd(), "..")), "translation.sqlite3"),
 )
 
 _model = None
@@ -47,6 +48,7 @@ def _get_model():
                 update_model_status_raw(_DB_PATH, "translator", "loading")
                 try:
                     from src.ai.translator import Translator
+
                     translator = Translator()
                     _model = translator
                     _model_loaded = True
@@ -75,7 +77,9 @@ def warmup_translation_model() -> None:
 
 
 @translation_queue.task()
-def call_local_translation_model(task_id: str, text: str, backward: bool = False, target_lang: str | None = None) -> None:
+def call_local_translation_model(
+    task_id: str, text: str, backward: bool = False, target_lang: str | None = None
+) -> None:
     """
     Translate text and store the result in task_results.db.
 
@@ -84,7 +88,9 @@ def call_local_translation_model(task_id: str, text: str, backward: bool = False
 
     Result stored as JSON: {"translation": "<translated text>"}
     """
-    logger.info(f"[translation_queue] task_id={task_id} backward={backward} target_lang={target_lang} text={text[:30]}...")
+    logger.info(
+        f"[translation_queue] task_id={task_id} backward={backward} target_lang={target_lang} text={text[:30]}..."
+    )
     start_time = time.time()
     try:
         model = _get_model()
@@ -94,7 +100,9 @@ def call_local_translation_model(task_id: str, text: str, backward: bool = False
         with _lock:
             translation = model.translate(text=text, backward=backward, target_lang=target_lang)
         save_result(task_id, json.dumps({"translation": translation}))
-        logger.info(f"[translation_queue] task_id={task_id} backward={backward} Translation completed in {time.time() - start_time:.2f}s")
+        logger.info(
+            f"[translation_queue] task_id={task_id} backward={backward} Translation completed in {time.time() - start_time:.2f}s"
+        )
     except Exception as exc:
         logger.error(f"[translation_queue] backward={backward} failed: {exc}")
         save_error(task_id, str(exc))

@@ -6,8 +6,10 @@ after the user selects a language in the installer UI. On the very first
 backend startup, this module reads that file and applies the language to
 the settings DB, then deletes the file so it only runs once.
 """
+
 import json
 from pathlib import Path
+
 from loguru import logger
 from sqlalchemy.orm import Session
 

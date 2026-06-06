@@ -2,31 +2,42 @@
 TDD tests for photo-edit DB service functions.
 Covers: trash flag, is_doc toggle, field update, tag/category manual link+unlink.
 """
+
 import sys
 from unittest.mock import MagicMock
+
 import sqlalchemy.types
 
 mock_pgvector = MagicMock()
 mock_pgvector.sqlalchemy.Vector = lambda size: sqlalchemy.types.JSON()
-sys.modules['pgvector'] = mock_pgvector
-sys.modules['pgvector.sqlalchemy'] = mock_pgvector.sqlalchemy
+sys.modules["pgvector"] = mock_pgvector
+sys.modules["pgvector.sqlalchemy"] = mock_pgvector.sqlalchemy
 
 import os
+
 import pytest
 import sqlalchemy.orm
 from sqlalchemy import create_engine
 
-from src.models import Base, Photo, PhotoTag, PhotoCategory, PhotoQualityIssue, Tag, Category
 from src.db_service import (
     get_photo_is_trash,
+    link_photo_category,
+    link_photo_tag,
     mark_photo_as_trash,
+    set_photo_is_doc,
+    unlink_photo_category,
+    unlink_photo_tag,
     unmark_photo_as_trash,
     update_photo_fields,
-    set_photo_is_doc,
-    link_photo_tag,
-    unlink_photo_tag,
-    link_photo_category,
-    unlink_photo_category,
+)
+from src.models import (
+    Base,
+    Category,
+    Photo,
+    PhotoCategory,
+    PhotoQualityIssue,
+    PhotoTag,
+    Tag,
 )
 
 TEST_DB = "test_photo_edit_service.sqlite3"
@@ -68,6 +79,7 @@ def photo(db):
 
 # ── Trash flag ────────────────────────────────────────────────────────────────
 
+
 class TestTrashFlag:
     def test_photo_is_not_trash_by_default(self, db, photo):
         assert get_photo_is_trash(db, photo.id) is False
@@ -81,9 +93,7 @@ class TestTrashFlag:
         mark_photo_as_trash(db, photo.id)
         mark_photo_as_trash(db, photo.id)
         db.commit()
-        issues = db.query(PhotoQualityIssue).filter_by(
-            photo_id=photo.id, issue_type="user_trash"
-        ).all()
+        issues = db.query(PhotoQualityIssue).filter_by(photo_id=photo.id, issue_type="user_trash").all()
         assert len(issues) == 1
 
     def test_unmark_photo_removes_only_user_trash(self, db, photo):
@@ -109,6 +119,7 @@ class TestTrashFlag:
 
 # ── is_doc toggle ─────────────────────────────────────────────────────────────
 
+
 class TestIsDoc:
     def test_set_is_doc_true(self, db, photo):
         result = set_photo_is_doc(db, photo.id, True)
@@ -129,6 +140,7 @@ class TestIsDoc:
 
 
 # ── Field update ──────────────────────────────────────────────────────────────
+
 
 class TestUpdatePhotoFields:
     def test_update_description(self, db, photo):
@@ -160,6 +172,7 @@ class TestUpdatePhotoFields:
 
 
 # ── Tag link / unlink ─────────────────────────────────────────────────────────
+
 
 class TestPhotoTagLink:
     def test_link_creates_tag_if_missing(self, db, photo):
@@ -200,6 +213,7 @@ class TestPhotoTagLink:
 
 
 # ── Category link / unlink ────────────────────────────────────────────────────
+
 
 class TestPhotoCategoryLink:
     def test_link_creates_category_if_missing(self, db, photo):

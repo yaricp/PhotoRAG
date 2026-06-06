@@ -5,7 +5,9 @@ Triggered when the user changes the UI language. Translates every photo's
 description to the new language and shows progress on the Processing Page
 via the standard PipelineTask / pipeline_tracker mechanism.
 """
+
 import asyncio
+
 from loguru import logger
 from sqlalchemy import text
 
@@ -30,9 +32,11 @@ async def start_retranslation(new_lang: str) -> None:
         return
 
     with SessionLocal() as db:
-        photo_ids = db.execute(
-            text("SELECT id FROM photos WHERE description IS NOT NULL AND description != ''")
-        ).scalars().all()
+        photo_ids = (
+            db.execute(text("SELECT id FROM photos WHERE description IS NOT NULL AND description != ''"))
+            .scalars()
+            .all()
+        )
 
     if not photo_ids:
         logger.info("[retranslation] no photos with descriptions, skipping")

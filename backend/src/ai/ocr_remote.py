@@ -1,6 +1,7 @@
 import base64
-from loguru import logger
+
 from langchain_core.messages import HumanMessage
+from loguru import logger
 
 OCR_PROMPT = (
     "Extract all text visible in this image. "
@@ -22,10 +23,12 @@ class RemoteOCR:
 
     def extract_text(self, file_path: str) -> str:
         image_b64 = _encode_image_base64(file_path)
-        msg = HumanMessage(content=[
-            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_b64}"}},
-            {"type": "text", "text": OCR_PROMPT},
-        ])
+        msg = HumanMessage(
+            content=[
+                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_b64}"}},
+                {"type": "text", "text": OCR_PROMPT},
+            ]
+        )
         try:
             response = self.llm.invoke([msg])
             return response.content.strip()

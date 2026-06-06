@@ -2,18 +2,17 @@
 Unit tests for quality_checks.py.
 Each test creates a synthetic PIL image in memory — no real files needed.
 """
-import io
+
 import numpy as np
-import pytest
 from PIL import Image, ImageDraw
 
 from src.quality_checks import (
-    check_resolution,
-    check_exif,
+    check_blur,
     check_brightness,
     check_edge_density,
-    check_blur,
     check_entropy,
+    check_exif,
+    check_resolution,
     check_screenshot,
 )
 
@@ -25,6 +24,7 @@ def _save_tmp(img: Image.Image, tmp_path, name: str) -> str:
 
 
 # ── check_resolution ──────────────────────────────────────────────────────
+
 
 def test_check_resolution_small_is_thumbnail(tmp_path):
     img = Image.new("RGB", (50, 50), color=(128, 128, 128))
@@ -43,6 +43,7 @@ def test_check_resolution_normal_not_thumbnail(tmp_path):
 
 
 # ── check_exif ────────────────────────────────────────────────────────────
+
 
 def test_check_exif_empty_dict_flagged():
     flagged, score = check_exif({})
@@ -66,6 +67,7 @@ def test_check_exif_only_unrelated_keys_flagged():
 
 
 # ── check_brightness ──────────────────────────────────────────────────────
+
 
 def test_check_brightness_dark_flagged(tmp_path):
     img = Image.new("RGB", (100, 100), color=(5, 5, 5))
@@ -93,6 +95,7 @@ def test_check_brightness_overexposed_flagged(tmp_path):
 
 # ── check_edge_density ────────────────────────────────────────────────────
 
+
 def test_check_edge_density_flat_image_flagged(tmp_path):
     img = Image.new("RGB", (200, 200), color=(100, 100, 100))
     path = _save_tmp(img, tmp_path, "flat.jpg")
@@ -114,6 +117,7 @@ def test_check_edge_density_image_with_edges_not_flagged(tmp_path):
 
 
 # ── check_blur ────────────────────────────────────────────────────────────
+
 
 def test_check_blur_uniform_image_is_blurry(tmp_path):
     img = Image.new("L", (100, 100), color=128)
@@ -137,6 +141,7 @@ def test_check_blur_sharp_image_not_blurry(tmp_path):
 
 # ── check_entropy ─────────────────────────────────────────────────────────
 
+
 def test_check_entropy_uniform_image_low(tmp_path):
     img = Image.new("RGB", (100, 100), color=(100, 100, 100))
     path = _save_tmp(img, tmp_path, "uniform.jpg")
@@ -156,13 +161,14 @@ def test_check_entropy_noisy_image_high(tmp_path):
 
 # ── check_screenshot ──────────────────────────────────────────────────────
 
+
 def test_check_screenshot_ui_like_flagged(tmp_path):
     # UI-like: large solid-color blocks — very few distinct colors
     img = Image.new("RGB", (400, 300), color=(240, 240, 240))
     draw = ImageDraw.Draw(img)
-    draw.rectangle([0, 0, 400, 40], fill=(70, 130, 180))    # title bar
+    draw.rectangle([0, 0, 400, 40], fill=(70, 130, 180))  # title bar
     draw.rectangle([0, 260, 400, 300], fill=(200, 200, 200))  # status bar
-    draw.rectangle([10, 50, 150, 80], fill=(100, 100, 200))   # button
+    draw.rectangle([10, 50, 150, 80], fill=(100, 100, 200))  # button
     path = _save_tmp(img, tmp_path, "ui.jpg")
     flagged, score = check_screenshot(path)
     assert flagged is True

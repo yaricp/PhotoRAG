@@ -7,24 +7,22 @@ Allows specifying the LangChain provider explicitly (e.g. "google_genai",
 Run once against an existing database:
     cd backend && python -m src.migrate_model_provider
 """
-from loguru import logger
-from src.db.database import engine
+
 import sqlalchemy
+from loguru import logger
+
+from src.db.database import engine
 
 
 def run():
     with engine.connect() as conn:
-        cols = [row[1] for row in conn.execute(
-            sqlalchemy.text("PRAGMA table_info(ai_model_configs)")
-        )]
+        cols = [row[1] for row in conn.execute(sqlalchemy.text("PRAGMA table_info(ai_model_configs)"))]
         if "model_provider" in cols:
             logger.info("Already migrated — model_provider column exists on ai_model_configs.")
             return
 
         logger.info("Adding model_provider column to ai_model_configs")
-        conn.execute(sqlalchemy.text(
-            "ALTER TABLE ai_model_configs ADD COLUMN model_provider VARCHAR"
-        ))
+        conn.execute(sqlalchemy.text("ALTER TABLE ai_model_configs ADD COLUMN model_provider VARCHAR"))
         conn.commit()
         logger.info("Migration complete.")
 

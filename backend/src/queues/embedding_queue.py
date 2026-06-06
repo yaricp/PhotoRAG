@@ -7,24 +7,25 @@ Responsibilities:
 - Accept tasks: encode text with purpose "save" or "search".
 - Save results to task_results.db. Zero access to the main photo DB.
 """
-import os
-import time
+
 import json
+import os
 import threading
+import time
 
 from huey import SqliteHuey
 from loguru import logger
 
-from src.db.task_results import save_result, save_error
-from src.queues.queue_config import get_model_name_from_db, update_model_status_raw
-
 from src.config import Database_Settings as _DB_Settings
+from src.db.task_results import save_error, save_result
+from src.queues.queue_config import update_model_status_raw
+
 _DB_PATH = _DB_Settings().DATABASE_PATH
 _DEFAULT_MODEL_NAME = "nomic-ai/nomic-embed-text-v1.5"
 
 embedding_queue = SqliteHuey(
     "embedding",
-    filename=os.path.join(os.environ.get("QUEUE_DB_DIR", os.path.join(os.getcwd(), "..")), "embedding.sqlite3")
+    filename=os.path.join(os.environ.get("QUEUE_DB_DIR", os.path.join(os.getcwd(), "..")), "embedding.sqlite3"),
 )
 
 _model = None
@@ -37,6 +38,7 @@ def _get_model():
         with _lock:
             if _model is None:
                 from src.queues.queue_config import read_model_config_from_db
+
                 cfg = read_model_config_from_db(_DB_PATH, "embedding")
                 if cfg and cfg.get("mode") == "remote":
                     logger.info("[embedding_queue] mode=remote — skipping local model load")
@@ -46,6 +48,7 @@ def _get_model():
                 update_model_status_raw(_DB_PATH, "embedding", "loading")
                 try:
                     from sentence_transformers import SentenceTransformer
+
                     m = SentenceTransformer(model_name, trust_remote_code=True)
                     m.max_seq_length = 512
                     m.name = model_name

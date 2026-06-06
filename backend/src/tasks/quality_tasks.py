@@ -1,14 +1,16 @@
 """Phase-0 and phase-3 image quality detection tasks — called by incoming_pipeline.py."""
+
 import asyncio
+
 from loguru import logger
 
 from src.db.database import SessionLocal
-from src.db_service import get_photo_by_id, create_quality_issue
+from src.db_service import create_quality_issue, get_photo_by_id
 from src.pipeline_tracker import track_task
 from src.quality_checks import (
+    check_blur,
     check_brightness,
     check_edge_density,
-    check_blur,
     check_entropy,
     check_screenshot,
 )

@@ -1,13 +1,11 @@
+import torch
 from loguru import logger
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
-import torch
 
 from src.config import Translation_Settings as ML_Settings
-from src.schemas import TranslateRequest
 
 
 class Translator:
-
     ml_settings = ML_Settings()
     MODEL_ID = ml_settings.TRANSLATOR_MODEL
 
@@ -62,7 +60,9 @@ class Translator:
             self.tokenizer.src_lang = "eng_Latn"
             self.tokenizer.tgt_lang = self.LANG_DICT[target_lang]
         else:
-            logger.warning(f"Translator.translate: unknown or missing target_lang={target_lang!r}, returning text unchanged")
+            logger.warning(
+                f"Translator.translate: unknown or missing target_lang={target_lang!r}, returning text unchanged"
+            )
             return text
 
         logger.debug(f"Translator: {self.tokenizer.src_lang} -> {self.tokenizer.tgt_lang} | {text}")

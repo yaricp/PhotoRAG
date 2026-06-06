@@ -9,37 +9,50 @@ Behaviors under test:
   the duplicate file appears to be older than the DB record
 - the existing Photo record is NOT replaced or duplicated in the photos table
 """
+
 import sys
 from unittest.mock import MagicMock, patch
+
 import sqlalchemy.types
 
 mock_pgvector = MagicMock()
 mock_pgvector.sqlalchemy.Vector = lambda size: sqlalchemy.types.JSON()
-sys.modules.setdefault('pgvector', mock_pgvector)
-sys.modules.setdefault('pgvector.sqlalchemy', mock_pgvector.sqlalchemy)
+sys.modules.setdefault("pgvector", mock_pgvector)
+sys.modules.setdefault("pgvector.sqlalchemy", mock_pgvector.sqlalchemy)
 
 # Native extensions and heavy dependencies unavailable in the test environment
 for _mod in [
-    'sqlite_vec', 'src.database', 'src.vector_db_services',
-    'src.ai', 'src.ai.registry', 'src.ai.prompts',
-    'src.queues', 'src.queues.folder_scan_queue',
-    'src.queues.vision_queue', 'src.queues.embedding_queue',
-    'src.queues.clip_queue', 'src.queues.translation_queue',
-    'src.queues.queue_config',
-    'src.tasks.utils', 'src.tasks.vision_tasks', 'src.tasks.embedding_tasks',
-    'src.tasks.clip_tasks', 'src.tasks.translation_tasks',
-    'src.model_services',
+    "sqlite_vec",
+    "src.database",
+    "src.vector_db_services",
+    "src.ai",
+    "src.ai.registry",
+    "src.ai.prompts",
+    "src.queues",
+    "src.queues.folder_scan_queue",
+    "src.queues.vision_queue",
+    "src.queues.embedding_queue",
+    "src.queues.clip_queue",
+    "src.queues.translation_queue",
+    "src.queues.queue_config",
+    "src.tasks.utils",
+    "src.tasks.vision_tasks",
+    "src.tasks.embedding_tasks",
+    "src.tasks.clip_tasks",
+    "src.tasks.translation_tasks",
+    "src.model_services",
 ]:
     sys.modules.setdefault(_mod, MagicMock())
 
 import os
-import pytest
 from datetime import datetime
+
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from src.models import Base, Photo, PhotoDuplicate
 from src.db_service import create_photo_record, record_exact_duplicate
+from src.models import Base, Photo, PhotoDuplicate
 
 TEST_DB = "test_pipeline_exact.sqlite3"
 _engine = create_engine(f"sqlite:///{TEST_DB}")
@@ -68,6 +81,7 @@ def db():
 
 
 # ── Logic helpers (tested independently of the Huey task) ────────────────────
+
 
 def _choose_original(existing_photo: Photo, new_captured_at: datetime | None) -> Photo:
     """Return the photo that should be the 'original' (earlier captured_at)."""
@@ -121,6 +135,7 @@ def test_duplicate_record_created_for_each_unique_path(db):
 
 # ── Folder scanner integration (patched) ─────────────────────────────────────
 
+
 def test_folder_scanner_calls_record_exact_duplicate_on_hash_collision(db):
     """
     Import folder_scanners with all heavy deps pre-mocked, then patch its
@@ -128,27 +143,29 @@ def test_folder_scanner_calls_record_exact_duplicate_on_hash_collision(db):
     The queue mock uses a passthrough decorator so the real function body runs.
     """
     # Make queue.task() act as a passthrough decorator so __wrapped__ exists
-    sys.modules['src.queues.folder_scan_queue'].folder_scan_queue.task.return_value = lambda f: f
-    saved_tasks = sys.modules.pop('src.tasks', None)
-    sys.modules.pop('src.tasks.folder_scanners', None)  # force fresh import
+    sys.modules["src.queues.folder_scan_queue"].folder_scan_queue.task.return_value = lambda f: f
+    saved_tasks = sys.modules.pop("src.tasks", None)
+    sys.modules.pop("src.tasks.folder_scanners", None)  # force fresh import
     import src.tasks.folder_scanners as fs_mod
+
     if saved_tasks is not None:
-        sys.modules['src.tasks'] = saved_tasks
+        sys.modules["src.tasks"] = saved_tasks
 
     existing_photo = create_photo_record(db, "hash_fs_coll", "fs_orig.jpg", datetime(2021, 1, 1))
     mock_scanner = MagicMock(id=1, total_steps=3, scanned_steps=0)
 
-    with patch.object(fs_mod, "check_photo_hash_exists", return_value=existing_photo), \
-         patch.object(fs_mod, "record_exact_duplicate") as mock_record, \
-         patch.object(fs_mod, "update_folder_scanner_progress"), \
-         patch.object(fs_mod, "get_or_create_folder_scanner", return_value=mock_scanner), \
-         patch.object(fs_mod, "SessionLocal", return_value=db), \
-         patch.object(fs_mod, "generate_file_hash", return_value="hash_fs_coll"), \
-         patch.object(fs_mod, "check_if_file_is_image", return_value=True), \
-         patch("os.path.exists", return_value=True), \
-         patch("os.walk", return_value=[("/folder", [], ["dup.jpg"])]), \
-         patch("os.stat") as mock_stat:
-
+    with (
+        patch.object(fs_mod, "check_photo_hash_exists", return_value=existing_photo),
+        patch.object(fs_mod, "record_exact_duplicate") as mock_record,
+        patch.object(fs_mod, "update_folder_scanner_progress"),
+        patch.object(fs_mod, "get_or_create_folder_scanner", return_value=mock_scanner),
+        patch.object(fs_mod, "SessionLocal", return_value=db),
+        patch.object(fs_mod, "generate_file_hash", return_value="hash_fs_coll"),
+        patch.object(fs_mod, "check_if_file_is_image", return_value=True),
+        patch("os.path.exists", return_value=True),
+        patch("os.walk", return_value=[("/folder", [], ["dup.jpg"])]),
+        patch("os.stat") as mock_stat,
+    ):
         mock_stat.return_value.st_birthtime = datetime(2023, 1, 1).timestamp()
         db.commit = MagicMock()
         db.refresh = MagicMock()
@@ -158,6 +175,7 @@ def test_folder_scanner_calls_record_exact_duplicate_on_hash_collision(db):
 
 
 # ── Observer integration (patched) ───────────────────────────────────────────
+
 
 def test_observer_calls_record_exact_duplicate_on_hash_collision(db):
     """
@@ -170,14 +188,16 @@ def test_observer_calls_record_exact_duplicate_on_hash_collision(db):
     mock_event.is_directory = False
     mock_event.src_path = "/watch/dup_photo.jpg"
 
-    with patch("src.observer.check_photo_hash_exists", return_value=existing_photo), \
-         patch("src.observer.record_exact_duplicate") as mock_record, \
-         patch("src.observer.create_photo_record") as mock_create, \
-         patch("src.observer.SessionLocal", return_value=db), \
-         patch("src.observer.generate_file_hash", return_value="hash_obs_coll"):
-
+    with (
+        patch("src.observer.check_photo_hash_exists", return_value=existing_photo),
+        patch("src.observer.record_exact_duplicate") as mock_record,
+        patch("src.observer.create_photo_record") as mock_create,
+        patch("src.observer.SessionLocal", return_value=db),
+        patch("src.observer.generate_file_hash", return_value="hash_obs_coll"),
+    ):
         db.close = MagicMock()
         from src.observer import PhotoEventHandler
+
         handler = PhotoEventHandler(destination_root_folder="/dest")
         handler.on_created(mock_event)
 

@@ -1,25 +1,25 @@
-import os
 import asyncio
+import os
 from datetime import datetime
+
 from huey import SqliteHuey
 from loguru import logger
 
 from src.db.database import SessionLocal
-from src.models import FolderScanner
 from src.db_service import (
-    update_folder_scanner_progress,
     check_photo_hash_exists,
     create_photo_record,
     delete_folder_scanner,
     get_or_create_folder_scanner,
     record_exact_duplicate,
+    update_folder_scanner_progress,
 )
-from src.utils import generate_file_hash, check_if_file_is_image
-
+from src.models import FolderScanner
+from src.utils import check_if_file_is_image, generate_file_hash
 
 folder_scan_queue = SqliteHuey(
     "folder_scan",
-    filename=os.path.join(os.environ.get("QUEUE_DB_DIR", os.path.join(os.getcwd(), "..")), "folder_scan.sqlite3")
+    filename=os.path.join(os.environ.get("QUEUE_DB_DIR", os.path.join(os.getcwd(), "..")), "folder_scan.sqlite3"),
 )
 
 
@@ -64,9 +64,7 @@ def start_folder_scanner_task(path: str) -> bool:
         try:
             file_hash = generate_file_hash(file_path)
             stat = os.stat(file_path)
-            file_created_at = datetime.fromtimestamp(
-                getattr(stat, "st_birthtime", stat.st_ctime)
-            )
+            file_created_at = datetime.fromtimestamp(getattr(stat, "st_birthtime", stat.st_ctime))
 
             db = SessionLocal()
             try:
@@ -98,6 +96,7 @@ def start_folder_scanner_task(path: str) -> bool:
     # ── Pass 2: run all pipelines concurrently ─────────────────────────────
     logger.info(f"[folder_scan] Launching pipelines for {len(new_photo_ids)} photos")
     from src.incoming_pipeline import run_pipelines_batch
+
     asyncio.run(run_pipelines_batch(new_photo_ids, scanner_id))
     logger.info("[folder_scan] All pipelines complete.")
     return True

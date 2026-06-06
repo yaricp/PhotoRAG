@@ -9,24 +9,26 @@ through these functions. They never load a model themselves — they either:
 Mode (local | remote) is read from ai_model_configs in the main DB, falling back to
 env-var settings if the DB is unavailable.
 """
+
+import asyncio
 import base64
 import json
-import asyncio
 from uuid import uuid4
+
 from loguru import logger
 
-from src.queues.queue_config import read_model_config_from_db
-from src.task_notifier import get_notifier
 from src.config import (
-    TaskQueue_Settings,
     CLIP_Settings,
     Embedding_Settings,
+    OCR_Settings,
+    TaskQueue_Settings,
     Translation_Settings,
     Vision_Settings,
-    OCR_Settings,
 )
-
 from src.config import Database_Settings as _DB_Settings
+from src.queues.queue_config import read_model_config_from_db
+from src.task_notifier import get_notifier
+
 _DB_PATH = _DB_Settings().DATABASE_PATH
 
 _task_queue_settings = TaskQueue_Settings()
@@ -35,6 +37,7 @@ _task_queue_settings = TaskQueue_Settings()
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
 
 async def _wait_result(task_id: str, label: str = "") -> str:
     """
@@ -49,9 +52,7 @@ async def _wait_result(task_id: str, label: str = "") -> str:
     """
     tag = f"[{label}] " if label else ""
     logger.debug(f"{tag}Waiting for task {task_id}")
-    raw = await get_notifier().wait_for_result(
-        task_id, timeout=_task_queue_settings.TASK_RESULT_TIMEOUT
-    )
+    raw = await get_notifier().wait_for_result(task_id, timeout=_task_queue_settings.TASK_RESULT_TIMEOUT)
     logger.debug(f"{tag}Task {task_id} result received")
     return raw
 
@@ -59,6 +60,7 @@ async def _wait_result(task_id: str, label: str = "") -> str:
 # ---------------------------------------------------------------------------
 # Shared image helpers
 # ---------------------------------------------------------------------------
+
 
 def _encode_image_base64(file_path: str) -> str:
     """Read an image file and return its base64-encoded content."""
@@ -77,6 +79,7 @@ def _build_langchain_vision_model(
 
     if p == "ollama":
         from langchain_ollama import ChatOllama
+
         kwargs: dict = {"model": model_name}
         if api_url:
             kwargs["base_url"] = api_url
@@ -84,6 +87,7 @@ def _build_langchain_vision_model(
 
     if p == "anthropic":
         from langchain_anthropic import ChatAnthropic
+
         kwargs = {"model": model_name}
         if api_key:
             kwargs["api_key"] = api_key
@@ -91,6 +95,7 @@ def _build_langchain_vision_model(
 
     if p in ("google_genai", "google"):
         from langchain_google_genai import ChatGoogleGenerativeAI
+
         kwargs = {"model": model_name}
         if api_key:
             kwargs["google_api_key"] = api_key
@@ -98,6 +103,7 @@ def _build_langchain_vision_model(
 
     # Default: OpenAI-compatible
     from langchain_openai import ChatOpenAI
+
     kwargs = {"model": model_name}
     if api_key:
         kwargs["api_key"] = api_key
@@ -117,10 +123,12 @@ async def _call_remote_vision(cfg: dict, file_path: str, prompt_text: str) -> st
 
     image_b64 = _encode_image_base64(file_path)
     llm = _build_langchain_vision_model(provider, model_name, api_key, api_url)
-    msg = HumanMessage(content=[
-        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_b64}"}},
-        {"type": "text", "text": prompt_text},
-    ])
+    msg = HumanMessage(
+        content=[
+            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_b64}"}},
+            {"type": "text", "text": prompt_text},
+        ]
+    )
     loop = asyncio.get_running_loop()
     logger.debug(f"[vision/remote] Sending image to remote model {model_name} at {api_url or 'default endpoint'}")
     response = await loop.run_in_executor(None, llm.invoke, [msg])
@@ -132,9 +140,11 @@ async def _call_remote_vision(cfg: dict, file_path: str, prompt_text: str) -> st
 # CLIP
 # ---------------------------------------------------------------------------
 
+
 def _load_clip_names(path: str) -> list[str]:
     """Load tag/category names from a JSON file, returning [] if unavailable."""
     import json as _json
+
     try:
         with open(path) as f:
             return _json.load(f)
@@ -160,11 +170,13 @@ async def _call_remote_clip(cfg: dict, file_path: str, task: str) -> list:
     tagger = RemoteClipTagger(llm=llm, all_tags=all_tags, all_categories=all_categories)
 
     loop = asyncio.get_running_loop()
-    logger.debug(f"[clip/remote] Running remote CLIP tagger for task '{task}' on model '{model_name}' at {api_url or 'default endpoint'}")  
+    logger.debug(
+        f"[clip/remote] Running remote CLIP tagger for task '{task}' on model '{model_name}' at {api_url or 'default endpoint'}"
+    )
     if task == "tags":
         result = await loop.run_in_executor(None, tagger.get_tags, file_path)
         logger.debug(f"[clip/remote] result: {result}")
-        logger.debug(f"[clip/remote] task '{task}' completed successfully") 
+        logger.debug(f"[clip/remote] task '{task}' completed successfully")
         return result
     elif task == "categorize":
         result = await loop.run_in_executor(None, tagger.get_categories, file_path)
@@ -189,6 +201,7 @@ async def call_clip_model(file_path: str, task: str = "tags") -> list:
 
     if mode == "local":
         from src.queues.clip_queue import call_local_clip_model
+
         task_id = str(uuid4())
         logger.debug(f"[clip/{task}] New Async task {task_id} for {file_path}")
         call_local_clip_model(task_id, file_path, task)
@@ -203,6 +216,7 @@ async def call_clip_model(file_path: str, task: str = "tags") -> list:
 # ---------------------------------------------------------------------------
 # Vision
 # ---------------------------------------------------------------------------
+
 
 async def call_vision_model(file_path: str, prompt_key: str) -> str:
     """
@@ -219,6 +233,7 @@ async def call_vision_model(file_path: str, prompt_key: str) -> str:
 
     if mode == "local":
         from src.queues.vision_queue import call_local_vision_model
+
         task_id = str(uuid4())
         logger.debug(f"[vision/{prompt_key}] Submitting Huey task {task_id} for {file_path}")
         call_local_vision_model(task_id, file_path, prompt_key)
@@ -237,6 +252,7 @@ async def call_vision_model(file_path: str, prompt_key: str) -> str:
 # ---------------------------------------------------------------------------
 # Embedding
 # ---------------------------------------------------------------------------
+
 
 def _apply_embedding_prefix(text: str, model_name: str, purpose: str) -> str:
     """Apply model-specific text prefix before encoding.
@@ -266,6 +282,7 @@ async def call_embedding_model(text: str, purpose: str = "search") -> list[float
 
     if mode == "local":
         from src.queues.embedding_queue import call_local_embedding_model
+
         task_id = str(uuid4())
         logger.debug(f"[embedding/{purpose}] Submitting Huey task {task_id}")
         call_local_embedding_model(task_id, text, purpose)
@@ -277,9 +294,7 @@ async def call_embedding_model(text: str, purpose: str = "search") -> list[float
         return await _call_remote_embedding(text, purpose, cfg, emb_settings)
 
 
-async def _call_remote_embedding(
-    text: str, purpose: str, cfg: dict | None, emb_settings
-) -> list[float]:
+async def _call_remote_embedding(text: str, purpose: str, cfg: dict | None, emb_settings) -> list[float]:
     """Encode text using a LangChain embedding provider. Text arrives pre-prefixed."""
     model_name = (cfg and cfg.get("model_name")) or emb_settings.PHOTO_EMBEDDER_MODEL
     api_key = (cfg and cfg.get("api_key")) or getattr(emb_settings, "EMBEDDING_API_KEY", None)
@@ -293,13 +308,13 @@ async def _call_remote_embedding(
     return vector
 
 
-def _build_langchain_embedder(provider: str | None, model_name: str,
-                               api_key: str | None, api_url: str | None):
+def _build_langchain_embedder(provider: str | None, model_name: str, api_key: str | None, api_url: str | None):
     """Return the appropriate LangChain Embeddings object for the given provider."""
     p = (provider or "").lower()
 
     if p == "ollama":
         from langchain_ollama import OllamaEmbeddings
+
         kwargs = {"model": model_name}
         if api_url:
             kwargs["base_url"] = api_url
@@ -307,6 +322,7 @@ def _build_langchain_embedder(provider: str | None, model_name: str,
 
     if p in ("google_genai", "google"):
         from langchain_google_genai import GoogleGenerativeAIEmbeddings
+
         kwargs = {"model": model_name}
         if api_key:
             kwargs["google_api_key"] = api_key
@@ -317,6 +333,7 @@ def _build_langchain_embedder(provider: str | None, model_name: str,
 
     # Default: OpenAI-compatible (openai, together, groq, mistral, custom OpenAI-compat endpoints)
     from langchain_openai import OpenAIEmbeddings
+
     kwargs = {"model": model_name}
     if api_key:
         kwargs["api_key"] = api_key
@@ -330,14 +347,24 @@ def _build_langchain_embedder(provider: str | None, model_name: str,
 # ---------------------------------------------------------------------------
 
 _LANG_NAMES: dict[str, str] = {
-    "en": "English", "ru": "Russian", "de": "German",
-    "fr": "French",  "es": "Spanish", "it": "Italian",
-    "zh": "Chinese", "ja": "Japanese", "ko": "Korean",
-    "pt": "Portuguese", "ar": "Arabic", "tr": "Turkish",
+    "en": "English",
+    "ru": "Russian",
+    "de": "German",
+    "fr": "French",
+    "es": "Spanish",
+    "it": "Italian",
+    "zh": "Chinese",
+    "ja": "Japanese",
+    "ko": "Korean",
+    "pt": "Portuguese",
+    "ar": "Arabic",
+    "tr": "Turkish",
 }
 
 
-async def _call_remote_translation(cfg: dict, text: str, *, backward: bool = False, target_lang: str | None = None) -> str:
+async def _call_remote_translation(
+    cfg: dict, text: str, *, backward: bool = False, target_lang: str | None = None
+) -> str:
     """Translate text via a LangChain chat model or specialty service (DeepL, LibreTranslate).
 
     backward=False: translate to target_lang (or DEFAULT_LANGUAGE)
@@ -361,7 +388,9 @@ async def _call_remote_translation(cfg: dict, text: str, *, backward: bool = Fal
     p = (provider or "").lower()
     if p in ("deepl", "libretranslate"):
         translator = RemoteTranslator(
-            provider=p, api_key=api_key, api_url=api_url,
+            provider=p,
+            api_key=api_key,
+            api_url=api_url,
             tgt_lang=tgt_name,
         )
     else:
@@ -390,6 +419,7 @@ async def call_translation_model(text: str, backward: bool = False, target_lang:
 
     if mode == "local":
         from src.queues.translation_queue import call_local_translation_model
+
         task_id = str(uuid4())
         direction = "backward" if backward else "forward"
         logger.debug(f"[translation/{direction}] Submitting Huey task {task_id}")
@@ -405,6 +435,7 @@ async def call_translation_model(text: str, backward: bool = False, target_lang:
 # ---------------------------------------------------------------------------
 # OCR
 # ---------------------------------------------------------------------------
+
 
 async def _call_remote_ocr(cfg: dict, file_path: str) -> str:
     """Extract text from an image using a remote vision LLM."""
@@ -432,6 +463,7 @@ async def call_ocr_model(file_path: str) -> str:
 
     if mode == "local":
         from src.queues.ocr_queue import call_local_ocr_model
+
         task_id = str(uuid4())
         logger.debug(f"[ocr] Submitting Huey task {task_id} for {file_path}")
         call_local_ocr_model(task_id, file_path)

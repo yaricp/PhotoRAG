@@ -1,16 +1,18 @@
 """Phase-1, phase-2, and phase-3 vision and OCR tasks — called by incoming_pipeline.py."""
+
 import asyncio
+
 from loguru import logger
 
 from src.db.database import SessionLocal
 from src.db_service import get_photo_by_id
-from src.model_services import call_vision_model, call_ocr_model
+from src.model_services import call_ocr_model, call_vision_model
 from src.pipeline_tracker import track_task
-
 
 # ---------------------------------------------------------------------------
 # Sync DB helpers — run via asyncio.to_thread to avoid blocking the event loop
 # ---------------------------------------------------------------------------
+
 
 def _get_vision_input_sync(photo_id: int) -> str | None:
     """Return file_path, or None if photo not found."""
@@ -79,6 +81,7 @@ def _save_ocr_text_sync(photo_id: int, text: str) -> None:
 # ---------------------------------------------------------------------------
 # Async task functions
 # ---------------------------------------------------------------------------
+
 
 async def vision_task(photo_id: int) -> None:
     """Generate a natural-language description of the photo."""

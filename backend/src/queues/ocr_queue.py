@@ -6,24 +6,24 @@ Responsibilities:
 - Accept tasks: extract text from an image file.
 - Save results to task_results.db. Zero access to the main photo DB.
 """
-import os
-import time
+
 import json
+import os
 import threading
+import time
 
 from huey import SqliteHuey
 from loguru import logger
 
-from src.db.task_results import save_result, save_error
+from src.config import Database_Settings as _DB_Settings
+from src.db.task_results import save_error, save_result
 from src.queues.queue_config import read_model_config_from_db, update_model_status_raw
 
-from src.config import Database_Settings as _DB_Settings
 _DB_PATH = _DB_Settings().DATABASE_PATH
 _DEFAULT_MODEL_NAME = "easyocr"
 
 ocr_queue = SqliteHuey(
-    "ocr",
-    filename=os.path.join(os.environ.get("QUEUE_DB_DIR", os.path.join(os.getcwd(), "..")), "ocr.sqlite3")
+    "ocr", filename=os.path.join(os.environ.get("QUEUE_DB_DIR", os.path.join(os.getcwd(), "..")), "ocr.sqlite3")
 )
 
 _reader = None
@@ -45,6 +45,7 @@ def _get_reader():
                 update_model_status_raw(_DB_PATH, "ocr", "loading")
                 try:
                     from src.ai.ocr import EasyOCRReader
+
                     _reader = EasyOCRReader.get_instance()
                     _reader_loaded = True
                     update_model_status_raw(_DB_PATH, "ocr", "ready")
@@ -87,6 +88,7 @@ def call_local_ocr_model(task_id: str, file_path: str) -> None:
             return
         with _lock:
             from src.ai.ocr import extract_text_from_image
+
             text = extract_text_from_image(file_path)
         save_result(task_id, json.dumps({"text": text or ""}))
         logger.info(f"[ocr_queue] Completed task for {file_path} in {time.time() - start_time:.2f}s")

@@ -8,21 +8,24 @@ Behaviors under test:
 - hash_distance is None for exact duplicates, integer for perceptual
 - Deleting a Photo cascades to its PhotoHash row
 """
+
 import sys
 from unittest.mock import MagicMock
+
 import sqlalchemy.types
 
 mock_pgvector = MagicMock()
 mock_pgvector.sqlalchemy.Vector = lambda size: sqlalchemy.types.JSON()
-sys.modules['pgvector'] = mock_pgvector
-sys.modules['pgvector.sqlalchemy'] = mock_pgvector.sqlalchemy
+sys.modules["pgvector"] = mock_pgvector
+sys.modules["pgvector.sqlalchemy"] = mock_pgvector.sqlalchemy
 
 import os
+
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from src.models import Base, Photo, PhotoHash, PhotoDuplicate
+from src.models import Base, Photo, PhotoDuplicate, PhotoHash
 
 TEST_DB = "test_models_duplicates.sqlite3"
 _engine = create_engine(f"sqlite:///{TEST_DB}")
@@ -51,6 +54,7 @@ def db():
 
 
 # ── PhotoHash ────────────────────────────────────────────────────────────────
+
 
 def test_photo_hash_stores_all_three_hashes(db):
     photo = Photo(hash="sha_h1", file_path="img1.jpg")
@@ -96,6 +100,7 @@ def test_photo_hash_relationship_accessible_from_photo(db):
 
 
 # ── PhotoDuplicate ────────────────────────────────────────────────────────────
+
 
 def test_photo_duplicate_exact_stores_file_path(db):
     orig = Photo(hash="sha_orig1", file_path="orig1.jpg")

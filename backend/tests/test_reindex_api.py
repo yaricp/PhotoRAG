@@ -2,17 +2,19 @@
 API tests for POST /api/photos/{id}/reindex.
 Written before implementation (TDD).
 """
+
 import uuid
+from datetime import datetime
+from unittest.mock import AsyncMock, patch
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
-from unittest.mock import patch, AsyncMock
-from datetime import datetime
 
-from src.main import app
 from src.deps import get_db
+from src.main import app
 from src.models import Base, Photo
 
 engine = create_engine(
@@ -47,8 +49,12 @@ def client():
 @pytest.fixture
 def photo_with_description():
     db = TestingSessionLocal()
-    p = Photo(hash=uuid.uuid4().hex, file_path="/test/reindex1.jpg",
-              description="A beautiful mountain lake", created_at=datetime.utcnow())
+    p = Photo(
+        hash=uuid.uuid4().hex,
+        file_path="/test/reindex1.jpg",
+        description="A beautiful mountain lake",
+        created_at=datetime.utcnow(),
+    )
     db.add(p)
     db.commit()
     photo_id = p.id
@@ -59,8 +65,7 @@ def photo_with_description():
 @pytest.fixture
 def photo_no_description():
     db = TestingSessionLocal()
-    p = Photo(hash=uuid.uuid4().hex, file_path="/test/reindex2.jpg",
-              description=None, created_at=datetime.utcnow())
+    p = Photo(hash=uuid.uuid4().hex, file_path="/test/reindex2.jpg", description=None, created_at=datetime.utcnow())
     db.add(p)
     db.commit()
     photo_id = p.id

@@ -1,11 +1,9 @@
-import time
+from geopy.exc import GeocoderServiceError, GeocoderTimedOut
+from geopy.geocoders import Nominatim
 from loguru import logger
 from PIL import ExifTags
-from geopy.geocoders import Nominatim
-from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 
 from src.utils import make_json_safe
-
 
 
 class GeoEnricher:
@@ -41,14 +39,8 @@ class GeoEnricher:
                 gps_data[name] = make_json_safe(gps[key])
 
             logger.info(f"GPS data extracted: {gps_data}")
-            self.lat = self.dms_to_decimal(
-                gps_data.get("GPSLatitude"), 
-                gps_data.get("GPSLatitudeRef")
-            )
-            self.lon = self.dms_to_decimal(
-                gps_data.get("GPSLongitude"),
-                gps_data.get("GPSLongitudeRef")
-            )
+            self.lat = self.dms_to_decimal(gps_data.get("GPSLatitude"), gps_data.get("GPSLatitudeRef"))
+            self.lon = self.dms_to_decimal(gps_data.get("GPSLongitude"), gps_data.get("GPSLongitudeRef"))
 
             logger.info(f"GPS data extracted: {self.lat}, {self.lon}")
             return gps_data
@@ -64,15 +56,15 @@ class GeoEnricher:
         """
         try:
             # Respect OSM usage policy (max 1 req/sec)
-            location = self.geolocator.reverse(f"{latitude}, {longitude}", language='en')
-            
-            if location and 'display_name' in location.raw:
+            location = self.geolocator.reverse(f"{latitude}, {longitude}", language="en")
+
+            if location and "display_name" in location.raw:
                 logger.info(f"Location: {location.raw['display_name']}")
-                return location.raw['display_name']
+                return location.raw["display_name"]
                 # address = location.raw['address']
                 # city = address.get('city') or address.get('town') or address.get('village', '')
                 # country = address.get('country', '')
-                
+
                 # logger.info(f"City: {city}, Country: {country}")
                 # if city and country:
                 #     return f"{city}, {country}"
@@ -80,7 +72,7 @@ class GeoEnricher:
                 # return location.address
             logger.info("Unknown Location")
             return "Unknown Location"
-            
+
         except (GeocoderTimedOut, GeocoderServiceError):
             logger.error("Geocoding Service Unavailable")
             return "Geocoding Service Unavailable"
@@ -95,9 +87,4 @@ class GeoEnricher:
         else:
             self.address = None
 
-        return {
-            "latitude": self.lat,
-            "longitude": self.lon,
-            "address": self.address
-        }
-        
+        return {"latitude": self.lat, "longitude": self.lon, "address": self.address}

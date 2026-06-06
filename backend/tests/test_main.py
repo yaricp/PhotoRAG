@@ -1,24 +1,23 @@
+from datetime import datetime
+from unittest.mock import patch
+
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
-from src.main import app
+
 from src.deps import get_db
-from src.models import Base, Photo, Tag, Category, Camera, Geoposition, ModelState
-from datetime import datetime
-import pytest
-from unittest.mock import patch
+from src.main import app
+from src.models import Base, Camera, Category, Geoposition, ModelState, Photo, Tag
 
 # Setup Test DB
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, 
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool
-)
+engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}, poolclass=StaticPool)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base.metadata.create_all(bind=engine)
+
 
 def override_get_db():
     db = TestingSessionLocal()
@@ -27,22 +26,29 @@ def override_get_db():
     finally:
         db.close()
 
+
 app.dependency_overrides[get_db] = override_get_db
 
 client = TestClient(app)
 
+
 @pytest.fixture(autouse=True)
 def mock_translator():
     from src.ai.registry import registry
-    with patch.object(registry.translator, 'load'), \
-         patch.object(registry.translator, 'translate', side_effect=lambda x, **kwargs: x):
+
+    with (
+        patch.object(registry.translator, "load"),
+        patch.object(registry.translator, "translate", side_effect=lambda x, **kwargs: x),
+    ):
         registry.translator._loaded = True
         yield
+
 
 def test_folder_scanners_endpoint():
     response = client.post("/api/folder_scanners/", json={"path": "/mock/path"})
     assert response.status_code == 200
     assert response.json()["status"] == "started"
+
 
 @pytest.fixture(autouse=True)
 def setup_data():
@@ -54,7 +60,7 @@ def setup_data():
     db.query(Camera).delete()
     db.query(Geoposition).delete()
     db.query(ModelState).delete()
-    
+
     # insert models
     cam = Camera(make="Sony", model="A7")
     db.add(cam)
@@ -63,22 +69,23 @@ def setup_data():
     cat = Category(name="Landscape")
     db.add(cat)
     db.commit()
-    
+
     photo1 = Photo(
-        hash="hash1", file_path="/mock/1.jpg", 
+        hash="hash1",
+        file_path="/mock/1.jpg",
         camera_id=cam.id,
         captured_at=datetime(2023, 1, 1),
-        created_at=datetime(2023, 1, 1)
+        created_at=datetime(2023, 1, 1),
     )
     db.add(photo1)
     db.commit()
-    
+
     geo = Geoposition(latitude=0.0, longitude=0.0)
     db.add(geo)
     db.commit()
     photo1.geoposition_id = geo.id
     db.commit()
-    
+
     yield
     db.close()
 
@@ -95,6 +102,7 @@ def test_get_system_status():
 
 def test_system_status_chat_ready_false_when_model_not_loaded():
     from src.ai.registry import registry as _registry
+
     original = _registry._chat_model
     _registry._chat_model = None
     try:
@@ -106,8 +114,10 @@ def test_system_status_chat_ready_false_when_model_not_loaded():
 
 
 def test_system_status_chat_ready_true_when_model_loaded():
-    from src.ai.registry import registry as _registry
     from unittest.mock import MagicMock
+
+    from src.ai.registry import registry as _registry
+
     original = _registry._chat_model
     _registry._chat_model = MagicMock()
     try:
@@ -127,25 +137,21 @@ def test_get_folder_scanners():
 def test_models_endpoints():
     # init defaults
     from src.db_service import init_default_model_configs
+
     db = TestingSessionLocal()
     init_default_model_configs(db)
     db.close()
-    
+
     # get models
     response = client.get("/api/models/")
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
     assert len(data) >= 6
-    
+
     # update model
-    update_data = {
-        "mode": "remote",
-        "model_name": "test-model",
-        "url": "http://test",
-        "api_key": "123"
-    }
-    
+    update_data = {"mode": "remote", "model_name": "test-model", "url": "http://test", "api_key": "123"}
+
     # mode=remote → no warmup task dispatched
     response = client.put("/api/models/vision", json=update_data)
     assert response.status_code == 200
@@ -158,7 +164,7 @@ def test_get_photo_by_id():
     db = TestingSessionLocal()
     photo = db.query(Photo).first()
     db.close()
-    
+
     response = client.get(f"/api/photos/{photo.id}")
     assert response.status_code == 200
     assert response.json()["id"] == photo.id

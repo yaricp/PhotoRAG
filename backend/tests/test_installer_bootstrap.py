@@ -1,12 +1,12 @@
 """
 TDD tests for the installer bootstrap reader — Phase 8.9.
 
-The NSIS installer writes %APPDATA%\PhotoRAG\bootstrap.json so the backend
+The NSIS installer writes %APPDATA%\\PhotoRAG\bootstrap.json so the backend
 reads it on first startup and applies the selected language without a
 second Settings-page visit.
 """
+
 import json
-import pytest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -21,9 +21,11 @@ def _run(tmp_path: Path, content: dict | None, existing_lang: str | None = None)
 
     db = MagicMock()
 
-    with patch("src.bootstrap._bootstrap_path", return_value=bootstrap_path), \
-         patch("src.bootstrap.get_setting", return_value=existing_lang), \
-         patch("src.bootstrap.set_setting") as mock_set:
+    with (
+        patch("src.bootstrap._bootstrap_path", return_value=bootstrap_path),
+        patch("src.bootstrap.get_setting", return_value=existing_lang),
+        patch("src.bootstrap.set_setting") as mock_set,
+    ):
         apply_bootstrap_settings(db)
 
     return mock_set, bootstrap_path
@@ -62,9 +64,11 @@ class TestApplyBootstrapSettings:
         bootstrap_path.write_text("not valid json {{{{")
         db = MagicMock()
 
-        with patch("src.bootstrap._bootstrap_path", return_value=bootstrap_path), \
-             patch("src.bootstrap.get_setting", return_value=None), \
-             patch("src.bootstrap.set_setting") as mock_set:
+        with (
+            patch("src.bootstrap._bootstrap_path", return_value=bootstrap_path),
+            patch("src.bootstrap.get_setting", return_value=None),
+            patch("src.bootstrap.set_setting") as mock_set,
+        ):
             apply_bootstrap_settings(db)  # must not raise
 
         mock_set.assert_not_called()

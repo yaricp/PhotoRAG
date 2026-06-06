@@ -7,7 +7,9 @@ Status is tracked via ModelState:
   "clip_tags"       → "recomputing" | "ready" | "error"
   "clip_categories" → "recomputing" | "ready" | "error"
 """
+
 from threading import Thread
+
 from loguru import logger
 
 
@@ -16,11 +18,11 @@ def trigger_recompute_tags() -> None:
 
 
 def _do_recompute_tags() -> None:
+    from src.ai.clip import ClipTagger
+    from src.config import CLIP_Settings
     from src.db.database import SessionLocal
     from src.db_service import update_model_status
-    from src.ai.clip import ClipTagger
     from src.install import _compute_model_hash, _save_hash
-    from src.config import CLIP_Settings
 
     db = SessionLocal()
     try:
@@ -36,6 +38,7 @@ def _do_recompute_tags() -> None:
     except Exception as e:
         logger.error(f"[recompute] tags failed: {e}")
         from src.db.database import SessionLocal as SL
+
         db2 = SL()
         try:
             update_model_status(db2, "clip_tags", "error")
@@ -50,11 +53,11 @@ def trigger_recompute_categories() -> None:
 
 
 def _do_recompute_categories() -> None:
+    from src.ai.clip import ClipTagger
+    from src.config import CLIP_Settings
     from src.db.database import SessionLocal
     from src.db_service import update_model_status
-    from src.ai.clip import ClipTagger
     from src.install import _compute_model_hash, _save_hash
-    from src.config import CLIP_Settings
 
     db = SessionLocal()
     try:
@@ -70,6 +73,7 @@ def _do_recompute_categories() -> None:
     except Exception as e:
         logger.error(f"[recompute] categories failed: {e}")
         from src.db.database import SessionLocal as SL
+
         db2 = SL()
         try:
             update_model_status(db2, "clip_categories", "error")

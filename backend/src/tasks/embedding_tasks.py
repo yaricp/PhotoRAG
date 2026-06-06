@@ -1,23 +1,25 @@
 """Phase-2 and phase-4 embedding tasks — called by incoming_pipeline.py."""
+
 import asyncio
-import os
+
 from loguru import logger
 
+from src.ai.prompts import build_photo_text_for_embedding
+from src.config import Database_Settings as _DB_Settings
 from src.config import Embedding_Settings, Main_Settings
 from src.db.database import SessionLocal
 from src.db_service import get_photo_by_id, get_setting
 from src.model_services import call_embedding_model, call_translation_model
 from src.pipeline_tracker import track_task
 from src.vector_db_services import store_photo_embedding
-from src.ai.prompts import build_photo_text_for_embedding
 
-from src.config import Database_Settings as _DB_Settings
 _DB_PATH = _DB_Settings().DATABASE_PATH
 
 
 # ---------------------------------------------------------------------------
 # Sync DB helpers — run via asyncio.to_thread to avoid blocking the event loop
 # ---------------------------------------------------------------------------
+
 
 def _read_embedding_input_sync(photo_id: int) -> dict | None:
     """Read all fields needed to build the embedding text. Returns None if not found."""
@@ -28,11 +30,7 @@ def _read_embedding_input_sync(photo_id: int) -> dict | None:
             return None
         tags = [pt.tag.name for pt in photo.tags_rel]
         categories = [pc.category.name for pc in photo.categories_rel]
-        location = (
-            photo.geoposition.address
-            if photo.geoposition and photo.geoposition.address
-            else "Unknown Location"
-        )
+        location = photo.geoposition.address if photo.geoposition and photo.geoposition.address else "Unknown Location"
         return {
             "description": photo.description,
             "tags": tags,
@@ -45,6 +43,7 @@ def _read_embedding_input_sync(photo_id: int) -> dict | None:
 
 def _save_embedding_sync(photo_id: int, embedding: list[float]) -> None:
     from src.queues.queue_config import read_model_config_from_db
+
     db = SessionLocal()
     try:
         cfg = read_model_config_from_db(_DB_PATH, "embedding")
@@ -73,6 +72,7 @@ def _read_doc_input_sync(photo_id: int) -> tuple[bool, str | None]:
 # ---------------------------------------------------------------------------
 # Async task functions
 # ---------------------------------------------------------------------------
+
 
 async def final_embedding_task(photo_id: int) -> None:
     """

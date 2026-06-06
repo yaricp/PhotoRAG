@@ -1,58 +1,58 @@
 import json
-from loguru import logger
-from typing import Literal, List
+from typing import List, Literal
+
 from langchain_core.messages import SystemMessage, ToolMessage
-from langgraph.graph import StateGraph, END
-from langgraph.prebuilt import ToolNode
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph import END, StateGraph
+from langgraph.prebuilt import ToolNode
+from loguru import logger
 
 from src.ai.prompts import get_prompt
 from src.db.database import SessionLocal
 from src.db_service import get_setting
 from src.graphs.state import AgentState
 from src.graphs.tools import (
-    get_categories,
-    get_tags,
-    get_cameras,
-    get_geopositions,
-    search_photos_semantic,
-    search_photos_by_category_id,
-    search_photos_metadata,
-    get_photo_details,
-    resize_photo,
-    get_exif_data,
-    describe_photo,
-    recognize_text_in_photos,
-    get_action_history,
-    undo_last_action,
-    create_folder,
-    move_photos,
+    add_category_to_photos,
+    add_geoposition_to_photos,
+    # Group C — annotation
+    add_tag_to_photos,
     archive_photos,
+    compare_photos_deep,
+    # Group B — duplicate comparison
+    compare_photos_quick,
+    create_folder,
+    describe_photo,
+    estimate_photo_quality_deep,
+    estimate_photo_quality_quick,
+    filter_photos,
+    geocode_photo_from_exif,
+    get_action_history,
+    get_cameras,
+    get_categories,
+    get_exif_data,
     # Group A — garbage / quality
     get_garbage_photos,
     get_garbage_total_size,
-    estimate_photo_quality_quick,
-    estimate_photo_quality_deep,
+    get_geopositions,
+    get_photo_details,
     get_photo_visual_metrics,
-    # Group B — duplicate comparison
-    compare_photos_quick,
-    compare_photos_deep,
-    # Group C — annotation
-    add_tag_to_photos,
-    add_category_to_photos,
-    add_geoposition_to_photos,
-    geocode_photo_from_exif,
-    mark_photos_as_duplicates,
     # Group D — search / filter
     get_photos_by_tag_id,
-    search_photos_by_exif,
-    filter_photos,
+    get_tags,
+    mark_photos_as_duplicates,
+    move_photos,
+    recognize_text_in_photos,
     # Group E — reindex / reprocess
     reindex_photos,
     rerun_pipeline_for_photos,
+    resize_photo,
+    search_photos_by_category_id,
+    search_photos_by_exif,
+    search_photos_metadata,
+    search_photos_semantic,
+    undo_last_action,
 )
 from src.schemas import Photo
-
 
 # 1. Initialize Tools
 tools = [
@@ -130,10 +130,13 @@ def call_model(state: AgentState):
         lang_suffix = f"\n\n{_LANG_INSTRUCTIONS[lang]}" if lang in _LANG_INSTRUCTIONS else ""
         system_msg = SystemMessage(content=base_prompt + lang_suffix)
         messages = [system_msg] + messages
-        
+
     logger.info(f"[ai_agent] current messages: {messages}")
 
-    from src.ai.registry import registry as _registry  # local import avoids LangGraph closure introspection
+    from src.ai.registry import (
+        registry as _registry,  # local import avoids LangGraph closure introspection
+    )
+
     llm_with_tools = _registry.chat_model.bind_tools(tools)
     response = llm_with_tools.invoke(messages)
     # logger.info(f"[ai_agent] response: {response}")

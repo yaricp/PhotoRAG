@@ -1,16 +1,18 @@
 import asyncio
-import os
 import threading
-from datetime import datetime
 
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
 from loguru import logger
+from watchdog.events import FileSystemEventHandler
+from watchdog.observers import Observer
 
-from src.utils import generate_file_hash, move_photo, get_photo_capture_date
-from src.incoming_pipeline import start_pipeline
 from src.db.database import SessionLocal
-from src.db_service import check_photo_hash_exists, create_photo_record, record_exact_duplicate
+from src.db_service import (
+    check_photo_hash_exists,
+    create_photo_record,
+    record_exact_duplicate,
+)
+from src.incoming_pipeline import start_pipeline
+from src.utils import generate_file_hash, get_photo_capture_date, move_photo
 
 
 class PhotoEventHandler(FileSystemEventHandler):
@@ -37,7 +39,7 @@ class PhotoEventHandler(FileSystemEventHandler):
         if event.is_directory:
             return
         src = event.src_path
-        if not src.lower().endswith(('.jpg', '.jpeg', '.png', '.gif', '.tiff')):
+        if not src.lower().endswith((".jpg", ".jpeg", ".png", ".gif", ".tiff")):
             return
 
         logger.info(f"[observer] New file: {src}")

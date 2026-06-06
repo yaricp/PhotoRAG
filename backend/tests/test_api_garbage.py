@@ -1,25 +1,42 @@
 # backend/tests/test_api_garbage.py
 import sys
 from unittest.mock import MagicMock, patch
+
 import sqlalchemy.types
 
 mock_pgvector = MagicMock()
 mock_pgvector.sqlalchemy.Vector = lambda size: sqlalchemy.types.JSON()
-sys.modules.setdefault('pgvector', mock_pgvector)
-sys.modules.setdefault('pgvector.sqlalchemy', mock_pgvector.sqlalchemy)
+sys.modules.setdefault("pgvector", mock_pgvector)
+sys.modules.setdefault("pgvector.sqlalchemy", mock_pgvector.sqlalchemy)
 
 for _mod in [
-    'sqlite_vec', 'langgraph', 'langgraph.graph',
-    'src.database', 'src.vector_db_services',
-    'src.ai', 'src.ai.registry', 'src.ai.prompts', 'src.ai.translator',
-    'src.queues', 'src.queues.folder_scan_queue', 'src.queues.clip_queue',
-    'src.queues.vision_queue', 'src.queues.embedding_queue',
-    'src.queues.translation_queue', 'src.queues.queue_config',
-    'src.tasks', 'src.tasks.utils', 'src.tasks.folder_scanners',
-    'src.tasks.vision_tasks', 'src.tasks.embedding_tasks',
-    'src.tasks.clip_tasks', 'src.tasks.translation_tasks',
-    'src.model_services', 'src.watcher_service', 'src.task_notifier',
-    'src.deps',
+    "sqlite_vec",
+    "langgraph",
+    "langgraph.graph",
+    "src.database",
+    "src.vector_db_services",
+    "src.ai",
+    "src.ai.registry",
+    "src.ai.prompts",
+    "src.ai.translator",
+    "src.queues",
+    "src.queues.folder_scan_queue",
+    "src.queues.clip_queue",
+    "src.queues.vision_queue",
+    "src.queues.embedding_queue",
+    "src.queues.translation_queue",
+    "src.queues.queue_config",
+    "src.tasks",
+    "src.tasks.utils",
+    "src.tasks.folder_scanners",
+    "src.tasks.vision_tasks",
+    "src.tasks.embedding_tasks",
+    "src.tasks.clip_tasks",
+    "src.tasks.translation_tasks",
+    "src.model_services",
+    "src.watcher_service",
+    "src.task_notifier",
+    "src.deps",
 ]:
     sys.modules.setdefault(_mod, MagicMock())
 
@@ -29,12 +46,14 @@ from fastapi.testclient import TestClient
 
 @pytest.fixture
 def client():
-    sys.modules.pop('src.main', None)
+    sys.modules.pop("src.main", None)
     import src.main as main_mod
+
     # Override get_db dependency so FastAPI can resolve it without a real DB
     def override_get_db():
         yield MagicMock()
-    main_mod.app.dependency_overrides[sys.modules['src.deps'].get_db] = override_get_db
+
+    main_mod.app.dependency_overrides[sys.modules["src.deps"].get_db] = override_get_db
     return TestClient(main_mod.app)
 
 

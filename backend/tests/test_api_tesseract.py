@@ -4,15 +4,15 @@ Tests for GET /api/system/tesseract/ endpoint.
 Tests the endpoint function directly (no full FastAPI app needed)
 since the function has no DB dependencies.
 """
-import sys
+
 import os
 from unittest.mock import patch
-import pytest
 
 
 def _get_tesseract_status():
     """Import the function in isolation to avoid main.py import chain."""
     import shutil as _shutil
+
     path = _shutil.which("tesseract")
     return {
         "available": path is not None,

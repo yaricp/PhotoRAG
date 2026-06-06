@@ -8,8 +8,10 @@ Tests the end-to-end flow:
   - Chat AI system prompt includes language instruction for non-English
   - bootstrap.py applies installer language choice only on first launch
 """
+
 import sys
 from unittest.mock import AsyncMock, MagicMock, patch
+
 import sqlalchemy.types
 
 # --- atomic mocks for heavy deps (must run before any src.* import) ---
@@ -19,38 +21,55 @@ sys.modules.setdefault("pgvector", mock_pgvector)
 sys.modules.setdefault("pgvector.sqlalchemy", mock_pgvector.sqlalchemy)
 
 for _mod in [
-    "sqlite_vec", "langgraph", "langgraph.graph",
-    "langgraph.prebuilt", "langgraph.checkpoint.memory",
-    "src.database", "src.vector_db_services",
-    "src.ai", "src.ai.registry", "src.ai.prompts", "src.ai.translator",
+    "sqlite_vec",
+    "langgraph",
+    "langgraph.graph",
+    "langgraph.prebuilt",
+    "langgraph.checkpoint.memory",
+    "src.database",
+    "src.vector_db_services",
+    "src.ai",
+    "src.ai.registry",
+    "src.ai.prompts",
+    "src.ai.translator",
     # NOTE: src.graphs.ai_agent is NOT mocked here so call_model is importable,
     # but state (which needs langgraph.graph.message) must stay mocked since
     # langgraph.graph is mocked above.
     "src.graphs.state",
-    "src.queues", "src.queues.folder_scan_queue", "src.queues.clip_queue",
-    "src.queues.vision_queue", "src.queues.embedding_queue",
-    "src.queues.translation_queue", "src.queues.queue_config",
-    "src.tasks", "src.tasks.utils", "src.tasks.folder_scanners",
-    "src.tasks.vision_tasks", "src.tasks.embedding_tasks",
-    "src.tasks.clip_tasks", "src.tasks.translation_tasks",
+    "src.queues",
+    "src.queues.folder_scan_queue",
+    "src.queues.clip_queue",
+    "src.queues.vision_queue",
+    "src.queues.embedding_queue",
+    "src.queues.translation_queue",
+    "src.queues.queue_config",
+    "src.tasks",
+    "src.tasks.utils",
+    "src.tasks.folder_scanners",
+    "src.tasks.vision_tasks",
+    "src.tasks.embedding_tasks",
+    "src.tasks.clip_tasks",
+    "src.tasks.translation_tasks",
     "src.model_services",
-    "src.deps", "src.watcher_service", "src.watcher",
+    "src.deps",
+    "src.watcher_service",
+    "src.watcher",
     "src.incoming_pipeline",
 ]:
     sys.modules.setdefault(_mod, MagicMock())
 
 import pytest
-from sqlalchemy import create_engine, event
-from sqlalchemy.pool import StaticPool
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
-from src.models import Base, AppSetting
-from src.db_service import get_setting, set_setting, get_all_settings
-
+from src.db_service import get_setting, set_setting
+from src.models import Base
 
 # ---------------------------------------------------------------------------
 # Shared fixtures
 # ---------------------------------------------------------------------------
+
 
 def _make_engine():
     """SQLite in-memory engine safe for multi-thread FastAPI test client."""
@@ -92,12 +111,14 @@ def client():
     main_mod.app.dependency_overrides[deps_mod.get_db] = override_db
 
     from fastapi.testclient import TestClient
+
     return TestClient(main_mod.app)
 
 
 # ---------------------------------------------------------------------------
 # Settings API round-trip
 # ---------------------------------------------------------------------------
+
 
 class TestSettingsLanguageRoundTrip:
     def test_settings_language_defaults_empty(self, client):
@@ -119,6 +140,7 @@ class TestSettingsLanguageRoundTrip:
 # Retranslate-all endpoint
 # ---------------------------------------------------------------------------
 
+
 class TestRetranslateAllEndpointIntegration:
     def test_returns_202_for_non_english_language(self, client):
         client.put("/api/settings/default_language", json={"value": "ru"})
@@ -129,9 +151,7 @@ class TestRetranslateAllEndpointIntegration:
 
     def test_returns_202_for_english_without_starting_pipeline(self, client):
         client.put("/api/settings/default_language", json={"value": "en"})
-        with patch(
-            "src.retranslation_pipeline.start_retranslation", new_callable=AsyncMock
-        ) as mock_start:
+        with patch("src.retranslation_pipeline.start_retranslation", new_callable=AsyncMock) as mock_start:
             resp = client.post("/api/translation/retranslate-all")
         assert resp.status_code == 202
         mock_start.assert_not_called()
@@ -147,9 +167,11 @@ class TestRetranslateAllEndpointIntegration:
 # Bootstrap integration: apply_bootstrap_settings + real DB session
 # ---------------------------------------------------------------------------
 
+
 class TestBootstrapSettingsIntegration:
     def test_bootstrap_language_written_to_db(self, tmp_path, db):
         import json
+
         from src.bootstrap import apply_bootstrap_settings
 
         (tmp_path / "bootstrap.json").write_text(json.dumps({"default_language": "ru"}))
@@ -160,6 +182,7 @@ class TestBootstrapSettingsIntegration:
 
     def test_bootstrap_does_not_overwrite_existing_setting(self, tmp_path, db):
         import json
+
         from src.bootstrap import apply_bootstrap_settings
 
         set_setting(db, "default_language", "en")
@@ -171,6 +194,7 @@ class TestBootstrapSettingsIntegration:
 
     def test_bootstrap_file_removed_after_apply(self, tmp_path, db):
         import json
+
         from src.bootstrap import apply_bootstrap_settings
 
         path = tmp_path / "bootstrap.json"
@@ -184,6 +208,7 @@ class TestBootstrapSettingsIntegration:
 # ---------------------------------------------------------------------------
 # Chat AI language injection integration
 # ---------------------------------------------------------------------------
+
 
 class TestChatLanguageInjectionIntegration:
     """
@@ -199,16 +224,20 @@ class TestChatLanguageInjectionIntegration:
 
         from langchain_core.messages import HumanMessage, SystemMessage
 
-        mock_resp = MagicMock(); mock_resp.content = "reply"
+        mock_resp = MagicMock()
+        mock_resp.content = "reply"
         mock_registry = MagicMock()
         mock_registry.chat_model.bind_tools.return_value.invoke.return_value = mock_resp
 
         state = {"messages": [HumanMessage(content="Hello")]}
 
-        with patch("src.graphs.ai_agent.get_prompt", return_value="Base prompt"), \
-             patch("src.graphs.ai_agent._get_ui_language", return_value=language), \
-             patch("src.ai.registry.registry", mock_registry):
+        with (
+            patch("src.graphs.ai_agent.get_prompt", return_value="Base prompt"),
+            patch("src.graphs.ai_agent._get_ui_language", return_value=language),
+            patch("src.ai.registry.registry", mock_registry),
+        ):
             from src.graphs.ai_agent import call_model
+
             call_model(state)
 
         llm = mock_registry.chat_model.bind_tools.return_value

@@ -11,19 +11,25 @@ Tests cover:
 - call_clip_model routes to local Huey task when mode=local
 - call_clip_model routes to remote when mode=remote
 """
-import sys
+
 import json
+import sys
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
 
 # Earlier test files set src.ai, src.ai.clip_remote, src.model_services, and
 # src.queues.* to MagicMocks.  Evict them so the real modules are imported.
-for _m in ['src.model_services', 'src.task_notifier',
-           'src.ai', 'src.ai.clip_remote',
-           'src.queues', 'src.queues.clip_queue', 'src.queues.queue_config']:
+for _m in [
+    "src.model_services",
+    "src.task_notifier",
+    "src.ai",
+    "src.ai.clip_remote",
+    "src.queues",
+    "src.queues.clip_queue",
+    "src.queues.queue_config",
+]:
     sys.modules.pop(_m, None)
-
-import src.queues.clip_queue  # noqa: pre-import so patch can resolve
 
 
 SAMPLE_TAGS = [f"tag_{i}" for i in range(20)]
@@ -34,9 +40,11 @@ SAMPLE_CATEGORIES = ["Nature", "Urban", "People", "Food", "Sports"]
 # RemoteClipTagger — tag classification
 # ---------------------------------------------------------------------------
 
+
 class TestRemoteClipTaggerGetTags:
     def _make_tagger(self, llm_response: str):
         from src.ai.clip_remote import RemoteClipTagger
+
         mock_llm = MagicMock()
         mock_llm.invoke.return_value = MagicMock(content=llm_response)
         return RemoteClipTagger(
@@ -50,10 +58,12 @@ class TestRemoteClipTaggerGetTags:
         f = tmp_path / "img.jpg"
         f.write_bytes(b"\xff\xd8\xff\xe0" + b"\x00" * 20)
 
-        llm_json = json.dumps([
-            {"tag": "tag_0", "score": 0.9},
-            {"tag": "tag_1", "score": 0.7},
-        ])
+        llm_json = json.dumps(
+            [
+                {"tag": "tag_0", "score": 0.9},
+                {"tag": "tag_1", "score": 0.7},
+            ]
+        )
         tagger = self._make_tagger(llm_json)
         result = tagger.get_tags(str(f))
 
@@ -65,10 +75,12 @@ class TestRemoteClipTaggerGetTags:
         f = tmp_path / "img.jpg"
         f.write_bytes(b"\xff\xd8\xff\xe0" + b"\x00" * 20)
 
-        llm_json = json.dumps([
-            {"tag": "tag_0", "score": 0.9},
-            {"tag": "tag_1", "score": 0.1},  # below 0.3 threshold
-        ])
+        llm_json = json.dumps(
+            [
+                {"tag": "tag_0", "score": 0.9},
+                {"tag": "tag_1", "score": 0.1},  # below 0.3 threshold
+            ]
+        )
         tagger = self._make_tagger(llm_json)
         result = tagger.get_tags(str(f))
 
@@ -80,10 +92,12 @@ class TestRemoteClipTaggerGetTags:
         f = tmp_path / "img.jpg"
         f.write_bytes(b"\xff\xd8\xff\xe0" + b"\x00" * 20)
 
-        llm_json = json.dumps([
-            {"tag": "tag_0", "score": 0.9},
-            {"tag": "unknown_hallucinated_tag", "score": 0.8},
-        ])
+        llm_json = json.dumps(
+            [
+                {"tag": "tag_0", "score": 0.9},
+                {"tag": "unknown_hallucinated_tag", "score": 0.8},
+            ]
+        )
         tagger = self._make_tagger(llm_json)
         result = tagger.get_tags(str(f))
 
@@ -110,6 +124,7 @@ class TestRemoteClipTaggerGetTags:
 class TestRemoteClipTaggerGetCategories:
     def test_get_categories_returns_scored_categories(self, tmp_path):
         from src.ai.clip_remote import RemoteClipTagger
+
         f = tmp_path / "img.jpg"
         f.write_bytes(b"\xff\xd8\xff\xe0" + b"\x00" * 20)
 
@@ -125,6 +140,7 @@ class TestRemoteClipTaggerGetCategories:
 class TestRemoteClipTaggerEncodeImage:
     def test_encode_image_raises_not_implemented(self, tmp_path):
         from src.ai.clip_remote import RemoteClipTagger
+
         f = tmp_path / "img.jpg"
         f.write_bytes(b"\xff\xd8\xff\xe0" + b"\x00" * 20)
 
@@ -138,9 +154,11 @@ class TestRemoteClipTaggerEncodeImage:
 # Prompt construction
 # ---------------------------------------------------------------------------
 
+
 class TestRemoteClipTaggerPrompt:
     def test_prompt_contains_candidate_tags(self, tmp_path):
         from src.ai.clip_remote import RemoteClipTagger
+
         f = tmp_path / "img.jpg"
         f.write_bytes(b"\xff\xd8\xff\xe0" + b"\x00" * 20)
 
@@ -157,6 +175,7 @@ class TestRemoteClipTaggerPrompt:
 
     def test_sends_at_most_200_tags(self, tmp_path):
         from src.ai.clip_remote import RemoteClipTagger
+
         f = tmp_path / "img.jpg"
         f.write_bytes(b"\xff\xd8\xff\xe0" + b"\x00" * 20)
 
@@ -177,15 +196,23 @@ class TestRemoteClipTaggerPrompt:
 # call_clip_model dispatch
 # ---------------------------------------------------------------------------
 
+
 class TestCallClipModelDispatch:
     @pytest.mark.asyncio
     async def test_local_mode_submits_huey_task(self):
         from src.model_services import call_clip_model
-        with patch("src.model_services.read_model_config_from_db",
-                   return_value={"mode": "local", "model_name": "ViT-B-32"}), \
-             patch("src.queues.clip_queue.call_local_clip_model") as mock_task, \
-             patch("src.model_services._wait_result", new_callable=AsyncMock,
-                   return_value=json.dumps([["cat", 0.8], ["dog", 0.6]])):
+
+        with (
+            patch(
+                "src.model_services.read_model_config_from_db", return_value={"mode": "local", "model_name": "ViT-B-32"}
+            ),
+            patch("src.queues.clip_queue.call_local_clip_model") as mock_task,
+            patch(
+                "src.model_services._wait_result",
+                new_callable=AsyncMock,
+                return_value=json.dumps([["cat", 0.8], ["dog", 0.6]]),
+            ),
+        ):
             mock_task.return_value = None
             result = await call_clip_model("/fake/img.jpg", task="tags")
         assert isinstance(result, list)
@@ -193,12 +220,14 @@ class TestCallClipModelDispatch:
     @pytest.mark.asyncio
     async def test_remote_mode_calls_remote_clip(self):
         from src.model_services import call_clip_model
-        cfg = {"mode": "remote", "model_name": "gpt-4o",
-               "model_provider": "openai", "api_key": "k", "url": None}
-        with patch("src.model_services.read_model_config_from_db", return_value=cfg), \
-             patch("src.model_services._call_remote_clip",
-                   new_callable=AsyncMock,
-                   return_value=[["sunset", 0.9]]) as mock_remote:
+
+        cfg = {"mode": "remote", "model_name": "gpt-4o", "model_provider": "openai", "api_key": "k", "url": None}
+        with (
+            patch("src.model_services.read_model_config_from_db", return_value=cfg),
+            patch(
+                "src.model_services._call_remote_clip", new_callable=AsyncMock, return_value=[["sunset", 0.9]]
+            ) as mock_remote,
+        ):
             result = await call_clip_model("/fake/img.jpg", task="tags")
         assert result == [["sunset", 0.9]]
         mock_remote.assert_called_once()

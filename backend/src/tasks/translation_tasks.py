@@ -1,5 +1,7 @@
 """Phase-2 translation task — called by incoming_pipeline.py."""
+
 import asyncio
+
 from loguru import logger
 
 from src.config import Main_Settings

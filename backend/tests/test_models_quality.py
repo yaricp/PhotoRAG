@@ -1,18 +1,25 @@
 import sys
 from unittest.mock import MagicMock
+
 import sqlalchemy.types
 
 mock_pgvector = MagicMock()
 mock_pgvector.sqlalchemy.Vector = lambda size: sqlalchemy.types.JSON()
-sys.modules['pgvector'] = mock_pgvector
-sys.modules['pgvector.sqlalchemy'] = mock_pgvector.sqlalchemy
+sys.modules["pgvector"] = mock_pgvector
+sys.modules["pgvector.sqlalchemy"] = mock_pgvector.sqlalchemy
 
 import os
+
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
+from src.db_service import (
+    create_quality_issue,
+    get_photos_by_issue_type,
+    get_quality_summary,
+)
 from src.models import Base, Photo, PhotoQualityIssue
-from src.db_service import create_quality_issue, get_quality_summary, get_photos_by_issue_type
 
 TEST_DB = "test_models_quality.sqlite3"
 _engine = create_engine(f"sqlite:///{TEST_DB}")

@@ -9,30 +9,31 @@ Behaviors under test:
 - find_perceptual_duplicates does NOT return photos outside the threshold
 - get_duplicate_groups returns the correct grouped structure for the API
 """
+
 import sys
 from unittest.mock import MagicMock
+
 import sqlalchemy.types
 
 mock_pgvector = MagicMock()
 mock_pgvector.sqlalchemy.Vector = lambda size: sqlalchemy.types.JSON()
-sys.modules['pgvector'] = mock_pgvector
-sys.modules['pgvector.sqlalchemy'] = mock_pgvector.sqlalchemy
+sys.modules["pgvector"] = mock_pgvector
+sys.modules["pgvector.sqlalchemy"] = mock_pgvector.sqlalchemy
 
 import os
+
 import pytest
-from datetime import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from src.models import Base, Photo, PhotoHash, PhotoDuplicate
 from src.db_service import (
     create_photo_record,
-    record_exact_duplicate,
-    record_perceptual_duplicate,
-    get_or_create_photo_hash,
     find_perceptual_duplicates,
     get_duplicate_groups,
+    get_or_create_photo_hash,
+    record_exact_duplicate,
 )
+from src.models import Base, PhotoDuplicate, PhotoHash
 
 TEST_DB = "test_db_service_duplicates.sqlite3"
 _engine = create_engine(f"sqlite:///{TEST_DB}")
@@ -62,15 +63,20 @@ def db():
 
 # ── record_exact_duplicate ────────────────────────────────────────────────────
 
+
 def test_record_exact_duplicate_creates_row(db):
     orig = create_photo_record(db, "hash_re_orig", "re_orig.jpg")
 
     record_exact_duplicate(db, orig.id, "/copies/re_dup.jpg")
 
-    row = db.query(PhotoDuplicate).filter_by(
-        original_photo_id=orig.id,
-        duplicate_file_path="/copies/re_dup.jpg",
-    ).first()
+    row = (
+        db.query(PhotoDuplicate)
+        .filter_by(
+            original_photo_id=orig.id,
+            duplicate_file_path="/copies/re_dup.jpg",
+        )
+        .first()
+    )
     assert row is not None
     assert row.match_type == "exact"
     assert row.hash_distance is None
@@ -83,14 +89,19 @@ def test_record_exact_duplicate_is_idempotent(db):
     record_exact_duplicate(db, orig.id, "/copies/idem_dup.jpg")
     record_exact_duplicate(db, orig.id, "/copies/idem_dup.jpg")
 
-    count = db.query(PhotoDuplicate).filter_by(
-        original_photo_id=orig.id,
-        duplicate_file_path="/copies/idem_dup.jpg",
-    ).count()
+    count = (
+        db.query(PhotoDuplicate)
+        .filter_by(
+            original_photo_id=orig.id,
+            duplicate_file_path="/copies/idem_dup.jpg",
+        )
+        .count()
+    )
     assert count == 1
 
 
 # ── get_or_create_photo_hash ──────────────────────────────────────────────────
+
 
 def test_get_or_create_photo_hash_creates_row(db):
     photo = create_photo_record(db, "hash_ph_new", "ph_new.jpg")
@@ -113,6 +124,7 @@ def test_get_or_create_photo_hash_returns_existing(db):
 
 
 # ── find_perceptual_duplicates ─────────────────────────────────────────────────
+
 
 def _hex_hash(n: int) -> str:
     """Build a 16-char hex string with n bits set (simple test fixture)."""
@@ -157,12 +169,17 @@ def test_find_perceptual_duplicates_does_not_return_self(db):
 
 # ── get_duplicate_groups ──────────────────────────────────────────────────────
 
+
 def test_get_duplicate_groups_returns_exact_and_perceptual_sections(db):
     orig = create_photo_record(db, "hash_grp_orig", "grp_orig.jpg")
     dup_perc = create_photo_record(db, "hash_grp_perc", "grp_perc.jpg")
 
     db.add(PhotoDuplicate(original_photo_id=orig.id, duplicate_file_path="/dup/exact.jpg", match_type="exact"))
-    db.add(PhotoDuplicate(original_photo_id=orig.id, duplicate_photo_id=dup_perc.id, match_type="perceptual", hash_distance=5))
+    db.add(
+        PhotoDuplicate(
+            original_photo_id=orig.id, duplicate_photo_id=dup_perc.id, match_type="perceptual", hash_distance=5
+        )
+    )
     db.commit()
 
     groups = get_duplicate_groups(db)
@@ -199,7 +216,9 @@ def test_get_duplicate_groups_perceptual_contains_distance(db):
     orig = create_photo_record(db, "hash_gp_orig", "gp_orig.jpg")
     dup = create_photo_record(db, "hash_gp_dup", "gp_dup.jpg")
 
-    db.add(PhotoDuplicate(original_photo_id=orig.id, duplicate_photo_id=dup.id, match_type="perceptual", hash_distance=8))
+    db.add(
+        PhotoDuplicate(original_photo_id=orig.id, duplicate_photo_id=dup.id, match_type="perceptual", hash_distance=8)
+    )
     db.commit()
 
     groups = get_duplicate_groups(db)

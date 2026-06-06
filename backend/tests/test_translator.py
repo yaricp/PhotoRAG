@@ -2,8 +2,10 @@
 TDD tests for translator.py — language-agnostic direction logic.
 Phase 8.1 of multilingual support.
 """
+
 import sys
 from unittest.mock import MagicMock, patch
+
 import pytest
 
 # Mock heavy ML dependencies before any src.ai.translator import
@@ -23,17 +25,21 @@ sys.modules.pop("src.ai.translator", None)
 # LANG_DICT completeness
 # ---------------------------------------------------------------------------
 
+
 class TestLangDict:
     def test_has_english(self):
         from src.ai.translator import Translator
+
         assert Translator.LANG_DICT.get("en") == "eng_Latn"
 
     def test_has_russian(self):
         from src.ai.translator import Translator
+
         assert Translator.LANG_DICT.get("ru") == "rus_Cyrl"
 
     def test_has_spanish(self):
         from src.ai.translator import Translator
+
         assert Translator.LANG_DICT.get("es") == "spa_Latn"
 
 
@@ -41,15 +47,16 @@ class TestLangDict:
 # Fixture: Translator with mocked model & tokenizer (no GPU, no HuggingFace)
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def translator():
-    with patch("src.ai.translator.AutoModelForSeq2SeqLM"), \
-         patch("src.ai.translator.AutoTokenizer") as mock_tok_cls:
+    with patch("src.ai.translator.AutoModelForSeq2SeqLM"), patch("src.ai.translator.AutoTokenizer") as mock_tok_cls:
         mock_tokenizer = MagicMock()
         mock_tokenizer.convert_tokens_to_ids.return_value = 42
         mock_tok_cls.from_pretrained.return_value = mock_tokenizer
 
         from src.ai.translator import Translator
+
         t = Translator()
         t.model = MagicMock()
         t.model.generate.return_value = [[1, 2, 3]]
@@ -61,6 +68,7 @@ def translator():
 # ---------------------------------------------------------------------------
 # Forward translation (non-English target)
 # ---------------------------------------------------------------------------
+
 
 class TestForwardTranslation:
     def test_forward_to_russian_uses_correct_pair(self, translator):
@@ -88,6 +96,7 @@ class TestForwardTranslation:
 # Backward translation (always → English, used for embedding/search)
 # ---------------------------------------------------------------------------
 
+
 class TestBackwardTranslation:
     def test_backward_from_russian_targets_english(self, translator):
         translator.translate("Привет", backward=True, target_lang="ru")
@@ -112,20 +121,24 @@ class TestBackwardTranslation:
 # Constructor: no dependency on DEFAULT_LANGUAGE
 # ---------------------------------------------------------------------------
 
+
 class TestConstructor:
     def test_no_hardcoded_direction_dicts(self):
-        with patch("src.ai.translator.AutoModelForSeq2SeqLM"), \
-             patch("src.ai.translator.AutoTokenizer"):
+        with patch("src.ai.translator.AutoModelForSeq2SeqLM"), patch("src.ai.translator.AutoTokenizer"):
             from src.ai.translator import Translator
+
             t = Translator()
         assert not getattr(t, "translate_default_direction", None)
         assert not getattr(t, "translate_default_backward_direction", None)
 
     def test_constructor_does_not_raise_for_any_default_language(self):
-        with patch("src.ai.translator.AutoModelForSeq2SeqLM"), \
-             patch("src.ai.translator.AutoTokenizer"), \
-             patch.dict("os.environ", {"DEFAULT_LANGUAGE": "es"}):
+        with (
+            patch("src.ai.translator.AutoModelForSeq2SeqLM"),
+            patch("src.ai.translator.AutoTokenizer"),
+            patch.dict("os.environ", {"DEFAULT_LANGUAGE": "es"}),
+        ):
             from src.ai.translator import Translator
+
             Translator()  # must not raise
 
 
@@ -133,11 +146,12 @@ class TestConstructor:
 # Supported languages includes Spanish
 # ---------------------------------------------------------------------------
 
+
 class TestSupportedLanguages:
     def test_get_supported_languages_includes_spanish(self):
-        with patch("src.ai.translator.AutoModelForSeq2SeqLM"), \
-             patch("src.ai.translator.AutoTokenizer"):
+        with patch("src.ai.translator.AutoModelForSeq2SeqLM"), patch("src.ai.translator.AutoTokenizer"):
             from src.ai.translator import Translator
+
             t = Translator()
         langs = t.get_supported_languages()
         assert "es" in langs

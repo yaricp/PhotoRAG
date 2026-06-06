@@ -1,20 +1,15 @@
 """
 TDD tests for src/data_dir.py — Phase 1: Data Directory Migration.
 """
-import os
-import sys
-import shutil
+
 import sqlite3
-import tempfile
+import sys
 from pathlib import Path
-from unittest.mock import patch
-
-import pytest
-
 
 # ---------------------------------------------------------------------------
 # resolve_app_data_dir()
 # ---------------------------------------------------------------------------
+
 
 def test_resolves_macos_path(tmp_path, monkeypatch):
     monkeypatch.delenv("APP_DATA_DIR", raising=False)
@@ -22,7 +17,9 @@ def test_resolves_macos_path(tmp_path, monkeypatch):
     monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
 
     from importlib import reload
+
     import src.data_dir as data_dir
+
     reload(data_dir)
 
     result = data_dir.resolve_app_data_dir()
@@ -36,7 +33,9 @@ def test_resolves_linux_path(tmp_path, monkeypatch):
     monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
 
     from importlib import reload
+
     import src.data_dir as data_dir
+
     reload(data_dir)
 
     result = data_dir.resolve_app_data_dir()
@@ -49,7 +48,9 @@ def test_env_override(tmp_path, monkeypatch):
     monkeypatch.setenv("APP_DATA_DIR", override)
 
     from importlib import reload
+
     import src.data_dir as data_dir
+
     reload(data_dir)
 
     result = data_dir.resolve_app_data_dir()
@@ -60,6 +61,7 @@ def test_env_override(tmp_path, monkeypatch):
 # ---------------------------------------------------------------------------
 # migrate_legacy_data() — SQLite files
 # ---------------------------------------------------------------------------
+
 
 def _make_sqlite(path: Path) -> None:
     """Create a minimal valid SQLite file."""
@@ -76,14 +78,20 @@ def test_migration_copies_sqlite_files(tmp_path):
     dst_dir.mkdir()
 
     sqlite_names = [
-        "db.sqlite3", "clip.sqlite3", "embedding.sqlite3",
-        "folder_scan.sqlite3", "ocr.sqlite3", "translation.sqlite3",
-        "vision.sqlite3", "task_results.db",
+        "db.sqlite3",
+        "clip.sqlite3",
+        "embedding.sqlite3",
+        "folder_scan.sqlite3",
+        "ocr.sqlite3",
+        "translation.sqlite3",
+        "vision.sqlite3",
+        "task_results.db",
     ]
     for name in sqlite_names:
         _make_sqlite(src_root / name)
 
     from src.data_dir import migrate_legacy_data
+
     migrate_legacy_data(src_root, dst_dir)
 
     for name in sqlite_names:
@@ -102,6 +110,7 @@ def test_migration_skips_if_already_migrated(tmp_path):
     existing.write_text("sentinel")
 
     from src.data_dir import migrate_legacy_data
+
     migrate_legacy_data(src_root, dst_dir)
 
     assert existing.read_text() == "sentinel"
@@ -117,6 +126,7 @@ def test_migration_skips_missing_source_files(tmp_path):
     _make_sqlite(src_root / "db.sqlite3")
 
     from src.data_dir import migrate_legacy_data
+
     migrate_legacy_data(src_root, dst_dir)
 
     assert (dst_dir / "db.sqlite3").exists()
@@ -127,6 +137,7 @@ def test_migration_skips_missing_source_files(tmp_path):
 # migrate_legacy_data() — .env
 # ---------------------------------------------------------------------------
 
+
 def test_migration_copies_dotenv(tmp_path):
     src_root = tmp_path / "project"
     dst_dir = tmp_path / "app_data"
@@ -136,6 +147,7 @@ def test_migration_copies_dotenv(tmp_path):
     (src_root / ".env").write_text("API_KEY=abc123\n")
 
     from src.data_dir import migrate_legacy_data
+
     migrate_legacy_data(src_root, dst_dir)
 
     assert (dst_dir / ".env").read_text() == "API_KEY=abc123\n"
@@ -151,6 +163,7 @@ def test_migration_skips_dotenv_if_already_exists(tmp_path):
     (dst_dir / ".env").write_text("OLD=value\n")
 
     from src.data_dir import migrate_legacy_data
+
     migrate_legacy_data(src_root, dst_dir)
 
     assert (dst_dir / ".env").read_text() == "OLD=value\n"
@@ -159,6 +172,7 @@ def test_migration_skips_dotenv_if_already_exists(tmp_path):
 # ---------------------------------------------------------------------------
 # migrate_legacy_data() — data/*.npy and data/*.hash
 # ---------------------------------------------------------------------------
+
 
 def test_migration_copies_data_npy_files(tmp_path):
     src_root = tmp_path / "project"
@@ -171,6 +185,7 @@ def test_migration_copies_data_npy_files(tmp_path):
     (src_root / "data" / "tags_model.hash").write_text("abc")
 
     from src.data_dir import migrate_legacy_data
+
     migrate_legacy_data(src_root, dst_dir)
 
     assert (dst_dir / "data" / "tags_features.npy").exists()
@@ -188,6 +203,7 @@ def test_migration_skips_npy_if_already_exists(tmp_path):
     (dst_dir / "data" / "tags_features.npy").write_bytes(b"OLD")
 
     from src.data_dir import migrate_legacy_data
+
     migrate_legacy_data(src_root, dst_dir)
 
     assert (dst_dir / "data" / "tags_features.npy").read_bytes() == b"OLD"

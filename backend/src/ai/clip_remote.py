@@ -10,10 +10,12 @@ Design:
 - Filters results by threshold and validates against the known vocabulary.
 - Returns [] on malformed JSON (logs a warning, pipeline continues without tags).
 """
+
 import base64
 import json
-from loguru import logger
+
 from langchain_core.messages import HumanMessage
+from loguru import logger
 
 MAX_TAGS_PER_CALL = 200
 
@@ -83,10 +85,12 @@ class RemoteClipTagger:
             threshold=self.threshold,
             tags=", ".join(candidates),
         )
-        msg = HumanMessage(content=[
-            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_b64}"}},
-            {"type": "text", "text": prompt},
-        ])
+        msg = HumanMessage(
+            content=[
+                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_b64}"}},
+                {"type": "text", "text": prompt},
+            ]
+        )
 
         try:
             response = self.llm.invoke([msg])

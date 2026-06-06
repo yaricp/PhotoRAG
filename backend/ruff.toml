@@ -1,0 +1,14 @@
+line-length = 120
+
+[lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]
+
+[lint.per-file-ignores]
+"tests/**" = ["E402", "F401", "F841", "F821", "E702"]
+# Deferred imports after conditional heavy-dep checks are intentional.
+"src/incoming_pipeline.py" = ["E402"]
+"src/install.py" = ["E402"]
+# SQLAlchemy ORM boolean comparisons generate correct SQL; ruff's suggestion would break them.
+"src/db_service.py" = ["E712", "E711"]
+"src/main.py" = ["E712", "E711"]

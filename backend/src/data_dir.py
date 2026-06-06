@@ -10,10 +10,11 @@ migrate_legacy_data() is called once on startup to copy existing files from
 the project root (dev layout) into APP_DATA_DIR so the app can run from a
 read-only .app bundle without losing previously generated data.
 """
+
 import os
-import sys
 import shutil
 import sqlite3
+import sys
 from pathlib import Path
 
 APP_NAME = "PhotoRAG"

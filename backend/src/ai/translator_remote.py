@@ -1,5 +1,5 @@
-from loguru import logger
 from langchain_core.messages import HumanMessage, SystemMessage
+from loguru import logger
 
 
 class RemoteTranslator:
@@ -53,9 +53,7 @@ class RemoteTranslator:
             raise RuntimeError("RemoteTranslator: no LLM provided for LangChain translation path")
         messages = [
             SystemMessage(content=self._TRANSLATION_SYSTEM),
-            HumanMessage(content=self._TRANSLATION_USER.format(
-                target_lang=target_lang, text=text
-            )),
+            HumanMessage(content=self._TRANSLATION_USER.format(target_lang=target_lang, text=text)),
         ]
         try:
             response = self.llm.invoke(messages)
@@ -72,9 +70,15 @@ class RemoteTranslator:
         import requests
 
         _LANG_MAP = {
-            "English": "EN-US", "Russian": "RU", "German": "DE",
-            "French": "FR", "Spanish": "ES", "Italian": "IT",
-            "Dutch": "NL", "Polish": "PL", "Portuguese": "PT-BR",
+            "English": "EN-US",
+            "Russian": "RU",
+            "German": "DE",
+            "French": "FR",
+            "Spanish": "ES",
+            "Italian": "IT",
+            "Dutch": "NL",
+            "Polish": "PL",
+            "Portuguese": "PT-BR",
         }
         tgt = _LANG_MAP.get(target_lang, target_lang.upper()[:2])
         base = self.api_url or "https://api-free.deepl.com"
@@ -100,8 +104,12 @@ class RemoteTranslator:
         import requests
 
         _LANG_MAP = {
-            "English": "en", "Russian": "ru", "German": "de",
-            "French": "fr", "Spanish": "es", "Italian": "it",
+            "English": "en",
+            "Russian": "ru",
+            "German": "de",
+            "French": "fr",
+            "Spanish": "es",
+            "Italian": "it",
         }
         tgt = _LANG_MAP.get(target_lang, target_lang.lower()[:2])
         url = f"{(self.api_url or 'http://localhost:5000').rstrip('/')}/translate"

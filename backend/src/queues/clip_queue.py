@@ -7,24 +7,24 @@ Responsibilities:
 - Accept tasks: tags, categorize, encode_image.
 - Save results to task_results.db. Zero access to the main photo DB.
 """
-import os
-import time
+
 import json
+import os
 import threading
+import time
 
 from huey import SqliteHuey
 from loguru import logger
 
-from src.db.task_results import save_result, save_error
+from src.config import Database_Settings as _DB_Settings
+from src.db.task_results import save_error, save_result
 from src.queues.queue_config import read_model_config_from_db, update_model_status_raw
 
-from src.config import Database_Settings as _DB_Settings
 _DB_PATH = _DB_Settings().DATABASE_PATH
 _DEFAULT_MODEL_NAME = "ViT-B-32"
 
 clip_queue = SqliteHuey(
-    "clip",
-    filename=os.path.join(os.environ.get("QUEUE_DB_DIR", os.path.join(os.getcwd(), "..")), "clip.sqlite3")
+    "clip", filename=os.path.join(os.environ.get("QUEUE_DB_DIR", os.path.join(os.getcwd(), "..")), "clip.sqlite3")
 )
 
 _model = None
@@ -47,6 +47,7 @@ def _get_model():
                 update_model_status_raw(_DB_PATH, "clip", "loading")
                 try:
                     from src.ai.clip import ClipTagger
+
                     tagger = ClipTagger()
                     tagger.load_model()
                     tagger.load_tags()

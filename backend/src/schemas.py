@@ -1,9 +1,14 @@
-from pydantic import BaseModel, ConfigDict, Field, field_validator
-from typing import Optional, Generic, TypeVar, List
-from datetime import datetime
-from enum import Enum
+from __future__ import annotations
 
-T = TypeVar('T')
+from datetime import datetime
+from typing import TYPE_CHECKING, Generic, List, Optional, TypeVar
+
+if TYPE_CHECKING:
+    from src.models import HistoryAction
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+T = TypeVar("T")
 
 
 class Watcher(BaseModel):
@@ -11,7 +16,7 @@ class Watcher(BaseModel):
     path: str
     status: str
     destination_path: str
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -25,7 +30,7 @@ class Camera(BaseModel):
     make: str
     model: str
     serial_number: Optional[str] = None
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -137,7 +142,7 @@ class Job(BaseModel):
     tasks: Optional[str] = None
     photo_id: int
     file_path: str
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -152,7 +157,7 @@ class FolderScanner(BaseModel):
     path: str
     total_steps: Optional[int] = None
     scanned_steps: Optional[int] = None
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -200,6 +205,7 @@ class HistoryActionSchema(BaseModel):
     @classmethod
     def from_orm_model(cls, action: "HistoryAction") -> "HistoryActionSchema":
         import json
+
         return cls(
             id=action.id,
             action_type=action.action_type,
@@ -214,13 +220,16 @@ class HistoryActionSchema(BaseModel):
 # Template Tags
 # ---------------------------------------------------------------------------
 
+
 class TemplateTagCreate(BaseModel):
     name: str
     clip_prompt: str
 
+
 class TemplateTagUpdate(BaseModel):
     name: str
     clip_prompt: str
+
 
 class TemplateTagResponse(BaseModel):
     id: int
@@ -230,17 +239,21 @@ class TemplateTagResponse(BaseModel):
     updated_at: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)
 
+
 # ---------------------------------------------------------------------------
 # Template Categories
 # ---------------------------------------------------------------------------
+
 
 class TemplateCategoryCreate(BaseModel):
     name: str
     clip_prompt: str
 
+
 class TemplateCategoryUpdate(BaseModel):
     name: str
     clip_prompt: str
+
 
 class TemplateCategoryResponse(BaseModel):
     id: int
@@ -250,34 +263,42 @@ class TemplateCategoryResponse(BaseModel):
     updated_at: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)
 
+
 # Recompute status returned by write endpoints
 class RecomputeStatus(BaseModel):
     status: str = "recomputing"
 
+
 # ---------------------------------------------------------------------------
 # Photo edit schemas
 # ---------------------------------------------------------------------------
+
 
 class PhotoUpdate(BaseModel):
     description: Optional[str] = None
     translated_description: Optional[str] = None
     ocr_text: Optional[str] = None
 
+
 class PhotoFlagsUpdate(BaseModel):
     is_doc: Optional[bool] = None
     is_trash: Optional[bool] = None
 
+
 class PhotoTagLink(BaseModel):
     name: str
 
+
 class PhotoCategoryLink(BaseModel):
     name: str
+
 
 class PhotoTagResponse(BaseModel):
     id: int
     name: str
     confidence_score: Optional[float] = None
     model_config = ConfigDict(from_attributes=True)
+
 
 class PhotoCategoryResponse(BaseModel):
     id: int
@@ -322,4 +343,3 @@ class PromptUpdate(BaseModel):
         if not v or not v.strip():
             raise ValueError("text must not be blank")
         return v
-

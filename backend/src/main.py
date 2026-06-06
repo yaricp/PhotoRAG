@@ -1,118 +1,127 @@
-from fastapi import FastAPI, Depends, HTTPException, Query, BackgroundTasks
-from pydantic import BaseModel
-from fastapi.middleware.cors import CORSMiddleware
-
 import os
 import shutil
-from typing import List, Dict, Any, Optional
-from loguru import logger
 from contextlib import asynccontextmanager
+from typing import Dict, List, Optional
 
-from src.db_service import (
-    get_all_model_states,
-    get_photo_by_id,
-    get_all_photos,
-    get_available_dates,
-    get_photos_by_vector,
-    get_all_watchers,
-    get_all_tags,
-    get_all_categories,
-    get_all_cameras,
-    get_all_geopositions,
-    delete_photo,
-    get_job_by_photo_id,
-    get_all_jobs,
-    get_or_create_folder_scanner,
-    update_folder_scanner_progress,
-    get_all_folder_scanners,
-    delete_folder_scanner,
-    get_all_model_configs,
-    get_model_config,
-    update_model_config,
-    get_duplicate_groups,
-    archive_photo,
-    delete_duplicate_record,
-    get_quality_summary,
-    get_photos_by_issue_type,
-    get_all_settings,
-    get_setting,
-    set_setting,
-    get_history_actions,
-    perform_undo,
-    create_history_action,
-    get_all_template_tags,
-    get_template_tag_by_id,
-    create_template_tag,
-    update_template_tag,
-    delete_template_tag,
-    get_all_template_categories,
-    get_template_category_by_id,
-    create_template_category,
-    update_template_category,
-    delete_template_category,
-    get_all_prompts,
-    get_prompt_by_key,
-    update_prompt,
-    seed_prompts_from_json,
-    get_photo_is_trash,
-    mark_photo_as_trash,
-    unmark_photo_as_trash,
-    update_photo_fields,
-    set_photo_is_doc,
-    link_photo_tag,
-    unlink_photo_tag,
-    link_photo_category,
-    unlink_photo_category,
-)
-from src.utils import archive_photos_to_zip
-from src.db.database import Session, SessionLocal
-from src.deps import get_db
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
+from langchain_core.messages import HumanMessage
+from loguru import logger
+from pydantic import BaseModel
+
 from src.config import Api_Settings
+from src.db.database import Session, SessionLocal
+from src.db_service import (
+    create_history_action,
+    create_template_category,
+    create_template_tag,
+    delete_duplicate_record,
+    delete_folder_scanner,
+    delete_photo,
+    delete_template_category,
+    delete_template_tag,
+    get_all_cameras,
+    get_all_categories,
+    get_all_folder_scanners,
+    get_all_geopositions,
+    get_all_jobs,
+    get_all_model_configs,
+    get_all_model_states,
+    get_all_photos,
+    get_all_prompts,
+    get_all_settings,
+    get_all_tags,
+    get_all_template_categories,
+    get_all_template_tags,
+    get_all_watchers,
+    get_available_dates,
+    get_duplicate_groups,
+    get_history_actions,
+    get_job_by_photo_id,
+    get_model_config,
+    get_photo_by_id,
+    get_photo_is_trash,
+    get_photos_by_issue_type,
+    get_photos_by_vector,
+    get_quality_summary,
+    get_setting,
+    link_photo_category,
+    link_photo_tag,
+    mark_photo_as_trash,
+    perform_undo,
+    seed_prompts_from_json,
+    set_photo_is_doc,
+    set_setting,
+    unlink_photo_category,
+    unlink_photo_tag,
+    unmark_photo_as_trash,
+    update_model_config,
+    update_photo_fields,
+    update_prompt,
+    update_template_category,
+    update_template_tag,
+)
+from src.deps import get_db
+from src.graphs.ai_agent import app as agent_app
 from src.models import PhotoDuplicate
+from src.queues.folder_scan_queue import start_folder_scanner_task
 from src.schemas import (
-    Photo as PhotoSchema,
-    WatchRequest,
-    QueryRequest,
-    Watcher,
-    PaginatedResponse,
-    Tag as TagSchema,
-    Category as CategorySchema,
-    Camera as CameraSchema,
-    GeoPosition as GeoPositionSchema,
-    ChatRequest,
-    ChatResponse,
-    Job as JobSchema,
-    FolderScannerProgress as FolderScannerProgressSchema,
-    FolderScanner as FolderScannerSchema,
-    FolderScannerRequest,
     AIModelConfigResponse,
     AIModelConfigUpdate,
     AppSettingSchema,
+    ChatRequest,
+    ChatResponse,
+    FolderScannerRequest,
     HistoryActionSchema,
-    TemplateTagCreate,
-    TemplateTagUpdate,
-    TemplateTagResponse,
-    TemplateCategoryCreate,
-    TemplateCategoryUpdate,
-    TemplateCategoryResponse,
-    PhotoUpdate,
-    PhotoFlagsUpdate,
-    PhotoTagLink,
+    PaginatedResponse,
     PhotoCategoryLink,
-    PhotoTagResponse,
     PhotoCategoryResponse,
+    PhotoFlagsUpdate,
     PhotoSearchResult,
+    PhotoTagLink,
+    PhotoTagResponse,
+    PhotoUpdate,
     PipelineTaskSchema,
     PromptResponse,
     PromptUpdate,
+    QueryRequest,
+    TemplateCategoryCreate,
+    TemplateCategoryResponse,
+    TemplateCategoryUpdate,
+    TemplateTagCreate,
+    TemplateTagResponse,
+    TemplateTagUpdate,
+    Watcher,
+    WatchRequest,
 )
-from src.watcher_service import WatcherService
-from src.graphs.ai_agent import app as agent_app
-from langchain_core.messages import HumanMessage
-from src.queues.folder_scan_queue import start_folder_scanner_task
+from src.schemas import (
+    Camera as CameraSchema,
+)
+from src.schemas import (
+    Category as CategorySchema,
+)
+from src.schemas import (
+    FolderScanner as FolderScannerSchema,
+)
+from src.schemas import (
+    FolderScannerProgress as FolderScannerProgressSchema,
+)
+from src.schemas import (
+    GeoPosition as GeoPositionSchema,
+)
+from src.schemas import (
+    Job as JobSchema,
+)
+from src.schemas import (
+    Photo as PhotoSchema,
+)
+from src.schemas import (
+    Tag as TagSchema,
+)
 from src.task_notifier import get_notifier
 from src.tasks.embedding_tasks import final_embedding_task
-
+from src.utils import archive_photos_to_zip
+from src.watcher_service import WatcherService
 
 watcher_service = WatcherService()
 
@@ -122,6 +131,7 @@ def _eager_load_chat_model() -> None:
     """Background thread: warm up the local chat model at startup."""
     try:
         from src.ai.registry import registry as _registry
+
         _ = _registry.chat_model
     except Exception as exc:
         logger.error(f"[startup] Chat model warmup failed: {exc}")
@@ -130,8 +140,9 @@ def _eager_load_chat_model() -> None:
 async def lifespan(app: FastAPI):
     import asyncio
     import threading
-    from src.pipeline_tracker import recover_interrupted_pipelines
+
     from src.incoming_pipeline import run_pipelines_batch
+    from src.pipeline_tracker import recover_interrupted_pipelines
 
     db = SessionLocal()
     watcher_service.start_all(db)
@@ -139,6 +150,7 @@ async def lifespan(app: FastAPI):
     # Apply installer bootstrap (language choice written by NSIS on Windows)
     try:
         from src.bootstrap import apply_bootstrap_settings
+
         apply_bootstrap_settings(db)
     except Exception as exc:
         logger.warning(f"[startup] Bootstrap read failed (non-fatal): {exc}")
@@ -146,6 +158,7 @@ async def lifespan(app: FastAPI):
     # Seed prompts table from prompts.json for new rows (idempotent — user edits preserved)
     try:
         from pathlib import Path
+
         _prompts_json = Path(__file__).parent.parent / "prompts" / "prompts.json"
         seeded = seed_prompts_from_json(db, _prompts_json)
         if seeded:
@@ -159,12 +172,15 @@ async def lifespan(app: FastAPI):
     # but existing DBs may already have stale rows).
     try:
         from sqlalchemy import text as _text
-        dupes_removed = db.execute(_text("""
+
+        dupes_removed = db.execute(
+            _text("""
             DELETE FROM photo_embedding_map
             WHERE id NOT IN (
                 SELECT MIN(id) FROM photo_embedding_map GROUP BY photo_id
             )
-        """)).rowcount
+        """)
+        ).rowcount
         db.commit()
         if dupes_removed:
             logger.info(f"[startup] Removed {dupes_removed} duplicate embedding map row(s)")
@@ -176,7 +192,12 @@ async def lifespan(app: FastAPI):
     # This matters when the model was changed via the setup wizard (which writes
     # directly to the DB, bypassing the API endpoint that normally triggers a rebuild).
     try:
-        from src.vector_db_services import get_embedding_dimension, current_vss_dimension, rebuild_embeddings_vss
+        from src.vector_db_services import (
+            current_vss_dimension,
+            get_embedding_dimension,
+            rebuild_embeddings_vss,
+        )
+
         emb_config = get_model_config(db, "embedding")
         if emb_config:
             new_dim = get_embedding_dimension(emb_config.model_name)
@@ -205,6 +226,7 @@ async def lifespan(app: FastAPI):
     get_notifier().stop_all()
     db.close()
     from src.db.database import engine
+
     engine.dispose()  # closes all pooled connections → SQLite WAL checkpoints and cleans up
 
 
@@ -212,7 +234,7 @@ app = FastAPI(
     title="Photo Describer MVP",
     description="AI photo analyzer that detects objects, locations, and generates descriptions.",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -234,6 +256,7 @@ def get_system_status_endpoint(db: Session = Depends(get_db)):
     logger.info(f"System status: {states}")
 
     from src.ai.registry import registry as _registry
+
     chat_config = get_model_config(db, "chat")
     chat_mode = chat_config.mode if chat_config else "local"
     # Remote chat model is available immediately (no warm-up); local requires the model to be loaded
@@ -242,7 +265,7 @@ def get_system_status_endpoint(db: Session = Depends(get_db)):
     return {
         "ready": all(s.status == "ready" for s in states),
         "chat_ready": chat_ready,
-        "models": [{"name": s.name, "status": s.status} for s in states]
+        "models": [{"name": s.name, "status": s.status} for s in states],
     }
 
 
@@ -254,11 +277,16 @@ def get_reindex_status_endpoint(db: Session = Depends(get_db)):
     (clearing photo_embedding_map).
     """
     from src.models import Photo, PhotoEmbedding
-    total = db.query(Photo).filter(
-        Photo.is_archived == False,
-        Photo.description != None,
-        Photo.description != "",
-    ).count()
+
+    total = (
+        db.query(Photo)
+        .filter(
+            Photo.is_archived == False,
+            Photo.description != None,
+            Photo.description != "",
+        )
+        .count()
+    )
     indexed = db.query(PhotoEmbedding).count()
     needed = total > 0 and indexed < total
     return {"needed": needed, "total": total, "indexed": indexed}
@@ -295,6 +323,7 @@ def delete_watcher_endpoint(watcher_id: int, db: Session = Depends(get_db)) -> N
     del_watcher = watcher_service.stop_watcher(watcher_id, db)
     return del_watcher
 
+
 @app.get("/api/stream/")
 def sse_event_stream_endpoint():
     # Will yield Async generator for SSE UI updates
@@ -309,9 +338,8 @@ def archive_photos_endpoint(
     photo_ids: list = body.get("photo_ids", [])
     if not photo_ids:
         raise HTTPException(status_code=422, detail="photo_ids is required")
-    from src.config import Api_Settings
     from pathlib import Path
-    from src.models import PhotoQualityIssue
+
     settings = Api_Settings()
     root = Path(settings.DEFAULT_FOLDER) if hasattr(settings, "DEFAULT_FOLDER") else Path.home()
     zip_path = str(root / "MyPhotoArchive.zip")
@@ -381,21 +409,25 @@ def get_photos_endpoint(
     year: Optional[int] = Query(None, alias="year"),
     month: Optional[int] = Query(None, alias="month"),
     day: Optional[int] = Query(None, alias="day"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ) -> PaginatedResponse[PhotoSchema]:
     logger.info("Getting all photos")
     photos, total = get_all_photos(
-        db, skip=skip, limit=limit, sort_by=sort_by, sort_order=sort_order,
-        category_ids=category_ids, tag_ids=tag_ids, camera_id=camera_id,
-        geoposition_id=geoposition_id, is_doc=is_doc,
-        year=year, month=month, day=day,
+        db,
+        skip=skip,
+        limit=limit,
+        sort_by=sort_by,
+        sort_order=sort_order,
+        category_ids=category_ids,
+        tag_ids=tag_ids,
+        camera_id=camera_id,
+        geoposition_id=geoposition_id,
+        is_doc=is_doc,
+        year=year,
+        month=month,
+        day=day,
     )
-    return PaginatedResponse(
-        items=photos,
-        total=total,
-        page=(skip // limit) + 1 if limit > 0 else 1,
-        size=limit
-    )
+    return PaginatedResponse(items=photos, total=total, page=(skip // limit) + 1 if limit > 0 else 1, size=limit)
 
 
 @app.get("/api/photos/available-dates/", tags=["Photos"])
@@ -404,7 +436,7 @@ def get_available_dates_endpoint(
     tag_ids: Optional[list[int]] = Query(None),
     camera_id: Optional[int] = Query(None),
     geoposition_id: Optional[int] = Query(None),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ) -> List[Dict[str, int]]:
     return get_available_dates(
         db,
@@ -420,10 +452,10 @@ def get_duplicates_endpoint(db: Session = Depends(get_db)) -> dict:
     return get_duplicate_groups(db)
 
 
-
 @app.delete("/api/duplicates/{record_id}", tags=["Photos"])
 def delete_duplicate_record_endpoint(record_id: int, db: Session = Depends(get_db)) -> dict:
     import os
+
     record = db.query(PhotoDuplicate).filter_by(id=record_id).first()
     if not record:
         raise HTTPException(status_code=404)
@@ -431,7 +463,7 @@ def delete_duplicate_record_endpoint(record_id: int, db: Session = Depends(get_d
         if os.path.exists(record.duplicate_file_path):
             os.remove(record.duplicate_file_path)
             logger.info(f"Deleted duplicate file from disk: {record.duplicate_file_path}")
-    deleted = delete_duplicate_record(db, record_id)
+    delete_duplicate_record(db, record_id)
     return {"id": record_id}
 
 
@@ -459,6 +491,7 @@ def get_garbage_photos_endpoint(
 @app.delete("/api/garbage/{photo_id}/issues", tags=["Garbage"])
 def unmark_garbage_endpoint(photo_id: int, db: Session = Depends(get_db)) -> dict:
     from src.models import PhotoQualityIssue as QI
+
     deleted = db.query(QI).filter(QI.photo_id == photo_id).delete(synchronize_session=False)
     db.commit()
     return {"photo_id": photo_id, "removed": deleted > 0}
@@ -467,6 +500,7 @@ def unmark_garbage_endpoint(photo_id: int, db: Session = Depends(get_db)) -> dic
 @app.delete("/api/photos/{photo_id}", tags=["Photos"], response_model=PhotoSchema)
 def delete_photo_endpoint(photo_id: int, db: Session = Depends(get_db)) -> PhotoSchema:
     import os
+
     photo = get_photo_by_id(db, photo_id)
     if not photo:
         raise HTTPException(status_code=404)
@@ -523,6 +557,7 @@ def get_geopositions_endpoint(db: Session = Depends(get_db)) -> List[GeoPosition
 async def chat_with_agent_endpoint(request: ChatRequest) -> ChatResponse:
     """Chat with the AI photo assistant"""
     from uuid import uuid4
+
     thread_id = request.thread_id or str(uuid4())
     logger.info(f"Received chat message: {request.message} (thread_id: {thread_id})")
 
@@ -541,8 +576,7 @@ async def chat_with_agent_endpoint(request: ChatRequest) -> ChatResponse:
         if "tool_call" in exc_str and "tool messages" in exc_str:
             fresh_id = str(uuid4())
             logger.warning(
-                f"[chat] Corrupted checkpoint for thread {thread_id!r}, "
-                f"retrying with fresh thread {fresh_id!r}: {exc}"
+                f"[chat] Corrupted checkpoint for thread {thread_id!r}, retrying with fresh thread {fresh_id!r}: {exc}"
             )
             result, thread_id = await _invoke(fresh_id)
         elif "insufficient_quota" in exc_str or "rate_limit" in exc_str or "429" in exc_str:
@@ -571,15 +605,10 @@ async def chat_with_agent_endpoint(request: ChatRequest) -> ChatResponse:
     content = last_msg.content
     if isinstance(content, list):
         content = " ".join(
-            block["text"] for block in content
-            if isinstance(block, dict) and block.get("type") == "text"
+            block["text"] for block in content if isinstance(block, dict) and block.get("type") == "text"
         )
 
-    return ChatResponse(
-        response=content,
-        thread_id=thread_id,
-        photos=result["photos"]
-    )
+    return ChatResponse(response=content, thread_id=thread_id, photos=result["photos"])
 
 
 @app.get("/api/jobs/", tags=["Jobs"], response_model=List[JobSchema])
@@ -598,7 +627,7 @@ def get_jobs_endpoint(db: Session = Depends(get_db)) -> List[JobSchema]:
                 photo_id=res.photo_id,
                 phase=res.phase,
                 tasks=res.tasks,
-                file_path=res.photo.file_path
+                file_path=res.photo.file_path,
             )
         )
 
@@ -614,14 +643,8 @@ def get_job_endpoint(photo_id: int, db: Session = Depends(get_db)) -> JobSchema:
     return job
 
 
-@app.get(
-    "/api/folder_scanners/progress/",
-    tags=["Folder Scanners"],
-    response_model=List[FolderScannerProgressSchema]
-)
-def get_folder_scanners_progress_endpoint(
-    db: Session = Depends(get_db)
-) -> List[FolderScannerProgressSchema]:
+@app.get("/api/folder_scanners/progress/", tags=["Folder Scanners"], response_model=List[FolderScannerProgressSchema])
+def get_folder_scanners_progress_endpoint(db: Session = Depends(get_db)) -> List[FolderScannerProgressSchema]:
     """Get all folder scanners"""
     folders = get_all_folder_scanners(db)
     logger.info(f"Folders found in DB: {folders}")
@@ -630,26 +653,14 @@ def get_folder_scanners_progress_endpoint(
         # if folder.scanned_steps == folder.total_steps:
         #     delete_folder_scanner(db, folder.id)
         #     continue
-        progress = int((folder.scanned_steps / folder.total_steps)*100)
+        progress = int((folder.scanned_steps / folder.total_steps) * 100)
         logger.info(f"Folder {folder.id} progress: {progress}")
-        output.append(
-            FolderScannerProgressSchema(
-                id=folder.id,
-                path=folder.path,
-                progress=progress
-            )
-        )
+        output.append(FolderScannerProgressSchema(id=folder.id, path=folder.path, progress=progress))
     return output
 
 
-@app.get(
-    "/api/folder_scanners/",
-    tags=["Folder Scanners"],
-    response_model=List[FolderScannerSchema]
-)
-def get_folder_scanners_endpoint(
-    db: Session = Depends(get_db)
-) -> List[FolderScannerSchema]:
+@app.get("/api/folder_scanners/", tags=["Folder Scanners"], response_model=List[FolderScannerSchema])
+def get_folder_scanners_endpoint(db: Session = Depends(get_db)) -> List[FolderScannerSchema]:
     """Get all folder scanners"""
     folders = get_all_folder_scanners(db)
     return folders
@@ -670,11 +681,7 @@ def delete_folder_scanner_endpoint(folder_scanner_id: int, db: Session = Depends
     """Delete a folder scanner"""
     result = delete_folder_scanner(db, folder_scanner_id)
     if result:
-        return FolderScannerSchema(
-            id=result.id,
-            path=result.path,
-            progress=100
-        )
+        return FolderScannerSchema(id=result.id, path=result.path, progress=100)
     else:
         raise HTTPException(status_code=400, detail="Folder scanner could not be deleted")
 
@@ -686,13 +693,13 @@ def get_all_models_endpoint(db: Session = Depends(get_db)):
 
 
 @app.put("/api/models/{config_type}", tags=["Models"], response_model=AIModelConfigResponse)
-def update_model_endpoint(
-    config_type: str,
-    request: AIModelConfigUpdate,
-    db: Session = Depends(get_db)
-):
+def update_model_endpoint(config_type: str, request: AIModelConfigUpdate, db: Session = Depends(get_db)):
     """Update AI model configuration and reload it in the registry"""
-    from src.vector_db_services import get_embedding_dimension, current_vss_dimension, rebuild_embeddings_vss
+    from src.vector_db_services import (
+        current_vss_dimension,
+        get_embedding_dimension,
+        rebuild_embeddings_vss,
+    )
 
     if config_type == "embedding":
         new_dim = get_embedding_dimension(request.model_name)
@@ -708,24 +715,31 @@ def update_model_endpoint(
     # When switching to local, trigger eager loading immediately
     if request.mode == "local":
         import threading
+
         if config_type == "chat":
             from src.ai.registry import registry as _registry
+
             _registry.reset_model("chat")
             threading.Thread(target=_eager_load_chat_model, name="chat-warmup", daemon=True).start()
         elif config_type == "vision":
             from src.queues.vision_queue import warmup_vision_model
+
             warmup_vision_model()
         elif config_type == "ocr":
             from src.queues.ocr_queue import warmup_ocr_model
+
             warmup_ocr_model()
         elif config_type == "clip":
             from src.queues.clip_queue import warmup_clip_model
+
             warmup_clip_model()
         elif config_type == "translator":
             from src.queues.translation_queue import warmup_translation_model
+
             warmup_translation_model()
         elif config_type == "embedding":
             from src.queues.embedding_queue import warmup_embedding_model
+
             warmup_embedding_model()
 
     return config
@@ -735,6 +749,7 @@ def update_model_endpoint(
 # ---------------------------------------------------------------------------
 # Prompts endpoints
 # ---------------------------------------------------------------------------
+
 
 @app.get("/api/prompts/", tags=["Prompts"], response_model=List[PromptResponse])
 def get_prompts_endpoint(db: Session = Depends(get_db)):
@@ -754,6 +769,7 @@ def update_prompt_endpoint(key: str, body: PromptUpdate, db: Session = Depends(g
 # ---------------------------------------------------------------------------
 # Settings endpoints
 # ---------------------------------------------------------------------------
+
 
 class SettingUpdateRequest(BaseModel):
     value: str
@@ -785,6 +801,7 @@ async def retranslate_all_endpoint(
     Returns immediately; translation runs in the background.
     """
     from src.retranslation_pipeline import start_retranslation
+
     lang = get_setting(db, "default_language") or "en"
     if lang != "en":
         background_tasks.add_task(start_retranslation, lang)
@@ -794,6 +811,7 @@ async def retranslate_all_endpoint(
 # ---------------------------------------------------------------------------
 # History endpoints
 # ---------------------------------------------------------------------------
+
 
 @app.get("/api/history/", tags=["History"], response_model=List[HistoryActionSchema])
 def get_history_endpoint(db: Session = Depends(get_db)) -> List[HistoryActionSchema]:
@@ -811,10 +829,9 @@ def undo_last_action_endpoint(db: Session = Depends(get_db)) -> Dict[str, str]:
 # Template Tags endpoints
 # ---------------------------------------------------------------------------
 
+
 @app.get("/api/template-tags/", tags=["Template Tags"], response_model=PaginatedResponse[TemplateTagResponse])
-def list_template_tags_endpoint(
-    skip: int = Query(0), limit: int = Query(50), db: Session = Depends(get_db)
-):
+def list_template_tags_endpoint(skip: int = Query(0), limit: int = Query(50), db: Session = Depends(get_db)):
     tags, total = get_all_template_tags(db, skip=skip, limit=limit)
     return PaginatedResponse(items=tags, total=total, page=(skip // limit) + 1 if limit else 1, size=limit)
 
@@ -822,12 +839,14 @@ def list_template_tags_endpoint(
 @app.post("/api/template-tags/", tags=["Template Tags"], response_model=TemplateTagResponse, status_code=201)
 def create_template_tag_endpoint(body: TemplateTagCreate, db: Session = Depends(get_db)):
     from sqlalchemy.exc import IntegrityError
+
     try:
         tag = create_template_tag(db, name=body.name.strip(), clip_prompt=body.clip_prompt.strip())
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=409, detail=f"Template tag '{body.name}' already exists")
     from src.tasks.recompute_tasks import trigger_recompute_tags
+
     trigger_recompute_tags()
     return tag
 
@@ -838,6 +857,7 @@ def update_template_tag_endpoint(tag_id: int, body: TemplateTagUpdate, db: Sessi
     if not tag:
         raise HTTPException(status_code=404, detail="Template tag not found")
     from src.tasks.recompute_tasks import trigger_recompute_tags
+
     trigger_recompute_tags()
     return tag
 
@@ -847,6 +867,7 @@ def delete_template_tag_endpoint(tag_id: int, db: Session = Depends(get_db)):
     if not delete_template_tag(db, tag_id):
         raise HTTPException(status_code=404, detail="Template tag not found")
     from src.tasks.recompute_tasks import trigger_recompute_tags
+
     trigger_recompute_tags()
 
 
@@ -854,23 +875,30 @@ def delete_template_tag_endpoint(tag_id: int, db: Session = Depends(get_db)):
 # Template Categories endpoints
 # ---------------------------------------------------------------------------
 
-@app.get("/api/template-categories/", tags=["Template Categories"], response_model=PaginatedResponse[TemplateCategoryResponse])
-def list_template_categories_endpoint(
-    skip: int = Query(0), limit: int = Query(50), db: Session = Depends(get_db)
-):
+
+@app.get(
+    "/api/template-categories/",
+    tags=["Template Categories"],
+    response_model=PaginatedResponse[TemplateCategoryResponse],
+)
+def list_template_categories_endpoint(skip: int = Query(0), limit: int = Query(50), db: Session = Depends(get_db)):
     cats, total = get_all_template_categories(db, skip=skip, limit=limit)
     return PaginatedResponse(items=cats, total=total, page=(skip // limit) + 1 if limit else 1, size=limit)
 
 
-@app.post("/api/template-categories/", tags=["Template Categories"], response_model=TemplateCategoryResponse, status_code=201)
+@app.post(
+    "/api/template-categories/", tags=["Template Categories"], response_model=TemplateCategoryResponse, status_code=201
+)
 def create_template_category_endpoint(body: TemplateCategoryCreate, db: Session = Depends(get_db)):
     from sqlalchemy.exc import IntegrityError
+
     try:
         cat = create_template_category(db, name=body.name.strip(), clip_prompt=body.clip_prompt.strip())
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=409, detail=f"Template category '{body.name}' already exists")
     from src.tasks.recompute_tasks import trigger_recompute_categories
+
     trigger_recompute_categories()
     return cat
 
@@ -881,6 +909,7 @@ def update_template_category_endpoint(cat_id: int, body: TemplateCategoryUpdate,
     if not cat:
         raise HTTPException(status_code=404, detail="Template category not found")
     from src.tasks.recompute_tasks import trigger_recompute_categories
+
     trigger_recompute_categories()
     return cat
 
@@ -890,10 +919,12 @@ def delete_template_category_endpoint(cat_id: int, db: Session = Depends(get_db)
     if not delete_template_category(db, cat_id):
         raise HTTPException(status_code=404, detail="Template category not found")
     from src.tasks.recompute_tasks import trigger_recompute_categories
+
     trigger_recompute_categories()
 
 
 # ── Photo edit endpoints ───────────────────────────────────────────────────────
+
 
 @app.put("/api/photos/{photo_id}", tags=["Photos"], response_model=PhotoSchema)
 def update_photo_endpoint(photo_id: int, body: PhotoUpdate, db: Session = Depends(get_db)):
@@ -906,6 +937,7 @@ def update_photo_endpoint(photo_id: int, body: PhotoUpdate, db: Session = Depend
     db.refresh(updated)
     if body.description is not None and body.description != old_description:
         from src.tasks.embedding_tasks import final_embedding_task
+
         final_embedding_task(photo_id, phase="edit")
     result = PhotoSchema.model_validate(updated)
     result.is_trash = get_photo_is_trash(db, photo_id)
@@ -986,7 +1018,8 @@ async def run_pipeline_for_photo_endpoint(
     db: Session = Depends(get_db),
 ):
     """Clear tags/categories and re-run the full pipeline for a single photo."""
-    from src.models import PhotoTag, PhotoCategory
+    from src.models import PhotoCategory, PhotoTag
+
     photo = get_photo_by_id(db, photo_id)
     if not photo:
         raise HTTPException(status_code=404, detail=f"Photo {photo_id} not found")
@@ -996,10 +1029,13 @@ async def run_pipeline_for_photo_endpoint(
 
     def _run():
         import asyncio
+
         from src.incoming_pipeline import run_pipelines_batch
+
         asyncio.run(run_pipelines_batch([photo_id]))
 
     import threading
+
     t = threading.Thread(target=_run, daemon=True)
     t.start()
     return {"status": "queued", "photo_id": photo_id}
@@ -1009,10 +1045,12 @@ async def run_pipeline_for_photo_endpoint(
 # Processing Page endpoints
 # ---------------------------------------------------------------------------
 
+
 @app.get("/api/pipeline/active", tags=["Pipeline"], response_model=List[PipelineTaskSchema])
 def get_active_pipeline_tasks_endpoint(db: Session = Depends(get_db)):
     """Return all currently pending or running pipeline tasks (for the Processing Page)."""
     from src.pipeline_tracker import get_active_pipeline_tasks
+
     return get_active_pipeline_tasks(db)
 
 
@@ -1023,6 +1061,7 @@ def get_recent_pipeline_tasks_endpoint(
 ):
     """Return the most recently created pipeline tasks."""
     from src.pipeline_tracker import get_recent_pipeline_tasks
+
     return get_recent_pipeline_tasks(db, limit=limit)
 
 
@@ -1030,4 +1069,5 @@ def get_recent_pipeline_tasks_endpoint(
 def get_photo_pipeline_tasks_endpoint(photo_id: int, db: Session = Depends(get_db)):
     """Return all pipeline tasks for a specific photo."""
     from src.pipeline_tracker import get_photo_pipeline_tasks
+
     return get_photo_pipeline_tasks(db, photo_id)

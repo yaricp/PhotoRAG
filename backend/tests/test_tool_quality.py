@@ -1,38 +1,54 @@
 # backend/tests/test_tool_quality.py
 import sys
 from unittest.mock import MagicMock, patch
+
 import sqlalchemy.types
 
 mock_pgvector = MagicMock()
 mock_pgvector.sqlalchemy.Vector = lambda size: sqlalchemy.types.JSON()
-sys.modules.setdefault('pgvector', mock_pgvector)
-sys.modules.setdefault('pgvector.sqlalchemy', mock_pgvector.sqlalchemy)
+sys.modules.setdefault("pgvector", mock_pgvector)
+sys.modules.setdefault("pgvector.sqlalchemy", mock_pgvector.sqlalchemy)
 
 for _mod in [
-    'sqlite_vec', 'langgraph', 'langgraph.graph',
-    'src.database', 'src.vector_db_services',
-    'src.ai', 'src.ai.registry', 'src.ai.prompts', 'src.ai.translator',
-    'src.queues', 'src.queues.folder_scan_queue', 'src.queues.clip_queue',
-    'src.queues.vision_queue', 'src.queues.embedding_queue',
-    'src.queues.translation_queue', 'src.queues.queue_config',
-    'src.tasks', 'src.tasks.utils', 'src.tasks.folder_scanners',
-    'src.tasks.vision_tasks', 'src.tasks.embedding_tasks',
-    'src.tasks.clip_tasks', 'src.tasks.translation_tasks',
-    'src.model_services',
-    'src.deps',
+    "sqlite_vec",
+    "langgraph",
+    "langgraph.graph",
+    "src.database",
+    "src.vector_db_services",
+    "src.ai",
+    "src.ai.registry",
+    "src.ai.prompts",
+    "src.ai.translator",
+    "src.queues",
+    "src.queues.folder_scan_queue",
+    "src.queues.clip_queue",
+    "src.queues.vision_queue",
+    "src.queues.embedding_queue",
+    "src.queues.translation_queue",
+    "src.queues.queue_config",
+    "src.tasks",
+    "src.tasks.utils",
+    "src.tasks.folder_scanners",
+    "src.tasks.vision_tasks",
+    "src.tasks.embedding_tasks",
+    "src.tasks.clip_tasks",
+    "src.tasks.translation_tasks",
+    "src.model_services",
+    "src.deps",
     # heavy optional deps not installed in test env
-    'exifread',
+    "exifread",
 ]:
     sys.modules.setdefault(_mod, MagicMock())
 
-import pytest
+
 import numpy as np
-from pathlib import Path
+import pytest
 from PIL import Image
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from src.models import Base, Photo as PhotoModel
+from src.models import Base
+from src.models import Photo as PhotoModel
 
 
 @pytest.fixture
@@ -66,8 +82,10 @@ def _make_photo(db, tmp_path, filename="photo.jpg"):
 # estimate_photo_quality_quick
 # ---------------------------------------------------------------------------
 
+
 def test_estimate_quality_quick_returns_metrics(tmp_path, db, db_factory):
     from src.graphs.tools import estimate_photo_quality_quick
+
     photo = _make_photo(db, tmp_path)
 
     with patch("src.graphs.tools.SessionLocal", side_effect=db_factory):
@@ -80,6 +98,7 @@ def test_estimate_quality_quick_returns_metrics(tmp_path, db, db_factory):
 
 def test_estimate_quality_quick_returns_not_found_for_missing_id(db_factory):
     from src.graphs.tools import estimate_photo_quality_quick
+
     with patch("src.graphs.tools.SessionLocal", side_effect=db_factory):
         result = estimate_photo_quality_quick.invoke({"photo_id": 9999})
     assert "not found" in result.lower()
@@ -87,6 +106,7 @@ def test_estimate_quality_quick_returns_not_found_for_missing_id(db_factory):
 
 def test_estimate_quality_quick_verdict_is_one_of_known_values(tmp_path, db, db_factory):
     from src.graphs.tools import estimate_photo_quality_quick
+
     photo = _make_photo(db, tmp_path)
     with patch("src.graphs.tools.SessionLocal", side_effect=db_factory):
         result = estimate_photo_quality_quick.invoke({"photo_id": photo.id})
@@ -95,6 +115,7 @@ def test_estimate_quality_quick_verdict_is_one_of_known_values(tmp_path, db, db_
 
 def test_estimate_quality_quick_flags_tiny_image(tmp_path, db, db_factory):
     from src.graphs.tools import estimate_photo_quality_quick
+
     f = tmp_path / "tiny.jpg"
     img = Image.new("RGB", (10, 10), color=(128, 128, 128))
     img.save(str(f), "JPEG")
@@ -111,15 +132,20 @@ def test_estimate_quality_quick_flags_tiny_image(tmp_path, db, db_factory):
 # estimate_photo_quality_deep
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_estimate_quality_deep_returns_probe_scores(tmp_path, db, db_factory):
-    from src.graphs.tools import estimate_photo_quality_deep
     from unittest.mock import AsyncMock
+
+    from src.graphs.tools import estimate_photo_quality_deep
+
     photo = _make_photo(db, tmp_path, "deep.jpg")
     vec = np.ones(512).tolist()
 
-    with patch("src.graphs.tools.SessionLocal", side_effect=db_factory), \
-         patch("src.graphs.tools.call_clip_model", new_callable=AsyncMock, return_value=vec):
+    with (
+        patch("src.graphs.tools.SessionLocal", side_effect=db_factory),
+        patch("src.graphs.tools.call_clip_model", new_callable=AsyncMock, return_value=vec),
+    ):
         result = await estimate_photo_quality_deep.ainvoke({"photo_id": photo.id})
 
     assert "a blurry photo" in result
@@ -128,23 +154,30 @@ async def test_estimate_quality_deep_returns_probe_scores(tmp_path, db, db_facto
 
 @pytest.mark.asyncio
 async def test_estimate_quality_deep_not_found(db_factory):
-    from src.graphs.tools import estimate_photo_quality_deep
     from unittest.mock import AsyncMock
-    with patch("src.graphs.tools.SessionLocal", side_effect=db_factory), \
-         patch("src.graphs.tools.call_clip_model", new_callable=AsyncMock,
-               return_value=np.ones(512).tolist()):
+
+    from src.graphs.tools import estimate_photo_quality_deep
+
+    with (
+        patch("src.graphs.tools.SessionLocal", side_effect=db_factory),
+        patch("src.graphs.tools.call_clip_model", new_callable=AsyncMock, return_value=np.ones(512).tolist()),
+    ):
         result = await estimate_photo_quality_deep.ainvoke({"photo_id": 9999})
     assert "not found" in result.lower()
 
 
 @pytest.mark.asyncio
 async def test_estimate_quality_deep_verdict_present(tmp_path, db, db_factory):
-    from src.graphs.tools import estimate_photo_quality_deep
     from unittest.mock import AsyncMock
+
+    from src.graphs.tools import estimate_photo_quality_deep
+
     photo = _make_photo(db, tmp_path, "deep2.jpg")
     vec = np.ones(512).tolist()
-    with patch("src.graphs.tools.SessionLocal", side_effect=db_factory), \
-         patch("src.graphs.tools.call_clip_model", new_callable=AsyncMock, return_value=vec):
+    with (
+        patch("src.graphs.tools.SessionLocal", side_effect=db_factory),
+        patch("src.graphs.tools.call_clip_model", new_callable=AsyncMock, return_value=vec),
+    ):
         result = await estimate_photo_quality_deep.ainvoke({"photo_id": photo.id})
     assert any(v in result for v in ("likely garbage", "good quality"))
 
@@ -153,8 +186,10 @@ async def test_estimate_quality_deep_verdict_present(tmp_path, db, db_factory):
 # get_photo_visual_metrics
 # ---------------------------------------------------------------------------
 
+
 def test_get_photo_visual_metrics_returns_all_keys(tmp_path, db, db_factory):
     from src.graphs.tools import get_photo_visual_metrics
+
     photo = _make_photo(db, tmp_path, "metrics.jpg")
     with patch("src.graphs.tools.SessionLocal", side_effect=db_factory):
         result = get_photo_visual_metrics.invoke({"photo_id": photo.id})
@@ -164,6 +199,7 @@ def test_get_photo_visual_metrics_returns_all_keys(tmp_path, db, db_factory):
 
 def test_get_photo_visual_metrics_not_found(db_factory):
     from src.graphs.tools import get_photo_visual_metrics
+
     with patch("src.graphs.tools.SessionLocal", side_effect=db_factory):
         result = get_photo_visual_metrics.invoke({"photo_id": 9999})
     assert "not found" in result.lower()
@@ -171,6 +207,7 @@ def test_get_photo_visual_metrics_not_found(db_factory):
 
 def test_get_visual_metrics_function_returns_dict(tmp_path):
     from src.quality_checks import get_visual_metrics
+
     f = tmp_path / "test.jpg"
     Image.new("RGB", (200, 150), color=(100, 150, 200)).save(str(f), "JPEG")
     metrics = get_visual_metrics(str(f))

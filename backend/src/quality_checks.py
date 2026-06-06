@@ -1,6 +1,6 @@
-from PIL import Image, ImageFilter, ImageStat
 import numpy as np
 from loguru import logger
+from PIL import Image, ImageFilter, ImageStat
 
 THUMBNAIL_MAX_PIXELS = 10_000  # 100×100
 
@@ -46,11 +46,7 @@ def check_blur(file_path: str) -> tuple[bool, float]:
     with Image.open(file_path) as img:
         img_small = img.convert("L").resize((512, 512))
         arr = np.array(img_small, dtype=np.float64)
-    lap = (
-        arr[:-2, 1:-1] + arr[2:, 1:-1] +
-        arr[1:-1, :-2] + arr[1:-1, 2:] -
-        4 * arr[1:-1, 1:-1]
-    )
+    lap = arr[:-2, 1:-1] + arr[2:, 1:-1] + arr[1:-1, :-2] + arr[1:-1, 2:] - 4 * arr[1:-1, 1:-1]
     variance = float(lap.var())
     logger.debug(f"Blur check: Laplacian variance={variance:.2f}")
     return variance < 100.0, round(variance, 2)
@@ -67,7 +63,7 @@ def check_entropy(file_path: str) -> tuple[bool, float]:
 
     for i in range(0, arr.shape[0] - patch_size, patch_size):
         for j in range(0, arr.shape[1] - patch_size, patch_size):
-            patch = Image.fromarray(arr[i:i+patch_size, j:j+patch_size])
+            patch = Image.fromarray(arr[i : i + patch_size, j : j + patch_size])
             entropies.append(patch.entropy())
 
     entropy = float(np.median(entropies))
@@ -91,25 +87,23 @@ def get_visual_metrics(file_path: str) -> dict:
 
     brightness = round(float(np.mean(gray_arr)), 2)
 
-    lap = (
-        gray_arr[:-2, 1:-1] + gray_arr[2:, 1:-1] +
-        gray_arr[1:-1, :-2] + gray_arr[1:-1, 2:] -
-        4 * gray_arr[1:-1, 1:-1]
-    )
+    lap = gray_arr[:-2, 1:-1] + gray_arr[2:, 1:-1] + gray_arr[1:-1, :-2] + gray_arr[1:-1, 2:] - 4 * gray_arr[1:-1, 1:-1]
     blur_variance = round(float(lap.var()), 2)
 
     from PIL import ImageFilter
+
     edges = np.array(gray.filter(ImageFilter.FIND_EDGES))
     edge_density = round(float((edges > 10).sum()) / edges.size, 4)
 
     from PIL import ImageFilter as IF
+
     blurred = gray.filter(IF.GaussianBlur(radius=2))
     blurred_arr = np.array(blurred)
     patch_size = 64
     entropies = []
     for i in range(0, blurred_arr.shape[0] - patch_size, patch_size):
         for j in range(0, blurred_arr.shape[1] - patch_size, patch_size):
-            entropies.append(Image.fromarray(blurred_arr[i:i+patch_size, j:j+patch_size]).entropy())
+            entropies.append(Image.fromarray(blurred_arr[i : i + patch_size, j : j + patch_size]).entropy())
     entropy = round(float(np.median(entropies)), 4) if entropies else 0.0
 
     hsv_arr = np.array(Image.fromarray(np.array(small_rgb)).convert("HSV"), dtype=np.float32)
