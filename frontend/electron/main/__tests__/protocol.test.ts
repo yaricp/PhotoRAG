@@ -5,7 +5,7 @@ vi.mock('electron', () => ({
         handle: vi.fn(),
     },
     net: {
-        fetch: vi.fn((url: string) => Promise.resolve(new Response('image data'))),
+        fetch: vi.fn((_url: string) => Promise.resolve(new Response('image data'))),
     }
 }))
 

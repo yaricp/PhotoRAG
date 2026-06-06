@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+# lint-staged config is at repo root; run it from there.
+frontend/node_modules/.bin/lint-staged
+# type-check runs from frontend/ where tsconfig lives.
+cd frontend && npm run type-check

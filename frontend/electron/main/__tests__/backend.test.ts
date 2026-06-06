@@ -53,6 +53,16 @@ beforeEach(() => {
         default: { createServer: createServerMock },
         createServer: createServerMock,
     }))
+
+    // startBackend now calls waitForBackend internally; mock fetch so tests don't hang.
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true }))
+
+    vi.doMock('fs', () => ({
+        default: { existsSync: vi.fn(() => false), appendFileSync: vi.fn(), mkdirSync: vi.fn() },
+        existsSync: vi.fn(() => false),
+        appendFileSync: vi.fn(),
+        mkdirSync: vi.fn(),
+    }))
 })
 
 afterEach(() => {

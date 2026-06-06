@@ -14,7 +14,7 @@ export function DocumentsPage() {
     const [data, setData] = useState<Photo[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const [page, setPage] = useState(0)
+    const [page, _setPage] = useState(0)
 
     useEffect(() => {
         setLoading(true)

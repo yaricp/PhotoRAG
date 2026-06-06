@@ -7,7 +7,7 @@ interface Props {
     currentTopic: string
 }
 
-export function HelpSidebar({ currentTopic }: Props) {
+export function HelpSidebar({ currentTopic: _currentTopic }: Props) {
     const { t } = useTranslation()
 
     return (

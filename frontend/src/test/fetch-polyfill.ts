@@ -5,7 +5,7 @@
 // Node 16 has them in 'stream/web' but doesn't expose them on globalThis.
 if (typeof globalThis.ReadableStream === 'undefined') {
     try {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
         const sw = require('stream/web') as Record<string, unknown>
         for (const key of Object.keys(sw)) {
             if (typeof (globalThis as Record<string, unknown>)[key] === 'undefined') {

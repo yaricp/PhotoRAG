@@ -7,6 +7,7 @@ import { startBackend, stopBackend, waitForBackend } from './backend'
 
 app.setName('PhotoRAG')
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 let mainWindow: BrowserWindow | null = null
 
 function createMainWindow(): BrowserWindow {

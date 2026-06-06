@@ -7,7 +7,7 @@ import '../i18n'
 const canUseMsw = typeof globalThis.BroadcastChannel !== 'undefined'
     && typeof globalThis.ReadableStream !== 'undefined'
 
-let server: { listen: Function; resetHandlers: Function; close: Function } | null = null
+let server: { listen: (opts?: Record<string, unknown>) => void; resetHandlers: () => void; close: () => void } | null = null
 
 if (canUseMsw) {
     beforeAll(async () => {

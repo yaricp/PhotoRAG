@@ -1,0 +1,3 @@
+#!/usr/bin/env sh
+# $1 is the commit message file, relative to repo root.
+frontend/node_modules/.bin/commitlint --config frontend/.commitlintrc.json --edit "$1"

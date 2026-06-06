@@ -1,172 +1,188 @@
 {
-    "name": "photo-describer-frontend",
-    "version": "0.1.0",
-    "private": true,
-    "main": "out/main/index.js",
-    "scripts": {
-        "dev": "electron-vite dev",
-        "build": "node --require ./scripts/crypto-polyfill.cjs ./node_modules/.bin/electron-vite build",
-        "preview": "electron-vite preview",
-        "dist": "npm run build && electron-builder",
-        "predist:mac": "bash ../scripts/download-python.sh",
-        "dist:mac": "npm run build && electron-builder --mac --universal",
-        "predist:win": "bash ../scripts/download-python-win.sh",
-        "dist:win": "npm run build && electron-builder --win --x64",
-        "predist:linux": "bash ../scripts/download-python-linux.sh x64",
-        "dist:linux": "npm run build && electron-builder --linux --x64",
-        "predist:linux:arm64": "bash ../scripts/download-python-linux.sh arm64",
-        "dist:linux:arm64": "npm run build && electron-builder --linux --arm64",
-        "predist:win:arm64": "bash ../scripts/download-python-win-arm64.sh",
-        "dist:win:arm64": "npm run build && electron-builder --win --arm64",
-        "test": "node --require ./scripts/crypto-polyfill.cjs ./node_modules/.bin/vitest",
-        "test:ui": "node --require ./scripts/crypto-polyfill.cjs ./node_modules/.bin/vitest --ui",
-        "test:coverage": "node --require ./scripts/crypto-polyfill.cjs ./node_modules/.bin/vitest run --coverage",
-        "test:e2e": "playwright test"
+  "name": "photo-describer-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "main": "out/main/index.js",
+  "engines": { "node": ">=20.0.0", "npm": ">=10.0.0" },
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "node --require ./scripts/crypto-polyfill.cjs ./node_modules/.bin/electron-vite build",
+    "preview": "electron-vite preview",
+    "dist": "npm run build && electron-builder",
+    "predist:mac": "bash ../scripts/download-python.sh",
+    "dist:mac": "npm run build && electron-builder --mac --universal",
+    "predist:win": "bash ../scripts/download-python-win.sh",
+    "dist:win": "npm run build && electron-builder --win --x64",
+    "predist:linux": "bash ../scripts/download-python-linux.sh x64",
+    "dist:linux": "npm run build && electron-builder --linux --x64",
+    "predist:linux:arm64": "bash ../scripts/download-python-linux.sh arm64",
+    "dist:linux:arm64": "npm run build && electron-builder --linux --arm64",
+    "predist:win:arm64": "bash ../scripts/download-python-win-arm64.sh",
+    "dist:win:arm64": "npm run build && electron-builder --win --arm64",
+    "lint": "eslint src/ electron/",
+    "type-check": "tsc --noEmit",
+    "test": "node --require ./scripts/crypto-polyfill.cjs ./node_modules/.bin/vitest",
+    "test:ui": "node --require ./scripts/crypto-polyfill.cjs ./node_modules/.bin/vitest --ui",
+    "test:coverage": "node --require ./scripts/crypto-polyfill.cjs ./node_modules/.bin/vitest run --coverage",
+    "test:e2e": "playwright test",
+    "prepare": "cd .. && husky || true"
+  },
+  "build": {
+    "appId": "com.photorag.app",
+    "productName": "PhotoRAG",
+    "directories": {
+      "output": "dist-electron"
     },
-    "build": {
-        "appId": "com.photorag.app",
-        "productName": "PhotoRAG",
-        "directories": {
-            "output": "dist-electron"
+    "mac": {
+      "category": "public.app-category.photography",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
+      "icon": "resources/icon.icns",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "x64ArchFiles": "**/python/**",
+      "extendInfo": {
+        "NSDesktopFolderUsageDescription": "PhotoRAG needs access to your Desktop folder to find and process photos stored there.",
+        "NSDocumentsFolderUsageDescription": "PhotoRAG needs access to your Documents folder to find and process photos stored there.",
+        "NSDownloadsFolderUsageDescription": "PhotoRAG needs access to your Downloads folder to find and process photos stored there.",
+        "NSPhotoLibraryUsageDescription": "PhotoRAG needs access to your Photos library to process your photos.",
+        "NSRemovableVolumesUsageDescription": "PhotoRAG needs access to removable volumes to find and process photos stored there."
+      }
+    },
+    "dmg": {
+      "icon": "resources/icon.icns",
+      "background": "resources/dmg-background.png",
+      "window": {
+        "width": 540,
+        "height": 380
+      },
+      "contents": [
+        {
+          "x": 130,
+          "y": 220,
+          "type": "file"
         },
-        "mac": {
-            "category": "public.app-category.photography",
-            "target": [
-                {
-                    "target": "dmg",
-                    "arch": [
-                        "universal"
-                    ]
-                }
-            ],
-            "icon": "resources/icon.icns",
-            "hardenedRuntime": false,
-            "gatekeeperAssess": false,
-            "x64ArchFiles": "**/python/**",
-            "extendInfo": {
-                "NSDesktopFolderUsageDescription": "PhotoRAG needs access to your Desktop folder to find and process photos stored there.",
-                "NSDocumentsFolderUsageDescription": "PhotoRAG needs access to your Documents folder to find and process photos stored there.",
-                "NSDownloadsFolderUsageDescription": "PhotoRAG needs access to your Downloads folder to find and process photos stored there.",
-                "NSPhotoLibraryUsageDescription": "PhotoRAG needs access to your Photos library to process your photos.",
-                "NSRemovableVolumesUsageDescription": "PhotoRAG needs access to removable volumes to find and process photos stored there."
-            }
-        },
-        "dmg": {
-            "icon": "resources/icon.icns",
-            "background": "resources/dmg-background.png",
-            "window": {
-                "width": 540,
-                "height": 380
-            },
-            "contents": [
-                {
-                    "x": 130,
-                    "y": 220,
-                    "type": "file"
-                },
-                {
-                    "x": 410,
-                    "y": 220,
-                    "type": "link",
-                    "path": "/Applications"
-                }
-            ]
-        },
-        "extraResources": [
-            {
-                "from": "resources/python",
-                "to": "python"
-            },
-            {
-                "from": "../backend",
-                "to": "backend",
-                "filter": [
-                    "**/*",
-                    "!.venv/**",
-                    "!__pycache__/**",
-                    "!*.pyc",
-                    "!.env",
-                    "!tests/**",
-                    "!data/**"
-                ]
-            }
-        ],
-        "win": {
-            "target": [
-                {
-                    "target": "nsis",
-                    "arch": [
-                        "x64",
-                        "arm64"
-                    ]
-                }
-            ],
-            "icon": "resources/icon.ico",
-            "artifactName": "${productName}-Setup-${version}-${arch}.${ext}"
-        },
-        "nsis": {
-            "oneClick": false,
-            "allowToChangeInstallationDirectory": true,
-            "perMachine": false,
-            "allowElevation": false,
-            "createDesktopShortcut": true,
-            "createStartMenuShortcut": true,
-            "shortcutName": "PhotoRAG",
-            "installerIcon": "resources/icon.ico",
-            "uninstallerIcon": "resources/icon.ico",
-            "installerHeaderIcon": "resources/icon.ico",
-            "deleteAppDataOnUninstall": false,
-            "multiLanguageInstaller": true,
-            "installerLanguages": ["en_US", "ru_RU", "es_ES"],
-            "include": "build/installer.nsh"
-        },
-        "linux": {
-            "target": [
-                {
-                    "target": "AppImage",
-                    "arch": [
-                        "x64"
-                    ]
-                }
-            ],
-            "category": "Graphics",
-            "artifactName": "${productName}-${version}-${arch}.${ext}"
-        },
-        "afterSign": "../scripts/notarize.js",
-        "files": [
-            "out/**/*",
-            "package.json"
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "extraResources": [
+      {
+        "from": "resources/python",
+        "to": "python"
+      },
+      {
+        "from": "../backend",
+        "to": "backend",
+        "filter": [
+          "**/*",
+          "!.venv/**",
+          "!__pycache__/**",
+          "!*.pyc",
+          "!.env",
+          "!tests/**",
+          "!data/**"
         ]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "resources/icon.ico",
+      "artifactName": "${productName}-Setup-${version}-${arch}.${ext}"
     },
-    "dependencies": {
-        "@heroicons/react": "^2.2.0",
-        "i18next": "^26.2.0",
-        "react": "^18.3.1",
-        "react-dom": "^18.3.1",
-        "react-i18next": "^17.0.8",
-        "react-router-dom": "^6.23.1",
-        "zustand": "^4.5.2"
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "allowElevation": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "PhotoRAG",
+      "installerIcon": "resources/icon.ico",
+      "uninstallerIcon": "resources/icon.ico",
+      "installerHeaderIcon": "resources/icon.ico",
+      "deleteAppDataOnUninstall": false,
+      "multiLanguageInstaller": true,
+      "installerLanguages": [
+        "en_US",
+        "ru_RU",
+        "es_ES"
+      ],
+      "include": "build/installer.nsh"
     },
-    "devDependencies": {
-        "@electron-toolkit/preload": "^3.0.0",
-        "@electron-toolkit/utils": "^3.0.0",
-        "@playwright/test": "^1.44.1",
-        "@testing-library/jest-dom": "^6.4.6",
-        "@testing-library/react": "^16.0.0",
-        "@testing-library/user-event": "^14.5.2",
-        "@types/node": "^20.14.2",
-        "@types/react": "^18.3.3",
-        "@types/react-dom": "^18.3.0",
-        "@vitejs/plugin-react": "^4.3.1",
-        "@vitest/coverage-v8": "^1.6.0",
-        "@vitest/ui": "^1.6.0",
-        "electron": "^31.0.1",
-        "electron-builder": "^24.13.3",
-        "electron-vite": "^2.3.0",
-        "jsdom": "^24.1.0",
-        "msw": "^2.14.5",
-        "typescript": "^5.5.2",
-        "vite": "^5.3.1",
-        "vitest": "^1.6.0"
-    }
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "category": "Graphics",
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "afterSign": "../scripts/notarize.js",
+    "files": [
+      "out/**/*",
+      "package.json"
+    ]
+  },
+  "dependencies": {
+    "@heroicons/react": "^2.2.0",
+    "i18next": "^26.2.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-i18next": "^17.0.8",
+    "react-router-dom": "^6.23.1",
+    "zustand": "^4.5.2"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^20.5.3",
+    "@commitlint/config-conventional": "^20.5.3",
+    "@electron-toolkit/preload": "^3.0.0",
+    "@electron-toolkit/utils": "^3.0.0",
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.44.1",
+    "@testing-library/jest-dom": "^6.4.6",
+    "@testing-library/react": "^16.0.0",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/node": "^20.14.2",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "@vitest/coverage-v8": "^1.6.0",
+    "@vitest/ui": "^1.6.0",
+    "electron": "^31.0.1",
+    "electron-builder": "^24.13.3",
+    "electron-vite": "^2.3.0",
+    "eslint": "^10.4.1",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "husky": "^9.1.7",
+    "jsdom": "^24.1.0",
+    "lint-staged": "^16.4.0",
+    "msw": "^2.14.5",
+    "typescript": "^5.5.2",
+    "typescript-eslint": "^8.60.1",
+    "vite": "^5.3.1",
+    "vitest": "^1.6.0"
+  }
 }
