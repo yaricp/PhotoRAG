@@ -47,6 +47,10 @@ test.describe('Setup Wizard — renderer unit checks', () => {
 
         await page.goto(process.env.VITE_DEV_URL || 'http://localhost:5173')
 
+        // Language step is first — advance past it
+        await expect(page.getByText(/choose your language/i)).toBeVisible({ timeout: 5000 })
+        await page.getByRole('button', { name: /continue/i }).click()
+
         await expect(page.getByText(/welcome to photorag/i)).toBeVisible({ timeout: 5000 })
     })
 

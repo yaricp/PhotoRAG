@@ -154,7 +154,7 @@ test.describe('Settings page i18n', () => {
 
         await page.goto(`${BASE_URL}/#/settings`)
 
-        const langSelect = page.locator('select[id="language"], select').filter({ hasText: /English|Русский|Español/i }).first()
+        const langSelect = page.locator('select[id="default-language"]')
         await expect(langSelect).toBeVisible({ timeout: 8000 })
 
         // All three language options should be present
@@ -189,7 +189,7 @@ test.describe('Settings page i18n', () => {
 
         await page.goto(`${BASE_URL}/#/settings`)
 
-        const langSelect = page.locator('select').filter({ hasText: /English|Русский|Español/i }).first()
+        const langSelect = page.locator('select[id="default-language"]')
         await expect(langSelect).toBeVisible({ timeout: 8000 })
 
         // Change to Russian
@@ -226,7 +226,7 @@ test.describe('Settings page i18n', () => {
 
         await page.goto(`${BASE_URL}/#/settings`)
 
-        const langSelect = page.locator('select').filter({ hasText: /English|Русский|Español/i }).first()
+        const langSelect = page.locator('select[id="default-language"]')
         await expect(langSelect).toBeVisible({ timeout: 8000 })
 
         // Change to English
