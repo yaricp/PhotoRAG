@@ -12,7 +12,6 @@
 #   • Node.js 20+  (npm in PATH)
 #   • libfuse2     (to run the resulting AppImage on Linux ARM64:
 #                   sudo apt install libfuse2)
-#
 # Output: frontend/dist-electron/PhotoRAG-<version>-arm64.AppImage
 
 set -euo pipefail

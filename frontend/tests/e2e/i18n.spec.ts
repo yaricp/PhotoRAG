@@ -147,14 +147,14 @@ test.describe('Settings page i18n', () => {
                 onInstallDepsProgress: () => {},
                 onDownloadModelProgress: () => {},
                 onBackendReady: (_cb: () => void) => {},
-                getBaseUrl: async () => 'http://localhost:8000',
+                getBackendPort: async () => 8000,
                 openFolderDialog: async () => null,
             }
         })
 
-        await page.goto(`${BASE_URL}/#/settings`)
+        await page.goto(`${BASE_URL}/settings`)
 
-        const langSelect = page.locator('select[id="language"], select').filter({ hasText: /English|Русский|Español/i }).first()
+        const langSelect = page.locator('select[id="default-language"]')
         await expect(langSelect).toBeVisible({ timeout: 8000 })
 
         // All three language options should be present
@@ -171,7 +171,7 @@ test.describe('Settings page i18n', () => {
                 onInstallDepsProgress: () => {},
                 onDownloadModelProgress: () => {},
                 onBackendReady: (_cb: () => void) => {},
-                getBaseUrl: async () => 'http://localhost:8000',
+                getBackendPort: async () => 8000,
                 openFolderDialog: async () => null,
             }
         })
@@ -187,9 +187,9 @@ test.describe('Settings page i18n', () => {
             })
         })
 
-        await page.goto(`${BASE_URL}/#/settings`)
+        await page.goto(`${BASE_URL}/settings`)
 
-        const langSelect = page.locator('select').filter({ hasText: /English|Русский|Español/i }).first()
+        const langSelect = page.locator('select[id="default-language"]')
         await expect(langSelect).toBeVisible({ timeout: 8000 })
 
         // Change to Russian
@@ -212,7 +212,7 @@ test.describe('Settings page i18n', () => {
                 onInstallDepsProgress: () => {},
                 onDownloadModelProgress: () => {},
                 onBackendReady: (_cb: () => void) => {},
-                getBaseUrl: async () => 'http://localhost:8000',
+                getBackendPort: async () => 8000,
                 openFolderDialog: async () => null,
             }
         })
@@ -224,9 +224,9 @@ test.describe('Settings page i18n', () => {
             await route.fulfill({ status: 202, contentType: 'application/json', body: '{}' })
         })
 
-        await page.goto(`${BASE_URL}/#/settings`)
+        await page.goto(`${BASE_URL}/settings`)
 
-        const langSelect = page.locator('select').filter({ hasText: /English|Русский|Español/i }).first()
+        const langSelect = page.locator('select[id="default-language"]')
         await expect(langSelect).toBeVisible({ timeout: 8000 })
 
         // Change to English
@@ -252,7 +252,7 @@ test.describe('Language persistence', () => {
                 onInstallDepsProgress: () => {},
                 onDownloadModelProgress: () => {},
                 onBackendReady: (_cb: () => void) => {},
-                getBaseUrl: async () => 'http://localhost:8000',
+                getBackendPort: async () => 8000,
                 openFolderDialog: async () => null,
             }
         })
@@ -260,7 +260,7 @@ test.describe('Language persistence', () => {
         // Backend reports Russian as the stored language
         await mockSettingsApi(page, 'ru')
 
-        await page.goto(`${BASE_URL}/#/settings`)
+        await page.goto(`${BASE_URL}/settings`)
 
         // Settings page should show Russian text after i18n syncs
         await page.waitForTimeout(1500)

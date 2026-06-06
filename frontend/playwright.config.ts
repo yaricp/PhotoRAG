@@ -8,7 +8,7 @@ export default defineConfig({
         headless: true,
     },
     webServer: {
-        command: 'npm run dev -- --port 5173',
+        command: 'npx vite --config vite.renderer.config.ts',
         url: 'http://localhost:5173',
         reuseExistingServer: !process.env.CI,
         timeout: 60_000,
