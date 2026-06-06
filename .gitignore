@@ -28,6 +28,10 @@ data/
 .claude/worktrees/
 planning/
 
+# Coverage reports
+backend/.coverage
+frontend/coverage/
+
 # macOS installer build artifacts
 frontend/resources/python/
 frontend/dist-electron/
