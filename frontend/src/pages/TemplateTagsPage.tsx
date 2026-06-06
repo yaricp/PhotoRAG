@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import {
     getTemplateTags, createTemplateTag, updateTemplateTag, deleteTemplateTag,
 } from '@/api/client'
@@ -10,6 +12,8 @@ const EMPTY_FORM = { name: '', clip_prompt: '' }
 const PAGE_SIZE = 50
 
 export function TemplateTagsPage() {
+    const { t } = useTranslation()
+    const navigate = useNavigate()
     const [items, setItems] = useState<TemplateTag[]>([])
     const [total, setTotal] = useState(0)
     const [page, setPage] = useState(0)
@@ -33,12 +37,12 @@ export function TemplateTagsPage() {
             const data = await getTemplateTags(p * PAGE_SIZE, PAGE_SIZE)
             setItems(data.items)
             setTotal(data.total)
-        } catch (e: any) {
-            setError(e.message ?? 'Failed to load template tags')
+        } catch {
+            setError(t('vocab.tags.errorLoad'))
         } finally {
             setLoading(false)
         }
-    }, [])
+    }, [t])
 
     useEffect(() => { load(page) }, [page, load])
 
@@ -50,7 +54,6 @@ export function TemplateTagsPage() {
             await createTemplateTag(addForm.name.trim(), addForm.clip_prompt.trim())
             setAddForm(EMPTY_FORM)
             setShowAdd(false)
-            // New item lands on last page — go there
             const newTotal = total + 1
             const newLastPage = Math.max(0, Math.ceil(newTotal / PAGE_SIZE) - 1)
             if (page === newLastPage) {
@@ -58,8 +61,8 @@ export function TemplateTagsPage() {
             } else {
                 setPage(newLastPage)
             }
-        } catch (e: any) {
-            setError(e.message ?? 'Failed to create tag')
+        } catch {
+            setError(t('vocab.tags.errorCreate'))
         } finally {
             setAdding(false)
         }
@@ -79,8 +82,8 @@ export function TemplateTagsPage() {
             const updated = await updateTemplateTag(editingId, editForm.name.trim(), editForm.clip_prompt.trim())
             setItems(prev => prev.map(it => it.id === updated.id ? updated : it))
             setEditingId(null)
-        } catch (e: any) {
-            setError(e.message ?? 'Failed to update tag')
+        } catch {
+            setError(t('vocab.tags.errorUpdate'))
         } finally {
             setSaving(false)
         }
@@ -98,26 +101,26 @@ export function TemplateTagsPage() {
             } else {
                 setPage(targetPage)
             }
-        } catch (e: any) {
-            setError(e.message ?? 'Failed to delete tag')
+        } catch {
+            setError(t('vocab.tags.errorDelete'))
         }
     }
 
     return (
         <div className="vocab-page">
+            <button className="vocab-btn vocab-btn--ghost vocab-back-btn" onClick={() => navigate(-1)}>
+                {t('photoDetail.back')}
+            </button>
             <div className="vocab-page__header">
                 <div className="vocab-page__titles">
                     <h1 className="vocab-page__title">
-                        Template Tags
+                        {t('vocab.tags.title')}
                         <span className="vocab-count">{total}</span>
                     </h1>
-                    <p className="vocab-page__desc">
-                        Tags that CLIP detects in photos. Each entry has a name (shown in UI) and a CLIP prompt (fed to the model).
-                        Changes trigger an automatic embedding recompute in the background.
-                    </p>
+                    <p className="vocab-page__desc">{t('vocab.tags.desc')}</p>
                 </div>
                 <button className="vocab-page__add-btn" onClick={() => { setShowAdd(true); setEditingId(null) }}>
-                    + Add Tag
+                    {t('vocab.tags.addBtn')}
                 </button>
             </div>
 
@@ -126,20 +129,20 @@ export function TemplateTagsPage() {
             {showAdd && (
                 <div className="vocab-add-form">
                     <div className="vocab-field">
-                        <label className="vocab-field__label">Name</label>
+                        <label className="vocab-field__label">{t('vocab.name')}</label>
                         <input
                             className="vocab-field__input"
-                            placeholder="e.g. dog"
+                            placeholder={t('vocab.tags.namePlaceholder')}
                             value={addForm.name}
                             onChange={e => setAddForm(f => ({ ...f, name: e.target.value }))}
                             autoFocus
                         />
                     </div>
                     <div className="vocab-field">
-                        <label className="vocab-field__label">CLIP prompt</label>
+                        <label className="vocab-field__label">{t('vocab.clipPrompt')}</label>
                         <input
                             className="vocab-field__input"
-                            placeholder="e.g. a photo of a dog"
+                            placeholder={t('vocab.tags.promptPlaceholder')}
                             value={addForm.clip_prompt}
                             onChange={e => setAddForm(f => ({ ...f, clip_prompt: e.target.value }))}
                             onKeyDown={e => e.key === 'Enter' && handleCreate()}
@@ -147,14 +150,14 @@ export function TemplateTagsPage() {
                     </div>
                     <div className="vocab-add-form__actions">
                         <button className="vocab-btn vocab-btn--ghost" onClick={() => { setShowAdd(false); setAddForm(EMPTY_FORM) }}>
-                            Cancel
+                            {t('vocab.cancel')}
                         </button>
                         <button
                             className="vocab-btn vocab-btn--primary"
                             onClick={handleCreate}
                             disabled={adding || !addForm.name.trim() || !addForm.clip_prompt.trim()}
                         >
-                            {adding ? 'Adding…' : 'Add'}
+                            {adding ? t('vocab.adding') : t('vocab.add')}
                         </button>
                     </div>
                 </div>
@@ -162,21 +165,21 @@ export function TemplateTagsPage() {
 
             <div className="vocab-table">
                 <div className="vocab-table__head">
-                    <span className="vocab-table__head-cell">Name</span>
-                    <span className="vocab-table__head-cell">CLIP prompt</span>
+                    <span className="vocab-table__head-cell">{t('vocab.name')}</span>
+                    <span className="vocab-table__head-cell">{t('vocab.clipPrompt')}</span>
                     <span className="vocab-table__head-cell" />
                 </div>
                 <div className="vocab-table__body">
                     {loading ? (
                         <div className="vocab-empty"><Spinner size="md" /></div>
                     ) : items.length === 0 ? (
-                        <div className="vocab-empty">No tags yet. Click "Add Tag" to create the first one.</div>
+                        <div className="vocab-empty">{t('vocab.tags.empty')}</div>
                     ) : items.map(item => (
                         editingId === item.id ? (
                             <div key={item.id} className="vocab-row vocab-row--editing">
                                 <div className="vocab-row__edit-grid">
                                     <div className="vocab-field">
-                                        <label className="vocab-field__label">Name</label>
+                                        <label className="vocab-field__label">{t('vocab.name')}</label>
                                         <input
                                             className="vocab-field__input"
                                             value={editForm.name}
@@ -185,7 +188,7 @@ export function TemplateTagsPage() {
                                         />
                                     </div>
                                     <div className="vocab-field">
-                                        <label className="vocab-field__label">CLIP prompt</label>
+                                        <label className="vocab-field__label">{t('vocab.clipPrompt')}</label>
                                         <input
                                             className="vocab-field__input"
                                             value={editForm.clip_prompt}
@@ -195,13 +198,13 @@ export function TemplateTagsPage() {
                                     </div>
                                 </div>
                                 <div className="vocab-row__edit-actions">
-                                    <button className="vocab-btn vocab-btn--ghost" onClick={() => setEditingId(null)}>Cancel</button>
+                                    <button className="vocab-btn vocab-btn--ghost" onClick={() => setEditingId(null)}>{t('vocab.cancel')}</button>
                                     <button
                                         className="vocab-btn vocab-btn--primary"
                                         onClick={handleSave}
                                         disabled={saving}
                                     >
-                                        {saving ? 'Saving…' : 'Save'}
+                                        {saving ? t('vocab.saving') : t('vocab.save')}
                                     </button>
                                 </div>
                             </div>
@@ -210,8 +213,8 @@ export function TemplateTagsPage() {
                                 <span className="vocab-row__cell">{item.name}</span>
                                 <span className="vocab-row__cell vocab-row__cell--dim">{item.clip_prompt}</span>
                                 <div className="vocab-row__actions">
-                                    <button className="vocab-btn--icon" onClick={() => startEdit(item)}>Edit</button>
-                                    <button className="vocab-btn vocab-btn--danger" onClick={() => handleDelete(item.id)}>Delete</button>
+                                    <button className="vocab-btn--icon" onClick={() => startEdit(item)}>{t('vocab.edit')}</button>
+                                    <button className="vocab-btn vocab-btn--danger" onClick={() => handleDelete(item.id)}>{t('vocab.delete')}</button>
                                 </div>
                             </div>
                         )
@@ -226,17 +229,17 @@ export function TemplateTagsPage() {
                         onClick={() => setPage(p => Math.max(0, p - 1))}
                         disabled={page === 0}
                     >
-                        ← Prev
+                        {t('vocab.prev')}
                     </button>
                     <span className="vocab-pagination__info">
-                        Page {page + 1} of {totalPages}
+                        {t('vocab.pageInfo', { page: page + 1, total: totalPages })}
                     </span>
                     <button
                         className="vocab-btn vocab-btn--ghost"
                         onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
                         disabled={page + 1 >= totalPages}
                     >
-                        Next →
+                        {t('vocab.next')}
                     </button>
                 </div>
             )}

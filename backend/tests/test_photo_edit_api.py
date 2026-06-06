@@ -10,40 +10,58 @@ TDD API tests for photo-edit endpoints:
 Also verifies GET /api/photos/{id} returns is_trash field.
 Embedding recompute task is mocked — we only verify it's called.
 """
+
 import sys
 from unittest.mock import MagicMock, patch
+
 import sqlalchemy.types
 
 mock_pgvector = MagicMock()
 mock_pgvector.sqlalchemy.Vector = lambda size: sqlalchemy.types.JSON()
-sys.modules['pgvector'] = mock_pgvector
-sys.modules['pgvector.sqlalchemy'] = mock_pgvector.sqlalchemy
+sys.modules.setdefault("pgvector", mock_pgvector)
+sys.modules.setdefault("pgvector.sqlalchemy", mock_pgvector.sqlalchemy)
 
 for _mod in [
-    'sqlite_vec', 'langgraph', 'langgraph.graph',
-    'src.database', 'src.vector_db_services',
-    'src.ai', 'src.ai.registry', 'src.ai.prompts', 'src.ai.translator',
-    'src.graphs.ai_agent',
-    'src.queues', 'src.queues.folder_scan_queue', 'src.queues.clip_queue',
-    'src.queues.vision_queue', 'src.queues.embedding_queue',
-    'src.queues.translation_queue',
-    'src.tasks', 'src.tasks.utils', 'src.tasks.folder_scanners',
-    'src.tasks.vision_tasks', 'src.tasks.embedding_tasks',
-    'src.tasks.clip_tasks', 'src.tasks.translation_tasks',
-    'src.tasks.recompute_tasks',
-    'src.deps',
+    "sqlite_vec",
+    "langgraph",
+    "langgraph.graph",
+    "src.database",
+    "src.vector_db_services",
+    "src.ai",
+    "src.ai.registry",
+    "src.ai.prompts",
+    "src.ai.translator",
+    "src.queues",
+    "src.queues.folder_scan_queue",
+    "src.queues.clip_queue",
+    "src.queues.vision_queue",
+    "src.queues.embedding_queue",
+    "src.queues.translation_queue",
+    "src.queues.queue_config",
+    "src.tasks",
+    "src.tasks.utils",
+    "src.tasks.folder_scanners",
+    "src.tasks.vision_tasks",
+    "src.tasks.embedding_tasks",
+    "src.tasks.clip_tasks",
+    "src.tasks.translation_tasks",
+    "src.tasks.recompute_tasks",
+    "src.model_services",
+    "src.watcher_service",
+    "src.task_notifier",
+    "src.deps",
 ]:
-    sys.modules[_mod] = MagicMock()
+    sys.modules.setdefault(_mod, MagicMock())
 
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
-from fastapi.testclient import TestClient
 
-from src.models import Base, Photo, PhotoQualityIssue, Tag, Category
-from src.main import app
 from src.deps import get_db
+from src.main import app
+from src.models import Base, Photo, PhotoQualityIssue
 
 engine = create_engine(
     "sqlite:///:memory:",
@@ -92,6 +110,7 @@ def photo():
 
 # ── GET /api/photos/{id} — is_trash field ────────────────────────────────────
 
+
 class TestGetPhotoIsTrash:
     def test_is_trash_false_by_default(self, client, photo):
         r = client.get(f"/api/photos/{photo}")
@@ -109,6 +128,7 @@ class TestGetPhotoIsTrash:
 
 
 # ── PUT /api/photos/{id} ──────────────────────────────────────────────────────
+
 
 class TestUpdatePhoto:
     def test_update_description_returns_200(self, client, photo):
@@ -141,6 +161,7 @@ class TestUpdatePhoto:
 
 # ── PUT /api/photos/{id}/flags ────────────────────────────────────────────────
 
+
 class TestUpdatePhotoFlags:
     def test_set_is_doc_true(self, client, photo):
         r = client.put(f"/api/photos/{photo}/flags", json={"is_doc": True})
@@ -171,6 +192,7 @@ class TestUpdatePhotoFlags:
 
 # ── POST /api/photos/{id}/tags ────────────────────────────────────────────────
 
+
 class TestLinkPhotoTag:
     def test_link_tag_returns_201(self, client, photo):
         r = client.post(f"/api/photos/{photo}/tags", json={"name": "sunset"})
@@ -191,6 +213,7 @@ class TestLinkPhotoTag:
 
 # ── DELETE /api/photos/{id}/tags/{tag_id} ─────────────────────────────────────
 
+
 class TestUnlinkPhotoTag:
     def test_unlink_tag_returns_204(self, client, photo):
         r = client.post(f"/api/photos/{photo}/tags", json={"name": "river"})
@@ -204,6 +227,7 @@ class TestUnlinkPhotoTag:
 
 
 # ── POST /api/photos/{id}/categories ─────────────────────────────────────────
+
 
 class TestLinkPhotoCategory:
     def test_link_category_returns_201(self, client, photo):
@@ -219,6 +243,7 @@ class TestLinkPhotoCategory:
 
 
 # ── DELETE /api/photos/{id}/categories/{cat_id} ───────────────────────────────
+
 
 class TestUnlinkPhotoCategory:
     def test_unlink_category_returns_204(self, client, photo):

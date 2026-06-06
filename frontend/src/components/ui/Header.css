@@ -68,6 +68,31 @@
     white-space: nowrap;
 }
 
+/* LOGO */
+.app-header__logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 12px;
+    user-select: none;
+    z-index: 2;
+}
+
+.app-header__logo-img {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.app-header__logo-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-text);
+    letter-spacing: 0.02em;
+}
+
 /* RIGHT NAV */
 .app-header__nav {
     margin-left: auto;

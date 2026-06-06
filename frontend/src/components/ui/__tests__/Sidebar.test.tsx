@@ -16,7 +16,7 @@ describe('Sidebar', () => {
         expect(screen.getByText('Gallery')).toBeInTheDocument()
         expect(screen.getByText('Search')).toBeInTheDocument()
         expect(screen.getByText('Documents')).toBeInTheDocument()
-        expect(screen.getByText('Chat')).toBeInTheDocument()
+        expect(screen.getByText('Agent AI')).toBeInTheDocument()
         expect(screen.getByText('Settings')).toBeInTheDocument()
     })
 
@@ -47,5 +47,28 @@ describe('Sidebar', () => {
             </MemoryRouter>
         )
         expect(screen.getByText('Garbage')).toBeInTheDocument()
+    })
+
+    it('renders Help link', () => {
+        renderSidebar()
+        expect(screen.getByText('Help')).toBeInTheDocument()
+    })
+
+    it('Help link points to /help', () => {
+        renderSidebar()
+        expect(screen.getByText('Help').closest('a')).toHaveAttribute('href', '/help')
+    })
+
+    it('Help link appears after Settings in the DOM', () => {
+        renderSidebar()
+        const links = screen.getAllByRole('link')
+        const settingsIdx = links.findIndex(l => l.textContent?.includes('Settings'))
+        const helpIdx = links.findIndex(l => l.textContent?.includes('Help'))
+        expect(helpIdx).toBeGreaterThan(settingsIdx)
+    })
+
+    it('highlights Help link when on /help route', () => {
+        renderSidebar('/help/getting-started')
+        expect(screen.getByText('Help').closest('a')).toHaveClass('sidebar__link--active')
     })
 })

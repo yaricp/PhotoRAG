@@ -1,18 +1,22 @@
-import open_clip
-import torch
 import csv
-import numpy as np
-import os
 import hashlib
 import json
-import requests
-from PIL import Image
-from loguru import logger
+import os
 
-from src.db.database import SessionLocal
-from src.db_service import get_all_categories, get_all_template_tags_ordered, get_all_template_categories_ordered
+import numpy as np
+import open_clip
+import requests
+import torch
+from loguru import logger
+from PIL import Image
 
 from src.config import CLIP_Settings
+from src.db.database import SessionLocal
+from src.db_service import (
+    get_all_categories,
+    get_all_template_categories_ordered,
+    get_all_template_tags_ordered,
+)
 
 
 class ClipTagger:
@@ -25,7 +29,7 @@ class ClipTagger:
     CATEGORIES_NPY_PATH = settings.CATEGORIES_NPY_PATH
     CATEGORIES_HASH_PATH = settings.CATEGORIES_HASH_PATH
     CATEGORIES_CLIP_THRESHOLD = settings.CATEGORIES_CLIP_THRESHOLD
-    
+
     TAGS_NAMES_PATH = settings.TAGS_NAMES_PATH
     CATEGORIES_NAMES_PATH = settings.CATEGORIES_NAMES_PATH
 
@@ -68,14 +72,14 @@ class ClipTagger:
         else:
             logger.error(f"Failed to download vocabulary: {response.status_code}")
             raise Exception(f"Failed to download vocabulary: {response.status_code}")
-        
+
         tags = []
         with open(self.CSV_PATH, "r") as f:
             reader = csv.reader(f)
             for row in reader:
                 if len(row) > 1:
                     tags.append(row[1])
-        
+
         normalized = self._normalize_tags(tags)
         with open(self.TAGS_LIST_PATH, "w") as f:
             for t in normalized:
@@ -100,7 +104,7 @@ class ClipTagger:
         os.makedirs(os.path.dirname(self.TAGS_NAMES_PATH) or ".", exist_ok=True)
         with open(self.TAGS_NAMES_PATH, "w") as f:
             json.dump(names, f)
-        logger.info(f"[clip/tags] tags.npy + tags_names.json saved ✓")
+        logger.info("[clip/tags] tags.npy + tags_names.json saved ✓")
 
     def compute_embeddings_categories_from_db(self, db) -> None:
         """Recompute categories.npy from template_categories table. Saves names to CATEGORIES_NAMES_PATH."""
@@ -115,7 +119,7 @@ class ClipTagger:
         os.makedirs(os.path.dirname(self.CATEGORIES_NAMES_PATH) or ".", exist_ok=True)
         with open(self.CATEGORIES_NAMES_PATH, "w") as f:
             json.dump(names, f)
-        logger.info(f"[clip/categories] categories.npy + categories_names.json saved ✓")
+        logger.info("[clip/categories] categories.npy + categories_names.json saved ✓")
 
     def _compute_and_save_text_embeddings(self, prompts: list[str], npy_path: str) -> np.ndarray:
         """Compute normalized text embeddings for a list of prompts and save to npy_path."""
@@ -124,7 +128,7 @@ class ClipTagger:
         all_features = []
         with torch.no_grad():
             for i in range(0, len(prompts), batch_size):
-                batch = prompts[i:i + batch_size]
+                batch = prompts[i : i + batch_size]
                 tokens = open_clip.tokenize(batch).to(self.device)
                 features = self.model.encode_text(tokens)
                 features = features / features.norm(dim=-1, keepdim=True)
@@ -166,9 +170,7 @@ class ClipTagger:
         self.load_model()
 
         if os.path.exists(self.CATEGORIES_NPY_PATH) and os.path.exists(self.CATEGORIES_NAMES_PATH):
-            self.categories_features = torch.from_numpy(
-                np.load(self.CATEGORIES_NPY_PATH)
-            ).float().to(self.device)
+            self.categories_features = torch.from_numpy(np.load(self.CATEGORIES_NPY_PATH)).float().to(self.device)
             with open(self.CATEGORIES_NAMES_PATH, "r") as f:
                 self.categories = json.load(f)
             logger.info(f"Loaded {len(self.categories)} categories from cache ✅")
@@ -189,7 +191,10 @@ class ClipTagger:
             finally:
                 db2.close()
             if not legacy:
-                raise ValueError("No categories found in DB")
+                logger.warning("[clip] No categories found in DB — category matching will be unavailable")
+                self.categories_features = None
+                self.categories = []
+                return
             rows = legacy  # type: ignore[assignment]
             names = [c.name for c in rows]
             prompts = [c.prompt for c in rows]
@@ -203,9 +208,7 @@ class ClipTagger:
         with open(self.CATEGORIES_NAMES_PATH, "w") as f:
             json.dump(names, f)
 
-        self.categories_features = torch.from_numpy(
-            np.load(self.CATEGORIES_NPY_PATH)
-        ).float().to(self.device)
+        self.categories_features = torch.from_numpy(np.load(self.CATEGORIES_NPY_PATH)).float().to(self.device)
         self.categories = names
 
     def compute_embeddings_categories(self, names: list[str], prompts: list[str]):
@@ -216,7 +219,7 @@ class ClipTagger:
 
         with torch.no_grad():
             for i in range(0, len(prompts), batch_size):
-                batch = prompts[i:i+batch_size]
+                batch = prompts[i : i + batch_size]
 
                 tokens = open_clip.tokenize(batch).to(self.device)
                 features = self.model.encode_text(tokens)
@@ -232,16 +235,16 @@ class ClipTagger:
         open_clip.create_model_and_transforms(self.model_name, self.pretrained)
         logger.info(f"Model {self.model_name} downloaded.")
         if not os.path.exists(self.NPY_PATH):
-            logger.info(f"Downloading tags...")
+            logger.info("Downloading tags...")
             tags = self.download_vocabulary()
-            logger.info(f"Tags downloaded.")
+            logger.info("Tags downloaded.")
             logger.info(f"Computing embeddings for {len(tags)} tags...")
             self.compute_embeddings_tags(tags)
-            logger.info(f"Embeddings computed.")
+            logger.info("Embeddings computed.")
         if not os.path.exists(self.CATEGORIES_NPY_PATH):
-            logger.info(f"Loading or computing categories...")
+            logger.info("Loading or computing categories...")
             self.load_or_compute_categories()
-            logger.info(f"Categories loaded or computed.")
+            logger.info("Categories loaded or computed.")
 
     def load_model(self):
         """
@@ -251,7 +254,7 @@ class ClipTagger:
             self.model_name, self.pretrained, device=self.device
         )
         self.model.eval()
-        logger.info(f"DEBUG: ClipTagger.load_model() model loaded")
+        logger.info("DEBUG: ClipTagger.load_model() model loaded")
 
     def load_tags(self):
         if self.tags_features is None and os.path.exists(self.NPY_PATH):
@@ -285,7 +288,11 @@ class ClipTagger:
             image_features = image_features / img_norm
             similarities = (image_features.cpu().numpy() @ self.tags_features.T).squeeze()
             top_indices = similarities.argsort()[-top_k:][::-1]
-            return [(self.tags[i], float(similarities[i])) for i in top_indices if similarities[i] > self.TAGS_CLIP_THRESHOLD]
+            return [
+                (self.tags[i], float(similarities[i]))
+                for i in top_indices
+                if similarities[i] > self.TAGS_CLIP_THRESHOLD
+            ]
 
     def categorize(self, filepath: str, top_k: int = 5) -> list[tuple[str, float]]:
         """Zero-Shot categorization. Returns list of (category_name, score)."""
@@ -304,7 +311,4 @@ class ClipTagger:
 
             filtered_scores = similarities[filtered_indices]
             topk = torch.topk(filtered_scores, min(top_k, len(filtered_scores)))
-            return [
-                (self.categories[filtered_indices[i]], float(topk.values[j]))
-                for j, i in enumerate(topk.indices)
-            ]
+            return [(self.categories[filtered_indices[i]], float(topk.values[j])) for j, i in enumerate(topk.indices)]

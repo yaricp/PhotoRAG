@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { getModelConfigs, updateModelConfig, getSystemStatus } from '@/api/client'
 import type { AIModelConfig } from '@/types/api'
 import { ServerIcon, CloudIcon } from '@heroicons/react/24/outline'
 import { Spinner } from '@/components/ui/Spinner'
+import { PrivacyWarning } from '@/components/ui/PrivacyWarning'
 import './ModelsPage.css'
 
 type ModelStatusMap = Record<string, string>  // model type → status
@@ -59,17 +61,20 @@ function getModelSuggestions(provider: string, modelType: string): string[] {
     return MODEL_SUGGESTIONS[provider]?.[modelType] ?? []
 }
 
-const STATUS_LABEL: Record<string, string> = {
-    ready:       'Ready',
-    loading:     'Loading…',
-    downloading: 'Downloading…',
-    pending:     'Pending',
-    error:       'Error',
+// Maps API model type to wizard label key
+const MODEL_TYPE_LABEL_KEY: Record<string, string> = {
+    vision:     'wizard.stepModelConfig.labelVision',
+    clip:       'wizard.stepModelConfig.labelClip',
+    ocr:        'wizard.stepModelConfig.labelOcr',
+    embedding:  'wizard.stepModelConfig.labelEmbedding',
+    translator: 'wizard.stepModelConfig.labelTranslator',
+    chat:       'wizard.stepModelConfig.labelChat',
 }
 
 function ModelStatusBadge({ status }: { status: string | undefined }) {
+    const { t } = useTranslation()
     if (!status || status === 'ready') return null
-    const label = STATUS_LABEL[status] ?? status
+    const label = t(`models.status.${status}`, { defaultValue: status })
     return (
         <span className={`model-status-badge model-status-badge--${status}`}>
             {(status === 'loading' || status === 'downloading') && (
@@ -84,6 +89,7 @@ function ModelStatusBadge({ status }: { status: string | undefined }) {
 }
 
 export function ModelsPage() {
+    const { t } = useTranslation()
     const [configs, setConfigs] = useState<AIModelConfig[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -98,7 +104,7 @@ export function ModelsPage() {
             s.models.forEach(m => { map[m.name] = m.status })
             setModelStatuses(map)
             // stop polling when nothing is actively loading
-            const busy = s.models.some(m => m.status === 'loading' || m.status === 'downloading')
+            const busy = s.models.some(m => m.status === 'loading')
             if (!busy && pollRef.current) {
                 clearInterval(pollRef.current)
                 pollRef.current = null
@@ -115,7 +121,7 @@ export function ModelsPage() {
     useEffect(() => {
         getModelConfigs()
             .then(data => { setConfigs(data); setError(null) })
-            .catch(err => setError(err.message || 'Failed to fetch model configs'))
+            .catch(err => setError(err.message || t('models.error')))
             .finally(() => setLoading(false))
         startPolling()
         return () => { if (pollRef.current) clearInterval(pollRef.current) }
@@ -136,7 +142,7 @@ export function ModelsPage() {
             setSavedType(config.type)
             if (config.mode === 'local') startPolling()
         } catch (err: any) {
-            setError(err.message || 'Failed to save configuration')
+            setError(err.message || t('models.errorSaving'))
         } finally {
             setSaving(null)
         }
@@ -156,45 +162,43 @@ export function ModelsPage() {
     if (loading) return (
         <div className="models-page models-page--loading">
             <Spinner size="lg" />
-            <p className="models-page__loading-text">Loading model configurations…</p>
+            <p className="models-page__loading-text">{t('models.loading')}</p>
         </div>
     )
 
     return (
         <div className="models-page">
-            <h1 className="models-page__title">AI Models</h1>
-            <p className="models-page__desc">
-                Configure which models run each task.
-                Local models are downloaded automatically on first use.
-            </p>
+            <p className="models-page__desc">{t('models.desc')}</p>
 
             {error && <div className="models-page__error">{error}</div>}
+
+            <div className="models-page__layout">
 
             {savedType && (
                 <div className="model-modal-overlay" onClick={() => setSavedType(null)}>
                     <div className="model-modal" onClick={e => e.stopPropagation()}>
                         <div className="model-modal__icon">✅</div>
-                        <p className="model-modal__title">Configuration saved</p>
+                        <p className="model-modal__title">{t('models.configSaved')}</p>
                         <div className="model-modal__body">
                             <div className="model-modal__row">
                                 <span className="model-modal__row-icon">🔄</span>
                                 <span>
-                                    The <strong>{savedType}</strong> model is{' '}
+                                    {t(`wizard.stepModelConfig.label${savedType.charAt(0).toUpperCase()}${savedType.slice(1)}`, { defaultValue: savedType })}{' '}
                                     {configs.find(c => c.type === savedType)?.mode === 'local'
-                                        ? 'loading in the background. Status updates are shown on this page.'
-                                        : 'now using the remote API.'}
+                                        ? t('models.modelLoading')
+                                        : t('models.modelRemote')}
                                 </span>
                             </div>
                             {savedType === 'embedding' && (
                                 <div className="model-modal__row">
                                     <span className="model-modal__row-icon">🗂️</span>
-                                    <span>The embedding model changed — all photos need to be re-indexed. Run the pipeline again on your photo folders to rebuild the search index.</span>
+                                    <span>{t('models.reindexNeeded')}</span>
                                 </div>
                             )}
                         </div>
                         <div className="model-modal__footer">
                             <button className="model-modal__ok-btn" onClick={() => setSavedType(null)}>
-                                Got it
+                                {t('models.gotIt')}
                             </button>
                         </div>
                     </div>
@@ -210,11 +214,11 @@ export function ModelsPage() {
                                     ? <ServerIcon className="model-card__icon model-card__icon--local" />
                                     : <CloudIcon  className="model-card__icon model-card__icon--remote" />
                                 }
-                                {config.type}
+                                {t(MODEL_TYPE_LABEL_KEY[config.type] ?? '', { defaultValue: config.type })}
                             </h2>
                             <div className="model-card__badges">
                                 <span className={`model-card__badge model-card__badge--${config.mode}`}>
-                                    {config.mode}
+                                    {config.mode === 'local' ? t('models.local') : t('models.remote')}
                                 </span>
                                 {config.mode === 'local' && (
                                     <ModelStatusBadge status={modelStatuses[config.type]} />
@@ -224,30 +228,30 @@ export function ModelsPage() {
 
                         <div className="model-card__form">
                             <div className="model-field">
-                                <label className="model-field__label">Processing mode</label>
+                                <label className="model-field__label">{t('wizard.stepModelConfig.processingMode')}</label>
                                 <select
                                     className="model-field__select"
                                     value={config.mode}
                                     onChange={e => handleChange(config.type, 'mode', e.target.value)}
                                 >
-                                    <option value="local">Local (GPU / CPU)</option>
-                                    <option value="remote">Remote (API)</option>
+                                    <option value="local">{t('wizard.stepModelConfig.localMode')}</option>
+                                    <option value="remote">{t('wizard.stepModelConfig.remoteMode')}</option>
                                 </select>
                             </div>
 
                             <div className="model-field">
-                                <label className="model-field__label">Model name / HuggingFace ID</label>
+                                <label className="model-field__label">{t('wizard.stepModelConfig.modelName')}</label>
                                 <input
                                     className="model-field__input"
                                     value={config.model_name}
                                     onChange={e => handleChange(config.type, 'model_name', e.target.value)}
                                     placeholder={config.mode === 'local'
-                                        ? 'e.g. Qwen/Qwen2-VL-2B-Instruct'
+                                        ? t('wizard.stepModelConfig.localPlaceholder')
                                         : config.type === 'vision' || config.type === 'clip' || config.type === 'ocr'
                                             ? 'e.g. gpt-4o  /  claude-3-haiku-20240307  /  llava'
                                             : config.type === 'translator'
                                                 ? 'e.g. gpt-4o-mini  (not needed for deepl/libretranslate)'
-                                                : 'e.g. gpt-4o-mini'
+                                                : t('wizard.stepModelConfig.remotePlaceholder')
                                     }
                                 />
                                 {config.mode === 'remote' && config.model_provider && (
@@ -256,7 +260,7 @@ export function ModelsPage() {
                                         if (!suggestions.length) return null
                                         return (
                                             <div className="model-suggestions">
-                                                <span className="model-suggestions__label">Suggestions:</span>
+                                                <span className="model-suggestions__label">{t('wizard.stepModelConfig.suggestions')}</span>
                                                 {suggestions.map(name => (
                                                     <button
                                                         key={name}
@@ -276,13 +280,13 @@ export function ModelsPage() {
                             {config.mode === 'remote' && (
                                 <div className="model-card__remote">
                                     <div className="model-field">
-                                        <label className="model-field__label">Provider</label>
+                                        <label className="model-field__label">{t('wizard.stepModelConfig.provider')}</label>
                                         <select
                                             className="model-field__select"
                                             value={config.model_provider || ''}
                                             onChange={e => handleChange(config.type, 'model_provider', e.target.value)}
                                         >
-                                            <option value="">— auto-detect —</option>
+                                            <option value="">{t('wizard.stepModelConfig.autoDetect')}</option>
                                             <option value="openai">OpenAI</option>
                                             {(config.type === 'chat' || config.type === 'vision' || config.type === 'clip' || config.type === 'ocr' || config.type === 'translator') && (
                                                 <option value="anthropic">Anthropic (Claude)</option>
@@ -298,9 +302,7 @@ export function ModelsPage() {
                                             {config.type === 'translator' && <option value="libretranslate">LibreTranslate (self-hosted)</option>}
                                         </select>
                                         {config.model_provider === 'ollama' && (
-                                            <p className="model-field__hint">
-                                                Set API base URL to your Ollama server (default: http://localhost:11434). No API key needed.
-                                            </p>
+                                            <p className="model-field__hint">{t('wizard.stepModelConfig.ollamaHint')}</p>
                                         )}
                                         {config.model_provider === 'google_vertexai' && (
                                             <p className="model-field__hint">
@@ -308,14 +310,10 @@ export function ModelsPage() {
                                             </p>
                                         )}
                                         {config.type === 'clip' && config.mode === 'remote' && (
-                                            <p className="model-field__hint">
-                                                Remote CLIP uses a vision LLM to classify tags from your vocabulary. Use the same vision model you configured above, or a dedicated one (e.g. gpt-4o-mini for cost savings).
-                                            </p>
+                                            <p className="model-field__hint">{t('wizard.stepModelConfig.remoteClipHint')}</p>
                                         )}
                                         {config.model_provider === 'deepl' && (
-                                            <p className="model-field__hint">
-                                                Enter your DeepL API key below. Model name is not used. Free tier: api-free.deepl.com (set in base URL).
-                                            </p>
+                                            <p className="model-field__hint">{t('wizard.stepModelConfig.deepLHint')}</p>
                                         )}
                                         {config.model_provider === 'libretranslate' && (
                                             <p className="model-field__hint">
@@ -325,7 +323,9 @@ export function ModelsPage() {
                                     </div>
                                     <div className="model-field">
                                         <label className="model-field__label">
-                                            {config.model_provider === 'ollama' ? 'Ollama server URL' : 'API base URL (optional)'}
+                                            {config.model_provider === 'ollama'
+                                                ? t('wizard.stepModelConfig.ollamaUrl')
+                                                : t('wizard.stepModelConfig.baseUrl')}
                                         </label>
                                         <input
                                             className="model-field__input"
@@ -336,7 +336,7 @@ export function ModelsPage() {
                                     </div>
                                     {config.model_provider !== 'ollama' && config.model_provider !== 'google_vertexai' && (
                                         <div className="model-field">
-                                            <label className="model-field__label">API key</label>
+                                            <label className="model-field__label">{t('wizard.stepModelConfig.apiKey')}</label>
                                             <input
                                                 className="model-field__input"
                                                 type="password"
@@ -352,7 +352,7 @@ export function ModelsPage() {
 
                         {config.type === 'embedding' && (
                             <div className="model-field">
-                                <label className="model-field__label">Similarity threshold</label>
+                                <label className="model-field__label">{t('wizard.stepModelConfig.similarityThreshold')}</label>
                                 <input
                                     className="model-field__input"
                                     type="number"
@@ -361,12 +361,9 @@ export function ModelsPage() {
                                     max="2.0"
                                     value={config.similarity_limit ?? ''}
                                     onChange={e => handleChange(config.type, 'similarity_limit', e.target.value)}
-                                    placeholder="auto (scaled by dimension)"
+                                    placeholder={t('wizard.stepModelConfig.similarityHint').substring(0, 30)}
                                 />
-                                <p className="model-field__hint">
-                                    L2 distance cutoff — lower is stricter. Leave blank to auto-scale from the base threshold.
-                                    Recommended: nomic&nbsp;768d&nbsp;→&nbsp;0.75, OpenAI&nbsp;text-embedding-3-small&nbsp;→&nbsp;1.05, OpenAI&nbsp;text-embedding-3-large&nbsp;→&nbsp;1.50.
-                                </p>
+                                <p className="model-field__hint">{t('wizard.stepModelConfig.similarityHint')}</p>
                             </div>
                         )}
 
@@ -382,13 +379,15 @@ export function ModelsPage() {
                                             <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" opacity="0.25" />
                                             <path fill="currentColor" opacity="0.75" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                                         </svg>
-                                        Saving…
+                                        {t('models.saving')}
                                     </>
-                                ) : 'Save'}
+                                ) : t('models.save')}
                             </button>
                         </div>
                     </div>
                 ))}
+            </div>
+                <PrivacyWarning />
             </div>
         </div>
     )

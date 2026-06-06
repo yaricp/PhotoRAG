@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { getActivePipelineTasks, getRecentPipelineTasks } from '@/api/client'
 import { Spinner } from '@/components/ui/Spinner'
 import type { PipelineTask } from '@/types/api'
@@ -101,6 +102,7 @@ function PhotoRow({ photo_id, tasks, now }: PhotoGroup & { now: number }) {
 }
 
 export function JobProcessingPage() {
+    const { t } = useTranslation()
     const [active, setActive] = useState<PipelineTask[]>([])
     const [recent, setRecent] = useState<PipelineTask[]>([])
     const [loading, setLoading] = useState(true)
@@ -136,8 +138,9 @@ export function JobProcessingPage() {
     return (
         <div className="jobs-page">
             <div className="jobs-page__header">
-                <h2>Processing</h2>
-                <span>{activeGroups.length} active photo{activeGroups.length !== 1 ? 's' : ''}</span>
+                <span>{activeGroups.length !== 1
+                    ? t('processing.activeCountPlural', { count: activeGroups.length })
+                    : t('processing.activeCount', { count: activeGroups.length })}</span>
             </div>
 
             {loading && (
@@ -150,18 +153,18 @@ export function JobProcessingPage() {
                 <>
                     {activeGroups.length > 0 ? (
                         <section className="pipeline-section">
-                            <h3 className="pipeline-section__title">Active</h3>
+                            <h3 className="pipeline-section__title">{t('processing.active')}</h3>
                             {activeGroups.map(g => (
                                 <PhotoRow key={g.photo_id} {...g} now={now} />
                             ))}
                         </section>
                     ) : (
-                        <div className="jobs-page__center">No active processing</div>
+                        <div className="jobs-page__center">{t('processing.noActive')}</div>
                     )}
 
                     {recentGroups.length > 0 && (
                         <section className="pipeline-section pipeline-section--recent">
-                            <h3 className="pipeline-section__title">Recent</h3>
+                            <h3 className="pipeline-section__title">{t('processing.recent')}</h3>
                             {recentGroups.map(g => (
                                 <PhotoRow key={g.photo_id} {...g} now={now} />
                             ))}

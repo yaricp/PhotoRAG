@@ -32,13 +32,13 @@ describe('factories', () => {
 
     it('makeWatcher returns active watcher', () => {
         const w = makeWatcher()
-        expect(w.is_active).toBe(true)
+        expect(w.status).toBe('active')
         expect(w.path).toBe('/Users/test/Photos')
     })
 
     it('makeJob defaults to processing status', () => {
         const job = makeJob()
-        expect(job.status).toBe('processing')
+        expect(job.phase).toBe('processing')
     })
 
     it('makeSystemStatus has 3 models all ready', () => {

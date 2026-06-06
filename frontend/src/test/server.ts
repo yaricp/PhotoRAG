@@ -17,6 +17,10 @@ export const handlers = [
         HttpResponse.json(makePaginatedPhotos([photo1, photo2, photo3]))
     ),
 
+    http.get(`${BASE}/api/photos/available-dates/`, () =>
+        HttpResponse.json([])
+    ),
+
     http.get(`${BASE}/api/photos/:id`, ({ params }) =>
         HttpResponse.json(makePhoto({ id: Number(params.id) }))
     ),
@@ -41,7 +45,7 @@ export const handlers = [
         HttpResponse.json([makeWatcher()])
     ),
 
-    http.post(`${BASE}/api/watch/`, () =>
+    http.post(`${BASE}/api/watchers/`, () =>
         HttpResponse.json(makeWatcher())
     ),
 
@@ -65,12 +69,28 @@ export const handlers = [
         HttpResponse.json([makeGeoposition()])
     ),
 
-    http.get(`${BASE}/api/job/:photoId`, ({ params }) =>
+    http.get(`${BASE}/api/jobs/:photoId`, ({ params }) =>
         HttpResponse.json(makeJob({ photo_id: Number(params.photoId) }))
+    ),
+
+    http.get(`${BASE}/api/jobs/:photoId`, ({ params }) =>
+        HttpResponse.json(makeJob({ photo_id: Number(params.photoId) }))
+    ),
+
+    http.post(`${BASE}/api/watchers/`, () =>
+        HttpResponse.json(makeWatcher())
     ),
 
     http.get(`${BASE}/api/stream/`, () =>
         new HttpResponse(null, { status: 200 })
+    ),
+
+    http.get(`${BASE}/api/photos/available-dates/`, () =>
+        HttpResponse.json([])
+    ),
+
+    http.get(`${BASE}/api/system/tesseract/`, () =>
+        HttpResponse.json({ available: true })
     ),
 
     http.get(`${BASE}/api/settings/`, () =>
@@ -83,6 +103,46 @@ export const handlers = [
 
     http.post(`${BASE}/api/history/undo/`, () =>
         HttpResponse.json({ status: 'ok', detail: 'No action to undo.' })
+    ),
+
+    http.get(`${BASE}/api/prompts/`, () =>
+        HttpResponse.json([])
+    ),
+
+    http.put(`${BASE}/api/prompts/:key`, ({ params }) =>
+        HttpResponse.json({ id: 1, key: params.key, group: 'general', name: '', title: '', text: '', description: null, updated_at: null })
+    ),
+
+    http.get(`${BASE}/api/models/`, () =>
+        HttpResponse.json([])
+    ),
+
+    http.put(`${BASE}/api/models/:type`, ({ params }) =>
+        HttpResponse.json({ id: 1, type: params.type, mode: 'remote', model_name: '' })
+    ),
+
+    http.get(`${BASE}/api/system/reindex-status/`, () =>
+        HttpResponse.json({ needed: false, total: 0, indexed: 0 })
+    ),
+
+    http.get(`${BASE}/api/pipeline/active`, () =>
+        HttpResponse.json([])
+    ),
+
+    http.get(`${BASE}/api/pipeline/recent`, () =>
+        HttpResponse.json([])
+    ),
+
+    http.get(`${BASE}/api/folder_scanners/progress/`, () =>
+        HttpResponse.json([])
+    ),
+
+    http.post(`${BASE}/api/folder_scanners/`, () =>
+        HttpResponse.json({ id: 1, path: '/test', progress: 0 })
+    ),
+
+    http.delete(`${BASE}/api/folder_scanners/:id`, () =>
+        new HttpResponse(null, { status: 204 })
     ),
 ]
 

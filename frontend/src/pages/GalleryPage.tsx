@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { getPhotos, getAvailableDates, archivePhotos, deletePhoto } from '@/api/client'
 import type { AvailableDate } from '@/api/client'
 import { PhotoCard } from '@/components/photos/PhotoCard'
@@ -12,13 +13,21 @@ type SortField = 'created_at' | 'captured_at' | 'file_created_at' | 'image_width
 type SortOrder = 'asc' | 'desc'
 
 const DEFAULT_LIMIT = 20
+const GALLERY_LIMIT_KEY = 'gallery-limit'
+const VALID_LIMITS = [5, 10, 20, 50, 100]
+
+function getSavedLimit(): number {
+    const n = parseInt(localStorage.getItem(GALLERY_LIMIT_KEY) ?? '', 10)
+    return VALID_LIMITS.includes(n) ? n : DEFAULT_LIMIT
+}
 
 export function GalleryPage() {
+    const { t } = useTranslation()
     const [data, setData] = useState<PaginatedPhotos | null>(null)
     const [loading, setLoading] = useState(true)
 
     const [page, setPage] = useState(0)
-    const [limit, setLimit] = useState(DEFAULT_LIMIT)
+    const [limit, setLimit] = useState(getSavedLimit)
 
     const [selectedCategories, setSelectedCategories] = useState<number[]>([])
     const [selectedTags, setSelectedTags] = useState<number[]>([])
@@ -33,6 +42,7 @@ export function GalleryPage() {
 
     const [availableDates, setAvailableDates] = useState<AvailableDate[]>([])
     const [removedIds, setRemovedIds] = useState<Set<number>>(new Set())
+    const [error, setError] = useState<string | null>(null)
 
     function removeFromGallery(id: number) {
         setRemovedIds(prev => { const next = new Set(prev); next.add(id); return next })
@@ -56,6 +66,7 @@ export function GalleryPage() {
     // Main query
     useEffect(() => {
         setLoading(true)
+        setError(null)
         setRemovedIds(new Set())
         getPhotos({
             skip: page * limit,
@@ -71,6 +82,7 @@ export function GalleryPage() {
             day: selectedDay ?? undefined,
         })
             .then(setData)
+            .catch(err => setError(err instanceof Error ? err.message : String(err)))
             .finally(() => setLoading(false))
     }, [page, limit, selectedCategories, selectedTags, selectedCamera, selectedGeo, selectedYear, selectedMonth, selectedDay, sortBy, sortOrder])
 
@@ -110,7 +122,7 @@ export function GalleryPage() {
     }, [data, limit])
 
     return (
-        <div className="gallery-layout">
+        <div className="gallery-layout" data-testid="page-gallery">
             <FilterBar
                 selectedTags={selectedTags}
                 selectedCategories={selectedCategories}
@@ -130,7 +142,7 @@ export function GalleryPage() {
                 onDateSelect={handleDateSelect}
                 onSortByChange={field => { setSortBy(field as SortField); setPage(0) }}
                 onSortOrderToggle={() => { setSortOrder(p => p === 'asc' ? 'desc' : 'asc'); setPage(0) }}
-                onLimitChange={val => { setLimit(val); setPage(0) }}
+                onLimitChange={val => { localStorage.setItem(GALLERY_LIMIT_KEY, String(val)); setLimit(val); setPage(0) }}
                 onReset={resetFilters}
             />
 
@@ -140,6 +152,14 @@ export function GalleryPage() {
                 </div>
             )}
 
+            {!loading && error && (
+                <div className="gallery-center">{t('gallery.error')}</div>
+            )}
+
+            {!loading && !error && data && data.items.length === 0 && (
+                <div className="gallery-center">{t('gallery.empty')}</div>
+            )}
+
             {!loading && data && (() => {
                 const pagination = (
                     <div className="gallery-pagination">
@@ -147,14 +167,14 @@ export function GalleryPage() {
                             disabled={page === 0}
                             onClick={() => setPage(p => Math.max(0, p - 1))}
                         >
-                            Prev
+                            {t('gallery.prev')}
                         </Button>
                         <span>{page + 1} / {totalPages}</span>
                         <Button
                             disabled={page + 1 >= totalPages}
                             onClick={() => setPage(p => p + 1)}
                         >
-                            Next
+                            {t('gallery.next')}
                         </Button>
                     </div>
                 )

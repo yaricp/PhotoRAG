@@ -4,25 +4,26 @@ TDD tests for src/pipeline_tracker.py.
 Uses an in-memory SQLite database to avoid touching the production DB.
 SessionLocal is monkeypatched to use the test engine.
 """
+
 import sys
 from unittest.mock import MagicMock
+
 import sqlalchemy.types
 
 # Mock pgvector before any src.* import so models.py doesn't fail
 mock_pgvector = MagicMock()
 mock_pgvector.sqlalchemy.Vector = lambda size: sqlalchemy.types.JSON()
-sys.modules['pgvector'] = mock_pgvector
-sys.modules['pgvector.sqlalchemy'] = mock_pgvector.sqlalchemy
+sys.modules.setdefault("pgvector", mock_pgvector)
+sys.modules.setdefault("pgvector.sqlalchemy", mock_pgvector.sqlalchemy)
 
 # Mock sqlite_vec so src.db.database can be imported in the test environment
-sys.modules['sqlite_vec'] = MagicMock()
+sys.modules.setdefault("sqlite_vec", MagicMock())
 
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from src.models import Base, Photo, PipelineTask
-
 
 TEST_ENGINE = create_engine("sqlite:///:memory:")
 TestSessionFactory = sessionmaker(bind=TEST_ENGINE)
@@ -62,6 +63,7 @@ def patch_session(monkeypatch):
 # init_pipeline_tasks
 # ---------------------------------------------------------------------------
 
+
 class TestInitPipelineTasks:
     def test_creates_pending_records(self, photo, patch_session):
         from src.pipeline_tracker import init_pipeline_tasks
@@ -93,6 +95,7 @@ class TestInitPipelineTasks:
 # track_task — success path
 # ---------------------------------------------------------------------------
 
+
 class TestTrackTaskSuccess:
     @pytest.mark.asyncio
     async def test_marks_running_then_done(self, photo, patch_session):
@@ -102,17 +105,13 @@ class TestTrackTaskSuccess:
 
         async with track_task(photo.id, "phase_1", "metadata_task"):
             db = TestSessionFactory()
-            mid = db.query(PipelineTask).filter_by(
-                photo_id=photo.id, task_name="metadata_task"
-            ).first()
+            mid = db.query(PipelineTask).filter_by(photo_id=photo.id, task_name="metadata_task").first()
             db.close()
             assert mid.status == "running"
             assert mid.started_at is not None
 
         db = TestSessionFactory()
-        final = db.query(PipelineTask).filter_by(
-            photo_id=photo.id, task_name="metadata_task"
-        ).first()
+        final = db.query(PipelineTask).filter_by(photo_id=photo.id, task_name="metadata_task").first()
         db.close()
         assert final.status == "done"
         assert final.finished_at is not None
@@ -135,6 +134,7 @@ class TestTrackTaskSuccess:
 # ---------------------------------------------------------------------------
 # track_task — failure path
 # ---------------------------------------------------------------------------
+
 
 class TestTrackTaskFailure:
     @pytest.mark.asyncio
@@ -169,6 +169,7 @@ class TestTrackTaskFailure:
 # track_task — graceful no-op when record missing
 # ---------------------------------------------------------------------------
 
+
 class TestTrackTaskNoRecord:
     @pytest.mark.asyncio
     async def test_does_not_crash_when_task_not_initialized(self, photo, patch_session):
@@ -183,9 +184,10 @@ class TestTrackTaskNoRecord:
 # get_active_pipeline_tasks
 # ---------------------------------------------------------------------------
 
+
 class TestGetActivePipelineTasks:
     def test_returns_pending_and_running(self, photo, db, patch_session):
-        from src.pipeline_tracker import init_pipeline_tasks, get_active_pipeline_tasks
+        from src.pipeline_tracker import get_active_pipeline_tasks, init_pipeline_tasks
 
         init_pipeline_tasks(photo.id, "phase_1", ["task_a", "task_b"])
         # manually set one to done
@@ -200,7 +202,7 @@ class TestGetActivePipelineTasks:
         assert results[0].task_name == "task_b"
 
     def test_excludes_done_and_failed(self, photo, db, patch_session):
-        from src.pipeline_tracker import init_pipeline_tasks, get_active_pipeline_tasks
+        from src.pipeline_tracker import get_active_pipeline_tasks, init_pipeline_tasks
 
         init_pipeline_tasks(photo.id, "phase_1", ["t1", "t2"])
         inner = TestSessionFactory()
@@ -218,9 +220,10 @@ class TestGetActivePipelineTasks:
 # get_photo_pipeline_tasks
 # ---------------------------------------------------------------------------
 
+
 class TestGetPhotoPipelineTasks:
     def test_returns_tasks_for_photo(self, photo, db, patch_session):
-        from src.pipeline_tracker import init_pipeline_tasks, get_photo_pipeline_tasks
+        from src.pipeline_tracker import get_photo_pipeline_tasks, init_pipeline_tasks
 
         init_pipeline_tasks(photo.id, "phase_1", ["meta", "clip"])
 
@@ -228,7 +231,7 @@ class TestGetPhotoPipelineTasks:
         assert len(results) == 2
 
     def test_does_not_return_other_photos_tasks(self, photo, db, patch_session):
-        from src.pipeline_tracker import init_pipeline_tasks, get_photo_pipeline_tasks
+        from src.pipeline_tracker import get_photo_pipeline_tasks, init_pipeline_tasks
 
         # Create second photo
         p2 = Photo(file_path="/tmp/other.jpg", hash="def456")

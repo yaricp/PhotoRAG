@@ -8,18 +8,26 @@ Covers:
 - cleanup_old_results removes stale rows
 - get_result returns None when no row exists
 """
+
 import json
 import sqlite3
 import threading
 import time
+
 import pytest
 
-from src.db.task_results import init_db, save_result, get_result, save_error, cleanup_old_results
-
+from src.db.task_results import (
+    cleanup_old_results,
+    get_result,
+    init_db,
+    save_error,
+    save_result,
+)
 
 # ---------------------------------------------------------------------------
 # Fixture: isolated in-memory DB for every test
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture(autouse=True)
 def isolated_db(tmp_path, monkeypatch):
@@ -33,6 +41,7 @@ def isolated_db(tmp_path, monkeypatch):
 # ---------------------------------------------------------------------------
 # Basic roundtrip
 # ---------------------------------------------------------------------------
+
 
 def test_save_and_get_string():
     save_result("t1", "hello")
@@ -59,6 +68,7 @@ def test_get_result_returns_none_when_absent():
 # save_error + get_result
 # ---------------------------------------------------------------------------
 
+
 def test_save_error_makes_get_result_raise():
     """save_error should store an error marker; get_result should raise RuntimeError."""
     save_error("e1", "something exploded")
@@ -77,6 +87,7 @@ def test_save_error_does_not_conflict_with_normal_result():
 # ---------------------------------------------------------------------------
 # Concurrent writers
 # ---------------------------------------------------------------------------
+
 
 def test_concurrent_writers():
     """10 threads each save their own task_id; all must be retrievable."""
@@ -131,6 +142,7 @@ def test_concurrent_save_and_get():
 # cleanup_old_results
 # ---------------------------------------------------------------------------
 
+
 def test_cleanup_removes_old_rows(isolated_db):
     """Rows older than max_age_seconds should be deleted; newer ones kept."""
     save_result("old-1", "stale")
@@ -139,9 +151,7 @@ def test_cleanup_removes_old_rows(isolated_db):
 
     # Back-date the two old rows directly in sqlite
     conn = sqlite3.connect(isolated_db)
-    conn.execute(
-        "UPDATE results SET created_at = datetime('now', '-2 hours') WHERE task_id IN ('old-1','old-2')"
-    )
+    conn.execute("UPDATE results SET created_at = datetime('now', '-2 hours') WHERE task_id IN ('old-1','old-2')")
     conn.commit()
     conn.close()
 

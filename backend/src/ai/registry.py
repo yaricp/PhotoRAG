@@ -1,8 +1,10 @@
 import threading
+
 from loguru import logger
+
 from src.config import (
-    Vision_Settings, CLIP_Settings, Embedding_Settings,
-    Translation_Settings, OCR_Settings, Chat_Settings
+    Chat_Settings,
+    Embedding_Settings,
 )
 
 
@@ -13,11 +15,13 @@ class AIModelRegistry:
     Respects local/remote mode from ML_Settings.
     Never downloads, never checks the network.
     """
+
     _instance = None
     _lock = threading.Lock()
 
     def __init__(self):
         self.settings = Chat_Settings()
+        self.embedding_settings = Embedding_Settings()
         self._clip_tagger = None
         self._vision_generator = None
         self._nomic_embedder = None
@@ -50,7 +54,7 @@ class AIModelRegistry:
     def get_model_config(self, model_type: str):
         from src.db.database import SessionLocal
         from src.db_service import get_model_config as db_get_model_config
-        
+
         db = SessionLocal()
         try:
             return db_get_model_config(db, model_type)
@@ -68,9 +72,10 @@ class AIModelRegistry:
                 if self._clip_tagger is None:
                     logger.info("[registry] Warming up CLIP Tagger...")
                     from src.ai.clip import ClipTagger
+
                     tagger = ClipTagger()
                     tagger.load_model()
-                    tagger.load_tags()               # загрузить tags.npy в память
+                    tagger.load_tags()  # загрузить tags.npy в память
                     tagger.load_or_compute_categories()  # загрузить categories.npy
                     self._clip_tagger = tagger
                     logger.info("[registry] CLIP Tagger ready ✓")
@@ -85,22 +90,22 @@ class AIModelRegistry:
         if self._vision_generator is None:
             with self._vision_lock:
                 if self._vision_generator is None:
-                    config = self.get_model_config("vision")
                     # mode = config.mode if config else self.settings.VISION_MODE
-                    
+
                     # if mode == "local":
                     logger.info("[registry] Warming up Qwen-VL Vision Generator...")
                     from src.ai.vision import QwenVisionGenerator
+
                     self._vision_generator = QwenVisionGenerator()
                     logger.info("[registry] Qwen-VL Vision Generator ready ✓")
                     # else:
                     #     logger.info("[registry] Vision mode=remote, using API client.")
                     #     from src.ai.vision_remote import RemoteVisionGenerator
-                        
+
                     #     api_key = config.api_key if config and config.api_key else self.settings.VISION_API_KEY
                     #     api_url = config.url if config and config.url else self.settings.VISION_API_URL
                     #     model_name = config.model_name if config and config.model_name else self.settings.VISION_DESCRIBER_MODEL
-                        
+
                     #     self._vision_generator = RemoteVisionGenerator(
                     #         api_key=api_key,
                     #         api_url=api_url,
@@ -126,11 +131,12 @@ class AIModelRegistry:
                 if self._nomic_embedder is None:
                     # config = self.get_model_config("embedding")
                     # mode = config.mode if config else self.settings.EMBEDDING_MODE
-                    
+
                     # if mode == "local":
                     logger.info("[registry] Warming up Nomic Embedder...")
                     model_name = self.embedding_settings.PHOTO_EMBEDDER_MODEL
                     from sentence_transformers import SentenceTransformer
+
                     model = SentenceTransformer(
                         model_name,
                         trust_remote_code=True,
@@ -142,11 +148,11 @@ class AIModelRegistry:
                     # else:
                     #     logger.info("[registry] Embedding mode=remote, using API client.")
                     #     from src.ai.embedding_remote import RemoteEmbedder
-                        
+
                     #     api_key = config.api_key if config and config.api_key else self.settings.EMBEDDING_API_KEY
                     #     api_url = config.url if config and config.url else self.settings.EMBEDDING_API_URL
                     #     model_name = config.model_name if config and config.model_name else self.settings.PHOTO_EMBEDDER_MODEL
-                        
+
                     #     self._nomic_embedder = RemoteEmbedder(
                     #         api_key=api_key,
                     #         api_url=api_url,
@@ -158,7 +164,7 @@ class AIModelRegistry:
         """Единая точка входа — local или remote прозрачно для tasks.py"""
         # config = self.get_model_config("embedding")
         # mode = config.mode if config else self.settings.EMBEDDING_MODE
-        
+
         # if mode == "local":
         if purpose == "search":
             text = f"search_query: {text}"
@@ -179,6 +185,7 @@ class AIModelRegistry:
             with self._geo_lock:
                 if self._geo_enricher is None:
                     from src.geo import GeoEnricher
+
                     self._geo_enricher = GeoEnricher()
                     logger.info("[registry] Geo Enricher ready ✓")
         return self._geo_enricher
@@ -189,6 +196,7 @@ class AIModelRegistry:
             with self._translator_lock:
                 if self._translator is None:
                     from src.ai.translator import Translator
+
                     self._translator = Translator()
                     logger.info("[registry] Translator ready ✓")
         return self._translator
@@ -197,6 +205,7 @@ class AIModelRegistry:
         try:
             from src.db.database import SessionLocal
             from src.db_service import update_model_status
+
             db = SessionLocal()
             try:
                 update_model_status(db, name, status)
@@ -218,9 +227,17 @@ class AIModelRegistry:
                         logger.info(f"[registry] Warming up local Chat Model: {model_id}")
                         self._update_model_status("chat", "loading")
                         try:
-                            from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline, BitsAndBytesConfig
-                            from langchain_huggingface import HuggingFacePipeline, ChatHuggingFace
                             import torch
+                            from langchain_huggingface import (
+                                ChatHuggingFace,
+                                HuggingFacePipeline,
+                            )
+                            from transformers import (
+                                AutoModelForCausalLM,
+                                AutoTokenizer,
+                                BitsAndBytesConfig,
+                                pipeline,
+                            )
 
                             tokenizer = AutoTokenizer.from_pretrained(model_id)
 
@@ -234,9 +251,11 @@ class AIModelRegistry:
                             def _load_causal_lm(mid, extra_kwargs):
                                 try:
                                     return AutoModelForCausalLM.from_pretrained(
-                                        mid, device_map="auto",
+                                        mid,
+                                        device_map="auto",
                                         quantization_config=bnb_config,
-                                        trust_remote_code=True, **extra_kwargs
+                                        trust_remote_code=True,
+                                        **extra_kwargs,
                                     )
                                 except ValueError as e:
                                     if "Unrecognized configuration class" in str(e):
@@ -248,7 +267,9 @@ class AIModelRegistry:
                                         ) from e
                                     raise
                                 except Exception as e:
-                                    logger.warning(f"[registry] Quantized load failed: {e}. Retrying without quantization.")
+                                    logger.warning(
+                                        f"[registry] Quantized load failed: {e}. Retrying without quantization."
+                                    )
                                     return AutoModelForCausalLM.from_pretrained(
                                         mid, device_map="auto", trust_remote_code=True
                                     )
@@ -260,16 +281,13 @@ class AIModelRegistry:
                                 model=model,
                                 tokenizer=tokenizer,
                                 max_new_tokens=1024,
-                                temperature=0,      # Deterministic for tools
+                                temperature=0,  # Deterministic for tools
                                 do_sample=False,
-                                return_full_text=False, # IMPORTANT: don't repeat the prompt
+                                return_full_text=False,  # IMPORTANT: don't repeat the prompt
                             )
                             hf_pipe = HuggingFacePipeline(pipeline=pipe)
                             # Pass tokenizer explicitly to ensure ChatML template is used
-                            self._chat_model = ChatHuggingFace(
-                                llm=hf_pipe,
-                                tokenizer=tokenizer
-                            )
+                            self._chat_model = ChatHuggingFace(llm=hf_pipe, tokenizer=tokenizer)
                             self._update_model_status("chat", "ready")
                             logger.info("[registry] Local Chat Model ready ✓")
                         except Exception:
@@ -299,20 +317,22 @@ class AIModelRegistry:
                             kwargs["base_url"] = api_url
 
                         _PROVIDER_INSTALL = {
-                            "openai":           "langchain-openai",
-                            "anthropic":        "langchain-anthropic",
-                            "google_genai":     "langchain-google-genai",
-                            "google_vertexai":  "langchain-google-vertexai",
-                            "ollama":           "langchain-ollama",
-                            "groq":             "langchain-groq",
-                            "mistralai":        "langchain-mistralai",
-                            "together":         "langchain-together",
-                            "cohere":           "langchain-cohere",
+                            "openai": "langchain-openai",
+                            "anthropic": "langchain-anthropic",
+                            "google_genai": "langchain-google-genai",
+                            "google_vertexai": "langchain-google-vertexai",
+                            "ollama": "langchain-ollama",
+                            "groq": "langchain-groq",
+                            "mistralai": "langchain-mistralai",
+                            "together": "langchain-together",
+                            "cohere": "langchain-cohere",
                         }
                         try:
                             self._chat_model = init_chat_model(**kwargs)
                         except ImportError as exc:
-                            pkg = _PROVIDER_INSTALL.get(model_provider or "", "the appropriate langchain provider package")
+                            pkg = _PROVIDER_INSTALL.get(
+                                model_provider or "", "the appropriate langchain provider package"
+                            )
                             raise RuntimeError(
                                 f"Missing package for provider '{model_provider}'. "
                                 f"Install it with: uv pip install {pkg}"
@@ -342,6 +362,7 @@ class AIModelRegistry:
         elif model_type == "ocr":
             # OCR is a singleton by itself in EasyOCRReader, but we can clear its instance
             from src.ai.ocr import EasyOCRReader
+
             EasyOCRReader._instance = None
         logger.info(f"[registry] Reset model cache for: {model_type}")
 

@@ -1,12 +1,12 @@
-from src.observer import start_observer
-from src.db_service import (
-    get_all_active_watchers, 
-    update_watcher_status,
-    get_or_create_watcher,
-    get_all_watchers,
-    delete_watcher
-)
 from loguru import logger
+
+from src.db_service import (
+    delete_watcher,
+    get_all_watchers,
+    get_or_create_watcher,
+    update_watcher_status,
+)
+from src.observer import start_observer
 
 
 class WatcherService:
@@ -20,17 +20,16 @@ class WatcherService:
 
         for watcher in watchers:
             logger.info(f"Starting watcher for path: {watcher.path}")
-            self.active.append({
-                "id": watcher.id,
-                "path": watcher.path,
-                "observer": self._start_observer(
-                    watcher.path,
-                    watcher.destination_path
-                )
-            })
-            watcher_db = update_watcher_status(db, watcher.id, "active")
+            self.active.append(
+                {
+                    "id": watcher.id,
+                    "path": watcher.path,
+                    "observer": self._start_observer(watcher.path, watcher.destination_path),
+                }
+            )
+            update_watcher_status(db, watcher.id, "active")
             logger.info(f"Watcher {watcher.id} started")
-        logger.info(f"All watchers started")
+        logger.info("All watchers started")
         return {"message": "watchers started"}
 
     def start_watcher(self, db, path: str, destination_path: str) -> dict:
@@ -42,10 +41,7 @@ class WatcherService:
         new_watcher = {
             "id": watcher_db.id,
             "path": watcher_db.path,
-            "observer": self._start_observer(
-                watcher_db.path,
-                watcher_db.destination_path
-            )
+            "observer": self._start_observer(watcher_db.path, watcher_db.destination_path),
         }
         self.active.append(new_watcher)
         watcher_db = update_watcher_status(db, watcher_db.id, "active")
@@ -57,7 +53,7 @@ class WatcherService:
         observer = start_observer(path, destination_path)
         logger.info(f"Observer started: {observer}")
         return observer
-        
+
     def stop_all(self, db):
         logger.info("Stopping all watchers...")
         for active in self.active:
@@ -71,9 +67,7 @@ class WatcherService:
     def stop_watcher(self, watcher_id: int, db):
         logger.info(f"Stopping watcher: {watcher_id}")
         logger.info(f"Active watchers: {self.active}")
-        watcher = list(filter(
-            lambda w: w["id"] == watcher_id, self.active
-        ))[0]
+        watcher = list(filter(lambda w: w["id"] == watcher_id, self.active))[0]
         logger.info(f"Stopping watcher for path: {watcher}")
         watcher["observer"].stop()
         watcher["observer"].join()

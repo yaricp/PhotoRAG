@@ -24,3 +24,16 @@ test_output.txt
 **/Pictures
 data/
 .github/skills/
+.claude/skills/
+.claude/worktrees/
+planning/
+
+# Coverage reports
+backend/.coverage
+frontend/coverage/
+
+# macOS installer build artifacts
+frontend/resources/python/
+frontend/dist-electron/
+frontend/resources/MyIcon.iconset/
+frontend/out/

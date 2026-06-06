@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import { getPhoto, deletePhoto, archivePhotos, updatePhotoFlags } from '@/api/client'
 import { Spinner } from '@/components/ui/Spinner'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
+import { OcrPanel } from './OcrPanel'
 import type { Photo } from '@/types/api'
 import { photoImageUrl } from '@/api/images'
 import './PhotoDetailPage.css'
@@ -33,8 +35,11 @@ function CollapsibleRow({ title, children }: { title: string; children: React.Re
 type PendingAction = 'archive' | 'delete' | null
 
 export function PhotoDetailPage() {
+    const { t } = useTranslation()
     const { id } = useParams()
     const navigate = useNavigate()
+    const location = useLocation()
+    const backTo = (location.state as { from?: string } | null)?.from ?? '/'
     const [photo, setPhoto] = useState<Photo | null>(null)
     const [loading, setLoading] = useState(true)
     const [pending, setPending] = useState<PendingAction>(null)
@@ -62,21 +67,21 @@ export function PhotoDetailPage() {
     async function handleArchive() {
         if (!photo) return
         await archivePhotos([photo.id])
-        navigate(-1)
+        navigate(backTo)
     }
 
     async function handleDelete() {
         if (!photo) return
         await deletePhoto(photo.id)
-        navigate(-1)
+        navigate(backTo)
     }
 
     if (loading) {
-        return <div className="pd__center"><Spinner size="lg" /></div>
+        return <div className="pd__center" data-testid="page-photo-detail"><Spinner size="lg" /></div>
     }
 
     if (!photo) {
-        return <div className="pd__center">Photo not found</div>
+        return <div className="pd__center" data-testid="page-photo-detail">{t('photoDetail.notFound')}</div>
     }
 
     const filename = photo.file_path.split('/').pop() ?? photo.file_path
@@ -86,11 +91,11 @@ export function PhotoDetailPage() {
     const categories = photo.categories_rel ?? []
 
     return (
-        <div className="pd">
+        <div className="pd" data-testid="page-photo-detail">
             {/* HEADER */}
             <div className="pd__header">
-                <button className="pd__back-btn" onClick={() => navigate(-1)}>← Back</button>
-                <Link className="pd__edit-btn" to={`/photo/${photo.id}/edit`}>Edit</Link>
+                <button className="pd__back-btn" onClick={() => navigate(backTo)}>{t('photoDetail.back')}</button>
+                <Link className="pd__edit-btn" to={`/photo/${photo.id}/edit`}>{t('photoDetail.edit')}</Link>
             </div>
 
             {/* IMAGE */}
@@ -103,7 +108,7 @@ export function PhotoDetailPage() {
                 <div className="pd__filepath">{photo.file_path}</div>
 
                 {photo.captured_at && (
-                    <Item label="Date taken" value={photo.captured_at.replace('T', ' ').slice(0, 16)} />
+                    <Item label={t('photoDetail.dateTaken')} value={photo.captured_at.replace('T', ' ').slice(0, 16)} />
                 )}
 
                 {geo && (
@@ -128,29 +133,34 @@ export function PhotoDetailPage() {
                 )}
 
                 {cam && (
-                    <Item label="Camera" value={`${cam.make ?? ''} ${cam.model ?? ''}`.trim()} />
+                    <Item label={t('photoDetail.camera')} value={`${cam.make ?? ''} ${cam.model ?? ''}`.trim()} />
                 )}
 
                 {photo.description && (
                     <div className="pd__description">
-                        <div className="pd__desc-label">Description</div>
+                        <div className="pd__desc-label">{t('photoDetail.description')}</div>
                         <div className="pd__desc-text">{photo.description}</div>
                     </div>
                 )}
 
                 {photo.translated_description && (
                     <div className="pd__description">
-                        <div className="pd__desc-label">Translation</div>
+                        <div className="pd__desc-label">{t('photoDetail.translation')}</div>
                         <div className="pd__desc-text pd__desc-text--muted">{photo.translated_description}</div>
                     </div>
                 )}
 
                 {tags.length > 0 && (
                     <div className="pd__tags">
-                        <div className="pd__desc-label">Tags</div>
+                        <div className="pd__desc-label">{t('photoDetail.tags')}</div>
                         <div className="pd__tag-list">
                             {tags.map(pt => (
-                                <span key={pt.tag?.id} className="pd__tag">{pt.tag?.name}</span>
+                                <span key={pt.tag?.id} className="pd__tag">
+                                    {pt.tag?.name}
+                                    {pt.confidence_score != null && (
+                                        <span className="pd__tag-score"> {Math.round(pt.confidence_score * 100)}%</span>
+                                    )}
+                                </span>
                             ))}
                         </div>
                     </div>
@@ -158,7 +168,7 @@ export function PhotoDetailPage() {
 
                 {categories.length > 0 && (
                     <div className="pd__tags">
-                        <div className="pd__desc-label">Categories</div>
+                        <div className="pd__desc-label">{t('photoDetail.categories')}</div>
                         <div className="pd__tag-list">
                             {categories.map(pc => (
                                 <span key={pc.category?.id} className="pd__tag pd__tag--cat">{pc.category?.name}</span>
@@ -177,7 +187,7 @@ export function PhotoDetailPage() {
                         disabled={flagLoading}
                         onChange={e => handleToggleFlag('is_trash', e.target.checked)}
                     />
-                    Trash
+                    {t('photoDetail.trash')}
                 </label>
                 <label className={`pd__flag-label ${flagLoading ? 'pd__flag-label--disabled' : ''}`}>
                     <input
@@ -186,33 +196,33 @@ export function PhotoDetailPage() {
                         disabled={flagLoading}
                         onChange={e => handleToggleFlag('is_doc', e.target.checked)}
                     />
-                    Document
+                    {t('photoDetail.document')}
                 </label>
             </div>
 
             {/* DOCUMENT TEXT (collapsible, only when is_doc) */}
             {photo.is_doc && photo.ocr_text && (
                 <div className="pd__section">
-                    <CollapsibleRow title="Document text">
-                        <div className="pd__ocr-text">{photo.ocr_text}</div>
+                    <CollapsibleRow title={t('photoDetail.documentText')}>
+                        <OcrPanel text={photo.ocr_text} />
                     </CollapsibleRow>
                 </div>
             )}
 
             {/* ADDITIONAL DATA (collapsible) */}
             <div className="pd__section">
-                <CollapsibleRow title="Additional data">
+                <CollapsibleRow title={t('photoDetail.additionalData')}>
                     <div className="pd__grid">
-                        <Item label="File created" value={photo.file_created_at?.replace('T', ' ').slice(0, 16)} />
-                        <Item label="Captured" value={photo.captured_at?.replace('T', ' ').slice(0, 16)} />
-                        <Item label="Indexed" value={photo.created_at?.replace('T', ' ').slice(0, 16)} />
-                        <Item label="Width" value={photo.image_width} />
-                        <Item label="Height" value={photo.image_height} />
-                        <Item label="ISO" value={photo.iso} />
-                        <Item label="Aperture" value={photo.aperture} />
-                        <Item label="Focal length" value={photo.focal_length} />
-                        <Item label="Shutter speed" value={photo.shutter_speed} />
-                        <Item label="Offset time" value={photo.offset_time} />
+                        <Item label={t('photoDetail.fileCreated')} value={photo.file_created_at?.replace('T', ' ').slice(0, 16)} />
+                        <Item label={t('photoDetail.captured')} value={photo.captured_at?.replace('T', ' ').slice(0, 16)} />
+                        <Item label={t('photoDetail.indexed')} value={photo.created_at?.replace('T', ' ').slice(0, 16)} />
+                        <Item label={t('photoDetail.width')} value={photo.image_width} />
+                        <Item label={t('photoDetail.height')} value={photo.image_height} />
+                        <Item label={t('photoDetail.iso')} value={photo.iso} />
+                        <Item label={t('photoDetail.aperture')} value={photo.aperture} />
+                        <Item label={t('photoDetail.focalLength')} value={photo.focal_length} />
+                        <Item label={t('photoDetail.shutterSpeed')} value={photo.shutter_speed} />
+                        <Item label={t('photoDetail.offsetTime')} value={photo.offset_time} />
                     </div>
                 </CollapsibleRow>
             </div>
@@ -220,27 +230,27 @@ export function PhotoDetailPage() {
             {/* ARCHIVE / DELETE */}
             <div className="pd__actions">
                 <button className="pd__action-btn pd__action-btn--warning" onClick={() => setPending('archive')}>
-                    Archive
+                    {t('photoDetail.archive')}
                 </button>
                 <button className="pd__action-btn pd__action-btn--danger" onClick={() => setPending('delete')}>
-                    Delete
+                    {t('photoDetail.delete')}
                 </button>
             </div>
 
             <ConfirmModal
                 open={pending === 'archive'}
-                title="Archive photo?"
-                message="The photo will be zipped and removed from the library."
-                confirmLabel="Archive"
+                title={t('photoDetail.archiveConfirmTitle')}
+                message={t('photoDetail.archiveConfirmMessage')}
+                confirmLabel={t('photoDetail.archive')}
                 variant="warning"
                 onConfirm={handleArchive}
                 onClose={() => setPending(null)}
             />
             <ConfirmModal
                 open={pending === 'delete'}
-                title="Delete photo?"
-                message="The photo will be permanently deleted."
-                confirmLabel="Delete"
+                title={t('photoDetail.deleteConfirmTitle')}
+                message={t('photoDetail.deleteConfirmMessage')}
+                confirmLabel={t('photoDetail.delete')}
                 variant="danger"
                 onConfirm={handleDelete}
                 onClose={() => setPending(null)}

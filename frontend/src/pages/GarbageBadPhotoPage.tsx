@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { getGarbageSummary, getGarbagePhotos, archivePhotos, deletePhoto, unmarkGarbage } from '@/api/client'
 import type { PaginatedPhotos } from '@/types/api'
 import { PhotoCard } from '@/components/photos/PhotoCard'
@@ -8,30 +9,27 @@ import './GarbageBadPhotoPage.css'
 
 type PendingAction = { id: number; type: 'archive' | 'delete' } | null
 
-interface IssueRow {
-    type: string
-    label: string
-}
-
-const TECHNICAL_ISSUES: IssueRow[] = [
-    { type: 'thumbnail',     label: 'Thumbnails (resolution too small)' },
-    { type: 'no_exif',       label: 'No EXIF (possible internet copy)' },
-    { type: 'brightness',    label: 'Abnormal brightness' },
-    { type: 'edge_density',  label: 'Low edge density (featureless)' },
-    { type: 'blur',          label: 'Blurry (Laplacian)' },
-    { type: 'entropy',       label: 'Low entropy (low information)' },
-    { type: 'screenshot',    label: 'Screenshots (UI detected)' },
-]
+// Maps API issue type keys to i18n keys under garbage.issues.*
+const TECHNICAL_ISSUE_TYPES = [
+    'thumbnail',
+    'no_exif',
+    'brightness',
+    'edge_density',
+    'blur',
+    'entropy',
+    'screenshot',
+] as const
 
 function IssueSection({
-    issue,
+    issueType,
     count,
     onPhotoRemoved,
 }: {
-    issue: IssueRow
+    issueType: string
     count: number
     onPhotoRemoved: () => void
 }) {
+    const { t } = useTranslation()
     const [expanded, setExpanded] = useState(false)
     const [data, setData] = useState<PaginatedPhotos | null>(null)
     const [loading, setLoading] = useState(false)
@@ -44,7 +42,7 @@ function IssueSection({
         if (data) return
         setLoading(true)
         try {
-            const result = await getGarbagePhotos(issue.type, 0, 50)
+            const result = await getGarbagePhotos(issueType, 0, 50)
             setData(result)
             setIds(new Set(result.items.map(p => p.id)))
         } finally {
@@ -72,15 +70,12 @@ function IssueSection({
 
     const visiblePhotos = data?.items.filter(p => ids.has(p.id)) ?? []
 
-    const confirmTitle = pending?.type === 'delete' ? 'Delete photo?' : 'Archive photo?'
-    const confirmMessage = pending?.type === 'delete'
-        ? 'This file will be permanently removed from disk.'
-        : 'This photo will be marked as archived.'
+    const label = t(`garbage.issues.${issueType}`, { defaultValue: issueType })
 
     return (
         <div className="gbp-issue">
             <button className="gbp-issue__row" onClick={expand}>
-                <span className="gbp-issue__label">{issue.label}</span>
+                <span className="gbp-issue__label">{label}</span>
                 {count > 0 && <span className="gbp-issue__count">{count}</span>}
                 <span className="gbp-issue__chevron">{expanded ? '▲' : '▼'}</span>
             </button>
@@ -89,7 +84,7 @@ function IssueSection({
                 <div className="gbp-issue__cards">
                     {loading && <Spinner />}
                     {!loading && visiblePhotos.length === 0 && (
-                        <p className="gbp-issue__empty">No photos flagged.</p>
+                        <p className="gbp-issue__empty">{t('garbage.noFlagged')}</p>
                     )}
                     {!loading && visiblePhotos.map(photo => (
                         <div key={photo.id} className="gbp-card-wrap">
@@ -101,9 +96,9 @@ function IssueSection({
                             <button
                                 className="gbp-not-garbage-btn"
                                 onClick={() => handleNotGarbage(photo.id)}
-                                title="Remove all garbage flags from this photo"
+                                title={t('garbage.notGarbageTitle')}
                             >
-                                Not garbage
+                                {t('garbage.notGarbage')}
                             </button>
                         </div>
                     ))}
@@ -112,9 +107,9 @@ function IssueSection({
 
             <ConfirmModal
                 open={pending !== null}
-                title={confirmTitle}
-                message={confirmMessage}
-                confirmLabel={pending?.type === 'delete' ? 'Delete' : 'Archive'}
+                title={pending?.type === 'delete' ? t('common.confirmDeletePhotoTitle') : t('common.confirmArchivePhotoTitle')}
+                message={pending?.type === 'delete' ? t('common.confirmDeletePhotoMessage') : t('common.confirmArchivePhotoMessage')}
+                confirmLabel={pending?.type === 'delete' ? t('common.delete') : t('common.archive')}
                 variant={pending?.type === 'delete' ? 'danger' : 'warning'}
                 onConfirm={executeAction}
                 onClose={() => setPending(null)}
@@ -124,15 +119,17 @@ function IssueSection({
 }
 
 function PlaceholderSection({ title }: { title: string }) {
+    const { t } = useTranslation()
     return (
         <section className="gbp-section">
             <h2 className="gbp-section__heading">{title}</h2>
-            <p className="gbp-section__placeholder">Coming soon</p>
+            <p className="gbp-section__placeholder">{t('garbage.comingSoon')}</p>
         </section>
     )
 }
 
 export function GarbageBadPhotoPage() {
+    const { t } = useTranslation()
     const [counts, setCounts] = useState<Record<string, number>>({})
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -144,7 +141,7 @@ export function GarbageBadPhotoPage() {
             const summary = await getGarbageSummary()
             setCounts(summary.counts ?? {})
         } catch {
-            setError('Failed to load garbage summary')
+            setError(t('garbage.error'))
         } finally {
             setLoading(false)
         }
@@ -152,38 +149,40 @@ export function GarbageBadPhotoPage() {
 
     useEffect(() => { load() }, [load])
 
-    if (loading) return <div className="gbp-page"><Spinner /></div>
-    if (error) return <div className="gbp-page gbp-page--error">{error}</div>
-
     return (
         <div className="gbp-page">
-            <h1 className="gbp-page__title">Garbage &amp; Bad Photos</h1>
+            {loading && <Spinner />}
+            {error && <div className="gbp-page--error">{error}</div>}
 
-            <section className="gbp-section">
-                <h2 className="gbp-section__heading">Technical Garbage</h2>
-                <div className="gbp-issues">
-                    {TECHNICAL_ISSUES.map(issue => (
-                        <IssueSection
-                            key={issue.type}
-                            issue={issue}
-                            count={counts[issue.type] ?? 0}
-                            onPhotoRemoved={() =>
-                                setCounts(prev => ({
-                                    ...prev,
-                                    [issue.type]: Math.max(0, (prev[issue.type] ?? 0) - 1),
-                                }))
-                            }
-                        />
-                    ))}
-                </div>
-            </section>
+            {!loading && !error && (
+                <>
+                    <section className="gbp-section">
+                        <h2 className="gbp-section__heading">{t('garbage.technical')}</h2>
+                        <div className="gbp-issues">
+                            {TECHNICAL_ISSUE_TYPES.map(issueType => (
+                                <IssueSection
+                                    key={issueType}
+                                    issueType={issueType}
+                                    count={counts[issueType] ?? 0}
+                                    onPhotoRemoved={() =>
+                                        setCounts(prev => ({
+                                            ...prev,
+                                            [issueType]: Math.max(0, (prev[issueType] ?? 0) - 1),
+                                        }))
+                                    }
+                                />
+                            ))}
+                        </div>
+                    </section>
 
-            <div className="gbp-divider" />
-            <PlaceholderSection title="Semantic Garbage" />
-            <div className="gbp-divider" />
-            <PlaceholderSection title="Temporary Garbage" />
-            <div className="gbp-divider" />
-            <PlaceholderSection title="Subjective Garbage" />
+                    <div className="gbp-divider" />
+                    <PlaceholderSection title={t('garbage.semantic')} />
+                    <div className="gbp-divider" />
+                    <PlaceholderSection title={t('garbage.temporary')} />
+                    <div className="gbp-divider" />
+                    <PlaceholderSection title={t('garbage.subjective')} />
+                </>
+            )}
         </div>
     )
 }

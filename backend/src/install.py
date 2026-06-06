@@ -4,15 +4,20 @@
 Идемпотентен: повторный запуск безопасен, пропускает уже готовые шаги.
 """
 
-import os
 import hashlib
+import os
 from typing import Optional
+
 from loguru import logger
 from sqlalchemy.orm import Session
 
 from src.config import (
-    CLIP_Settings, Vision_Settings, Embedding_Settings,
-    Translation_Settings, OCR_Settings, Chat_Settings,
+    Chat_Settings,
+    CLIP_Settings,
+    Embedding_Settings,
+    OCR_Settings,
+    Translation_Settings,
+    Vision_Settings,
 )
 
 
@@ -30,28 +35,30 @@ def _local_ml_models() -> list[str]:
     if Chat_Settings().CHAT_MODEL_MODE == "local":
         result.append("chat")
     return result
-from src.db.database import engine, SessionLocal
-from src.models import Base, ModelState
+
+
 from sqlalchemy import text
+
+from src.db.database import engine
 from src.db_service import (
-    get_model_status,
-    update_model_status,
-    get_or_create_category,
     get_all_categories,
     get_model_or_none,
-    init_default_model_configs,
-    get_setting,
-    set_setting,
-    get_or_create_template_tag,
+    get_model_status,
     get_or_create_template_category,
+    get_or_create_template_tag,
+    get_setting,
+    init_default_model_configs,
     seed_prompts_from_json,
+    set_setting,
+    update_model_status,
 )
+from src.models import Base, ModelState
 from src.utils import load_categories_from_json
-
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _compute_model_hash(model_name: str, pretrained: str) -> str:
     """Хеш конфига модели — инвалидирует .npy при смене модели в .env"""
@@ -82,6 +89,7 @@ def _remove_if_exists(*paths: str) -> None:
 # Cache validators
 # ---------------------------------------------------------------------------
 
+
 def _is_tags_cache_valid(cfg: CLIP_Settings, model_hash: str) -> bool:
     """
     tags.npy валиден если:
@@ -111,6 +119,7 @@ def _is_categories_cache_valid(cfg: CLIP_Settings, model_hash: str, db: Session)
 
     # Проверка 3: содержимое категорий в БД не менялось
     from src.ai.clip import ClipTagger
+
     rows = get_all_categories(db)
     if not rows:
         return False
@@ -122,6 +131,7 @@ def _is_categories_cache_valid(cfg: CLIP_Settings, model_hash: str, db: Session)
 # Installers
 # ---------------------------------------------------------------------------
 
+
 def _seed_template_tags_if_empty(db: Session) -> None:
     """
     Seed template_tags from the cached vocabulary file if the table is empty.
@@ -129,6 +139,7 @@ def _seed_template_tags_if_empty(db: Session) -> None:
     a valid tags.npy (from before this feature) still get the table populated.
     """
     from src.db_service import get_all_template_tags_ordered
+
     if get_all_template_tags_ordered(db):
         logger.info("[template_tags] Already seeded, skipping.")
         return
@@ -204,8 +215,9 @@ def install_clip(db: Session) -> None:
         logger.info("[clip] All caches valid, skipping ✓")
         return
 
-    from src.ai.clip import ClipTagger
     import open_clip
+
+    from src.ai.clip import ClipTagger
 
     tagger = ClipTagger()
 
@@ -269,6 +281,7 @@ def install_vision(db: Session) -> None:
         return
 
     from src.ai.vision import QwenVisionGenerator
+
     try:
         update_model_status(db, "vision", "downloading")
         logger.info("[vision] Downloading Qwen2-VL weights (this may take a while)...")
@@ -291,6 +304,7 @@ def install_embedding(db: Session) -> None:
         update_model_status(db, "embedding", "downloading")
         logger.info("[embedding] Downloading nomic-embed-text-v1.5...")
         from sentence_transformers import SentenceTransformer
+
         SentenceTransformer(
             Embedding_Settings().PHOTO_EMBEDDER_MODEL,
             trust_remote_code=True,
@@ -312,10 +326,11 @@ def install_translator(db: Session) -> None:
         update_model_status(db, "translator", "downloading")
         import torch
         from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+
         translate_name_model = Translation_Settings().TRANSLATOR_MODEL
         logger.info(f"[translator] Downloading {translate_name_model}...")
-        model = AutoModelForSeq2SeqLM.from_pretrained(translate_name_model).to(torch.float16)
-        tokenizer = AutoTokenizer.from_pretrained(translate_name_model)
+        AutoModelForSeq2SeqLM.from_pretrained(translate_name_model).to(torch.float16)
+        AutoTokenizer.from_pretrained(translate_name_model)
         update_model_status(db, "translator", "ready")
         logger.info("[translator] Installation complete ✓")
     except Exception as e:
@@ -332,6 +347,7 @@ def install_chat(db: Session) -> None:
     try:
         update_model_status(db, "chat", "downloading")
         from transformers import AutoModelForCausalLM, AutoTokenizer
+
         chat_model_name = Chat_Settings().CHAT_LOCAL_MODEL
         logger.info(f"[chat] Downloading {chat_model_name} (this may take a while)...")
         AutoTokenizer.from_pretrained(chat_model_name)
@@ -352,9 +368,10 @@ def install_ocr(db: Session) -> None:
     try:
         update_model_status(db, "ocr", "downloading")
         from src.ai.ocr import EasyOCRReader
+
         logger.info("[ocr] Downloading EasyOCR models (ru+en)...")
         # Initialize singleton to trigger download
-        EasyOCRReader.get_instance(languages=['en', 'ru'])
+        EasyOCRReader.get_instance(languages=["en", "ru"])
         update_model_status(db, "ocr", "ready")
         logger.info("[ocr] Installation complete ✓")
     except Exception as e:
@@ -367,16 +384,18 @@ def init_db(db: Session):
     logger.info("[db] Creating tables...")
     Base.metadata.create_all(bind=engine)
     with engine.begin() as conn:
-        conn.execute(text("""
+        conn.execute(
+            text("""
             CREATE VIRTUAL TABLE IF NOT EXISTS photo_embeddings_vss
             USING vec0(embedding FLOAT[768]);
-        """))
+        """)
+        )
     ml_local_models = _local_ml_models()
     clip_local_models = CLIP_Settings().local_models
     for local_model_name in ml_local_models + clip_local_models:
         if not get_model_or_none(db, local_model_name):
             db.add(ModelState(name=local_model_name, status="pending"))
-            
+
     # Initialize default model configurations
     init_default_model_configs(db)
 
@@ -413,6 +432,7 @@ def run_install(db: Session) -> None:
 
     # 1b. Seed prompts table from prompts.json (idempotent)
     from pathlib import Path
+
     _prompts_json = Path(__file__).parent.parent / "prompts" / "prompts.json"
     seeded = seed_prompts_from_json(db, _prompts_json)
     if seeded:

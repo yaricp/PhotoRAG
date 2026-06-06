@@ -1,24 +1,40 @@
-from typing import Optional, List
 from datetime import datetime
-from loguru import logger
-from sqlalchemy.orm import Session
-from sqlalchemy import exists, and_, text, extract, func
+from typing import List, Optional
 
+from loguru import logger
+from sqlalchemy import and_, exists, extract, func, text
+from sqlalchemy.orm import Session
+
+from src.config import Main_Settings
+from src.model_services import call_embedding_model, call_translation_model
 from src.models import (
-    Photo, Tag, Person, Keyword, Category, PhotoTag, PhotoCategory, Camera, Geoposition,
-    ModelState, Watcher, ProcessingJob, FolderScanner, AIModelConfig,
-    PhotoEmbedding, PhotoHash, PhotoDuplicate, PhotoQualityIssue,
-    AppSetting, HistoryAction, TemplateTag, TemplateCategory, Prompt,
+    AIModelConfig,
+    AppSetting,
+    Camera,
+    Category,
+    FolderScanner,
+    Geoposition,
+    HistoryAction,
+    Keyword,
+    ModelState,
+    Photo,
+    PhotoCategory,
+    PhotoDuplicate,
+    PhotoEmbedding,
+    PhotoHash,
+    PhotoQualityIssue,
+    PhotoTag,
+    ProcessingJob,
+    Prompt,
+    Tag,
+    TemplateCategory,
+    TemplateTag,
+    Watcher,
 )
-from src.schemas import Photo as PhotoSchema
 from src.schemas import AIModelConfigUpdate
+from src.schemas import Photo as PhotoSchema
 from src.utils import generate_file_hash
-from src.model_services import (
-    call_embedding_model,
-    call_translation_model
-)
 from src.vector_db_services import search_similar_photos
-from src.config  import Main_Settings
 
 
 # Registration & Status Helpers (Existing)
@@ -26,15 +42,8 @@ def check_photo_hash_exists(db: Session, hash_str: str) -> Photo:
     return db.query(Photo).filter(Photo.hash == hash_str).first()
 
 
-def create_photo_record(
-    db: Session, hash_str: str, file_path: str,
-    file_created_at: datetime = None
-) -> Photo:
-    photo = Photo(
-        hash=hash_str,
-        file_path=file_path,
-        file_created_at=file_created_at
-    )
+def create_photo_record(db: Session, hash_str: str, file_path: str, file_created_at: datetime = None) -> Photo:
+    photo = Photo(hash=hash_str, file_path=file_path, file_created_at=file_created_at)
     db.add(photo)
     db.commit()
     db.refresh(photo)
@@ -54,10 +63,11 @@ def get_photo_by_id(db: Session, photo_id: int) -> Optional[Photo]:
 
 
 def get_photos_by_category_id(db: Session, category_id: int) -> List[Photo]:
-    return db.query(Photo).filter(
-        Photo.is_archived == False,
-        Photo.categories_rel.any(PhotoCategory.category_id == category_id)
-    ).all()
+    return (
+        db.query(Photo)
+        .filter(Photo.is_archived == False, Photo.categories_rel.any(PhotoCategory.category_id == category_id))
+        .all()
+    )
 
 
 def get_all_photos(
@@ -75,32 +85,19 @@ def get_all_photos(
     month: Optional[int] = None,
     day: Optional[int] = None,
 ):
-
     base_query = db.query(Photo).filter(Photo.is_archived == False)
 
     # 🔹 ВСЕ категории должны присутствовать (AND)
     if category_ids:
         for cid in category_ids:
             base_query = base_query.filter(
-                exists().where(
-                    and_(
-                        PhotoCategory.photo_id == Photo.id,
-                        PhotoCategory.category_id == cid
-                    )
-                )
+                exists().where(and_(PhotoCategory.photo_id == Photo.id, PhotoCategory.category_id == cid))
             )
 
     # 🔹 ВСЕ теги должны присутствовать (AND)
     if tag_ids:
         for tid in tag_ids:
-            base_query = base_query.filter(
-                exists().where(
-                    and_(
-                        PhotoTag.photo_id == Photo.id,
-                        PhotoTag.tag_id == tid
-                    )
-                )
-            )
+            base_query = base_query.filter(exists().where(and_(PhotoTag.photo_id == Photo.id, PhotoTag.tag_id == tid)))
 
     # 🔹 камера
     if camera_id is not None:
@@ -114,11 +111,11 @@ def get_all_photos(
         base_query = base_query.filter(Photo.is_doc == is_doc)
 
     if year is not None:
-        base_query = base_query.filter(extract('year', Photo.captured_at) == year)
+        base_query = base_query.filter(extract("year", Photo.captured_at) == year)
     if month is not None:
-        base_query = base_query.filter(extract('month', Photo.captured_at) == month)
+        base_query = base_query.filter(extract("month", Photo.captured_at) == month)
     if day is not None:
-        base_query = base_query.filter(extract('day', Photo.captured_at) == day)
+        base_query = base_query.filter(extract("day", Photo.captured_at) == day)
 
     # 🔥 важно: считаем ДО пагинации
     total = base_query.count()
@@ -128,18 +125,12 @@ def get_all_photos(
         "created_at": Photo.created_at,
         "captured_at": Photo.captured_at,
         "file_created_at": Photo.file_created_at,
-        "id": Photo.id
+        "id": Photo.id,
     }.get(sort_by, Photo.created_at)
 
     order_expr = order_col.desc() if sort_order == "desc" else order_col.asc()
 
-    photos = (
-        base_query
-        .order_by(order_expr)
-        .offset(skip)
-        .limit(limit)
-        .all()
-    )
+    photos = base_query.order_by(order_expr).offset(skip).limit(limit).all()
 
     return photos, total
 
@@ -151,11 +142,10 @@ def get_available_dates(
     camera_id: Optional[int] = None,
     geoposition_id: Optional[int] = None,
 ) -> list[dict]:
-    from sqlalchemy import func
     base_query = db.query(
-        extract('year', Photo.captured_at).label('year'),
-        extract('month', Photo.captured_at).label('month'),
-        extract('day', Photo.captured_at).label('day'),
+        extract("year", Photo.captured_at).label("year"),
+        extract("month", Photo.captured_at).label("month"),
+        extract("day", Photo.captured_at).label("day"),
     ).filter(Photo.captured_at.isnot(None), Photo.is_archived == False)
 
     if category_ids:
@@ -165,30 +155,29 @@ def get_available_dates(
             )
     if tag_ids:
         for tid in tag_ids:
-            base_query = base_query.filter(
-                exists().where(and_(PhotoTag.photo_id == Photo.id, PhotoTag.tag_id == tid))
-            )
+            base_query = base_query.filter(exists().where(and_(PhotoTag.photo_id == Photo.id, PhotoTag.tag_id == tid)))
     if camera_id is not None:
         base_query = base_query.filter(Photo.camera_id == camera_id)
     if geoposition_id is not None:
         base_query = base_query.filter(Photo.geoposition_id == geoposition_id)
 
     rows = base_query.distinct().all()
-    return [{'year': int(r.year), 'month': int(r.month), 'day': int(r.day)} for r in rows]
+    return [{"year": int(r.year), "month": int(r.month), "day": int(r.day)} for r in rows]
 
 
-async def get_photos_by_vector(
-    db: Session, request_text: str, k: int
-) -> List[tuple]:
+async def get_photos_by_vector(db: Session, request_text: str, k: int) -> List[tuple]:
     """Returns (Photo, distance) pairs sorted by ascending distance (most relevant first)."""
     import os
+
     from src.queues.queue_config import read_model_config_from_db
+
     logger.info("Getting photos by vector")
     settings = Main_Settings()
 
-    if settings.DEFAULT_LANGUAGE != "en":
-        logger.info("Translating request text to English")
-        request_text = await call_translation_model(request_text, backward=True)
+    lang = get_setting(db, "default_language") or settings.DEFAULT_LANGUAGE
+    if lang != "en":
+        logger.info("Translating search query to English")
+        request_text = await call_translation_model(request_text, backward=True, target_lang=lang)
 
     embedding = await call_embedding_model(text=request_text, purpose="search")
 
@@ -196,10 +185,8 @@ async def get_photos_by_vector(
     cfg = read_model_config_from_db(db_path, "embedding")
     similarity_limit = cfg.get("similarity_limit") if cfg else None
 
-    results = search_similar_photos(
-        db=db, query_embedding=embedding, limit=k, similarity_limit=similarity_limit
-    )
-    
+    results = search_similar_photos(db=db, query_embedding=embedding, limit=k, similarity_limit=similarity_limit)
+
     logger.info(f"Vector search results: {results}")
     pairs = []
     for photo_id, distance in results:
@@ -291,22 +278,14 @@ def get_or_create_tag(db: Session, name: str):
 
 
 def add_photo_tag_with_score(db: Session, photo_id: int, tag_name: str, score: float):
-    logger.info(f"Adding tag: {tag_name} with score: {score}")
     tag = get_or_create_tag(db, tag_name)
-    logger.info(f"Tag: {tag.id}")
     photo = get_photo_by_id(db, photo_id)
-    logger.info(f"Photo: {photo}")
     photo_tag = db.query(PhotoTag).filter_by(photo_id=photo_id, tag_id=tag.id).first()
-    logger.info(f"Photo tag: {photo_tag}")
     if not photo_tag:
         photo_tag = PhotoTag(photo=photo, tag=tag, confidence_score=score)
         db.add(photo_tag)
-        logger.info(f"Added photo tag")
     else:
         photo_tag.confidence_score = score
-    db.commit()
-    logger.info(f"Committed photo tag")
-    photo_tag = db.query(PhotoTag).filter_by(photo_id=photo_id, tag_id=tag.id).first()
     return photo_tag
 
 
@@ -351,7 +330,6 @@ def add_photo_category_with_score(db: Session, photo_id: int, cat_id: int, score
         db.add(photo_cat)
     else:
         photo_cat.confidence_score = score
-    db.commit()
     return photo_cat
 
 
@@ -366,7 +344,7 @@ def get_or_create_watcher(db: Session, path: str, destination_path: str):
 
 
 def get_watcher_by_id(db: Session, watcher_id: int):
-    return db.query(Watcher).filter_by(id=watcher_id).first() 
+    return db.query(Watcher).filter_by(id=watcher_id).first()
 
 
 def update_watcher_status(db: Session, watcher_id: int, status: str):
@@ -391,13 +369,13 @@ def get_all_watchers(db: Session):
     return db.query(Watcher).all()
 
 
-def get_or_create_job(
-    db: Session, photo_id: int, phase: str, tasks: str
-):
+def get_or_create_job(db: Session, photo_id: int, phase: str, tasks: str):
     job = db.query(ProcessingJob).filter_by(photo_id=photo_id, phase=phase).first()
     if not job:
         job = ProcessingJob(
-            photo_id=photo_id, phase=phase, tasks=tasks,
+            photo_id=photo_id,
+            phase=phase,
+            tasks=tasks,
         )
         db.add(job)
         db.commit()
@@ -405,13 +383,7 @@ def get_or_create_job(
     return job
 
 
-def update_job_tasks(
-    db: Session,
-    photo_id: int,
-    phase: str,
-    tasks: str,
-    new_phase: str = None
-):
+def update_job_tasks(db: Session, photo_id: int, phase: str, tasks: str, new_phase: str = None):
     logger.info(f"Updating job tasks for photo {photo_id}")
     logger.info(f"in phase {phase} with tasks {tasks}")
     logger.info(f"new phase {new_phase}")
@@ -450,7 +422,7 @@ def delete_photo(db: Session, photo_id: int):
     photo = get_photo_by_id(db, photo_id)
     if not photo:
         return None
-    
+
     db.query(PhotoEmbedding).filter_by(photo_id=photo_id).delete()
     db.query(PhotoTag).filter_by(photo_id=photo_id).delete()
     db.query(PhotoCategory).filter_by(photo_id=photo_id).delete()
@@ -461,13 +433,13 @@ def delete_photo(db: Session, photo_id: int):
     except Exception:
         pass  # virtual table may not exist in all environments (e.g. tests)
     db.delete(photo)
-    
-    db.flush()   # применяет изменения, но не закрывает сессию
-    
+
+    db.flush()  # применяет изменения, но не закрывает сессию
+
     # photo ещё привязан к сессии, но уже "удалён" из БД
     # Pydantic может прочитать все атрибуты
     response = PhotoSchema.model_validate(photo)
-    
+
     db.commit()  # теперь коммитим
     return response  # возвращаем уже готовую схему, не ORM-объект
 
@@ -477,9 +449,7 @@ def get_all_folder_scanners(db: Session):
 
 
 def create_folder_scanner(db: Session, path: str):
-    folder_scanner = FolderScanner(
-        path=path, progress_percentage=0
-    )
+    folder_scanner = FolderScanner(path=path, progress_percentage=0)
     db.add(folder_scanner)
     db.commit()
     db.refresh(folder_scanner)
@@ -497,9 +467,7 @@ def get_folder_scanner_by_path(db: Session, path: str):
 def get_or_create_folder_scanner(db: Session, path: str, total_steps: int):
     folder_scanner = db.query(FolderScanner).filter_by(path=path).first()
     if not folder_scanner:
-        folder_scanner = FolderScanner(
-            path=path, total_steps=total_steps, scanned_steps=0
-        )
+        folder_scanner = FolderScanner(path=path, total_steps=total_steps, scanned_steps=0)
         db.add(folder_scanner)
         db.commit()
         db.refresh(folder_scanner)
@@ -561,7 +529,7 @@ def init_default_model_configs(db: Session):
         {"type": "chat", "mode": "remote", "model_name": "gpt-4o-mini"},
         {"type": "ocr", "mode": "local", "model_name": "easyocr"},
     ]
-    
+
     for d in defaults:
         config = db.query(AIModelConfig).filter_by(type=d["type"]).first()
         if not config:
@@ -573,15 +541,20 @@ def init_default_model_configs(db: Session):
 
 # ── Duplicate helpers ──────────────────────────────────────────────────────────
 
+
 def record_exact_duplicate(db: Session, original_id: int, duplicate_file_path: str) -> Optional[PhotoDuplicate]:
     original = db.query(Photo).filter(Photo.id == original_id).first()
     if original and original.file_path == duplicate_file_path:
         return None  # same file scanned twice — not a duplicate
-    existing = db.query(PhotoDuplicate).filter_by(
-        original_photo_id=original_id,
-        duplicate_file_path=duplicate_file_path,
-        match_type="exact",
-    ).first()
+    existing = (
+        db.query(PhotoDuplicate)
+        .filter_by(
+            original_photo_id=original_id,
+            duplicate_file_path=duplicate_file_path,
+            match_type="exact",
+        )
+        .first()
+    )
     if existing:
         return existing
     record = PhotoDuplicate(
@@ -596,11 +569,15 @@ def record_exact_duplicate(db: Session, original_id: int, duplicate_file_path: s
 
 
 def record_perceptual_duplicate(db: Session, original_id: int, duplicate_id: int, distance: int) -> PhotoDuplicate:
-    existing = db.query(PhotoDuplicate).filter_by(
-        original_photo_id=original_id,
-        duplicate_photo_id=duplicate_id,
-        match_type="perceptual",
-    ).first()
+    existing = (
+        db.query(PhotoDuplicate)
+        .filter_by(
+            original_photo_id=original_id,
+            duplicate_photo_id=duplicate_id,
+            match_type="perceptual",
+        )
+        .first()
+    )
     if existing:
         return existing
     record = PhotoDuplicate(
@@ -614,9 +591,7 @@ def record_perceptual_duplicate(db: Session, original_id: int, duplicate_id: int
     return record
 
 
-def get_or_create_photo_hash(
-    db: Session, photo_id: int, dhash: str, ahash: str, phash: str
-) -> PhotoHash:
+def get_or_create_photo_hash(db: Session, photo_id: int, dhash: str, ahash: str, phash: str) -> PhotoHash:
     ph = db.query(PhotoHash).filter_by(photo_id=photo_id).first()
     if ph:
         return ph
@@ -637,9 +612,7 @@ def _hamming_distance(hex_a: str, hex_b: str) -> int:
     return bin(a ^ b).count("1")
 
 
-def find_perceptual_duplicates(
-    db: Session, photo_id: int, threshold: int = 10
-) -> list[dict]:
+def find_perceptual_duplicates(db: Session, photo_id: int, threshold: int = 10) -> list[dict]:
     """
     Return list of {photo_id, hash_distance} for all photos whose dhash is
     within `threshold` hamming distance of the given photo's dhash.
@@ -721,9 +694,8 @@ def delete_duplicate_record(db: Session, record_id: int) -> Optional[PhotoDuplic
 
 # ── Quality issue helpers ──────────────────────────────────────────────────
 
-def create_quality_issue(
-    db: Session, photo_id: int, issue_type: str, score: Optional[float]
-) -> PhotoQualityIssue:
+
+def create_quality_issue(db: Session, photo_id: int, issue_type: str, score: Optional[float]) -> PhotoQualityIssue:
     issue = PhotoQualityIssue(photo_id=photo_id, issue_type=issue_type, score=score)
     db.add(issue)
     return issue
@@ -741,9 +713,7 @@ def get_quality_summary(db: Session) -> dict[str, int]:
     return {issue_type: count for issue_type, count in rows}
 
 
-def get_photos_by_issue_type(
-    db: Session, issue_type: str, skip: int = 0, limit: int = 20
-) -> tuple[list[Photo], int]:
+def get_photos_by_issue_type(db: Session, issue_type: str, skip: int = 0, limit: int = 20) -> tuple[list[Photo], int]:
     """Return paginated photos that have been flagged with the given issue_type."""
     query = (
         db.query(Photo)
@@ -759,6 +729,7 @@ def get_photos_by_issue_type(
 # ---------------------------------------------------------------------------
 # Garbage / quality-issue helpers
 # ---------------------------------------------------------------------------
+
 
 def get_garbage_photos_with_issues(
     db: Session, issue_type: str = "", skip: int = 0, limit: int = 20
@@ -794,6 +765,7 @@ def get_garbage_photo_paths(db: Session, issue_type: str = "") -> list[str]:
 # Tag / category lookup by ID
 # ---------------------------------------------------------------------------
 
+
 def get_photos_by_tag_id(db: Session, tag_id: int) -> List[Photo]:
     """Return all photos that have a given tag."""
     return (
@@ -807,6 +779,7 @@ def get_photos_by_tag_id(db: Session, tag_id: int) -> List[Photo]:
 # ---------------------------------------------------------------------------
 # EXIF-parameter search
 # ---------------------------------------------------------------------------
+
 
 def search_photos_by_exif_params(
     db: Session,
@@ -858,21 +831,34 @@ def search_photos_by_exif_params(
 # AppSetting helpers
 # ---------------------------------------------------------------------------
 
+
 def get_setting(db: Session, key: str) -> Optional[str]:
     row = db.query(AppSetting).filter(AppSetting.key == key).first()
     return row.value if row else None
 
 
 def set_setting(db: Session, key: str, value: str) -> AppSetting:
-    row = db.query(AppSetting).filter(AppSetting.key == key).first()
-    if row:
-        row.value = value
-    else:
-        row = AppSetting(key=key, value=value)
-        db.add(row)
-    db.commit()
-    db.refresh(row)
-    return row
+    import time
+
+    from sqlalchemy.exc import OperationalError
+
+    for attempt in range(3):
+        try:
+            row = db.query(AppSetting).filter(AppSetting.key == key).first()
+            if row:
+                row.value = value
+            else:
+                row = AppSetting(key=key, value=value)
+                db.add(row)
+            db.commit()
+            db.refresh(row)
+            return row
+        except OperationalError as e:
+            if "database is locked" in str(e) and attempt < 2:
+                db.rollback()
+                time.sleep(0.1 * (attempt + 1))
+            else:
+                raise
 
 
 def get_all_settings(db: Session) -> dict:
@@ -884,6 +870,7 @@ def get_all_settings(db: Session) -> dict:
 # HistoryAction helpers
 # ---------------------------------------------------------------------------
 
+
 def create_history_action(
     db: Session,
     action_type: str,
@@ -892,6 +879,7 @@ def create_history_action(
     undo_data: dict,
 ) -> HistoryAction:
     import json
+
     action = HistoryAction(
         action_type=action_type,
         photo_ids=json.dumps(photo_ids) if photo_ids is not None else None,
@@ -905,20 +893,11 @@ def create_history_action(
 
 
 def get_history_actions(db: Session, limit: int = 20) -> List[HistoryAction]:
-    return (
-        db.query(HistoryAction)
-        .order_by(HistoryAction.created_at.desc())
-        .limit(limit)
-        .all()
-    )
+    return db.query(HistoryAction).order_by(HistoryAction.created_at.desc()).limit(limit).all()
 
 
 def get_last_history_action(db: Session) -> Optional[HistoryAction]:
-    return (
-        db.query(HistoryAction)
-        .order_by(HistoryAction.created_at.desc())
-        .first()
-    )
+    return db.query(HistoryAction).order_by(HistoryAction.created_at.desc()).first()
 
 
 def delete_history_action(db: Session, action_id: int) -> None:
@@ -1033,6 +1012,7 @@ def perform_undo(db: Session) -> str:
 # TemplateTag CRUD
 # ---------------------------------------------------------------------------
 
+
 def create_template_tag(db: Session, name: str, clip_prompt: str) -> TemplateTag:
     tag = TemplateTag(name=name, clip_prompt=clip_prompt)
     db.add(tag)
@@ -1045,9 +1025,7 @@ def get_template_tag_by_id(db: Session, tag_id: int) -> Optional[TemplateTag]:
     return db.query(TemplateTag).filter(TemplateTag.id == tag_id).first()
 
 
-def get_all_template_tags(
-    db: Session, skip: int = 0, limit: int = 50
-) -> tuple[List[TemplateTag], int]:
+def get_all_template_tags(db: Session, skip: int = 0, limit: int = 50) -> tuple[List[TemplateTag], int]:
     q = db.query(TemplateTag).order_by(TemplateTag.name)
     total = q.count()
     tags = q.offset(skip).limit(limit).all()
@@ -1059,9 +1037,7 @@ def get_all_template_tags_ordered(db: Session) -> List[TemplateTag]:
     return db.query(TemplateTag).order_by(TemplateTag.id).all()
 
 
-def update_template_tag(
-    db: Session, tag_id: int, name: str, clip_prompt: str
-) -> Optional[TemplateTag]:
+def update_template_tag(db: Session, tag_id: int, name: str, clip_prompt: str) -> Optional[TemplateTag]:
     tag = get_template_tag_by_id(db, tag_id)
     if not tag:
         return None
@@ -1082,9 +1058,7 @@ def delete_template_tag(db: Session, tag_id: int) -> bool:
     return True
 
 
-def get_or_create_template_tag(
-    db: Session, name: str, clip_prompt: str
-) -> TemplateTag:
+def get_or_create_template_tag(db: Session, name: str, clip_prompt: str) -> TemplateTag:
     tag = db.query(TemplateTag).filter(TemplateTag.name == name).first()
     if not tag:
         tag = TemplateTag(name=name, clip_prompt=clip_prompt)
@@ -1098,6 +1072,7 @@ def get_or_create_template_tag(
 # TemplateCategory CRUD
 # ---------------------------------------------------------------------------
 
+
 def create_template_category(db: Session, name: str, clip_prompt: str) -> TemplateCategory:
     cat = TemplateCategory(name=name, clip_prompt=clip_prompt)
     db.add(cat)
@@ -1110,9 +1085,7 @@ def get_template_category_by_id(db: Session, cat_id: int) -> Optional[TemplateCa
     return db.query(TemplateCategory).filter(TemplateCategory.id == cat_id).first()
 
 
-def get_all_template_categories(
-    db: Session, skip: int = 0, limit: int = 50
-) -> tuple[List[TemplateCategory], int]:
+def get_all_template_categories(db: Session, skip: int = 0, limit: int = 50) -> tuple[List[TemplateCategory], int]:
     q = db.query(TemplateCategory).order_by(TemplateCategory.name)
     total = q.count()
     cats = q.offset(skip).limit(limit).all()
@@ -1124,9 +1097,7 @@ def get_all_template_categories_ordered(db: Session) -> List[TemplateCategory]:
     return db.query(TemplateCategory).order_by(TemplateCategory.id).all()
 
 
-def update_template_category(
-    db: Session, cat_id: int, name: str, clip_prompt: str
-) -> Optional[TemplateCategory]:
+def update_template_category(db: Session, cat_id: int, name: str, clip_prompt: str) -> Optional[TemplateCategory]:
     cat = get_template_category_by_id(db, cat_id)
     if not cat:
         return None
@@ -1147,9 +1118,7 @@ def delete_template_category(db: Session, cat_id: int) -> bool:
     return True
 
 
-def get_or_create_template_category(
-    db: Session, name: str, clip_prompt: str
-) -> TemplateCategory:
+def get_or_create_template_category(db: Session, name: str, clip_prompt: str) -> TemplateCategory:
     cat = db.query(TemplateCategory).filter(TemplateCategory.name == name).first()
     if not cat:
         cat = TemplateCategory(name=name, clip_prompt=clip_prompt)
@@ -1163,24 +1132,19 @@ def get_or_create_template_category(
 # Photo edit helpers
 # ---------------------------------------------------------------------------
 
+
 def get_photo_is_trash(db: Session, photo_id: int) -> bool:
-    return db.query(PhotoQualityIssue).filter_by(
-        photo_id=photo_id, issue_type="user_trash"
-    ).first() is not None
+    return db.query(PhotoQualityIssue).filter_by(photo_id=photo_id, issue_type="user_trash").first() is not None
 
 
 def mark_photo_as_trash(db: Session, photo_id: int) -> None:
-    exists = db.query(PhotoQualityIssue).filter_by(
-        photo_id=photo_id, issue_type="user_trash"
-    ).first()
+    exists = db.query(PhotoQualityIssue).filter_by(photo_id=photo_id, issue_type="user_trash").first()
     if not exists:
         db.add(PhotoQualityIssue(photo_id=photo_id, issue_type="user_trash"))
 
 
 def unmark_photo_as_trash(db: Session, photo_id: int) -> None:
-    db.query(PhotoQualityIssue).filter_by(
-        photo_id=photo_id, issue_type="user_trash"
-    ).delete()
+    db.query(PhotoQualityIssue).filter_by(photo_id=photo_id, issue_type="user_trash").delete()
 
 
 def update_photo_fields(db: Session, photo_id: int, **fields) -> Optional[Photo]:
@@ -1278,22 +1242,25 @@ def seed_prompts_from_json(db: Session, json_path) -> int:
     """
     import json
     from pathlib import Path
+
     data = json.loads(Path(json_path).read_text(encoding="utf-8"))
     seeded = 0
     for group, entries in data.items():
-        for name, text in entries.items():
+        for name, prompt_text in entries.items():
             key = f"{group}.{name}"
             if db.query(Prompt).filter_by(key=key).first():
                 continue
             meta = _PROMPT_METADATA.get(key, {})
-            db.add(Prompt(
-                key=key,
-                group=group,
-                name=name,
-                title=meta.get("title", f"{group} / {name}"),
-                text=text,
-                description=meta.get("description"),
-            ))
+            db.add(
+                Prompt(
+                    key=key,
+                    group=group,
+                    name=name,
+                    title=meta.get("title", f"{group} / {name}"),
+                    text=prompt_text,
+                    description=meta.get("description"),
+                )
+            )
             seeded += 1
     db.commit()
     return seeded
@@ -1310,6 +1277,7 @@ def get_prompt_by_key(db: Session, key: str) -> Prompt | None:
 
 def update_prompt(db: Session, key: str, text: str) -> Prompt | None:
     from datetime import datetime
+
     p = db.query(Prompt).filter_by(key=key).first()
     if not p:
         return None

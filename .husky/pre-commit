@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+set -e
+# Load nvm so hooks use the pinned node version (.nvmrc = 20)
+export NVM_DIR="$HOME/.nvm"
+# shellcheck disable=SC1091
+[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" --no-use
+nvm use --silent 2>/dev/null || true
+frontend/node_modules/.bin/lint-staged
+cd frontend && npm run type-check

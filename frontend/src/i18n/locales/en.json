@@ -1,0 +1,547 @@
+{
+  "sidebar": {
+    "gallery": "Gallery",
+    "search": "Search",
+    "documents": "Documents",
+    "duplicates": "Duplicates",
+    "garbage": "Garbage",
+    "chat": "Agent AI",
+    "processing": "Processing",
+    "folders": "Folders",
+    "models": "Models",
+    "prompts": "Prompts",
+    "settings": "Settings",
+    "help": "Help"
+  },
+  "gallery": {
+    "prev": "Prev",
+    "next": "Next",
+    "sort": {
+      "created_at": "Created",
+      "captured_at": "Captured",
+      "file_created_at": "File",
+      "image_width": "Width"
+    },
+    "perPage": "{{count}} / page",
+    "reset": "Reset",
+    "empty": "No photos found",
+    "error": "Error loading photos",
+    "documentsOnly": "Documents only"
+  },
+  "chat": {
+    "selectAll": "Select all",
+    "selected": "{{count}} of {{total}} selected",
+    "archive": "Archive",
+    "delete": "Delete",
+    "warming": "The AI chat model is still warming up. Your first message may take a moment.",
+    "placeholder": "Ask something about your photos...",
+    "undo": "↩ Undo",
+    "send": "Send",
+    "newChat": "New chat",
+    "confirmArchiveTitle": "Archive {{count}} photo{{plural}}?",
+    "confirmArchiveMessage": "The photos will be marked as archived.",
+    "confirmDeleteTitle": "Delete {{count}} photo{{plural}}?",
+    "confirmDeleteMessage": "The files will be permanently removed from disk.",
+    "title": "Agent AI"
+  },
+  "photoDetail": {
+    "back": "← Back",
+    "edit": "Edit",
+    "dateTaken": "Date taken",
+    "camera": "Camera",
+    "description": "Description",
+    "translation": "Translation",
+    "tags": "Tags",
+    "categories": "Categories",
+    "trash": "Trash",
+    "document": "Document",
+    "documentText": "Document text",
+    "additionalData": "Additional data",
+    "fileCreated": "File created",
+    "captured": "Captured",
+    "indexed": "Indexed",
+    "width": "Width",
+    "height": "Height",
+    "iso": "ISO",
+    "aperture": "Aperture",
+    "focalLength": "Focal length",
+    "shutterSpeed": "Shutter speed",
+    "offsetTime": "Offset time",
+    "archive": "Archive",
+    "delete": "Delete",
+    "notFound": "Photo not found",
+    "archiveConfirmTitle": "Archive photo?",
+    "archiveConfirmMessage": "The photo will be zipped and removed from the library.",
+    "deleteConfirmTitle": "Delete photo?",
+    "deleteConfirmMessage": "The photo will be permanently deleted."
+  },
+  "photoEdit": {
+    "backToPhoto": "← Back to photo",
+    "ocrText": "OCR Text",
+    "descriptionEn": "Description (EN)",
+    "translation": "Translation",
+    "manageTags": "+ Manage Tags",
+    "manageCategories": "+ Manage Categories",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Saved ✓",
+    "reindexSearch": "Re-index Search",
+    "queuing": "Queuing…",
+    "queued": "Queued ✓",
+    "runPipeline": "Run Full Pipeline",
+    "starting": "Starting…",
+    "started": "Started ✓",
+    "notFound": "Photo not found"
+  },
+  "processing": {
+    "title": "Processing",
+    "active": "Active",
+    "recent": "Recent",
+    "noActive": "No active processing",
+    "activeCount": "{{count}} active photo",
+    "activeCountPlural": "{{count}} active photos"
+  },
+  "documents": {
+    "noDocuments": "No documents",
+    "noDocumentsDesc": "Documents will appear here automatically",
+    "failedToLoad": "Failed to load documents",
+    "title": "Documents"
+  },
+  "prompts": {
+    "title": "Prompts",
+    "subtitle": "Edit the prompts used by AI models. Changes take effect on the next request — no restart needed.",
+    "saving": "Saving…",
+    "save": "Save",
+    "saved": "Saved",
+    "loading": "Loading prompts…",
+    "errorSaving": "Save failed",
+    "groups": {
+      "vision_analysis": "Vision Analysis",
+      "chat_agent": "Chat Agent"
+    },
+    "meta": {
+      "vision_analysis": {
+        "system_prompt": {
+          "title": "Vision — System Prompt",
+          "description": "Sets the AI persona for all vision analysis tasks. Applied as the system message to the local vision model."
+        },
+        "describe_scene": {
+          "title": "Vision — Describe Scene",
+          "description": "Used when generating a natural-language description of a photo."
+        },
+        "is_document": {
+          "title": "Vision — Is Document?",
+          "description": "Classifies whether a photo is a text document. Must return only 'yes' or 'no'."
+        }
+      },
+      "chat_agent": {
+        "system_message": {
+          "title": "Chat Agent — System Message",
+          "description": "Main system message for the AI photo search agent. Controls tool usage rules and response language."
+        }
+      }
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "general": "General",
+    "defaultLanguage": "Default language",
+    "defaultFolder": "Default folder",
+    "defaultFolderHint": "Used by agent tools (create folder, move photos, archive). Falls back to home directory if empty.",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "clipVocabulary": "CLIP Vocabulary",
+    "templateTags": "Template Tags",
+    "templateTagsDesc": "Manage the tag vocabulary used by CLIP detection",
+    "templateCategories": "Template Categories",
+    "templateCategoriesDesc": "Manage the category list used by CLIP classification",
+    "dangerZone": "Danger Zone",
+    "uninstall": "Uninstall PhotoRAG",
+    "uninstallDesc": "Removes the app, database, AI models, and all settings. Your original photos are not affected.",
+    "uninstalling": "Uninstalling…",
+    "retranslating": "Re-translating photos…",
+    "retranslateSuccess": "Translation started. See Processing page for progress."
+  },
+  "languages": {
+    "en": "English",
+    "ru": "Русский",
+    "es": "Español"
+  },
+  "wizard": {
+    "steps": {
+      "language": "Language",
+      "welcome": "Welcome",
+      "install-deps": "Dependencies",
+      "init-db": "Database",
+      "model-config": "AI Models",
+      "downloading": "Downloading",
+      "done": "Done"
+    },
+    "language": {
+      "title": "Choose Your Language",
+      "subtitle": "Select the language you want to use for PhotoRAG. You can change it later in Settings.",
+      "continue": "Continue"
+    },
+    "welcome": {
+      "title": "Welcome to PhotoRAG",
+      "subtitle": "Let's set up your AI-powered photo library. This will take a few minutes.",
+      "installDeps": "Install Python dependencies",
+      "initDb": "Initialise the database",
+      "downloadModels": "Download AI models of your choice",
+      "getStarted": "Get Started"
+    },
+    "stepInstallDeps": {
+      "title": "Install Dependencies",
+      "subtitle": "We'll install the required Python packages into an isolated virtual environment.",
+      "installButton": "Install",
+      "installing": "Installing…",
+      "retryButton": "Retry",
+      "errorMessage": "Installation failed: {{error}}"
+    },
+    "stepInitDb": {
+      "title": "Initialising Database",
+      "initializing": "Setting up the photo library database…",
+      "retryButton": "Retry",
+      "errorMessage": "Database initialisation failed: {{error}}"
+    },
+    "stepDownloading": {
+      "title": "Downloading Models",
+      "cancelButton": "Cancel",
+      "backButton": "← Back to model selection",
+      "errorMessage": "Download error: {{error}}"
+    },
+    "stepModelPicker": {
+      "title": "Choose Models to Download",
+      "subtitle": "Required models are always installed. Optional models add extra features.",
+      "skipAllOptional": "Skip all optional models",
+      "totalDownload": "Total download: {{size}}",
+      "continueButton": "Continue",
+      "noLocalModels": "All models are configured to use remote APIs — no local downloads needed.",
+      "nllbNotice": "⚠️ NLLB-200 (translation model) is licensed under CC BY-NC 4.0 — non-commercial use only. For commercial use, switch to a remote translation API in the next step."
+    },
+    "stepModelConfig": {
+      "title": "Configure AI Models",
+      "subtitle": "Choose local (runs on your Mac) or remote (API key required) for each task.",
+      "loadingModels": "Loading model configurations…",
+      "errorLoadingModels": "Failed to load model configurations",
+      "processingMode": "Processing mode",
+      "localMode": "Local (GPU / CPU)",
+      "remoteMode": "Remote (API)",
+      "modelName": "Model name / HuggingFace ID",
+      "continueButton": "Continue",
+      "saving": "Saving…",
+      "errorSaving": "Failed to save model configurations",
+      "provider": "Provider",
+      "autoDetect": "— auto-detect —",
+      "apiKey": "API key",
+      "baseUrl": "API base URL (optional)",
+      "ollamaUrl": "Ollama server URL",
+      "ollamaHint": "No API key needed. Set the base URL to your Ollama server.",
+      "remoteClipHint": "Remote CLIP uses a vision LLM to classify tags. You can reuse your vision model here.",
+      "deepLHint": "Enter your DeepL API key below. Model name is not used.",
+      "similarityThreshold": "Similarity threshold",
+      "similarityHint": "L2 distance cutoff — lower is stricter. Leave blank to auto-scale.",
+      "suggestions": "Suggestions:",
+      "localPlaceholder": "e.g. Qwen/Qwen2-VL-2B-Instruct",
+      "remotePlaceholder": "e.g. gpt-4o-mini",
+      "labelVision": "Vision",
+      "labelClip": "CLIP",
+      "labelOcr": "OCR",
+      "labelEmbedding": "Embedding",
+      "labelTranslator": "Translator",
+      "labelChat": "Chat"
+    },
+    "stepDone": {
+      "title": "Setup Complete!",
+      "subtitle": "PhotoRAG is ready. Click Launch to open your photo library.",
+      "launchButton": "Launch",
+      "launching": "Launching…"
+    }
+  },
+  "common": {
+    "openInMaps": "Open in Google Maps ↗",
+    "chooseFolder": "Choose folder",
+    "confirmDeletePhotoTitle": "Delete photo?",
+    "confirmDeletePhotoMessage": "This file will be permanently removed from disk.",
+    "confirmArchivePhotoTitle": "Archive photo?",
+    "confirmArchivePhotoMessage": "This photo will be marked as archived.",
+    "delete": "Delete",
+    "archive": "Archive"
+  },
+  "search": {
+    "title": "Semantic Search",
+    "placeholder": "Search your photos…",
+    "button": "Search",
+    "results": "Results",
+    "noResults": "No results found",
+    "error": "Search failed"
+  },
+  "duplicates": {
+    "title": "Duplicates",
+    "exact": "Exact duplicates",
+    "perceptual": "Similar photos",
+    "loading": "Loading duplicates…",
+    "noResults": "No duplicates found",
+    "noExact": "No exact duplicates found.",
+    "noNear": "No near-duplicates found.",
+    "original": "Original",
+    "selectAll": "Select / deselect all duplicates",
+    "deleting": "Deleting…",
+    "deleteSelected": "Delete selected ({{count}})",
+    "deleteSelectedEmpty": "Delete selected",
+    "archive": "Archive",
+    "delete": "Delete",
+    "dismiss": "Dismiss",
+    "error": "Failed to load duplicates",
+    "confirmDeleteCountTitle": "Delete {{count}} duplicate(s)?",
+    "confirmBulkDeleteMessage": "The selected duplicate records will be permanently deleted from disk."
+  },
+  "garbage": {
+    "title": "Garbage",
+    "noResults": "No garbage photos",
+    "noFlagged": "No photos flagged.",
+    "notGarbage": "Not garbage",
+    "notGarbageTitle": "Remove all garbage flags from this photo",
+    "archive": "Archive",
+    "delete": "Delete",
+    "unmark": "Not garbage",
+    "loading": "Loading…",
+    "error": "Failed to load garbage photos",
+    "technical": "Technical Garbage",
+    "semantic": "Semantic Garbage",
+    "temporary": "Temporary Garbage",
+    "subjective": "Subjective Garbage",
+    "comingSoon": "Coming soon",
+    "issues": {
+      "thumbnail": "Thumbnails (resolution too small)",
+      "no_exif": "No EXIF (possible internet copy)",
+      "brightness": "Abnormal brightness",
+      "edge_density": "Low edge density (featureless)",
+      "blur": "Blurry (Laplacian)",
+      "entropy": "Low entropy (low information)",
+      "screenshot": "Screenshots (UI detected)"
+    }
+  },
+  "folders": {
+    "title": "Folders",
+    "add": "Add folder",
+    "remove": "Remove",
+    "empty": "No folders configured",
+    "watching": "Watching",
+    "destination": "Destination",
+    "watchers": "Watchers",
+    "watchersDesc": "Monitors a folder for new photos and moves them into a structured destination folder.",
+    "activeCount": "{{count}} active",
+    "sourceFolder": "Source folder",
+    "destinationFolder": "Destination folder",
+    "addButton": "Add",
+    "noWatchers": "No active watchers",
+    "scanners": "Scanners",
+    "scannersDesc": "Scans all subdirectories once and processes found photos. Shows progress.",
+    "scanFolder": "Folder to scan",
+    "startScan": "Start scanning",
+    "noScanners": "No active scans",
+    "source": "Source",
+    "target": "Target",
+    "updatedAt": "Updated:",
+    "delete": "Delete",
+    "scanningFolder": "Folder being scanned",
+    "done": "Done",
+    "scanning": "Scanning…"
+  },
+  "models": {
+    "title": "AI Models",
+    "desc": "Configure which models run each task. Local models are downloaded automatically on first use.",
+    "local": "Local",
+    "remote": "Remote (API)",
+    "loading": "Loading model configurations…",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "error": "Failed to load models",
+    "errorSaving": "Failed to save model configurations",
+    "provider": "Provider",
+    "apiKey": "API key",
+    "baseUrl": "Base URL",
+    "modelName": "Model name",
+    "configSaved": "Configuration saved",
+    "modelLoading": "loading in the background. Status updates are shown on this page.",
+    "modelRemote": "now using the remote API.",
+    "reindexNeeded": "The embedding model changed — all photos need to be re-indexed. Run the pipeline again on your photo folders to rebuild the search index.",
+    "gotIt": "Got it",
+    "status": {
+      "ready": "Ready",
+      "loading": "Loading…",
+      "downloading": "Downloading…",
+      "pending": "Pending",
+      "error": "Error"
+    }
+  },
+  "privacy": {
+    "shortTitle": "⚠ Privacy Notice",
+    "shortText": "Remote AI models send your photos and descriptions to third-party cloud providers.",
+    "expandButton": "Show Full Warning",
+    "fullTitle": "Privacy Notice — Remote AI Models",
+    "fullText": "When you configure remote AI models (OpenAI, Google Gemini, Anthropic Claude, Groq, etc.), your photos and the metadata generated by this app may be sent to those providers' servers and processed under their privacy policies. They may store or use this data according to their terms of service.\n\nTo keep your data private:\n• Local models — run entirely on your device; no data leaves your computer.\n• Self-hosted models — Ollama or vLLM on a server you control.\n• Enterprise providers — those offering explicit data-retention guarantees.\n\nIf you are unsure, selecting all local models is the safest choice.",
+    "closeButton": "Close"
+  },
+  "vocab": {
+    "name": "Name",
+    "clipPrompt": "CLIP prompt",
+    "cancel": "Cancel",
+    "add": "Add",
+    "adding": "Adding…",
+    "save": "Save",
+    "saving": "Saving…",
+    "edit": "Edit",
+    "delete": "Delete",
+    "prev": "← Prev",
+    "next": "Next →",
+    "pageInfo": "Page {{page}} of {{total}}",
+    "tags": {
+      "title": "Template Tags",
+      "desc": "Tags that CLIP detects in photos. Each entry has a name (shown in UI) and a CLIP prompt (fed to the model). Changes trigger an automatic embedding recompute in the background.",
+      "addBtn": "+ Add Tag",
+      "namePlaceholder": "e.g. dog",
+      "promptPlaceholder": "e.g. a photo of a dog",
+      "empty": "No tags yet. Click \"Add Tag\" to create the first one.",
+      "errorLoad": "Failed to load template tags",
+      "errorCreate": "Failed to create tag",
+      "errorUpdate": "Failed to update tag",
+      "errorDelete": "Failed to delete tag"
+    },
+    "categories": {
+      "title": "Template Categories",
+      "desc": "Categories that CLIP assigns to photos. Each entry has a name (shown in UI) and a CLIP prompt (fed to the model). Changes trigger an automatic embedding recompute in the background.",
+      "addBtn": "+ Add Category",
+      "namePlaceholder": "e.g. food",
+      "promptPlaceholder": "e.g. a photo of food",
+      "empty": "No categories yet. Click \"Add Category\" to create the first one.",
+      "errorLoad": "Failed to load template categories",
+      "errorCreate": "Failed to create category",
+      "errorUpdate": "Failed to update category",
+      "errorDelete": "Failed to delete category"
+    }
+  },
+  "help": {
+    "title": "Help",
+    "examplesHeading": "Examples",
+    "topics": {
+      "getting-started": {
+        "title": "Getting Started",
+        "intro": "Welcome to PhotoRAG — an AI-powered photo management system.",
+        "body": "PhotoRAG helps you organise, describe, and search your entire photo library using local and remote AI models.\n\nDuring first launch, the Setup Wizard guides you through installing Python dependencies, initialising the database, and choosing which AI models to use (local or remote via API key). Configure models later on the [Models](/help/models) page.\n\nOnce setup is complete, the main application opens automatically. Add photo folders from the [Folders](/help/folders) page and monitor analysis progress on the [Processing](/help/processing) page. When processing finishes, browse your library in the [Gallery](/help/gallery).",
+        "examples": "Example: install PhotoRAG, run the Setup Wizard, then open the [Folders](/help/folders) page. Add an 'Input Photos' folder as a Watcher — PhotoRAG will automatically pick up any new photos dropped into it. Or run a one-time Scan on an existing folder such as 'Vacation 2024'. PhotoRAG will generate descriptions, extract any text visible in photos, and index everything for search. Once done, browse results in the [Gallery](/help/gallery)."
+      },
+      "gallery": {
+        "title": "Gallery",
+        "intro": "The Gallery is the main view of your photo library.",
+        "body": "All processed photos appear as cards in the Gallery grid. Each card shows a thumbnail, the auto-generated description, and any tags or categories assigned.\n\nUse the filter panel to narrow results by tags (managed on the [Template Tags](/help/template-tags) page), categories (managed on the [Template Categories](/help/template-categories) page), location, and date range. Multiple selections narrow results further.\n\nClick any card to open the [Photo Detail](/help/photo-detail) page. Photos not yet processed show a pending indicator. For more powerful queries use the [Search](/help/search) page or ask the [Chat](/help/chat) agent.",
+        "examples": "Example: open the Gallery and use the filter panel to select tags such as 'sunset' or 'beach', categories such as 'Landscape', a location, and a date range. You can select multiple tags and categories at the same time — each additional selection narrows the results further. Click any card to see the full description and linked documents."
+      },
+      "search": {
+        "title": "Search",
+        "intro": "Find photos using natural language or keyword queries.",
+        "body": "PhotoRAG uses vector embeddings to enable semantic search: describe what you are looking for in plain language and the system returns the most visually and conceptually similar photos, even if your exact words do not appear in any description.\n\nKeyword search matches exact words in descriptions, tags, and extracted text. You can combine semantic and keyword modes.\n\nResults are ranked by similarity score. Click any result to open the [Photo Detail](/help/photo-detail) page. For conversational multi-step queries, use the [Chat](/help/chat) agent instead.",
+        "examples": "Example: type 'dog running on a beach at sunset' — PhotoRAG returns photos matching that scene even if no description contains all those words exactly. Or type 'birthday' to find all photos where birthday-related text was detected or described."
+      },
+      "photo-detail": {
+        "title": "Photo Detail",
+        "intro": "View the full information for a single photo.",
+        "body": "The Photo Detail page shows the original image alongside its AI-generated description, assigned tags, categories, and any [Documents](/help/documents) (extracted text) linked to the photo.\n\nNavigate to the next or previous photo in the current view. Open the [Photo Edit](/help/photo-edit) page to modify metadata. Return to the [Gallery](/help/gallery) with the back button.\n\nIf translation is enabled and your language is not English, descriptions are shown in your selected language. Change the language in [Settings](/help/settings).",
+        "examples": "Example: click a photo in the Gallery, see its English description alongside the Russian translation (if you set Russian in Settings), and view any text extracted from a receipt or document visible in the photo."
+      },
+      "photo-edit": {
+        "title": "Photo Edit",
+        "intro": "Manually edit a photo's title, description, and tags.",
+        "body": "On the Photo Edit page you can override the AI-generated description with your own text, add or remove tags, and change the category.\n\nAfter saving, the photo is re-indexed so it immediately appears in updated [Search](/help/search) results. You can also trigger a re-run of AI analysis to regenerate the description from scratch using the current [prompt template](/help/prompts). The [Processing](/help/processing) page shows the re-run progress.",
+        "examples": "Example: the AI described a photo as 'a group of people indoors' but you know it is your team at a product launch. Edit the description to 'Team at the 2024 product launch, office, evening', add tags 'team work launch', and save."
+      },
+      "documents": {
+        "title": "Documents",
+        "intro": "Browse text documents extracted from your photos.",
+        "body": "When photos contain visible text (receipts, invoices, signs, whiteboards, book pages), PhotoRAG uses OCR during the [Processing](/help/processing) pipeline to extract that text and stores it as a Document linked to the photo.\n\nThe Documents page lists all extracted documents. Search document content, view which photo a document belongs to (click to open [Photo Detail](/help/photo-detail)), and filter by type.\n\nDocuments are also included in [Search](/help/search) results.",
+        "examples": "Example: photograph a whiteboard from a meeting. PhotoRAG extracts the text into a Document. Later, search for 'Q3 roadmap' — the meeting whiteboard photo appears in results because its extracted document contains that phrase."
+      },
+      "duplicates": {
+        "title": "Duplicates",
+        "intro": "Find and resolve duplicate photos in your library.",
+        "body": "PhotoRAG detects duplicate photos using a combination of perceptual hashing (for exact or near-exact copies) and semantic similarity (for visually similar but not identical shots).\n\nThe Duplicates page groups photos into clusters. For each cluster choose which copy to keep and mark the rest for deletion or archiving. Archiving moves photos to long-term storage; deletion moves them to the [Garbage](/help/garbage) page for final review.\n\nYou can also ask the [Chat](/help/chat) agent to compare specific photos for you using the compare tools.",
+        "examples": "Example: you copied a folder of photos twice by mistake. Open Duplicates — PhotoRAG groups all 200 pairs. Select 'Keep latest' for each group and click 'Remove duplicates' to clean up without losing any unique photos."
+      },
+      "garbage": {
+        "title": "Garbage / Bad Photos",
+        "intro": "Review and remove low-quality or unwanted photos.",
+        "body": "PhotoRAG automatically detects and flags low-quality photos — blurry shots, overexposed or underexposed images, accidental captures, and photos the AI model rates as uninformative.\n\nFlagged photos appear on the Garbage page. Choose to restore to the [Gallery](/help/gallery), archive (moves to long-term storage), or permanently delete.\n\nPhotos sent from the [Duplicates](/help/duplicates) page also appear here. The [Chat](/help/chat) agent can also flag or assess individual photos using quality tools.",
+        "examples": "Example: after importing 1 000 holiday photos, 47 are flagged as blurry or accidental. Open Garbage, review the thumbnails, restore the 5 that are actually fine, and permanently delete the remaining 42 with one click."
+      },
+      "chat": {
+        "title": "Chat (Agent AI)",
+        "intro": "Ask questions about your photo library in natural language.",
+        "body": "The Chat page provides a RAG (Retrieval-Augmented Generation) interface powered by the configured language model. You type a question or instruction, PhotoRAG searches your [Gallery](/help/gallery) for relevant context, and the AI responds using that context.\n\nThe AI Agent has access to 34 tools spanning search, annotation, file management, quality assessment, duplicate detection, and AI analysis. For a complete reference of every tool, see the [Agent Tools](/help/agent-tools) page.\n\nKey tool groups: search photos by scene description, tag, category, location, date, camera, or EXIF parameters; add/edit tags, categories, and geo-locations; move, archive, or resize photos; run OCR text extraction; assess photo quality; compare photos for duplicates; re-run the full AI pipeline on selected photos.\n\nUndo: if the Agent performs an action you did not intend, ask it to undo the last action. The Agent will reverse the most recent change (restore a deleted photo, revert an edit, etc.).\n\nSystem prompts that govern the Agent's personality and constraints are configured on the [Prompts & Templates](/help/prompts) page.",
+        "examples": "Example: ask 'What did our team look like in 2023?' — the AI retrieves team photos from 2023, summarises who is in them, and describes the settings. Then ask 'Which of those were taken outdoors?' for a refined answer."
+      },
+      "processing": {
+        "title": "Processing",
+        "intro": "Manage the AI pipeline that analyses your photos.",
+        "body": "The Processing page shows a live view of the photo analysis pipeline. It is a read-only monitor: processing is triggered by folder watchers or by a manual scan on the [Folders](/help/folders) page.\n\nEach photo passes through phases: description generation, translation, OCR, duplicate detection, and quality scoring. Each phase is shown as a separate row with timing and status.\n\nFailed jobs show the full error message. If failures are model-related, check the [Models](/help/models) page. Resolve the issue, then return to [Folders](/help/folders) and run the scanner again.",
+        "examples": "Example: you notice three jobs have been in the 'description' phase for an unusually long time. Click the task row to see the error: the remote model API returned a timeout. Fix the API connectivity issue, then return to the Folders page and run the scanner again — only the failed photos will be re-queued."
+      },
+      "folders": {
+        "title": "Folders",
+        "intro": "Configure which photo folders PhotoRAG monitors.",
+        "body": "PhotoRAG supports two methods for adding photos.\n\nMethod 1 — Watcher: monitors a source folder and automatically moves incoming photos into structured storage (year/month/day subfolders). Ideal for phone sync: configure [Syncthing](https://syncthing.net/) to sync from your phone to a PC folder, then point a PhotoRAG Watcher at that folder. Photos arrive, are ingested, and moved to storage automatically — freeing space on the phone. New photos are queued for [Processing](/help/processing) immediately.\n\nMethod 2 — Scanner: one-time recursive scan of an existing folder (e.g. your home directory). Photos stay in place. The Scanner does not watch for future changes — re-run it manually after copying new photos. Results appear in [Processing](/help/processing).\n\nKey difference: Watcher is always on for ongoing ingestion; Scanner is a one-shot import. Configure the default storage path in [Settings](/help/settings).",
+        "examples": "Watcher example: install Syncthing on your phone and PC. Create a sync folder called 'Phone inbox'. Add a PhotoRAG Watcher pointing at 'Phone inbox' as the source and '/Photos/Library' as storage. When you transfer a photo to the sync folder on your phone it arrives on the PC, PhotoRAG picks it up within seconds, describes it, and files it under '/Photos/Library/2025/05/26'. The sync folder is emptied automatically.\n\nScanner example: you have 5 000 family photos in '/Users/me/Pictures'. Add that path as a Scanner folder. PhotoRAG scans every subfolder, finds all images, and queues them for processing. Run the Scanner again any time you copy new photos into that tree manually."
+      },
+      "models": {
+        "title": "Models",
+        "intro": "Configure the AI models used for description, translation, and search.",
+        "body": "PhotoRAG uses separate models for different tasks: a vision model for generating photo descriptions, a language model for chat and re-writing, a translation model for multilingual support, and an embedding model for semantic search.\n\nEach model can run locally (downloaded to your machine) or remotely via an API key (OpenAI, Anthropic, Google, and others).\n\nThe Models page lets you switch between local and remote mode, enter API keys, and check model download and readiness status. Configure the language used for descriptions in [Settings](/help/settings), and check the [Processing](/help/processing) page to verify models are running correctly.\n\n⚠️ Non-commercial restriction: the default local translation model (NLLB-200 by Meta AI) is licensed under CC BY-NC 4.0, which permits non-commercial use only. If you plan to use PhotoRAG in a commercial context, configure a remote translation API (OpenAI, Google Translate, Anthropic, or a self-hosted Ollama model) instead of the bundled NLLB-200. All other models included with PhotoRAG are commercially licensed.\n\n⚠️ Data privacy: when you use a local model, all photo data — images, descriptions, extracted text, and search queries — stays entirely on your machine and is never sent to any external server. When you use a remote model, the photo image or its description is sent to the chosen API provider (for example OpenAI) for processing. This means your photos or their content may be stored or logged by that provider according to their own privacy policy. If privacy is a concern, use local models only, or review the privacy policy of your chosen provider before enabling remote mode.",
+        "examples": "Example: switch the vision model from local LLaVA to remote GPT-4o by selecting 'Remote' mode, entering your OpenAI API key, and clicking Save. New photo descriptions will now be generated by GPT-4o without downloading anything locally."
+      },
+      "prompts": {
+        "title": "Prompts & Templates",
+        "intro": "Customise the instructions given to the AI when describing photos.",
+        "body": "Prompt templates control what the AI writes in photo descriptions. Create templates for different categories (portraits, landscapes, documents) and assign them as default for a folder or globally.\n\nTemplates support variables like {language} filled in automatically. Category tags suggested when editing photos on the [Photo Edit](/help/photo-edit) page are drawn from the [Template Tags](/help/template-tags) and [Template Categories](/help/template-categories) vocabularies.\n\nThis page also holds system prompts for the [Chat](/help/chat) agent — defining its personality, default behaviour, and response constraints.\n\nChanging the active template and re-running AI analysis regenerates descriptions for all affected photos.",
+        "examples": "Example: create a template 'Describe this photo as a professional archivist would, noting date cues, attire, and setting' and assign it to your family history folder. Re-run analysis — all descriptions become more archivally detailed."
+      },
+      "settings": {
+        "title": "Settings",
+        "intro": "Configure global application preferences.",
+        "body": "The Settings page lets you change the default language for descriptions and the UI, set the default photo folder, configure the backend API base URL (useful when running PhotoRAG server on a different machine), and toggle automatic processing when new photos are detected.\n\nLanguage changes take effect immediately in the UI. If you switch to a non-English language, click 'Re-translate all' to translate existing descriptions. Configure which AI [Models](/help/models) are active to control what processing phases are available.\n\nThe default storage folder set here is used by folder Watchers. Monitor active processing on the [Processing](/help/processing) page.",
+        "examples": "Example: change Default Language to Russian, click Save, then click 'Re-translate all'. All existing English descriptions are queued for translation. Future photos are automatically described and translated into Russian."
+      },
+      "template-tags": {
+        "title": "Template Tags",
+        "intro": "Define the vocabulary of tags that the AI assigns to your photos.",
+        "body": "Tags are short descriptive labels attached to photos — e.g. 'sunset', 'portrait', 'beach'. This page manages the master list PhotoRAG recognises and auto-assigns during processing.\n\nEach entry has a Name (label shown in the [Gallery](/help/gallery) filter panel and stored in the database) and a CLIP Prompt (a phrase the CLIP visual model uses to detect whether the tag applies). The prompt should describe the tag visually, e.g. tag 'sunset' → 'a photo taken at sunset with warm orange sky'.\n\nDuring processing, every active CLIP prompt is tested against the image; tags whose similarity score exceeds the threshold are assigned. Tags are also suggested when editing photos.\n\nWorks hand-in-hand with [Template Categories](/help/template-categories). Both appear as filter options in [Gallery](/help/gallery) and in [Search](/help/search) indexing. Custom description templates that reference tag behaviour live on the [Prompts](/help/prompts) page.",
+        "examples": "Example: you want PhotoRAG to automatically tag all photos taken in winter. Create a tag with Name = 'winter' and CLIP Prompt = 'a snowy winter landscape with snow on the ground'. After saving, newly processed photos that visually match that description will receive the 'winter' tag automatically."
+      },
+      "template-categories": {
+        "title": "Template Categories",
+        "intro": "Define the broader categories used to group your photos.",
+        "body": "Categories are higher-level groupings — e.g. 'Landscape', 'Portrait', 'Document'. This page works identically to [Template Tags](/help/template-tags): each category has a Name and a CLIP Prompt for visual detection.\n\nWhile a photo can have many tags, it is typically assigned one primary category. Categories appear in the [Gallery](/help/gallery) filter panel and as selection criteria in the [Chat](/help/chat) agent.\n\nRecommended workflow: Categories for broad grouping ('what kind of photo?'), Tags for specific content ('what subjects or themes?'). Custom description templates referencing categories live on the [Prompts](/help/prompts) page.",
+        "examples": "Example: create a category 'Document' with CLIP Prompt = 'a photo of a written or printed document, receipt, invoice, or form'. All newly processed photos of documents will be placed in the Document category, making it easy to filter your library to just document scans in the Gallery."
+      },
+      "agent-tools": {
+        "title": "Agent Tools",
+        "intro": "Complete reference for all 34 tools available to the AI Agent in the Chat page.",
+        "body": "Access the Agent from the [Chat](/help/chat) page. All write operations (marked ⚠️) require your explicit confirmation before the Agent executes them. Operations marked ⏳ are slow because they run a neural network.\n\n── Search & Lookup ──\n\nsearch_photos_semantic — semantic/AI search using a natural-language description of a scene, subject, or feeling. Best for open-ended queries like 'photos of food on a table' or 'beach at sunset'.\n\nsearch_photos_metadata — structured search by category IDs, tag IDs, camera ID, location ID, or document flag. Use when you know the specific metadata values.\n\nfilter_photos — [Gallery](/help/gallery)-style filter combining category, tag, camera, location, document flag, and date (year/month/day). The most flexible read-only search tool.\n\nsearch_photos_by_exif — search by technical camera parameters: focal length, aperture, ISO, resolution, camera make/model. Great for finding all wide-angle shots or photos from a specific device.\n\nsearch_photos_by_category_id — return all photos in a specific category by its numeric ID. Call get_categories first to find the ID.\n\nget_photos_by_tag_id — return all photos with a specific tag by its numeric ID. Call get_tags first to find the ID.\n\nget_photo_details — get the full record for one photo by ID: description, tags, categories, EXIF, location. Always use this when the user references a photo by number.\n\n── Library Data Lookups ──\n\nget_categories — list all categories with IDs. Call before using category IDs in other tools.\n\nget_tags — list all tags with IDs. Call before using tag IDs in other tools.\n\nget_cameras — list all cameras (make, model, serial) with IDs.\n\nget_geopositions — list all saved locations (address, latitude, longitude) with IDs.\n\nget_exif_data — return raw EXIF metadata for a photo: camera settings, GPS, timestamps. Read-only.\n\n── AI Analysis ──\n\ndescribe_photo ⏳ — generate an AI visual description of a photo using the vision model. Read-only; does not save the result to the database.\n\nrecognize_text_in_photos ⏳ — run OCR on one or more photos to extract visible text. Saves the text to the database and marks photos as documents. Results appear on the [Documents](/help/documents) page.\n\nestimate_photo_quality_quick — fast pixel-level quality check (< 1 second, no AI model). Returns brightness, blur, edge density, entropy, screenshot detection, and a verdict. Read-only.\n\nestimate_photo_quality_deep ⏳ — deep CLIP-based quality assessment. Compares the photo against 8 quality probes ('blurry photo', 'sharp well-lit photo', etc.) and returns similarity scores. Read-only.\n\nget_photo_visual_metrics — return raw visual measurements (brightness, blur, colorfulness, resolution) without a garbage verdict. Read-only.\n\n── Duplicate Detection ──\n\ncompare_photos_quick — compare two photos using perceptual hashing (dHash, aHash, pHash). Fast (milliseconds). Returns Hamming distances; verdict: 'likely duplicates' if dHash ≤ 10. Read-only.\n\ncompare_photos_deep ⏳ — compare two photos using CLIP cosine similarity (0–1). Use when quick comparison is inconclusive, or for different crops/resizes of the same shot. Read-only.\n\nmark_photos_as_duplicates ⚠️ — manually record that certain photos are duplicates of a chosen original. They appear on the [Duplicates](/help/duplicates) page for review. Requires confirmation.\n\n── Annotation ──\n\nadd_tag_to_photos ⚠️ — add a tag to one or more photos. Creates the tag if it does not exist. Confidence is set to 1.0 (manually assigned). Undoable. Requires confirmation.\n\nadd_category_to_photos ⚠️ — assign a category to one or more photos. Creates the category if needed. Undoable. Requires confirmation.\n\nadd_geoposition_to_photos ⚠️ — set the geographical location for photos. Accepts a text address (forward-geocoded) or latitude + longitude (reverse-geocoded). Requires internet. Undoable. Requires confirmation.\n\ngeocode_photo_from_exif ⚠️ — read GPS coordinates from a photo's EXIF and save the reverse-geocoded address to the database. Requires internet and GPS data in the EXIF. Requires confirmation.\n\n── File & Folder Management ──\n\ncreate_folder ⚠️ — create a new folder inside the allowed photos root directory. Undoable (removes the folder if empty). Requires confirmation.\n\nmove_photos ⚠️ — move photos to a different folder on disk and update database paths. Destination is created automatically if it does not exist. Undoable. Requires confirmation.\n\narchive_photos ⚠️ — pack photos into MyPhotoArchive.zip and mark them as archived in the database. New files are appended if the zip already exists. Undoable. Requires confirmation. See also the [Duplicates](/help/duplicates) and [Garbage](/help/garbage) pages for UI-based archiving.\n\nresize_photo ⚠️ — resize a photo file and overwrite the original on disk. Use with care — this is a destructive operation. Requires confirmation.\n\n── Reprocessing ──\n\nreindex_photos — re-save existing descriptions into the vector search database without re-generating them. Useful after manually editing a description on the [Photo Edit](/help/photo-edit) page or after changing the embedding model. Runs in background.\n\nrerun_pipeline_for_photos — run the complete AI pipeline (phases 0–4) from scratch: CLIP tags, categories, vision description, OCR, translation, embedding. Tags and categories are cleared first. Progress visible on the [Processing](/help/processing) page. Runs in background.\n\n── History & Undo ──\n\nget_action_history — list the last 20 recorded actions with timestamps and parameters. Call this before undo_last_action to confirm what will be reversed.\n\nundo_last_action ⚠️ — reverse the most recent recorded action: remove a created folder, move files back, unzip archived photos, remove added tags or categories, restore previous geo-location. Requires confirmation.",
+        "examples": "Example: 'Find all photos from my trip to Paris in July 2023 and add the tag vacation to them.' The Agent calls get_geopositions to find Paris, calls filter_photos with geoposition_id and year=2023, month=7, then asks for confirmation before calling add_tag_to_photos.\n\nExample: 'Are photos 42 and 43 duplicates?' The Agent calls compare_photos_quick; if the result is inconclusive it offers to run compare_photos_deep.\n\nExample: 'Undo that.' The Agent calls get_action_history to show you what will be reversed, asks for confirmation, then calls undo_last_action."
+      },
+      "uninstall": {
+        "title": "Uninstalling PhotoRAG",
+        "intro": "You can fully uninstall PhotoRAG at any time. Your personal photos are never affected.",
+        "body": "Run the uninstaller for your platform:\n\n• Windows: Settings → Apps → PhotoRAG → Uninstall\n• macOS: drag PhotoRAG.app to Trash, then remove ~/Library/Application Support/PhotoRAG\n• Linux: delete the .AppImage file and remove the data folder: rm -rf ~/.config/PhotoRAG\n\nThe uninstaller removes the PhotoRAG application, its database, and any AI models it downloaded.\n\nAll photos on your disk remain untouched — including those that PhotoRAG moved or organised into folders during its operation. Any folders created by PhotoRAG (e.g. archive, duplicates export) stay on your disk exactly as they were.\n\nThe AI models (CLIP, LLaVA, etc.) are deleted along with the application. If you reinstall PhotoRAG, models will be downloaded again during the Setup Wizard.",
+        "examples": "If you reinstall PhotoRAG later, run the Setup Wizard again — it will re-download the models. Then re-add your photo folders on the [Folders](/help/folders) page and run a Scan or set up Watchers. The index is rebuilt from scratch, so processing will run again for all photos."
+      },
+      "system-requirements": {
+        "title": "System Requirements & Installation Notes",
+        "intro": "PhotoRAG is designed to run without administrator or root access on all supported platforms.",
+        "body": "Supported architectures:\n\n• macOS — Universal binary: runs natively on both Intel (x86_64) and Apple Silicon (ARM64) Macs with the same .dmg file.\n• Windows — x64 installer for Intel/AMD PCs; ARM64 installer for Snapdragon / Surface devices. Windows ARM64 can also run the x64 installer via the built-in emulation layer.\n• Linux — x86_64 AppImage for Intel/AMD; ARM64 AppImage for Raspberry Pi 4/5, AWS Graviton, and similar boards.\n\nNo administrator or root access required:\n\n• macOS: drag PhotoRAG.app to any folder (e.g. Applications or your home folder). No system-level changes are made.\n• Windows: the installer uses user-level install (no UAC prompt). It installs to %LocalAppData%\\Programs\\PhotoRAG and writes data to %AppData%\\PhotoRAG.\n• Linux: AppImage needs no installation — mark it executable and run it. No files are written outside ~/.config/PhotoRAG.\n\nLinux: if the AppImage does not launch (FUSE error):\n\nSome systems (Ubuntu 22.04+, Debian 12+) do not include libfuse2 by default. Two solutions — choose either:\n\n1. Install libfuse2 (requires sudo once):\n   sudo apt install libfuse2\n\n2. Run without FUSE (no sudo ever needed):\n   APPIMAGE_EXTRACT_AND_RUN=1 ./PhotoRAG-*.AppImage\n   You can make this permanent by adding it to a launcher or shell alias.",
+        "examples": "Example: on a shared Ubuntu server where you have no sudo access, download the AppImage, then run:\n   chmod +x PhotoRAG-1.0.0-x64.AppImage\n   APPIMAGE_EXTRACT_AND_RUN=1 ./PhotoRAG-1.0.0-x64.AppImage\nThe app runs entirely from your home directory — no system changes required."
+      }
+    }
+  }
+}

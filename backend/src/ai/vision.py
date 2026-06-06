@@ -1,11 +1,11 @@
 import torch
 from loguru import logger
 from PIL import Image
-from transformers import AutoProcessor, Qwen2VLForConditionalGeneration
 from qwen_vl_utils import process_vision_info
+from transformers import AutoProcessor, Qwen2VLForConditionalGeneration
 
-from src.config import Vision_Settings as ML_Settings
 from src.ai.prompts import get_prompt
+from src.config import Vision_Settings as ML_Settings
 
 
 class QwenVisionGenerator:
@@ -13,6 +13,7 @@ class QwenVisionGenerator:
     This class is a wrapper around the Qwen2VLForConditionalGeneration model.
     It is used to generate text descriptions of images.
     """
+
     settings = ML_Settings()
     RESIZE_FOR_DESCRIPTION = settings.RESIZE_FOR_DESCRIPTION
     RESIZE_FOR_DETECTION = settings.RESIZE_FOR_DETECTION
@@ -31,42 +32,37 @@ class QwenVisionGenerator:
     def download(self):
         """Pre-downloads the models and weights from HuggingFace."""
         AutoProcessor.from_pretrained(self.MODEL_ID)
-        Qwen2VLForConditionalGeneration.from_pretrained(
-            self.MODEL_ID, torch_dtype="auto"
-        )
+        Qwen2VLForConditionalGeneration.from_pretrained(self.MODEL_ID, torch_dtype="auto")
 
     def load(self):
         if not self.model:
             logger.info(f"Vision: Loading {self.MODEL_ID} on {self.device}...")
-            self.model = Qwen2VLForConditionalGeneration.from_pretrained(
-                self.MODEL_ID, 
-                torch_dtype=torch.float16
-            ).to(self.device)
+            self.model = Qwen2VLForConditionalGeneration.from_pretrained(self.MODEL_ID, torch_dtype=torch.float16).to(
+                self.device
+            )
             self.processor = AutoProcessor.from_pretrained(self.MODEL_ID)
             self.model.eval()
             logger.info(f"Vision: {self.MODEL_ID} loaded on {self.device}")
 
-    def generate_vision_text(
-        self, file_path: str, prompt_key: str = "describe_scene"
-    ) -> str:
+    def generate_vision_text(self, file_path: str, prompt_key: str = "describe_scene") -> str:
         """Universal vision generation using prompts from central registry."""
         # from qwen_vl_utils import process_vision_info
         self.load()
 
         image = Image.open(file_path).convert("RGB")
-        
-        if prompt_key  == "describe_scene":
+
+        if prompt_key == "describe_scene":
             image = image.resize(self.RESIZE_FOR_DESCRIPTION)
         elif prompt_key == "is_document":
             image = image.resize(self.RESIZE_FOR_DETECTION)
-        
+
         # Fetch prompt fresh from DB on every call (no cache)
         try:
             prompt_text = get_prompt(f"vision_analysis.{prompt_key}")
         except KeyError:
             prompt_text = get_prompt("vision_analysis.describe_scene")
         # logger.debug(f"Generating vision text with prompt_key='{prompt_key}' and prompt_text='{prompt_text}'")
-        
+
         try:
             system_text = get_prompt("vision_analysis.system_prompt")
         except KeyError:
@@ -83,13 +79,11 @@ class QwenVisionGenerator:
                     {"type": "image", "image": image},
                     {"type": "text", "text": prompt_text},
                 ],
-            }
+            },
         ]
 
         # Preparation
-        text = self.processor.apply_chat_template(
-            messages, tokenize=False, add_generation_prompt=True
-        )
+        text = self.processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         # logger.debug(f"Processed text: {text}")
         image_inputs, video_inputs = process_vision_info(messages)
         inputs = self.processor(
@@ -111,5 +105,5 @@ class QwenVisionGenerator:
                 generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False
             )
             logger.debug(f"Raw output text: {output_text}")
-            
+
         return output_text[0] if output_text else ""

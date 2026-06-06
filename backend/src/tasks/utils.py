@@ -3,7 +3,10 @@ from sqlalchemy import text
 
 from src.db.database import SessionLocal
 from src.db_service import (
-    delete_job, get_or_create_job, get_folder_scanner, update_folder_scanner_progress
+    delete_job,
+    get_folder_scanner,
+    get_or_create_job,
+    update_folder_scanner_progress,
 )
 
 
@@ -27,16 +30,25 @@ def phase_logic(phase: str) -> tuple[str, str]:
     return "", ""
 
 
-def _dispatch_tasks(
-    photo_id: int, phase: str, tasks: str, folder_scanner_id: int = None
-):
+def _dispatch_tasks(photo_id: int, phase: str, tasks: str, folder_scanner_id: int = None):
     """Send tasks to the appropriate queues."""
-    from .clip_tasks import auto_tag_clip_task, metadata_task, categorize_photo_task, compute_perceptual_hashes_task
-    from .vision_tasks import vision_task, ocr_task, is_this_document_task
-    from .embedding_tasks import final_embedding_task, embedding_document_text_task
+    from .clip_tasks import (
+        auto_tag_clip_task,
+        categorize_photo_task,
+        compute_perceptual_hashes_task,
+        metadata_task,
+    )
+    from .embedding_tasks import embedding_document_text_task, final_embedding_task
+    from .quality_tasks import (
+        blur_task,
+        brightness_task,
+        edge_density_task,
+        entropy_task,
+        screenshot_detect_task,
+    )
     from .translation_tasks import translate_description_task
-    from .quality_tasks import brightness_task, edge_density_task, blur_task, entropy_task, screenshot_detect_task
-    
+    from .vision_tasks import is_this_document_task, ocr_task, vision_task
+
     for task_name in tasks.split(","):
         task_name = task_name.strip()
         if not task_name:
@@ -76,9 +88,7 @@ def _dispatch_tasks(
         logger.info(f"[pipeline] Dispatched {task_name} for photo {photo_id}")
 
 
-def _finish_task(
-    photo_id: int, phase: str, name: str, folder_scanner_id: int = None
-):
+def _finish_task(photo_id: int, phase: str, name: str, folder_scanner_id: int = None):
     """
     Finish task in phase and start next phase if needed
     """
@@ -98,7 +108,7 @@ def _finish_task(
                 "task_name": name + ",",
                 "photo_id": photo_id,
                 "phase": phase,
-            }
+            },
         )
         db.commit()
 
@@ -110,7 +120,7 @@ def _finish_task(
                 WHERE photo_id = :photo_id
                   AND phase = :phase
             """),
-            {"photo_id": photo_id, "phase": phase}
+            {"photo_id": photo_id, "phase": phase},
         ).scalar_one_or_none()
         logger.info(f"[pipeline] Tasks row for photo {photo_id} and phase {phase}: {tasks_row}")
         if tasks_row is None:
@@ -133,9 +143,7 @@ def _finish_task(
         db.close()
 
 
-def _start_next_phase(
-    photo_id: int, phase: str, folder_scanner_id: int = None
-):
+def _start_next_phase(photo_id: int, phase: str, folder_scanner_id: int = None):
     """
     Start next phase if needed
     """
@@ -144,18 +152,17 @@ def _start_next_phase(
     try:
         next_phase, new_tasks = phase_logic(phase)
         if folder_scanner_id:
-            
             folder_scanner = get_folder_scanner(db, folder_scanner_id)
             logger.info(f"[pipeline] Folder scanner {folder_scanner.id}")
             if folder_scanner:
                 update_folder_scanner_progress(db, folder_scanner_id)
                 logger.info(f"[pipeline] Folder scanner {folder_scanner_id} progress updated")
         if not next_phase:
-            logger.info(f"[pipeline] FINISHED processing for photo {photo_id}")   
+            logger.info(f"[pipeline] FINISHED processing for photo {photo_id}")
             db.commit()
             db.close()
             return
-        
+
         get_or_create_job(db, photo_id=photo_id, phase=next_phase, tasks=new_tasks)
         db.commit()
         logger.info(f"[pipeline] New JOB created: {next_phase} for photo {photo_id}")

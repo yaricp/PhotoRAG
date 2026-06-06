@@ -1,0 +1,5 @@
+{
+  "frontend/src/**/*.{ts,tsx}": ["frontend/node_modules/.bin/eslint --fix"],
+  "frontend/electron/**/*.{ts,tsx}": ["frontend/node_modules/.bin/eslint --fix"],
+  "backend/**/*.py": ["ruff check --fix", "ruff format"]
+}

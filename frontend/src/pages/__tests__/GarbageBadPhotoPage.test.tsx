@@ -1,12 +1,15 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { server } from '@/test/server'
 import { http, HttpResponse } from 'msw'
 import { makePaginatedPhotos, makePhoto } from '@/test/factories'
+import i18n from '@/i18n'
 import { GarbageBadPhotoPage } from '../GarbageBadPhotoPage'
 
 vi.mock('@/api/base', () => ({ getBaseUrl: async () => 'http://localhost:8000' }))
+
+afterEach(() => { i18n.changeLanguage('en') })
 
 const renderPage = () =>
     render(
@@ -32,11 +35,11 @@ function mockPhotos(issueType: string, photos = [makePhoto()]) {
 }
 
 describe('GarbageBadPhotoPage', () => {
-    it('renders the page title', async () => {
+    it('renders section headings', async () => {
         mockSummary({})
         renderPage()
         await waitFor(() =>
-            expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument()
+            expect(screen.getAllByRole('heading', { level: 2 }).length).toBeGreaterThan(0)
         )
     })
 
@@ -73,6 +76,15 @@ describe('GarbageBadPhotoPage', () => {
         renderPage()
         await waitFor(() =>
             expect(screen.getAllByText(/Coming soon/i).length).toBeGreaterThanOrEqual(3)
+        )
+    })
+
+    it('renders Russian garbage section headings', async () => {
+        mockSummary({})
+        i18n.changeLanguage('ru')
+        render(<MemoryRouter><GarbageBadPhotoPage /></MemoryRouter>)
+        await waitFor(() =>
+            expect(screen.getByText('Технический мусор')).toBeInTheDocument()
         )
     })
 })

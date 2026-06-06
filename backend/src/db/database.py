@@ -1,23 +1,24 @@
 import sqlite_vec
-from sqlalchemy import create_engine
-from sqlalchemy import event
-from sqlalchemy.engine import Engine
-from sqlalchemy.orm import sessionmaker, Session
 from loguru import logger
+from sqlalchemy import create_engine, event
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import NullPool
 
 from src.config import Database_Settings
-
 
 settings = Database_Settings()
 if settings.DATABASE_DIALECT == "sqlite":
     DATABASE_URL: str = f"sqlite:///{settings.DATABASE_NAME}"
 else:
     DATABASE_URL: str = f"{settings.DATABASE_DIALECT}+{settings.DATABASE_DRIVER}://{settings.DATABASE_USER}:{settings.DATABASE_PASSWORD}@{settings.DATABASE_HOST}:{settings.DATABASE_PORT}/{settings.DATABASE_NAME}"
-engine = create_engine(DATABASE_URL)
+
+_connect_args = {"timeout": 30} if settings.DATABASE_DIALECT == "sqlite" else {}
+_pool_kwargs = {"poolclass": NullPool} if settings.DATABASE_DIALECT == "sqlite" else {}
+engine = create_engine(DATABASE_URL, connect_args=_connect_args, **_pool_kwargs)
 SessionLocal: sessionmaker[Session] = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
-@event.listens_for(Engine, "connect")
+@event.listens_for(engine, "connect")
 def load_sqlite_extensions(dbapi_connection, connection_record):
     try:
         dbapi_connection.enable_load_extension(True)
@@ -26,13 +27,8 @@ def load_sqlite_extensions(dbapi_connection, connection_record):
         logger.info("✅ sqlite-vec loaded successfully")
     except Exception as e:
         logger.error(f"Failed to load sqlite-vec: {e}")
-
-
-@event.listens_for(Engine, "close")
-def checkpoint_on_close(dbapi_connection, connection_record):
-    """Flush WAL back into the main DB file whenever a connection is returned to the pool."""
     try:
-        dbapi_connection.execute("PRAGMA wal_checkpoint(TRUNCATE)")
-    except Exception:
-        pass
-
+        dbapi_connection.execute("PRAGMA journal_mode=WAL")
+        dbapi_connection.execute("PRAGMA busy_timeout=30000")
+    except Exception as e:
+        logger.error(f"Failed to set SQLite pragmas: {e}")

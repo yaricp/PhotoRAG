@@ -8,8 +8,10 @@ Each queue file calls:
     model_name = get_model_name_from_db(DB_PATH, "clip", default="ViT-B-32")
     config     = read_model_config_from_db(DB_PATH, "vision")  # -> dict | None
 """
+
 import os
 import sqlite3
+
 from loguru import logger
 
 
@@ -26,7 +28,7 @@ def read_model_config_from_db(db_path: str, model_type: str) -> dict | None:
         conn = sqlite3.connect(db_path)
         row = conn.execute(
             "SELECT model_name, mode, url, api_key, model_provider, similarity_limit FROM ai_model_configs WHERE type = ?",
-            (model_type,)
+            (model_type,),
         ).fetchone()
         conn.close()
         if row:
@@ -53,15 +55,9 @@ def update_model_status_raw(db_path: str, name: str, status: str) -> None:
         if not os.path.exists(db_path):
             return
         with sqlite3.connect(db_path) as conn:
-            conn.execute(
-                "UPDATE model_states SET status=? WHERE name=?",
-                (status, name)
-            )
+            conn.execute("UPDATE model_states SET status=? WHERE name=?", (status, name))
             if conn.total_changes == 0:
-                conn.execute(
-                    "INSERT OR IGNORE INTO model_states (name, status) VALUES (?, ?)",
-                    (name, status)
-                )
+                conn.execute("INSERT OR IGNORE INTO model_states (name, status) VALUES (?, ?)", (name, status))
             conn.commit()
     except Exception as exc:
         logger.warning(f"[queue_config] Could not update model_states '{name}'→'{status}': {exc}")
@@ -74,7 +70,5 @@ def get_model_name_from_db(db_path: str, model_type: str, default: str) -> str:
     cfg = read_model_config_from_db(db_path, model_type)
     if cfg and cfg.get("model_name"):
         return cfg["model_name"]
-    logger.warning(
-        f"[queue_config] No DB config for '{model_type}', using default: {default!r}"
-    )
+    logger.warning(f"[queue_config] No DB config for '{model_type}', using default: {default!r}")
     return default

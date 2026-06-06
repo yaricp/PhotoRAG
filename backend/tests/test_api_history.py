@@ -1,44 +1,59 @@
 # backend/tests/test_api_history.py
-import sys
-import os
 import json
+import sys
 import zipfile
-import tempfile
 from unittest.mock import MagicMock, patch
+
 import sqlalchemy.types
 
 mock_pgvector = MagicMock()
 mock_pgvector.sqlalchemy.Vector = lambda size: sqlalchemy.types.JSON()
-sys.modules['pgvector'] = mock_pgvector
-sys.modules['pgvector.sqlalchemy'] = mock_pgvector.sqlalchemy
+sys.modules.setdefault("pgvector", mock_pgvector)
+sys.modules.setdefault("pgvector.sqlalchemy", mock_pgvector.sqlalchemy)
 
 for _mod in [
-    'sqlite_vec', 'langgraph', 'langgraph.graph',
-    'src.database', 'src.vector_db_services', 'src.config',
-    'src.ai', 'src.ai.registry', 'src.ai.prompts', 'src.ai.translator',
-    'src.graphs.ai_agent',
-    'src.queues', 'src.queues.folder_scan_queue', 'src.queues.clip_queue',
-    'src.queues.vision_queue', 'src.queues.embedding_queue',
-    'src.queues.translation_queue',
-    'src.tasks', 'src.tasks.utils', 'src.tasks.folder_scanners',
-    'src.tasks.vision_tasks', 'src.tasks.embedding_tasks',
-    'src.tasks.clip_tasks', 'src.tasks.translation_tasks',
-    'src.deps',
+    "sqlite_vec",
+    "langgraph",
+    "langgraph.graph",
+    "src.database",
+    "src.vector_db_services",
+    "src.ai",
+    "src.ai.registry",
+    "src.ai.prompts",
+    "src.ai.translator",
+    "src.queues",
+    "src.queues.folder_scan_queue",
+    "src.queues.clip_queue",
+    "src.queues.vision_queue",
+    "src.queues.embedding_queue",
+    "src.queues.translation_queue",
+    "src.queues.queue_config",
+    "src.tasks",
+    "src.tasks.utils",
+    "src.tasks.folder_scanners",
+    "src.tasks.vision_tasks",
+    "src.tasks.embedding_tasks",
+    "src.tasks.clip_tasks",
+    "src.tasks.translation_tasks",
+    "src.model_services",
+    "src.watcher_service",
+    "src.task_notifier",
+    "src.deps",
 ]:
-    sys.modules[_mod] = MagicMock()
+    sys.modules.setdefault(_mod, MagicMock())
 
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from src.models import Base, Photo as PhotoModel
 from src.db_service import (
     create_history_action,
     get_history_actions,
     get_last_history_action,
-    delete_history_action,
     perform_undo,
 )
+from src.models import Base
+from src.models import Photo as PhotoModel
 
 
 @pytest.fixture
@@ -53,12 +68,15 @@ def db():
 
 @pytest.fixture
 def client():
-    sys.modules.pop('src.main', None)
+    sys.modules.pop("src.main", None)
     import src.main as main_mod
+
     def override_get_db():
         yield MagicMock()
-    main_mod.app.dependency_overrides[sys.modules['src.deps'].get_db] = override_get_db
+
+    main_mod.app.dependency_overrides[sys.modules["src.deps"].get_db] = override_get_db
     from fastapi.testclient import TestClient
+
     return TestClient(main_mod.app)
 
 
@@ -93,7 +111,9 @@ def test_undo_create_folder_removes_directory(db, tmp_path):
     folder = tmp_path / "test_new_folder"
     folder.mkdir()
     create_history_action(
-        db, "create_folder", None,
+        db,
+        "create_folder",
+        None,
         {"path": str(folder)},
         {"path": str(folder)},
     )
@@ -115,7 +135,9 @@ def test_undo_move_photos_restores_paths(db, tmp_path):
     db.refresh(photo)
 
     create_history_action(
-        db, "move_photos", [photo.id],
+        db,
+        "move_photos",
+        [photo.id],
         {"destination": str(tmp_path)},
         {"original_paths": {str(photo.id): original_path}},
     )
@@ -131,7 +153,9 @@ def test_undo_archive_photos_deletes_zip(db, tmp_path):
         zf.writestr("photo1.jpg", b"data")
 
     create_history_action(
-        db, "archive_photos", [1],
+        db,
+        "archive_photos",
+        [1],
         {"zip_path": str(zip_path)},
         {"zip_path": str(zip_path), "added_names": ["photo1.jpg"], "newly_archived_ids": []},
     )

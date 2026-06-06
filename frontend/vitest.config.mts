@@ -7,7 +7,8 @@ export default defineConfig({
     test: {
         environment: 'jsdom',
         globals: true,
-        setupFiles: ['src/test/setup.ts'],
+        setupFiles: ['src/test/fetch-polyfill.ts', 'src/test/setup.ts'],
+        exclude: ['tests/e2e/**', 'node_modules/**', '**/e2e/**'],
         coverage: {
             provider: 'v8',
             reporter: ['text', 'html'],

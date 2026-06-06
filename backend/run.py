@@ -1,21 +1,27 @@
 # run.py
-import sys
 import signal
 import subprocess
+import sys
+from pathlib import Path
+
 from loguru import logger
 
 from src.config import (
-    Api_Settings, Vision_Settings, CLIP_Settings,
-    Embedding_Settings, Translation_Settings, OCR_Settings
+    Api_Settings,
+    CLIP_Settings,
+    Embedding_Settings,
+    OCR_Settings,
+    Translation_Settings,
+    Vision_Settings,
 )
-
+from src.data_dir import migrate_legacy_data, resolve_app_data_dir
 
 QUEUE_MODULE = {
-    "clip":        "src.queues.clip_queue.clip_queue",
-    "vision":      "src.queues.vision_queue.vision_queue",
-    "embedding":   "src.queues.embedding_queue.embedding_queue",
-    "translate":   "src.queues.translation_queue.translation_queue",
-    "ocr":         "src.queues.ocr_queue.ocr_queue",
+    "clip": "src.queues.clip_queue.clip_queue",
+    "vision": "src.queues.vision_queue.vision_queue",
+    "embedding": "src.queues.embedding_queue.embedding_queue",
+    "translate": "src.queues.translation_queue.translation_queue",
+    "ocr": "src.queues.ocr_queue.ocr_queue",
     "folder_scan": "src.queues.folder_scan_queue.folder_scan_queue",
 }
 
@@ -53,12 +59,18 @@ def start_workers() -> list[subprocess.Popen]:
             logger.error(f"[workers] Unknown model: {model}")
             continue
         logger.info(f"[workers] Starting worker for: {model} → {queue_module}")
-        proc = subprocess.Popen([
-            sys.executable, "-m", "huey.bin.huey_consumer",
-            queue_module,
-            "-w", "1",
-            "-k", "thread",
-        ])
+        proc = subprocess.Popen(
+            [
+                sys.executable,
+                "-m",
+                "huey.bin.huey_consumer",
+                queue_module,
+                "-w",
+                "1",
+                "-k",
+                "thread",
+            ]
+        )
         procs.append(proc)
     return procs
 
@@ -92,6 +104,7 @@ def stop_workers(procs: list[subprocess.Popen]) -> None:
 
 def start_api():
     import uvicorn
+
     cfg = Api_Settings()
     logger.info(f"[api] Starting FastAPI on {cfg.API_HOST}:{cfg.API_PORT}")
     uvicorn.run(
@@ -103,6 +116,11 @@ def start_api():
 
 
 if __name__ == "__main__":
+    _project_root = Path(__file__).parent.parent
+    _app_data_dir = resolve_app_data_dir()
+    migrate_legacy_data(_project_root, _app_data_dir)
+    logger.info(f"[startup] APP_DATA_DIR = {_app_data_dir}")
+
     worker_procs = start_workers()
 
     # Ensure workers are cleaned up on SIGTERM (e.g. from Docker / systemd)

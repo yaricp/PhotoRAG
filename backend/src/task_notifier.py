@@ -46,14 +46,16 @@ USAGE
 
 No explicit start() call is needed.
 """
+
 import asyncio
 import json
 import os
 import sqlite3
 import time
+
 from loguru import logger
 
-from src.config import TaskQueue_Settings, Database_Settings
+from src.config import Database_Settings, TaskQueue_Settings
 
 _ERROR_KEY = "__error__"
 
@@ -231,9 +233,7 @@ class TaskResultNotifier:
             elapsed = now - started
             last = last_heartbeat.get(task_id, started)
             if elapsed > 0 and (now - last) >= log_every:
-                logger.info(
-                    f"[notifier] Still waiting for task {task_id} ({elapsed:.0f}s elapsed)"
-                )
+                logger.info(f"[notifier] Still waiting for task {task_id} ({elapsed:.0f}s elapsed)")
                 last_heartbeat[task_id] = now
 
     def _fetch_batch(self, task_ids: list[str]) -> dict[str, str]:

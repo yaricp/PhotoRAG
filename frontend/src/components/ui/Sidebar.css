@@ -139,3 +139,9 @@
     background: var(--color-accent);
     border-radius: 2px;
 }
+/* SEPARATOR between main nav and bottom links */
+.sidebar__separator {
+    height: 1px;
+    background: var(--color-border, #e2e8f0);
+    margin: 8px 12px;
+}

@@ -1,33 +1,36 @@
 """Phase-0 CPU tasks and phase-1 CLIP tasks — called by incoming_pipeline.py."""
+
 import asyncio
 from time import time
+
 from loguru import logger
 
 from src.db.database import SessionLocal
 from src.db_service import (
-    get_photo_by_id,
-    get_or_create_camera,
-    update_photo_geoposition,
-    add_photo_tag_with_score,
-    get_or_create_category,
     add_photo_category_with_score,
-    get_or_create_photo_hash,
-    find_perceptual_duplicates,
-    record_perceptual_duplicate,
+    add_photo_tag_with_score,
     create_quality_issue,
+    find_perceptual_duplicates,
+    get_or_create_camera,
+    get_or_create_category,
+    get_or_create_photo_hash,
+    get_photo_by_id,
+    record_perceptual_duplicate,
+    update_photo_geoposition,
 )
 from src.model_services import call_clip_model
 from src.pipeline_tracker import track_task
+from src.quality_checks import check_exif, check_resolution
 from src.utils import extract_exif, parse_datetime
-from src.quality_checks import check_resolution, check_exif
-
 
 # ---------------------------------------------------------------------------
 # Phase 0 — CPU-only, run via asyncio.to_thread so they don't block the loop
 # ---------------------------------------------------------------------------
 
+
 def _metadata_sync(photo_id: int) -> None:
     from src.geo import GeoEnricher
+
     db = SessionLocal()
     try:
         photo = get_photo_by_id(db, photo_id)
@@ -46,7 +49,8 @@ def _metadata_sync(photo_id: int) -> None:
         geo_result = GeoEnricher().geocode_photo(exif_raw)
         if geo_result.get("latitude") and geo_result.get("longitude"):
             update_photo_geoposition(
-                db, photo_id,
+                db,
+                photo_id,
                 geo_result["latitude"],
                 geo_result["longitude"],
                 geo_result["address"],
@@ -130,6 +134,7 @@ async def compute_perceptual_hashes_task(photo_id: int) -> None:
 # DB reads and writes run in threads so the event loop stays free.
 # ---------------------------------------------------------------------------
 
+
 def _get_file_path_sync(photo_id: int) -> str | None:
     db = SessionLocal()
     try:
@@ -176,7 +181,7 @@ async def auto_tag_clip_task(photo_id: int) -> None:
             return
         t0 = time()
         tags = await call_clip_model(file_path, task="tags")
-        logger.debug(f"[clip/tags] Photo {photo_id}: model took {time()-t0:.2f}s, {len(tags)} tags")
+        logger.debug(f"[clip/tags] Photo {photo_id}: model took {time() - t0:.2f}s, {len(tags)} tags")
         await asyncio.to_thread(_save_tags_sync, photo_id, tags)
         logger.info(f"[clip/tags] Photo {photo_id}: {len(tags)} tags ✓")
 
@@ -190,6 +195,6 @@ async def categorize_photo_task(photo_id: int) -> None:
             return
         t0 = time()
         cat_results = await call_clip_model(file_path=file_path, task="categorize")
-        logger.debug(f"[clip/categories] Photo {photo_id}: model took {time()-t0:.2f}s, {len(cat_results)} cats")
+        logger.debug(f"[clip/categories] Photo {photo_id}: model took {time() - t0:.2f}s, {len(cat_results)} cats")
         await asyncio.to_thread(_save_categories_sync, photo_id, cat_results)
         logger.info(f"[clip/categories] Photo {photo_id}: {len(cat_results)} categories ✓")

@@ -1,11 +1,11 @@
+from typing import List, Optional, Tuple
+
+import numpy as np
 from loguru import logger
 from sqlalchemy import text
-from typing import List, Optional, Tuple
-import numpy as np
 
-from src.models import PhotoEmbedding
 from src.config import Embedding_Settings as ML_Settings
-
+from src.models import PhotoEmbedding
 
 # ---------------------------------------------------------------------------
 # Dimension helpers
@@ -13,34 +13,35 @@ from src.config import Embedding_Settings as ML_Settings
 
 _DIMENSION_MAP = {
     # OpenAI
-    "text-embedding-3-large":       3072,
-    "text-embedding-3-small":       1536,
-    "text-embedding-ada-002":       1536,
+    "text-embedding-3-large": 3072,
+    "text-embedding-3-small": 1536,
+    "text-embedding-ada-002": 1536,
     # Google
-    "text-embedding-004":           768,
-    "text-multilingual-embedding":  768,
+    "text-embedding-004": 768,
+    "text-multilingual-embedding": 768,
     # Nomic
-    "nomic-embed-text":             768,
-    "nomic":                        768,
+    "nomic-embed-text": 768,
+    "nomic": 768,
     # BAAI / FlagEmbedding
-    "bge-large":                    1024,
-    "bge-base":                     768,
-    "bge-small":                    512,
-    "bge-m3":                       1024,
+    "bge-large": 1024,
+    "bge-base": 768,
+    "bge-small": 512,
+    "bge-m3": 1024,
     # sentence-transformers common
-    "all-mpnet-base":               768,
-    "all-minilm-l12":               384,
-    "all-minilm-l6":                384,
-    "paraphrase-minilm":            384,
-    "multilingual-e5-large":        1024,
-    "multilingual-e5-base":         768,
-    "multilingual-e5-small":        384,
-    "e5-large":                     1024,
-    "e5-base":                      768,
-    "e5-small":                     384,
-    "gte-large":                    1024,
-    "gte-base":                     768,
+    "all-mpnet-base": 768,
+    "all-minilm-l12": 384,
+    "all-minilm-l6": 384,
+    "paraphrase-minilm": 384,
+    "multilingual-e5-large": 1024,
+    "multilingual-e5-base": 768,
+    "multilingual-e5-small": 384,
+    "e5-large": 1024,
+    "e5-base": 768,
+    "e5-small": 384,
+    "gte-large": 1024,
+    "gte-base": 768,
 }
+
 
 def get_embedding_dimension(model_name: str) -> int:
     """Return the output dimension for a known embedding model, defaulting to 768."""
@@ -53,11 +54,12 @@ def get_embedding_dimension(model_name: str) -> int:
 
 def current_vss_dimension(db) -> int:
     """Read the dimension that the photo_embeddings_vss table was created with."""
-    row = db.execute(text(
-        "SELECT sql FROM sqlite_master WHERE type='table' AND name='photo_embeddings_vss'"
-    )).fetchone()
+    row = db.execute(
+        text("SELECT sql FROM sqlite_master WHERE type='table' AND name='photo_embeddings_vss'")
+    ).fetchone()
     if row and row[0]:
         import re
+
         m = re.search(r"FLOAT\[(\d+)\]", row[0], re.IGNORECASE)
         if m:
             return int(m.group(1))
@@ -72,13 +74,15 @@ def rebuild_embeddings_vss(db, new_dimension: int) -> None:
     logger.info(f"[vector_db] Rebuilding photo_embeddings_vss with dim={new_dimension}")
     with db.bind.begin() as conn:
         conn.execute(text("DROP TABLE IF EXISTS photo_embeddings_vss"))
-        conn.execute(text(f"""
+        conn.execute(
+            text(f"""
             CREATE VIRTUAL TABLE photo_embeddings_vss
             USING vec0(embedding FLOAT[{new_dimension}])
-        """))
+        """)
+        )
     db.execute(text("DELETE FROM photo_embedding_map"))
     db.commit()
-    logger.info(f"[vector_db] Rebuild complete — photo_embedding_map cleared, re-embedding needed")
+    logger.info("[vector_db] Rebuild complete — photo_embedding_map cleared, re-embedding needed")
 
 
 # ----------------------------
@@ -86,23 +90,40 @@ def rebuild_embeddings_vss(db, new_dimension: int) -> None:
 # ----------------------------
 def save_embedding(db, photo_embedding_id: int, embedding: List[float]) -> int:
     """
-    Saves embedding to the vector DB and return the rowid.
+    Saves embedding to the vector DB and returns the rowid.
+    Auto-rebuilds the VSS table if the dimension doesn't match the vector.
     """
-    try:
-        embedding_bytes = np.array(embedding, dtype=np.float32).flatten().tobytes()
+    embedding_bytes = np.array(embedding, dtype=np.float32).flatten().tobytes()
 
-        db.execute(text("""
+    try:
+        db.execute(
+            text("""
             INSERT INTO photo_embeddings_vss(rowid, embedding)
             VALUES (:id, :embedding)
-        """), {"id": photo_embedding_id, "embedding": embedding_bytes})
-
+        """),
+            {"id": photo_embedding_id, "embedding": embedding_bytes},
+        )
         db.commit()
-
         logger.info(f"Embedding saved, rowid={photo_embedding_id}")
         return photo_embedding_id
 
     except Exception as e:
         db.rollback()
+        if "Dimension mismatch" in str(e):
+            new_dim = len(embedding)
+            logger.warning(f"[vector_db] Dimension mismatch — rebuilding VSS table with dim={new_dim} and retrying")
+            rebuild_embeddings_vss(db, new_dim)
+            # Retry once with the freshly recreated table
+            db.execute(
+                text("""
+                INSERT INTO photo_embeddings_vss(rowid, embedding)
+                VALUES (:id, :embedding)
+            """),
+                {"id": photo_embedding_id, "embedding": embedding_bytes},
+            )
+            db.commit()
+            logger.info(f"Embedding saved after rebuild, rowid={photo_embedding_id}")
+            return photo_embedding_id
         logger.error(f"Error saving embedding: {e}")
         raise
 
@@ -110,9 +131,7 @@ def save_embedding(db, photo_embedding_id: int, embedding: List[float]) -> int:
 # ----------------------------
 # Link photo ↔ embedding
 # ----------------------------
-def link_photo_embedding(
-    db, photo_id: int, model: str
-):
+def link_photo_embedding(db, photo_id: int, model: str):
     """
     Stores mapping between photo and vector row.
     """
@@ -133,21 +152,40 @@ def link_photo_embedding(
 # ----------------------------
 # Full pipeline save
 # ----------------------------
-def store_photo_embedding(
-    db, photo_id: int, embedding: List[float], model: str
-) -> int:
+def store_photo_embedding(db, photo_id: int, embedding: List[float], model: str) -> int:
     """
     One-step helper: save embedding + link to photo.
+    Replaces any previously stored embedding for this photo so a photo
+    never has more than one vector in the VSS table.
     """
+    existing = db.execute(
+        text("SELECT id FROM photo_embedding_map WHERE photo_id = :pid"),
+        {"pid": photo_id},
+    ).fetchall()
+    if existing:
+        for row in existing:
+            try:
+                db.execute(
+                    text("DELETE FROM photo_embeddings_vss WHERE rowid = :rid"),
+                    {"rid": row[0]},
+                )
+            except Exception:
+                pass
+        db.execute(
+            text("DELETE FROM photo_embedding_map WHERE photo_id = :pid"),
+            {"pid": photo_id},
+        )
+        db.commit()
+
     photo_embedding_id = link_photo_embedding(db, photo_id, model)
     rowid = save_embedding(db, photo_embedding_id, embedding)
-    
     return rowid
 
 
 # ----------------------------
 # Search similar photos
 # ----------------------------
+
 
 def _scaled_threshold(base: float, dim: int) -> float:
     """Scale the L2 distance threshold for the embedding dimension in use.
@@ -173,7 +211,8 @@ def search_similar_photos(
 
         # Run KNN in a subquery first, then JOIN — avoids sqlite-vec optimizer issues
         # with JOIN + MATCH in the same query level.
-        rows = db.execute(text("""
+        rows = db.execute(
+            text("""
             SELECT m.photo_id, knn.distance
             FROM (
                 SELECT rowid, distance
@@ -183,11 +222,21 @@ def search_similar_photos(
             ) knn
             JOIN photo_embedding_map m ON knn.rowid = m.id
             WHERE knn.distance < :threshold
-        """), {"embedding": embedding_bytes, "k": limit, "threshold": threshold}).fetchall()
+        """),
+            {"embedding": embedding_bytes, "k": limit, "threshold": threshold},
+        ).fetchall()
 
         logger.info(f"Vector search returned {len(rows)} results (threshold={threshold:.3f})")
 
-        return [(r[0], r[1]) for r in rows]
+        # Deduplicate by photo_id — keep only the closest match per photo.
+        # A photo can have multiple VSS rows if it was re-embedded without
+        # the old vector being deleted first; deduplication here prevents
+        # the same photo appearing several times in search results.
+        seen: dict[int, float] = {}
+        for photo_id, distance in rows:
+            if photo_id not in seen or distance < seen[photo_id]:
+                seen[photo_id] = distance
+        return list(seen.items())
 
     except Exception as e:
         logger.error(f"Error searching embeddings: {e}")
@@ -209,7 +258,7 @@ def get_embedding_by_photo(db, photo_id: int) -> Optional[List[float]]:
             JOIN photo_embedding_map m ON v.rowid = m.rowid
             WHERE m.photo_id = ?
             """,
-            (photo_id,)
+            (photo_id,),
         ).fetchone()
 
         if not row:

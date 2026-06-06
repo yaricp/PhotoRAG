@@ -1,12 +1,13 @@
-import os
-import json
-import shutil
 import hashlib
+import json
+import os
+import shutil
 from datetime import datetime
 from typing import Optional
-from PIL import Image, ExifTags
-from PIL.TiffImagePlugin import IFDRational
+
 from loguru import logger
+from PIL import ExifTags, Image
+from PIL.TiffImagePlugin import IFDRational
 
 
 def extract_exif(image_path: str):
@@ -87,7 +88,7 @@ def parse_datetime(exif_raw):
     # EXIF date fields in priority order
     date_keys = ["DateTimeOriginal", "DateTimeDigitized", "DateTime"]
     dt_str = None
-    
+
     for key in date_keys:
         val = exif_raw.get(key)
         if val and isinstance(val, str) and val.strip():
@@ -96,12 +97,12 @@ def parse_datetime(exif_raw):
             if clean_val and clean_val != "0000:00:00 00:00:00":
                 dt_str = clean_val
                 break
-                
+
     if not dt_str:
         return None
-        
+
     logger.info(f"[parse_datetime] Attempting to parse: {dt_str}")
-    
+
     # Try the standard EXIF format first
     formats = ["%Y:%m:%d %H:%M:%S", "%Y-%m-%d %H:%M:%S"]
     for fmt in formats:
@@ -109,7 +110,7 @@ def parse_datetime(exif_raw):
             return datetime.strptime(dt_str, fmt)
         except (ValueError, TypeError):
             continue
-            
+
     logger.warning(f"[parse_datetime] Failed to parse any known format for: {dt_str}")
     return None
 
@@ -117,11 +118,7 @@ def parse_datetime(exif_raw):
 def convert_ocr_result_to_json(result):
     output = []
     for box, text, conf in result:
-        output.append({
-            "box": [[int(x), int(y)] for x, y in box],
-            "text": text,
-            "confidence": float(conf)
-        })
+        output.append({"box": [[int(x), int(y)] for x, y in box], "text": text, "confidence": float(conf)})
     return output
 
 
@@ -134,7 +131,8 @@ def archive_photos_to_zip(file_paths: list, zip_path: str) -> tuple:
         skipped — list of original paths that were missing and not archived
     """
     import zipfile
-    added: dict = {}   # arcname → original_path
+
+    added: dict = {}  # arcname → original_path
     skipped: list = []
     with zipfile.ZipFile(zip_path, "a") as zf:
         for fp in file_paths:
@@ -178,9 +176,7 @@ def check_if_file_is_image(image_path: str) -> bool:
         return False
 
 
-def make_dir_by_datetime(
-    photo_created_at: datetime, destination_root_folder: str
-) -> str:
+def make_dir_by_datetime(photo_created_at: datetime, destination_root_folder: str) -> str:
     """
     Returns the path to the folder where the photo should be moved, based on its creation date.
     Creates the folder if it doesn't exist.
@@ -188,22 +184,18 @@ def make_dir_by_datetime(
     year_folder = photo_created_at.strftime("%Y")
     month_folder = photo_created_at.strftime("%m")
     day_folder = photo_created_at.strftime("%d")
-    destination_path = os.path.join(
-        destination_root_folder, year_folder, month_folder, day_folder
-    )
+    destination_path = os.path.join(destination_root_folder, year_folder, month_folder, day_folder)
     os.makedirs(destination_path, exist_ok=True)
     return destination_path
 
 
-def move_photo(path:str, destination_root_folder:str):
+def move_photo(path: str, destination_root_folder: str):
     """
     Move file to the destination folder based on its creation date.
     """
     try:
         stat = os.stat(path)
-        file_created_at = datetime.fromtimestamp(
-            getattr(stat, 'st_birthtime', stat.st_ctime)
-        )
+        file_created_at = datetime.fromtimestamp(getattr(stat, "st_birthtime", stat.st_ctime))
         logger.info(f"File created at: {file_created_at}")
         file_name = os.path.basename(path)
         new_path = make_dir_by_datetime(file_created_at, destination_root_folder)
@@ -217,11 +209,10 @@ def move_photo(path:str, destination_root_folder:str):
 
 
 def get_photo_capture_date(photo_path: str) -> Optional[datetime]:
-    """ Gets photo capture date from EXIF data. """
+    """Gets photo capture date from EXIF data."""
     try:
         exif_raw = extract_exif(photo_path)
         return parse_datetime(exif_raw)
     except Exception as err:
         logger.warning(f"Failed to get photo capture date for {photo_path}: {err}")
         return None
-            

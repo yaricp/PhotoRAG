@@ -1,5 +1,4 @@
-from src.db.database import SessionLocal
-from src.db.database import Session
+from src.db.database import Session, SessionLocal
 
 
 def get_db() -> Session:

@@ -9,15 +9,24 @@ Each queue file exposes:
 We test the shared logic independently by importing from src.queues.queue_config
 (a new shared module that every queue file will import from).
 """
+
 import sqlite3
+import sys
+
 import pytest
 
-from src.queues.queue_config import read_model_config_from_db, get_model_name_from_db
+# The full suite sets src.queues to a MagicMock via setdefault in other test
+# files, making src.queues.queue_config unimportable.  Evict both so Python
+# can import the real lightweight module (queue_config only uses stdlib).
+sys.modules.pop("src.queues", None)
+sys.modules.pop("src.queues.queue_config", None)
 
+from src.queues.queue_config import get_model_name_from_db, read_model_config_from_db
 
 # ---------------------------------------------------------------------------
 # Fixture: tiny SQLite DB with ai_model_configs table
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture()
 def db_with_clip(tmp_path) -> str:
@@ -30,7 +39,9 @@ def db_with_clip(tmp_path) -> str:
             mode TEXT,
             model_name TEXT,
             url TEXT,
-            api_key TEXT
+            api_key TEXT,
+            model_provider TEXT,
+            similarity_limit REAL
         )
     """)
     conn.execute(
@@ -50,14 +61,17 @@ def db_with_clip(tmp_path) -> str:
 # read_model_config_from_db
 # ---------------------------------------------------------------------------
 
+
 def test_reads_existing_clip_row(db_with_clip):
     cfg = read_model_config_from_db(db_with_clip, "clip")
-    assert cfg == {"model_name": "ViT-L-14", "mode": "local"}
+    assert cfg["model_name"] == "ViT-L-14"
+    assert cfg["mode"] == "local"
 
 
 def test_reads_existing_vision_row(db_with_clip):
     cfg = read_model_config_from_db(db_with_clip, "vision")
-    assert cfg == {"model_name": "gpt-4o", "mode": "remote"}
+    assert cfg["model_name"] == "gpt-4o"
+    assert cfg["mode"] == "remote"
 
 
 def test_returns_none_when_type_not_in_table(db_with_clip):
@@ -82,6 +96,7 @@ def test_returns_none_when_table_missing(tmp_path):
 # ---------------------------------------------------------------------------
 # get_model_name_from_db (with fallback)
 # ---------------------------------------------------------------------------
+
 
 def test_returns_db_model_name_when_available(db_with_clip):
     name = get_model_name_from_db(db_with_clip, "clip", default="ViT-B-32")

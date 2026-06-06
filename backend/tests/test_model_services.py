@@ -11,24 +11,26 @@ The queue modules (clip_queue, vision_queue, etc.) use lazy imports inside
 model_services.py functions. We pre-import them here so unittest.mock.patch
 can resolve and replace their attributes during tests.
 """
-import json
+
 import asyncio
+import json
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
 
 # Pre-import queue modules so patch() can resolve them.
 # Each module only creates a SqliteHuey object at import time (safe);
 # actual model loading is deferred to _get_model() inside worker processes.
-import src.queues.clip_queue          # noqa: F401
-import src.queues.vision_queue        # noqa: F401
-import src.queues.embedding_queue     # noqa: F401
-import src.queues.translation_queue   # noqa: F401
-import src.queues.ocr_queue           # noqa: F401
-
+import src.queues.clip_queue  # noqa: F401
+import src.queues.embedding_queue  # noqa: F401
+import src.queues.ocr_queue  # noqa: F401
+import src.queues.translation_queue  # noqa: F401
+import src.queues.vision_queue  # noqa: F401
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_result(payload) -> str:
     """Serialize a Python object as the JSON string poll would return."""
@@ -51,6 +53,7 @@ def _set_poll_value(value: str) -> None:
 # call_clip_model — local mode
 # ---------------------------------------------------------------------------
 
+
 class TestCallClipModelLocal:
     @pytest.mark.asyncio
     async def test_local_tags_submits_huey_task_and_returns_deserialized(self):
@@ -60,12 +63,12 @@ class TestCallClipModelLocal:
         fake_task_fn = MagicMock()
 
         with (
-            patch("src.model_services.read_model_config_from_db",
-                  return_value={"mode": "local"}),
+            patch("src.model_services.read_model_config_from_db", return_value={"mode": "local"}),
             patch("src.model_services._wait_result", side_effect=_instant_poll),
             patch("src.queues.clip_queue.call_local_clip_model", fake_task_fn),
         ):
             from src.model_services import call_clip_model
+
             result = await call_clip_model("/tmp/photo.jpg", task="tags")
 
         assert result == tags
@@ -82,12 +85,12 @@ class TestCallClipModelLocal:
         fake_task_fn = MagicMock()
 
         with (
-            patch("src.model_services.read_model_config_from_db",
-                  return_value={"mode": "local"}),
+            patch("src.model_services.read_model_config_from_db", return_value={"mode": "local"}),
             patch("src.model_services._wait_result", side_effect=_instant_poll),
             patch("src.queues.clip_queue.call_local_clip_model", fake_task_fn),
         ):
             from src.model_services import call_clip_model
+
             result = await call_clip_model("/tmp/photo.jpg", task="encode_image")
 
         assert result == vector
@@ -100,8 +103,7 @@ class TestCallClipModelLocal:
             raise RuntimeError("model exploded")
 
         with (
-            patch("src.model_services.read_model_config_from_db",
-                  return_value={"mode": "local"}),
+            patch("src.model_services.read_model_config_from_db", return_value={"mode": "local"}),
             patch("src.model_services._wait_result", side_effect=_raise),
             patch("src.queues.clip_queue.call_local_clip_model", MagicMock()),
         ):
@@ -113,6 +115,7 @@ class TestCallClipModelLocal:
 # call_clip_model — remote mode
 # ---------------------------------------------------------------------------
 
+
 class TestCallClipModelRemote:
     @pytest.mark.asyncio
     async def test_remote_mode_calls_remote_clip(self):
@@ -120,11 +123,11 @@ class TestCallClipModelRemote:
         mock_remote = AsyncMock(return_value=tags)
 
         with (
-            patch("src.model_services.read_model_config_from_db",
-                  return_value={"mode": "remote"}),
+            patch("src.model_services.read_model_config_from_db", return_value={"mode": "remote"}),
             patch("src.model_services._call_remote_clip", mock_remote),
         ):
             from src.model_services import call_clip_model
+
             result = await call_clip_model("/tmp/photo.jpg", task="tags")
 
         assert result == tags
@@ -135,6 +138,7 @@ class TestCallClipModelRemote:
 # call_vision_model
 # ---------------------------------------------------------------------------
 
+
 class TestCallVisionModel:
     @pytest.mark.asyncio
     async def test_local_describe_scene_returns_text(self):
@@ -142,12 +146,12 @@ class TestCallVisionModel:
         fake_task_fn = MagicMock()
 
         with (
-            patch("src.model_services.read_model_config_from_db",
-                  return_value={"mode": "local"}),
+            patch("src.model_services.read_model_config_from_db", return_value={"mode": "local"}),
             patch("src.model_services._wait_result", side_effect=_instant_poll),
             patch("src.queues.vision_queue.call_local_vision_model", fake_task_fn),
         ):
             from src.model_services import call_vision_model
+
             result = await call_vision_model("/tmp/photo.jpg", "describe_scene")
 
         assert result == "A sunny beach."
@@ -159,12 +163,12 @@ class TestCallVisionModel:
         fake_task_fn = MagicMock()
 
         with (
-            patch("src.model_services.read_model_config_from_db",
-                  return_value={"mode": "local"}),
+            patch("src.model_services.read_model_config_from_db", return_value={"mode": "local"}),
             patch("src.model_services._wait_result", side_effect=_instant_poll),
             patch("src.queues.vision_queue.call_local_vision_model", fake_task_fn),
         ):
             from src.model_services import call_vision_model
+
             result = await call_vision_model("/tmp/photo.jpg", "is_document")
 
         assert result == "yes"
@@ -174,11 +178,13 @@ class TestCallVisionModel:
         mock_remote = AsyncMock(return_value="Mountain landscape.")
 
         with (
-            patch("src.model_services.read_model_config_from_db",
-                  return_value={"mode": "remote", "model_name": "gpt-4o"}),
+            patch(
+                "src.model_services.read_model_config_from_db", return_value={"mode": "remote", "model_name": "gpt-4o"}
+            ),
             patch("src.model_services._call_remote_vision", mock_remote),
         ):
             from src.model_services import call_vision_model
+
             result = await call_vision_model("/tmp/photo.jpg", "describe_scene")
 
         assert result == "Mountain landscape."
@@ -188,6 +194,7 @@ class TestCallVisionModel:
 # call_embedding_model
 # ---------------------------------------------------------------------------
 
+
 class TestCallEmbeddingModel:
     @pytest.mark.asyncio
     async def test_local_returns_float_list(self):
@@ -196,12 +203,12 @@ class TestCallEmbeddingModel:
         fake_task_fn = MagicMock()
 
         with (
-            patch("src.model_services.read_model_config_from_db",
-                  return_value={"mode": "local"}),
+            patch("src.model_services.read_model_config_from_db", return_value={"mode": "local"}),
             patch("src.model_services._wait_result", side_effect=_instant_poll),
             patch("src.queues.embedding_queue.call_local_embedding_model", fake_task_fn),
         ):
             from src.model_services import call_embedding_model
+
             result = await call_embedding_model("some text", purpose="save")
 
         assert result == vector
@@ -216,11 +223,14 @@ class TestCallEmbeddingModel:
         mock_remote = AsyncMock(return_value=vector)
 
         with (
-            patch("src.model_services.read_model_config_from_db",
-                  return_value={"mode": "remote", "model_name": "text-embedding-3-small"}),
+            patch(
+                "src.model_services.read_model_config_from_db",
+                return_value={"mode": "remote", "model_name": "text-embedding-3-small"},
+            ),
             patch("src.model_services._call_remote_embedding", mock_remote),
         ):
             from src.model_services import call_embedding_model
+
             result = await call_embedding_model("query text", purpose="search")
 
         assert result == vector
@@ -230,6 +240,7 @@ class TestCallEmbeddingModel:
 # call_translation_model
 # ---------------------------------------------------------------------------
 
+
 class TestCallTranslationModel:
     @pytest.mark.asyncio
     async def test_local_forward_translation(self):
@@ -237,12 +248,12 @@ class TestCallTranslationModel:
         fake_task_fn = MagicMock()
 
         with (
-            patch("src.model_services.read_model_config_from_db",
-                  return_value={"mode": "local"}),
+            patch("src.model_services.read_model_config_from_db", return_value={"mode": "local"}),
             patch("src.model_services._wait_result", side_effect=_instant_poll),
             patch("src.queues.translation_queue.call_local_translation_model", fake_task_fn),
         ):
             from src.model_services import call_translation_model
+
             result = await call_translation_model("Hello world", backward=False)
 
         assert result == "Привет мир"
@@ -256,12 +267,12 @@ class TestCallTranslationModel:
         fake_task_fn = MagicMock()
 
         with (
-            patch("src.model_services.read_model_config_from_db",
-                  return_value={"mode": "local"}),
+            patch("src.model_services.read_model_config_from_db", return_value={"mode": "local"}),
             patch("src.model_services._wait_result", side_effect=_instant_poll),
             patch("src.queues.translation_queue.call_local_translation_model", fake_task_fn),
         ):
             from src.model_services import call_translation_model
+
             result = await call_translation_model("Привет мир", backward=True)
 
         assert result == "Hello world"
@@ -273,11 +284,14 @@ class TestCallTranslationModel:
         mock_remote = AsyncMock(return_value="Bonjour")
 
         with (
-            patch("src.model_services.read_model_config_from_db",
-                  return_value={"mode": "remote", "model_name": "gpt-4o-mini"}),
+            patch(
+                "src.model_services.read_model_config_from_db",
+                return_value={"mode": "remote", "model_name": "gpt-4o-mini"},
+            ),
             patch("src.model_services._call_remote_translation", mock_remote),
         ):
             from src.model_services import call_translation_model
+
             result = await call_translation_model("Hello", backward=False)
 
         assert result == "Bonjour"
@@ -288,6 +302,7 @@ class TestCallTranslationModel:
 # call_ocr_model
 # ---------------------------------------------------------------------------
 
+
 class TestCallOcrModel:
     @pytest.mark.asyncio
     async def test_local_returns_extracted_text(self):
@@ -295,12 +310,12 @@ class TestCallOcrModel:
         fake_task_fn = MagicMock()
 
         with (
-            patch("src.model_services.read_model_config_from_db",
-                  return_value={"mode": "local"}),
+            patch("src.model_services.read_model_config_from_db", return_value={"mode": "local"}),
             patch("src.model_services._wait_result", side_effect=_instant_poll),
             patch("src.queues.ocr_queue.call_local_ocr_model", fake_task_fn),
         ):
             from src.model_services import call_ocr_model
+
             result = await call_ocr_model("/tmp/doc.jpg")
 
         assert result == "Invoice #1234"
@@ -313,12 +328,12 @@ class TestCallOcrModel:
         fake_task_fn = MagicMock()
 
         with (
-            patch("src.model_services.read_model_config_from_db",
-                  return_value={"mode": "local"}),
+            patch("src.model_services.read_model_config_from_db", return_value={"mode": "local"}),
             patch("src.model_services._wait_result", side_effect=_instant_poll),
             patch("src.queues.ocr_queue.call_local_ocr_model", fake_task_fn),
         ):
             from src.model_services import call_ocr_model
+
             result = await call_ocr_model("/tmp/photo.jpg")
 
         assert result == ""
@@ -328,11 +343,13 @@ class TestCallOcrModel:
         mock_remote = AsyncMock(return_value="Hello OCR")
 
         with (
-            patch("src.model_services.read_model_config_from_db",
-                  return_value={"mode": "remote", "model_name": "gpt-4o"}),
+            patch(
+                "src.model_services.read_model_config_from_db", return_value={"mode": "remote", "model_name": "gpt-4o"}
+            ),
             patch("src.model_services._call_remote_ocr", mock_remote),
         ):
             from src.model_services import call_ocr_model
+
             result = await call_ocr_model("/tmp/scan.jpg")
 
         assert result == "Hello OCR"
@@ -341,6 +358,7 @@ class TestCallOcrModel:
 # ---------------------------------------------------------------------------
 # _wait_result — delegates to TaskResultNotifier
 # ---------------------------------------------------------------------------
+
 
 class TestWaitResult:
     @pytest.mark.asyncio
@@ -359,7 +377,6 @@ class TestWaitResult:
     @pytest.mark.asyncio
     async def test_propagates_timeout_error(self):
         from src.model_services import _wait_result
-        import asyncio
 
         mock_notifier = MagicMock()
         mock_notifier.wait_for_result = AsyncMock(side_effect=asyncio.TimeoutError())

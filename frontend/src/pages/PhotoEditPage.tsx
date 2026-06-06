@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getPhoto, updatePhoto, reindexPhoto, runPipelineForPhoto } from '@/api/client'
 import type { LinkedTag, LinkedCategory } from '@/api/client'
@@ -97,8 +98,10 @@ export function PhotoEditPage() {
         }
     }
 
+    const { t } = useTranslation()
+
     if (loading) return <div className="pe__center"><Spinner size="lg" /></div>
-    if (!photo) return <div className="pe__center">Photo not found</div>
+    if (!photo) return <div className="pe__center">{t('photoEdit.notFound')}</div>
 
     const filename = photo.file_path.split('/').pop() ?? photo.file_path
 
@@ -106,8 +109,8 @@ export function PhotoEditPage() {
         <div className="pe">
             {/* HEADER */}
             <div className="pe__header">
-                <button className="pe__back-btn" onClick={() => navigate(`/photo/${photo.id}`)}>
-                    ← Back to photo
+                <button className="pe__back-btn" onClick={() => navigate(-1)}>
+                    {t('photoEdit.backToPhoto')}
                 </button>
             </div>
 
@@ -118,57 +121,54 @@ export function PhotoEditPage() {
 
             {/* FIELDS */}
             <div className="pe__section">
-                <label className="pe__label">OCR Text</label>
+                <label className="pe__label">{t('photoEdit.ocrText')}</label>
                 <textarea
                     className="pe__textarea"
                     rows={4}
                     value={ocrText}
                     onChange={e => setOcrText(e.target.value)}
-                    placeholder="Extracted text from document…"
                 />
 
-                <label className="pe__label">Description (EN)</label>
+                <label className="pe__label">{t('photoEdit.descriptionEn')}</label>
                 <textarea
                     className="pe__textarea"
                     rows={5}
                     value={description}
                     onChange={e => setDescription(e.target.value)}
-                    placeholder="Describe this photo…"
                 />
 
-                <label className="pe__label">Translation (RU)</label>
+                <label className="pe__label">{t('photoEdit.translation')}</label>
                 <textarea
                     className="pe__textarea"
                     rows={5}
                     value={translatedDescription}
                     onChange={e => setTranslatedDescription(e.target.value)}
-                    placeholder="Перевод описания…"
                 />
             </div>
 
             {/* TAGS */}
             <div className="pe__section">
                 <div className="pe__chips-row">
-                    <div className="pe__chips-label">Tags</div>
+                    <div className="pe__chips-label">{t('photoDetail.tags')}</div>
                     <div className="pe__chips">
                         {linkedTags.map(lt => (
                             <span key={lt.id} className="pe__chip">{lt.name}</span>
                         ))}
                     </div>
                     <button className="pe__manage-btn" onClick={() => setTagModalOpen(true)}>
-                        + Manage Tags
+                        {t('photoEdit.manageTags')}
                     </button>
                 </div>
 
                 <div className="pe__chips-row">
-                    <div className="pe__chips-label">Categories</div>
+                    <div className="pe__chips-label">{t('photoDetail.categories')}</div>
                     <div className="pe__chips">
                         {linkedCategories.map(lc => (
                             <span key={lc.id} className="pe__chip pe__chip--cat">{lc.name}</span>
                         ))}
                     </div>
                     <button className="pe__manage-btn" onClick={() => setCatModalOpen(true)}>
-                        + Manage Categories
+                        {t('photoEdit.manageCategories')}
                     </button>
                 </div>
             </div>
@@ -176,13 +176,13 @@ export function PhotoEditPage() {
             {/* SAVE / REINDEX */}
             <div className="pe__footer">
                 <button className="pe__save-btn" onClick={handleSave} disabled={saving}>
-                    {saving ? 'Saving…' : saved ? 'Saved ✓' : 'Save'}
+                    {saving ? t('photoEdit.saving') : saved ? t('photoEdit.saved') : t('photoEdit.save')}
                 </button>
                 <button className="pe__reindex-btn" onClick={handleReindex} disabled={reindexing}>
-                    {reindexing ? 'Queuing…' : reindexed ? 'Queued ✓' : 'Re-index Search'}
+                    {reindexing ? t('photoEdit.queuing') : reindexed ? t('photoEdit.queued') : t('photoEdit.reindexSearch')}
                 </button>
                 <button className="pe__pipeline-btn" onClick={handleRunPipeline} disabled={pipelining}>
-                    {pipelining ? 'Starting…' : pipelined ? 'Started ✓' : 'Run Full Pipeline'}
+                    {pipelining ? t('photoEdit.starting') : pipelined ? t('photoEdit.started') : t('photoEdit.runPipeline')}
                 </button>
             </div>
 

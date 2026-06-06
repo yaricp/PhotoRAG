@@ -1,0 +1,26 @@
+# Lightweight requirements for CI test runs.
+# Linting and coverage tools.
+ruff
+mypy
+pytest-cov
+# Heavy ML packages (torch, easyocr, open-clip, sentence-transformers, etc.)
+# are excluded because the tests that need them are listed in conftest.collect_ignore.
+# All other tests mock those heavy deps via sys.modules before importing src.*.
+
+pytest
+pytest-asyncio
+fastapi
+httpx
+sqlalchemy
+pydantic-settings
+python-dotenv
+loguru
+Pillow
+numpy
+watchdog
+huey==2.5.0
+sqlite-vec
+langchain-core
+langchain
+langchain-openai
+langgraph

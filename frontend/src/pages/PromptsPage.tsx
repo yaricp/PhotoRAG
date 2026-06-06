@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { getPrompts, updatePrompt } from '@/api/client'
 import type { Prompt } from '@/types/api'
 import './PromptsPage.css'
@@ -11,6 +12,7 @@ interface PromptState {
 }
 
 export function PromptsPage() {
+    const { t } = useTranslation()
     const [prompts, setPrompts] = useState<Prompt[]>([])
     const [loading, setLoading] = useState(true)
     const [states, setStates] = useState<Record<string, PromptState>>({})
@@ -43,39 +45,42 @@ export function PromptsPage() {
                 setStates(prev => ({ ...prev, [key]: { ...prev[key], saved: false } }))
             }, 2500)
         } catch (e: any) {
-            setStates(prev => ({ ...prev, [key]: { ...prev[key], saving: false, error: e.message ?? 'Save failed' } }))
+            setStates(prev => ({ ...prev, [key]: { ...prev[key], saving: false, error: e.message ?? t('prompts.errorSaving') } }))
         }
     }
 
     if (loading) {
-        return <div className="prompts-page"><p className="prompts-loading">Loading prompts…</p></div>
+        return <div className="prompts-page"><p className="prompts-loading">{t('prompts.loading')}</p></div>
     }
 
     const groups = Array.from(new Set(prompts.map(p => p.group))).sort()
 
     return (
         <div className="prompts-page">
-            <h1 className="prompts-page__title">Prompts</h1>
-            <p className="prompts-page__subtitle">
-                Edit the prompts used by AI models. Changes take effect on the next request — no restart needed.
-            </p>
+            <p className="prompts-page__subtitle">{t('prompts.subtitle')}</p>
 
             {groups.map(group => (
                 <section key={group} className="prompts-group">
-                    <h2 className="prompts-group__name">{group.replace('_', ' ')}</h2>
+                    <h2 className="prompts-group__name">
+                        {t(`prompts.groups.${group}`, { defaultValue: group.replace(/_/g, ' ') })}
+                    </h2>
                     {prompts
                         .filter(p => p.group === group)
                         .map(p => {
                             const s = states[p.key]
                             const dirty = s?.text !== p.text
+                            const title = t(`prompts.meta.${p.key}.title`, { defaultValue: p.title })
+                            const description = p.description
+                                ? t(`prompts.meta.${p.key}.description`, { defaultValue: p.description })
+                                : null
                             return (
                                 <div key={p.key} className="prompt-card">
                                     <div className="prompt-card__header">
-                                        <span className="prompt-card__title">{p.title}</span>
+                                        <span className="prompt-card__title">{title}</span>
                                         <code className="prompt-card__key">{p.key}</code>
                                     </div>
-                                    {p.description && (
-                                        <p className="prompt-card__desc">{p.description}</p>
+                                    {description && (
+                                        <p className="prompt-card__desc">{description}</p>
                                     )}
                                     <textarea
                                         className="prompt-card__textarea"
@@ -90,9 +95,9 @@ export function PromptsPage() {
                                             onClick={() => handleSave(p.key)}
                                             disabled={s?.saving || !dirty}
                                         >
-                                            {s?.saving ? 'Saving…' : 'Save'}
+                                            {s?.saving ? t('prompts.saving') : t('prompts.save')}
                                         </button>
-                                        {s?.saved && <span className="prompt-card__saved">Saved</span>}
+                                        {s?.saved && <span className="prompt-card__saved">{t('prompts.saved')}</span>}
                                         {s?.error && <span className="prompt-card__error">{s.error}</span>}
                                     </div>
                                 </div>

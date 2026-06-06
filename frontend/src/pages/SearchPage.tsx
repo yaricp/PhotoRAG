@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { searchPhotos } from '@/api/client'
 import { PhotoCard } from '@/components/photos/PhotoCard'
 import { Spinner } from '@/components/ui/Spinner'
@@ -7,6 +8,7 @@ import { useSearchStore } from '@/stores/useSearchStore'
 import './SearchPage.css'
 
 export function SearchPage() {
+    const { t } = useTranslation()
     const { query, results, hasSearched, setQuery, setResults, clear } = useSearchStore()
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -19,7 +21,7 @@ export function SearchPage() {
             const data = await searchPhotos({ text_query: query, k: 10, thresholds: 1 })
             setResults(query, data)
         } catch {
-            setError('Failed to search photos')
+            setError(t('search.error'))
         } finally {
             setLoading(false)
         }
@@ -39,10 +41,10 @@ export function SearchPage() {
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && onSearch()}
-                    placeholder="Search photos..."
+                    placeholder={t('search.placeholder')}
                 />
                 <button onClick={onSearch} disabled={loading || !query.trim()}>
-                    Search
+                    {t('search.button')}
                 </button>
                 {hasSearched && (
                     <button className="search-page__clear-btn" onClick={onClear} disabled={loading}>
@@ -65,7 +67,7 @@ export function SearchPage() {
 
             {!loading && !error && hasSearched && results.length === 0 && (
                 <EmptyState
-                    title="No results"
+                    title={t('search.noResults')}
                     description="Try different search query"
                 />
             )}

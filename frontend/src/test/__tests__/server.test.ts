@@ -44,7 +44,7 @@ describe('MSW handlers', () => {
         const data = await res.json()
         expect(res.status).toBe(200)
         expect(data.thread_id).toBeTruthy()
-        expect(data.message).toBeTruthy()
+        expect(data.response).toBeTruthy()
     })
 
     it('GET /api/system/status/ returns model statuses', async () => {
@@ -61,7 +61,7 @@ describe('MSW handlers', () => {
     })
 
     it('POST /api/watch/ creates watcher', async () => {
-        const res = await fetch(`${BASE}/api/watch/`, {
+        const res = await fetch(`${BASE}/api/watchers/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ path: '/Users/test/NewPhotos' })
@@ -77,10 +77,10 @@ describe('MSW handlers', () => {
     })
 
     it('GET /api/job/:photoId returns job', async () => {
-        const res = await fetch(`${BASE}/api/job/42`)
+        const res = await fetch(`${BASE}/api/jobs/42`)
         const data = await res.json()
         expect(data.photo_id).toBe(42)
-        expect(data.status).toBe('processing')
+        expect(data.phase).toBe('processing')
     })
 
     it('GET /api/cameras/ returns cameras', async () => {

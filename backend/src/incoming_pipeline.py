@@ -12,11 +12,13 @@ Use `run_pipelines_batch(photo_ids)` to process multiple photos concurrently.
 Each photo's phases remain sequential; phases across photos run in parallel,
 bounded by `TaskQueue_Settings.MAX_CONCURRENT_PIPELINES`.
 """
+
 import asyncio
+
 from loguru import logger
 
-from src.pipeline_tracker import init_pipeline_tasks
 from src.config import TaskQueue_Settings
+from src.pipeline_tracker import init_pipeline_tasks
 
 
 def _log_phase_results(photo_id: int, phase: str, results: list) -> None:
@@ -24,16 +26,24 @@ def _log_phase_results(photo_id: int, phase: str, results: list) -> None:
     for r in results:
         if isinstance(r, Exception):
             logger.error(f"[pipeline] photo={photo_id} {phase} task failed: {type(r).__name__}: {r}")
+
+
 from src.tasks.clip_tasks import (
-    metadata_task,
     auto_tag_clip_task,
     categorize_photo_task,
     compute_perceptual_hashes_task,
+    metadata_task,
 )
-from src.tasks.vision_tasks import vision_task, is_this_document_task, ocr_task
-from src.tasks.quality_tasks import brightness_task, edge_density_task, blur_task, entropy_task, screenshot_detect_task
-from src.tasks.embedding_tasks import final_embedding_task, embedding_document_text_task
+from src.tasks.embedding_tasks import embedding_document_text_task, final_embedding_task
+from src.tasks.quality_tasks import (
+    blur_task,
+    brightness_task,
+    edge_density_task,
+    entropy_task,
+    screenshot_detect_task,
+)
 from src.tasks.translation_tasks import translate_description_task
+from src.tasks.vision_tasks import is_this_document_task, ocr_task, vision_task
 
 _PHASE_0_TASKS = [
     "metadata_task",
@@ -64,8 +74,6 @@ _PHASE_3_TASKS = [
 _PHASE_4_TASKS = [
     "embedding_document_text_task",
 ]
-
-
 
 
 async def start_pipeline(photo_id: int, folder_scanner_id: int = None) -> None:
@@ -142,14 +150,13 @@ async def start_pipeline(photo_id: int, folder_scanner_id: int = None) -> None:
     _log_phase_results(photo_id, "phase_4", results)
     logger.info(f"[pipeline] Phase 4 complete for photo {photo_id}")
 
-
-
     # ------------------------------------------------------------------
     # Update folder scanner progress
     # ------------------------------------------------------------------
     if folder_scanner_id is not None:
         from src.db.database import SessionLocal
         from src.db_service import update_folder_scanner_progress
+
         db = SessionLocal()
         try:
             update_folder_scanner_progress(db, folder_scanner_id)
@@ -177,9 +184,7 @@ async def run_pipelines_batch(
 
     max_concurrent = TaskQueue_Settings().MAX_CONCURRENT_PIPELINES
     sem = asyncio.Semaphore(max_concurrent)
-    logger.info(
-        f"[pipeline] batch: {len(photo_ids)} photos, max_concurrent={max_concurrent}"
-    )
+    logger.info(f"[pipeline] batch: {len(photo_ids)} photos, max_concurrent={max_concurrent}")
 
     async def _guarded(photo_id: int) -> None:
         async with sem:

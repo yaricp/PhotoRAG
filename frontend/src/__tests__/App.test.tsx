@@ -1,7 +1,14 @@
-import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, afterEach } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import { server } from '@/test/server'
+import { http, HttpResponse } from 'msw'
+import i18n from '@/i18n'
 import App from '../App'
+
+vi.mock('@/api/base', () => ({ getBaseUrl: async () => 'http://localhost:8000' }))
+
+afterEach(async () => { await i18n.changeLanguage('en') })
 
 describe('App', () => {
     it('renders sidebar', () => {
@@ -29,5 +36,15 @@ describe('App', () => {
             </MemoryRouter>
         )
         expect(screen.getByTestId('page-gallery')).toBeInTheDocument()
+    })
+
+    it('syncs i18n language from saved settings on mount', async () => {
+        server.use(
+            http.get('http://localhost:8000/api/settings/', () =>
+                HttpResponse.json({ default_language: 'ru', default_folder: '' })
+            )
+        )
+        render(<MemoryRouter><App /></MemoryRouter>)
+        await waitFor(() => expect(i18n.language).toBe('ru'))
     })
 })

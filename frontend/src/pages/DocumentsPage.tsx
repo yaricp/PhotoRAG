@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { getPhotos } from '@/api/client'
 import { PhotoCard } from '@/components/photos/PhotoCard'
 import { Spinner } from '@/components/ui/Spinner'
@@ -9,10 +10,11 @@ import './DocumentsPage.css'
 const LIMIT = 50
 
 export function DocumentsPage() {
+    const { t } = useTranslation()
     const [data, setData] = useState<Photo[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const [page, setPage] = useState(0)
+    const [page, _setPage] = useState(0)
 
     useEffect(() => {
         setLoading(true)
@@ -26,13 +28,12 @@ export function DocumentsPage() {
             is_doc: true,
         })
             .then((res) => setData(res.items))
-            .catch(() => setError('Failed to load documents'))
+            .catch(() => setError(t('documents.failedToLoad')))
             .finally(() => setLoading(false))
     }, [page])
 
     return (
         <div data-testid="page-documents" className="documents-page">
-
             {/* LOADING */}
             {loading && (
                 <div className="documents-page__center">
@@ -50,8 +51,8 @@ export function DocumentsPage() {
             {/* EMPTY */}
             {!loading && !error && data.length === 0 && (
                 <EmptyState
-                    title="No documents"
-                    description="Documents will appear here automatically"
+                    title={t('documents.noDocuments')}
+                    description={t('documents.noDocumentsDesc')}
                 />
             )}
 

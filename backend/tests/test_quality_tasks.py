@@ -3,33 +3,44 @@
 Tests for quality detection tasks.
 Uses unittest.mock to avoid real Huey queues and DB connections.
 """
+
 import sys
 from unittest.mock import MagicMock, patch
+
 import sqlalchemy.types
 
 mock_pgvector = MagicMock()
 mock_pgvector.sqlalchemy.Vector = lambda size: sqlalchemy.types.JSON()
-sys.modules['pgvector'] = mock_pgvector
-sys.modules['pgvector.sqlalchemy'] = mock_pgvector.sqlalchemy
+sys.modules["pgvector"] = mock_pgvector
+sys.modules["pgvector.sqlalchemy"] = mock_pgvector.sqlalchemy
 
 # Mock heavy deps unavailable in the test environment
 for _mod in [
-    'sqlite_vec', 'src.database', 'src.vector_db_services', 'src.config',
-    'src.ai', 'src.ai.registry', 'src.ai.prompts',
-    'src.queues', 'src.queues.folder_scan_queue', 'src.queues.clip_queue',
-    'src.queues.vision_queue', 'src.queues.embedding_queue',
-    'src.queues.translation_queue',
-    'src.tasks.utils', 'src.tasks.vision_tasks', 'src.tasks.embedding_tasks',
-    'src.tasks.translation_tasks',
-    'imagehash',
+    "sqlite_vec",
+    "src.database",
+    "src.vector_db_services",
+    "src.config",
+    "src.ai",
+    "src.ai.registry",
+    "src.ai.prompts",
+    "src.queues",
+    "src.queues.folder_scan_queue",
+    "src.queues.clip_queue",
+    "src.queues.vision_queue",
+    "src.queues.embedding_queue",
+    "src.queues.translation_queue",
+    "src.tasks.utils",
+    "src.tasks.vision_tasks",
+    "src.tasks.embedding_tasks",
+    "src.tasks.translation_tasks",
+    "imagehash",
 ]:
     sys.modules.setdefault(_mod, MagicMock())
 
 # Also stub src.geo so GeoEnricher lazy import inside metadata_task works
 _mock_geo = MagicMock()
-sys.modules.setdefault('src.geo', _mock_geo)
+sys.modules.setdefault("src.geo", _mock_geo)
 
-import pytest
 from PIL import Image
 
 
@@ -41,27 +52,30 @@ def _make_jpeg(tmp_path, name="test.jpg", size=(800, 600), color=(128, 128, 128)
 
 def _import_clip_tasks():
     """Import clip_tasks fresh, with Huey decorator stubbed out."""
-    sys.modules['src.queues.clip_queue'].clip_queue.task.return_value = lambda f: f
-    saved = sys.modules.pop('src.tasks', None)
-    sys.modules.pop('src.tasks.clip_tasks', None)
+    sys.modules["src.queues.clip_queue"].clip_queue.task.return_value = lambda f: f
+    saved = sys.modules.pop("src.tasks", None)
+    sys.modules.pop("src.tasks.clip_tasks", None)
     import src.tasks.clip_tasks as m
+
     if saved is not None:
-        sys.modules['src.tasks'] = saved
+        sys.modules["src.tasks"] = saved
     return m
 
 
 def _import_quality_tasks():
     """Import quality_tasks fresh, with Huey decorator stubbed out."""
-    sys.modules['src.queues.clip_queue'].clip_queue.task.return_value = lambda f: f
-    saved = sys.modules.pop('src.tasks', None)
-    sys.modules.pop('src.tasks.quality_tasks', None)
+    sys.modules["src.queues.clip_queue"].clip_queue.task.return_value = lambda f: f
+    saved = sys.modules.pop("src.tasks", None)
+    sys.modules.pop("src.tasks.quality_tasks", None)
     import src.tasks.quality_tasks as m
+
     if saved is not None:
-        sys.modules['src.tasks'] = saved
+        sys.modules["src.tasks"] = saved
     return m
 
 
 # ── metadata_task resolution + EXIF checks ─────────────────────────────────
+
 
 def test_metadata_task_flags_thumbnail(tmp_path):
     """metadata_task creates a 'thumbnail' quality issue for a very small image."""
@@ -79,10 +93,10 @@ def test_metadata_task_flags_thumbnail(tmp_path):
     # GeoEnricher is imported lazily from src.geo inside metadata_task
     mock_geo_instance = MagicMock()
     mock_geo_instance.geocode_photo.return_value = {}
-    sys.modules['src.geo'].GeoEnricher.return_value = mock_geo_instance
+    sys.modules["src.geo"].GeoEnricher.return_value = mock_geo_instance
 
     # _finish_task is imported lazily from src.tasks.utils
-    sys.modules['src.tasks.utils']._finish_task = MagicMock()
+    sys.modules["src.tasks.utils"]._finish_task = MagicMock()
 
     with (
         patch.object(task_mod, "get_photo_by_id", return_value=mock_photo),
@@ -112,8 +126,8 @@ def test_metadata_task_flags_no_exif(tmp_path):
 
     mock_geo_instance = MagicMock()
     mock_geo_instance.geocode_photo.return_value = {}
-    sys.modules['src.geo'].GeoEnricher.return_value = mock_geo_instance
-    sys.modules['src.tasks.utils']._finish_task = MagicMock()
+    sys.modules["src.geo"].GeoEnricher.return_value = mock_geo_instance
+    sys.modules["src.tasks.utils"]._finish_task = MagicMock()
 
     with (
         patch.object(task_mod, "get_photo_by_id", return_value=mock_photo),
@@ -130,6 +144,7 @@ def test_metadata_task_flags_no_exif(tmp_path):
 
 # ── brightness_task ─────────────────────────────────────────────────────────
 
+
 def test_brightness_task_flags_dark_image(tmp_path):
     dark_path = _make_jpeg(tmp_path, "dark.jpg", color=(5, 5, 5))
     mock_photo = MagicMock()
@@ -139,7 +154,7 @@ def test_brightness_task_flags_dark_image(tmp_path):
 
     task_mod = _import_quality_tasks()
     # _finish_task is imported lazily from src.tasks.utils inside _run_quality_check
-    sys.modules['src.tasks.utils']._finish_task = MagicMock()
+    sys.modules["src.tasks.utils"]._finish_task = MagicMock()
 
     with (
         patch.object(task_mod, "get_photo_by_id", return_value=mock_photo),
@@ -159,7 +174,7 @@ def test_brightness_task_skips_normal_image(tmp_path):
     mock_db = MagicMock()
 
     task_mod = _import_quality_tasks()
-    sys.modules['src.tasks.utils']._finish_task = MagicMock()
+    sys.modules["src.tasks.utils"]._finish_task = MagicMock()
 
     with (
         patch.object(task_mod, "get_photo_by_id", return_value=mock_photo),
@@ -172,6 +187,7 @@ def test_brightness_task_skips_normal_image(tmp_path):
 
 # ── blur_task ───────────────────────────────────────────────────────────────
 
+
 def test_blur_task_flags_uniform_image(tmp_path):
     flat_path = str(tmp_path / "flat.png")
     Image.new("L", (100, 100), color=128).save(flat_path, format="PNG")
@@ -181,7 +197,7 @@ def test_blur_task_flags_uniform_image(tmp_path):
     mock_db = MagicMock()
 
     task_mod = _import_quality_tasks()
-    sys.modules['src.tasks.utils']._finish_task = MagicMock()
+    sys.modules["src.tasks.utils"]._finish_task = MagicMock()
 
     with (
         patch.object(task_mod, "get_photo_by_id", return_value=mock_photo),
@@ -195,6 +211,7 @@ def test_blur_task_flags_uniform_image(tmp_path):
 
 # ── entropy_task ────────────────────────────────────────────────────────────
 
+
 def test_entropy_task_flags_uniform_image(tmp_path):
     uniform_path = _make_jpeg(tmp_path, "uni.jpg", color=(100, 100, 100))
     mock_photo = MagicMock()
@@ -203,7 +220,7 @@ def test_entropy_task_flags_uniform_image(tmp_path):
     mock_db = MagicMock()
 
     task_mod = _import_quality_tasks()
-    sys.modules['src.tasks.utils']._finish_task = MagicMock()
+    sys.modules["src.tasks.utils"]._finish_task = MagicMock()
 
     with (
         patch.object(task_mod, "get_photo_by_id", return_value=mock_photo),
@@ -217,6 +234,7 @@ def test_entropy_task_flags_uniform_image(tmp_path):
 
 # ── edge_density_task ───────────────────────────────────────────────────────
 
+
 def test_edge_density_task_flags_flat_image(tmp_path):
     flat_path = _make_jpeg(tmp_path, "flat2.jpg", color=(128, 128, 128))
     mock_photo = MagicMock()
@@ -225,7 +243,7 @@ def test_edge_density_task_flags_flat_image(tmp_path):
     mock_db = MagicMock()
 
     task_mod = _import_quality_tasks()
-    sys.modules['src.tasks.utils']._finish_task = MagicMock()
+    sys.modules["src.tasks.utils"]._finish_task = MagicMock()
 
     with (
         patch.object(task_mod, "get_photo_by_id", return_value=mock_photo),
@@ -239,31 +257,38 @@ def test_edge_density_task_flags_flat_image(tmp_path):
 
 # ── phase_logic wiring ──────────────────────────────────────────────────────
 
+
 def _load_utils_fresh():
     """Import the real src.tasks.utils regardless of what other tests have mocked."""
-    import importlib, importlib.util, os
+    import importlib
+    import importlib.util
+    import os
+
     spec = importlib.util.spec_from_file_location(
         "_utils_under_test",
         os.path.join(os.path.dirname(__file__), "..", "src", "tasks", "utils.py"),
     )
     mod = importlib.util.module_from_spec(spec)
     # stub out heavy imports that utils.py pulls in at module level
-    mod.__dict__.update({
-        "logger": MagicMock(),
-        "text": MagicMock(),
-        "SessionLocal": MagicMock(),
-        "delete_job": MagicMock(),
-        "get_or_create_job": MagicMock(),
-        "get_folder_scanner": MagicMock(),
-        "update_folder_scanner_progress": MagicMock(),
-    })
+    mod.__dict__.update(
+        {
+            "logger": MagicMock(),
+            "text": MagicMock(),
+            "SessionLocal": MagicMock(),
+            "delete_job": MagicMock(),
+            "get_or_create_job": MagicMock(),
+            "get_folder_scanner": MagicMock(),
+            "update_folder_scanner_progress": MagicMock(),
+        }
+    )
     # patch sys.modules so that top-level imports inside utils.py resolve
     _saved = {}
     for key in ("src.database", "src.db_service", "loguru", "sqlalchemy", "sqlalchemy.text"):
         _saved[key] = sys.modules.get(key)
     sys.modules["loguru"] = MagicMock()
     # execute the module source — only phase_logic is needed, it has no imports
-    import ast, types
+    import ast
+
     with open(spec.origin) as fh:
         source = fh.read()
     # Only exec the phase_logic function definition to keep it isolated

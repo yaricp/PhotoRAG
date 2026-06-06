@@ -1,35 +1,69 @@
-import { app, BrowserWindow, protocol } from 'electron'
+import { app, BrowserWindow, dialog } from 'electron'
+import { existsSync } from 'fs'
 import { join } from 'path'
 import { registerIpcHandlers } from './ipc'
 import { registerAppProtocol } from './protocol'
+import { startBackend, stopBackend, waitForBackend } from './backend'
 
+app.setName('PhotoRAG')
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 let mainWindow: BrowserWindow | null = null
 
-async function createWindow() {
-    registerIpcHandlers(8000)
-
-    mainWindow = new BrowserWindow({
-        width: 1200,
-        height: 800,
+function createMainWindow(): BrowserWindow {
+    const win = new BrowserWindow({
+        width: 1280,
+        height: 820,
+        show: false,
         webPreferences: {
             preload: join(__dirname, '../preload/index.js'),
             contextIsolation: true,
-            nodeIntegration: false
-        }
+            nodeIntegration: false,
+        },
     })
 
     if (!app.isPackaged) {
-        await mainWindow.loadURL('http://127.0.0.1:5173')
-        mainWindow.webContents.openDevTools()
+        win.loadURL('http://127.0.0.1:5173')
+        win.webContents.openDevTools()
     } else {
-        await mainWindow.loadFile('dist/index.html')
+        win.loadFile(join(__dirname, '../renderer/index.html'))
     }
+
+    win.once('ready-to-show', () => win.show())
+    return win
 }
 
-// Протокол нужно регистрировать ДО app.whenReady()
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
     registerAppProtocol()
-    createWindow()
+
+    const setupDone = existsSync(join(app.getPath('userData'), 'setup_done'))
+
+    if (!setupDone) {
+        // First run: show window immediately so the setup wizard can run.
+        // Backend will be started by setup:complete once the wizard finishes.
+        registerIpcHandlers(0)
+        mainWindow = createMainWindow()
+        return
+    }
+
+    // Setup already done: start backend, then open window.
+    try {
+        const port = await startBackend()
+        await waitForBackend(port)
+        registerIpcHandlers(port)
+        mainWindow = createMainWindow()
+    } catch (err) {
+        console.error('[startup] Failed to start backend:', err)
+        dialog.showErrorBox(
+            'PhotoRAG — startup error',
+            `The Python backend failed to start.\n\n${err instanceof Error ? err.message : String(err)}\n\nCheck that the installation completed successfully via the Setup Wizard.`
+        )
+        app.quit()
+    }
+})
+
+app.on('will-quit', () => {
+    stopBackend()
 })
 
 app.on('window-all-closed', () => {

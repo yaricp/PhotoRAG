@@ -1,0 +1,356 @@
+.wizard-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: #1a1a2e;
+    color: #e0e0e0;
+    font-family: system-ui, -apple-system, sans-serif;
+    padding: 2rem;
+}
+
+.wizard-stepper {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+}
+
+.wizard-stepper__dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #444;
+    transition: background 0.2s;
+}
+
+.wizard-stepper__dot--active {
+    background: #6c8ff8;
+}
+
+.wizard-stepper__dot--done {
+    background: #4caf7d;
+}
+
+.wizard-content {
+    width: 100%;
+}
+
+.wizard-step {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    max-width: 560px;
+    width: 100%;
+}
+
+.wizard-step--wide {
+    max-width: 1100px;
+    width: 100%;
+}
+
+.wizard-logo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.wizard-logo__img {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+}
+
+.wizard-logo__name {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #e0e0e0;
+    letter-spacing: 0.01em;
+}
+
+.wizard-step h1,
+.wizard-step h2 {
+    margin: 0;
+    font-size: 1.6rem;
+}
+
+.wizard-icon {
+    font-size: 3rem;
+    text-align: center;
+}
+
+.wizard-subtitle {
+    color: #aaa;
+    margin: 0;
+}
+
+.wizard-checklist {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.wizard-checklist li::before {
+    content: '✓  ';
+    color: #4caf7d;
+}
+
+.wizard-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    margin-top: 0.5rem;
+}
+
+.wizard-btn {
+    padding: 0.6rem 1.4rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+
+.wizard-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.wizard-btn--primary {
+    background: #6c8ff8;
+    color: #fff;
+}
+
+.wizard-btn--primary:hover:not(:disabled) {
+    background: #5a7ee6;
+}
+
+.wizard-btn--secondary {
+    background: #444;
+    color: #e0e0e0;
+}
+
+.wizard-btn--secondary:hover:not(:disabled) {
+    background: #555;
+}
+
+/* Progress bar */
+.wizard-progress-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.wizard-progressbar {
+    height: 8px;
+    background: #333;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.wizard-progressbar__fill {
+    height: 100%;
+    background: #6c8ff8;
+    transition: width 0.3s ease;
+}
+
+.wizard-log {
+    font-size: 0.75rem;
+    color: #888;
+    font-family: monospace;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin: 0;
+}
+
+/* Model list */
+.wizard-model-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.wizard-model-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0.75rem;
+    background: #252540;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.wizard-model-row input[type='checkbox'] {
+    flex-shrink: 0;
+}
+
+.wizard-model-info {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    gap: 0.15rem;
+}
+
+.wizard-model-name {
+    font-weight: 500;
+}
+
+.wizard-model-desc {
+    font-size: 0.8rem;
+    color: #888;
+}
+
+.wizard-model-size {
+    font-size: 0.8rem;
+    color: #aaa;
+    white-space: nowrap;
+}
+
+.wizard-skip-all {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: #aaa;
+    cursor: pointer;
+    margin-top: 0.25rem;
+}
+
+.wizard-total-size {
+    font-size: 0.9rem;
+    color: #aaa;
+    margin: 0;
+}
+
+/* Per-model download progress */
+.wizard-model-progress {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin-bottom: 0.75rem;
+}
+
+.wizard-model-progress__header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    color: #ccc;
+}
+
+/* Spinner */
+.wizard-spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid #333;
+    border-top-color: #6c8ff8;
+    border-radius: 50%;
+    animation: wizard-spin 0.8s linear infinite;
+    margin: 0.5rem auto;
+}
+
+@keyframes wizard-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Error */
+.wizard-error {
+    color: #f08080;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* Model config step — scrollable card list */
+.wizard-model-config-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: calc(100vh - 420px);
+    overflow-y: auto;
+    padding-right: 4px;
+    /* style the scrollbar subtly */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+
+.wizard-model-config-list::-webkit-scrollbar {
+    width: 5px;
+}
+
+.wizard-model-config-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.wizard-model-config-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+}
+
+/* Language step */
+.wizard-lang-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    width: 100%;
+    max-width: 320px;
+    margin: 1.5rem 0;
+}
+
+.wizard-lang-option {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1.25rem;
+    border-radius: 8px;
+    border: 2px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    color: #e0e0e0;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    text-align: left;
+}
+
+.wizard-lang-option:hover {
+    border-color: rgba(108, 143, 248, 0.5);
+    background: rgba(108, 143, 248, 0.08);
+}
+
+.wizard-lang-option--selected {
+    border-color: #6c8ff8;
+    background: rgba(108, 143, 248, 0.15);
+}
+
+.wizard-lang-flag {
+    font-size: 1.5rem;
+    line-height: 1;
+}
+
+.wizard-lang-name {
+    font-weight: 500;
+}
+
+/* Two-column layout in StepModelConfig: model list left, PrivacyWarning right */
+.wizard-model-config-layout {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    width: 100%;
+}
+
+.wizard-model-config-layout .wizard-model-config-list {
+    flex: 1;
+    min-width: 0;
+}
+
+.wizard-model-config-layout .privacy-warning {
+    width: 260px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 16px;
+}

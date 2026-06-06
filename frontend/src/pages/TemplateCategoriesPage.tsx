@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import {
     getTemplateCategories, createTemplateCategory, updateTemplateCategory, deleteTemplateCategory,
 } from '@/api/client'
@@ -10,6 +12,8 @@ const EMPTY_FORM = { name: '', clip_prompt: '' }
 const PAGE_SIZE = 50
 
 export function TemplateCategoriesPage() {
+    const { t } = useTranslation()
+    const navigate = useNavigate()
     const [items, setItems] = useState<TemplateCategory[]>([])
     const [total, setTotal] = useState(0)
     const [page, setPage] = useState(0)
@@ -33,12 +37,12 @@ export function TemplateCategoriesPage() {
             const data = await getTemplateCategories(p * PAGE_SIZE, PAGE_SIZE)
             setItems(data.items)
             setTotal(data.total)
-        } catch (e: any) {
-            setError(e.message ?? 'Failed to load template categories')
+        } catch {
+            setError(t('vocab.categories.errorLoad'))
         } finally {
             setLoading(false)
         }
-    }, [])
+    }, [t])
 
     useEffect(() => { load(page) }, [page, load])
 
@@ -57,8 +61,8 @@ export function TemplateCategoriesPage() {
             } else {
                 setPage(newLastPage)
             }
-        } catch (e: any) {
-            setError(e.message ?? 'Failed to create category')
+        } catch {
+            setError(t('vocab.categories.errorCreate'))
         } finally {
             setAdding(false)
         }
@@ -78,8 +82,8 @@ export function TemplateCategoriesPage() {
             const updated = await updateTemplateCategory(editingId, editForm.name.trim(), editForm.clip_prompt.trim())
             setItems(prev => prev.map(it => it.id === updated.id ? updated : it))
             setEditingId(null)
-        } catch (e: any) {
-            setError(e.message ?? 'Failed to update category')
+        } catch {
+            setError(t('vocab.categories.errorUpdate'))
         } finally {
             setSaving(false)
         }
@@ -97,26 +101,26 @@ export function TemplateCategoriesPage() {
             } else {
                 setPage(targetPage)
             }
-        } catch (e: any) {
-            setError(e.message ?? 'Failed to delete category')
+        } catch {
+            setError(t('vocab.categories.errorDelete'))
         }
     }
 
     return (
         <div className="vocab-page">
+            <button className="vocab-btn vocab-btn--ghost vocab-back-btn" onClick={() => navigate(-1)}>
+                {t('photoDetail.back')}
+            </button>
             <div className="vocab-page__header">
                 <div className="vocab-page__titles">
                     <h1 className="vocab-page__title">
-                        Template Categories
+                        {t('vocab.categories.title')}
                         <span className="vocab-count">{total}</span>
                     </h1>
-                    <p className="vocab-page__desc">
-                        Categories that CLIP assigns to photos. Each entry has a name (shown in UI) and a CLIP prompt (fed to the model).
-                        Changes trigger an automatic embedding recompute in the background.
-                    </p>
+                    <p className="vocab-page__desc">{t('vocab.categories.desc')}</p>
                 </div>
                 <button className="vocab-page__add-btn" onClick={() => { setShowAdd(true); setEditingId(null) }}>
-                    + Add Category
+                    {t('vocab.categories.addBtn')}
                 </button>
             </div>
 
@@ -125,20 +129,20 @@ export function TemplateCategoriesPage() {
             {showAdd && (
                 <div className="vocab-add-form">
                     <div className="vocab-field">
-                        <label className="vocab-field__label">Name</label>
+                        <label className="vocab-field__label">{t('vocab.name')}</label>
                         <input
                             className="vocab-field__input"
-                            placeholder="e.g. food"
+                            placeholder={t('vocab.categories.namePlaceholder')}
                             value={addForm.name}
                             onChange={e => setAddForm(f => ({ ...f, name: e.target.value }))}
                             autoFocus
                         />
                     </div>
                     <div className="vocab-field">
-                        <label className="vocab-field__label">CLIP prompt</label>
+                        <label className="vocab-field__label">{t('vocab.clipPrompt')}</label>
                         <input
                             className="vocab-field__input"
-                            placeholder="e.g. a photo of food"
+                            placeholder={t('vocab.categories.promptPlaceholder')}
                             value={addForm.clip_prompt}
                             onChange={e => setAddForm(f => ({ ...f, clip_prompt: e.target.value }))}
                             onKeyDown={e => e.key === 'Enter' && handleCreate()}
@@ -146,14 +150,14 @@ export function TemplateCategoriesPage() {
                     </div>
                     <div className="vocab-add-form__actions">
                         <button className="vocab-btn vocab-btn--ghost" onClick={() => { setShowAdd(false); setAddForm(EMPTY_FORM) }}>
-                            Cancel
+                            {t('vocab.cancel')}
                         </button>
                         <button
                             className="vocab-btn vocab-btn--primary"
                             onClick={handleCreate}
                             disabled={adding || !addForm.name.trim() || !addForm.clip_prompt.trim()}
                         >
-                            {adding ? 'Adding…' : 'Add'}
+                            {adding ? t('vocab.adding') : t('vocab.add')}
                         </button>
                     </div>
                 </div>
@@ -161,21 +165,21 @@ export function TemplateCategoriesPage() {
 
             <div className="vocab-table">
                 <div className="vocab-table__head">
-                    <span className="vocab-table__head-cell">Name</span>
-                    <span className="vocab-table__head-cell">CLIP prompt</span>
+                    <span className="vocab-table__head-cell">{t('vocab.name')}</span>
+                    <span className="vocab-table__head-cell">{t('vocab.clipPrompt')}</span>
                     <span className="vocab-table__head-cell" />
                 </div>
                 <div className="vocab-table__body">
                     {loading ? (
                         <div className="vocab-empty"><Spinner size="md" /></div>
                     ) : items.length === 0 ? (
-                        <div className="vocab-empty">No categories yet. Click "Add Category" to create the first one.</div>
+                        <div className="vocab-empty">{t('vocab.categories.empty')}</div>
                     ) : items.map(item => (
                         editingId === item.id ? (
                             <div key={item.id} className="vocab-row vocab-row--editing">
                                 <div className="vocab-row__edit-grid">
                                     <div className="vocab-field">
-                                        <label className="vocab-field__label">Name</label>
+                                        <label className="vocab-field__label">{t('vocab.name')}</label>
                                         <input
                                             className="vocab-field__input"
                                             value={editForm.name}
@@ -184,7 +188,7 @@ export function TemplateCategoriesPage() {
                                         />
                                     </div>
                                     <div className="vocab-field">
-                                        <label className="vocab-field__label">CLIP prompt</label>
+                                        <label className="vocab-field__label">{t('vocab.clipPrompt')}</label>
                                         <input
                                             className="vocab-field__input"
                                             value={editForm.clip_prompt}
@@ -194,13 +198,13 @@ export function TemplateCategoriesPage() {
                                     </div>
                                 </div>
                                 <div className="vocab-row__edit-actions">
-                                    <button className="vocab-btn vocab-btn--ghost" onClick={() => setEditingId(null)}>Cancel</button>
+                                    <button className="vocab-btn vocab-btn--ghost" onClick={() => setEditingId(null)}>{t('vocab.cancel')}</button>
                                     <button
                                         className="vocab-btn vocab-btn--primary"
                                         onClick={handleSave}
                                         disabled={saving}
                                     >
-                                        {saving ? 'Saving…' : 'Save'}
+                                        {saving ? t('vocab.saving') : t('vocab.save')}
                                     </button>
                                 </div>
                             </div>
@@ -209,8 +213,8 @@ export function TemplateCategoriesPage() {
                                 <span className="vocab-row__cell">{item.name}</span>
                                 <span className="vocab-row__cell vocab-row__cell--dim">{item.clip_prompt}</span>
                                 <div className="vocab-row__actions">
-                                    <button className="vocab-btn--icon" onClick={() => startEdit(item)}>Edit</button>
-                                    <button className="vocab-btn vocab-btn--danger" onClick={() => handleDelete(item.id)}>Delete</button>
+                                    <button className="vocab-btn--icon" onClick={() => startEdit(item)}>{t('vocab.edit')}</button>
+                                    <button className="vocab-btn vocab-btn--danger" onClick={() => handleDelete(item.id)}>{t('vocab.delete')}</button>
                                 </div>
                             </div>
                         )
@@ -225,17 +229,17 @@ export function TemplateCategoriesPage() {
                         onClick={() => setPage(p => Math.max(0, p - 1))}
                         disabled={page === 0}
                     >
-                        ← Prev
+                        {t('vocab.prev')}
                     </button>
                     <span className="vocab-pagination__info">
-                        Page {page + 1} of {totalPages}
+                        {t('vocab.pageInfo', { page: page + 1, total: totalPages })}
                     </span>
                     <button
                         className="vocab-btn vocab-btn--ghost"
                         onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
                         disabled={page + 1 >= totalPages}
                     >
-                        Next →
+                        {t('vocab.next')}
                     </button>
                 </div>
             )}

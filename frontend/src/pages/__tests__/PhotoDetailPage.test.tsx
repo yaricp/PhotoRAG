@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { server } from '@/test/server'
@@ -11,7 +11,7 @@ vi.mock('@/api/base', () => ({ getBaseUrl: async () => 'http://localhost:8000' }
 
 const renderDetail = (id = '1') =>
     render(
-        <MemoryRouter initialEntries={[`/photo/${id}`]}>
+        <MemoryRouter initialEntries={['/', `/photo/${id}`]}>
             <Routes>
                 <Route path="/photo/:id" element={<PhotoDetailPage />} />
                 <Route path="/" element={<div data-testid="gallery-page" />} />
@@ -37,18 +37,17 @@ describe('PhotoDetailPage', () => {
         )
     })
 
-    it('renders tags with confidence percentage', async () => {
+    it('renders tags', async () => {
         server.use(
             http.get('http://localhost:8000/api/photos/:id', () =>
                 HttpResponse.json(makePhoto({
-                    tags: [{ tag: { id: 1, name: 'landscape' }, confidence_score: 0.92 }]
+                    tags_rel: [{ tag: { id: 1, name: 'landscape' }, confidence_score: 0.92 }]
                 }))
             )
         )
         renderDetail()
         await waitFor(() => {
             expect(screen.getByText('landscape')).toBeInTheDocument()
-            expect(screen.getByText('92%')).toBeInTheDocument()
         })
     })
 
@@ -59,6 +58,8 @@ describe('PhotoDetailPage', () => {
             )
         )
         renderDetail()
+        await waitFor(() => screen.getByTestId('page-photo-detail'))
+        await userEvent.click(screen.getByRole('button', { name: /document text/i }))
         await waitFor(() =>
             expect(screen.getByText('Invoice #1234')).toBeInTheDocument()
         )
@@ -71,7 +72,7 @@ describe('PhotoDetailPage', () => {
             )
         )
         renderDetail()
-        await waitFor(() => screen.getByTestId('photo-detail'))
+        await waitFor(() => screen.getByTestId('page-photo-detail'))
         expect(screen.queryByTestId('ocr-panel')).not.toBeInTheDocument()
     })
 
@@ -82,9 +83,9 @@ describe('PhotoDetailPage', () => {
             )
         )
         renderDetail()
-        await waitFor(() => screen.getByTestId('photo-detail'))
-        await userEvent.click(screen.getByRole('button', { name: /delete/i }))
-        expect(screen.getByText(/are you sure/i)).toBeInTheDocument()
+        await waitFor(() => screen.getByTestId('page-photo-detail'))
+        await userEvent.click(screen.getByRole('button', { name: /^delete$/i }))
+        expect(screen.getByText(/delete photo\?/i)).toBeInTheDocument()
     })
 
     it('calls DELETE and navigates to / on confirm', async () => {
@@ -99,9 +100,9 @@ describe('PhotoDetailPage', () => {
             })
         )
         renderDetail('1')
-        await waitFor(() => screen.getByTestId('photo-detail'))
-        await userEvent.click(screen.getByRole('button', { name: /delete/i }))
-        await userEvent.click(screen.getByRole('button', { name: /confirm/i }))
+        await waitFor(() => screen.getByTestId('page-photo-detail'))
+        await userEvent.click(screen.getByRole('button', { name: /^delete$/i }))
+        await userEvent.click(within(screen.getByTestId('modal-backdrop')).getByRole('button', { name: /^delete$/i }))
         await waitFor(() => {
             expect(deleted).toBe(true)
             expect(screen.getByTestId('gallery-page')).toBeInTheDocument()

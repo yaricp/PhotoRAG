@@ -1,33 +1,49 @@
 # backend/tests/test_tool_search.py
 import sys
 from unittest.mock import MagicMock, patch
+
 import sqlalchemy.types
 
 mock_pgvector = MagicMock()
 mock_pgvector.sqlalchemy.Vector = lambda size: sqlalchemy.types.JSON()
-sys.modules['pgvector'] = mock_pgvector
-sys.modules['pgvector.sqlalchemy'] = mock_pgvector.sqlalchemy
+sys.modules.setdefault("pgvector", mock_pgvector)
+sys.modules.setdefault("pgvector.sqlalchemy", mock_pgvector.sqlalchemy)
 
 for _mod in [
-    'sqlite_vec', 'langgraph', 'langgraph.graph',
-    'src.database', 'src.vector_db_services', 'src.config',
-    'src.ai', 'src.ai.registry', 'src.ai.prompts', 'src.ai.translator',
-    'src.graphs.ai_agent',
-    'src.queues', 'src.queues.folder_scan_queue', 'src.queues.clip_queue',
-    'src.queues.vision_queue', 'src.queues.embedding_queue',
-    'src.queues.translation_queue',
-    'src.tasks', 'src.tasks.utils', 'src.tasks.folder_scanners',
-    'src.tasks.vision_tasks', 'src.tasks.embedding_tasks',
-    'src.tasks.clip_tasks', 'src.tasks.translation_tasks',
-    'src.deps',
+    "sqlite_vec",
+    "langgraph",
+    "langgraph.graph",
+    "src.database",
+    "src.vector_db_services",
+    "src.ai",
+    "src.ai.registry",
+    "src.ai.prompts",
+    "src.ai.translator",
+    "src.queues",
+    "src.queues.folder_scan_queue",
+    "src.queues.clip_queue",
+    "src.queues.vision_queue",
+    "src.queues.embedding_queue",
+    "src.queues.translation_queue",
+    "src.queues.queue_config",
+    "src.tasks",
+    "src.tasks.utils",
+    "src.tasks.folder_scanners",
+    "src.tasks.vision_tasks",
+    "src.tasks.embedding_tasks",
+    "src.tasks.clip_tasks",
+    "src.tasks.translation_tasks",
+    "src.model_services",
+    "src.deps",
 ]:
-    sys.modules[_mod] = MagicMock()
+    sys.modules.setdefault(_mod, MagicMock())
 
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from src.models import Base, Photo as PhotoModel, Tag, PhotoTag, Camera
+from src.models import Base, Camera, PhotoTag, Tag
+from src.models import Photo as PhotoModel
 
 
 @pytest.fixture
@@ -59,8 +75,10 @@ def _add_photo(db, tmp_path, filename="p.jpg", **kwargs):
 # get_photos_by_tag_id
 # ---------------------------------------------------------------------------
 
+
 def test_get_photos_by_tag_id_returns_matching_photos(tmp_path, db, db_factory):
     from src.graphs.tools import get_photos_by_tag_id
+
     photo = _add_photo(db, tmp_path, "tagged.jpg")
     tag = Tag(name="sunset")
     db.add(tag)
@@ -76,6 +94,7 @@ def test_get_photos_by_tag_id_returns_matching_photos(tmp_path, db, db_factory):
 
 def test_get_photos_by_tag_id_returns_empty_message_when_none(db_factory):
     from src.graphs.tools import get_photos_by_tag_id
+
     with patch("src.graphs.tools.SessionLocal", side_effect=db_factory):
         result = get_photos_by_tag_id.invoke({"tag_id": 9999})
     assert "No photos" in result
@@ -83,6 +102,7 @@ def test_get_photos_by_tag_id_returns_empty_message_when_none(db_factory):
 
 def test_get_photos_by_tag_id_does_not_return_untagged_photo(tmp_path, db, db_factory):
     from src.graphs.tools import get_photos_by_tag_id
+
     _add_photo(db, tmp_path, "untagged.jpg")
     tag = Tag(name="ocean")
     db.add(tag)
@@ -98,8 +118,10 @@ def test_get_photos_by_tag_id_does_not_return_untagged_photo(tmp_path, db, db_fa
 # search_photos_by_exif
 # ---------------------------------------------------------------------------
 
+
 def test_search_photos_by_exif_width_filter(tmp_path, db, db_factory):
     from src.graphs.tools import search_photos_by_exif
+
     wide = _add_photo(db, tmp_path, "wide.jpg", image_width=5000, image_height=3000)
     narrow = _add_photo(db, tmp_path, "narrow.jpg", image_width=800, image_height=600)
 
@@ -112,6 +134,7 @@ def test_search_photos_by_exif_width_filter(tmp_path, db, db_factory):
 
 def test_search_photos_by_exif_iso_filter(tmp_path, db, db_factory):
     from src.graphs.tools import search_photos_by_exif
+
     high_iso = _add_photo(db, tmp_path, "high_iso.jpg", iso=6400)
     low_iso = _add_photo(db, tmp_path, "low_iso.jpg", iso=100)
 
@@ -124,6 +147,7 @@ def test_search_photos_by_exif_iso_filter(tmp_path, db, db_factory):
 
 def test_search_photos_by_exif_no_match(db_factory):
     from src.graphs.tools import search_photos_by_exif
+
     with patch("src.graphs.tools.SessionLocal", side_effect=db_factory):
         result = search_photos_by_exif.invoke({"width_min": 99999})
     assert "No photos" in result
@@ -131,6 +155,7 @@ def test_search_photos_by_exif_no_match(db_factory):
 
 def test_search_photos_by_exif_camera_make(tmp_path, db, db_factory):
     from src.graphs.tools import search_photos_by_exif
+
     cam = Camera(make="Canon", model="EOS 5D")
     db.add(cam)
     db.flush()
@@ -148,8 +173,10 @@ def test_search_photos_by_exif_camera_make(tmp_path, db, db_factory):
 # filter_photos
 # ---------------------------------------------------------------------------
 
+
 def test_filter_photos_returns_all_without_filters(tmp_path, db, db_factory):
     from src.graphs.tools import filter_photos
+
     _add_photo(db, tmp_path, "f1.jpg")
     _add_photo(db, tmp_path, "f2.jpg")
 
@@ -162,6 +189,7 @@ def test_filter_photos_returns_all_without_filters(tmp_path, db, db_factory):
 
 def test_filter_photos_is_doc_filter(tmp_path, db, db_factory):
     from src.graphs.tools import filter_photos
+
     _add_photo(db, tmp_path, "doc.jpg", is_doc=True)
     _add_photo(db, tmp_path, "photo.jpg", is_doc=False)
 
@@ -174,6 +202,7 @@ def test_filter_photos_is_doc_filter(tmp_path, db, db_factory):
 
 def test_filter_photos_returns_no_photos_message(db_factory):
     from src.graphs.tools import filter_photos
+
     with patch("src.graphs.tools.SessionLocal", side_effect=db_factory):
         result = filter_photos.invoke({"is_doc": True})
     assert "No photos" in result
