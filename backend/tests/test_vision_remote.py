@@ -119,9 +119,7 @@ class TestCallRemoteVision:
         with patch("src.model_services._build_langchain_vision_model", return_value=mock_llm):
             import asyncio
 
-            result = asyncio.get_event_loop().run_until_complete(
-                _call_remote_vision(cfg, str(f), "Describe this image.")
-            )
+            result = asyncio.run(_call_remote_vision(cfg, str(f), "Describe this image."))
         assert result == "A sunny beach scene."
 
     def test_passes_base64_image_in_message(self, tmp_path):
@@ -140,7 +138,7 @@ class TestCallRemoteVision:
         with patch("src.model_services._build_langchain_vision_model", return_value=mock_llm):
             import asyncio
 
-            asyncio.get_event_loop().run_until_complete(_call_remote_vision(cfg, str(f), "describe"))
+            asyncio.run(_call_remote_vision(cfg, str(f), "describe"))
 
         call_args = mock_llm.invoke.call_args[0][0]
         assert len(call_args) == 1

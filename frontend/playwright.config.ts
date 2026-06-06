@@ -7,12 +7,10 @@ export default defineConfig({
         baseURL: process.env.VITE_DEV_URL || 'http://localhost:5173',
         headless: true,
     },
-    webServer: process.env.CI
-        ? undefined
-        : {
-              command: 'npm run dev -- --port 5173',
-              url: 'http://localhost:5173',
-              reuseExistingServer: true,
-              timeout: 30_000,
-          },
+    webServer: {
+        command: 'npm run dev -- --port 5173',
+        url: 'http://localhost:5173',
+        reuseExistingServer: !process.env.CI,
+        timeout: 60_000,
+    },
 })
