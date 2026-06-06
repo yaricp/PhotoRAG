@@ -5,6 +5,9 @@ on:
     types: [created]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build ${{ matrix.name }}
@@ -39,7 +42,7 @@ jobs:
             install-fuse: true
 
           - name: linux-arm64
-            os: ubuntu-24.04-arm
+            os: ubuntu-latest
             script: dist:linux:arm64
             artifact-name: PhotoRAG-Linux-arm64
             artifact-pattern: frontend/dist-electron/*.AppImage

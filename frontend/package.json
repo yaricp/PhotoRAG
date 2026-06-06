@@ -6,7 +6,7 @@
   "engines": { "node": ">=20.0.0", "npm": ">=10.0.0" },
   "scripts": {
     "dev": "electron-vite dev",
-    "build": "node --require ./scripts/crypto-polyfill.cjs ./node_modules/.bin/electron-vite build",
+    "build": "node --require ./scripts/crypto-polyfill.cjs node_modules/electron-vite/bin/electron-vite.js build",
     "preview": "electron-vite preview",
     "dist": "npm run build && electron-builder",
     "predist:mac": "bash ../scripts/download-python.sh",
