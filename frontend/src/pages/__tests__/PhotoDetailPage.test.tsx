@@ -58,8 +58,7 @@ describe('PhotoDetailPage', () => {
             )
         )
         renderDetail()
-        await waitFor(() => screen.getByTestId('page-photo-detail'))
-        await userEvent.click(screen.getByRole('button', { name: /document text/i }))
+        await userEvent.click(await screen.findByRole('button', { name: /document text/i }))
         await waitFor(() =>
             expect(screen.getByText('Invoice #1234')).toBeInTheDocument()
         )
