@@ -4,6 +4,7 @@
       "release-type": "node",
       "package-name": "photorag",
       "version-file": "frontend/package.json",
+      "bump-minor-pre-major": true,
       "extra-files": [
         {
           "type": "generic",
