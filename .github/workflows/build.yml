@@ -1,0 +1,75 @@
+name: Build installers
+
+on:
+  release:
+    types: [created]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: mac-universal
+            os: macos-latest
+            script: dist:mac
+            artifact-name: PhotoRAG-macOS-universal
+            artifact-pattern: frontend/dist-electron/*.dmg
+
+          - name: win-x64
+            os: windows-latest
+            script: dist:win
+            artifact-name: PhotoRAG-Windows-x64
+            artifact-pattern: frontend/dist-electron/*x64*.exe
+
+          - name: win-arm64
+            os: windows-latest
+            script: dist:win:arm64
+            artifact-name: PhotoRAG-Windows-arm64
+            artifact-pattern: frontend/dist-electron/*arm64*.exe
+
+          - name: linux-x64
+            os: ubuntu-latest
+            script: dist:linux
+            artifact-name: PhotoRAG-Linux-x64
+            artifact-pattern: frontend/dist-electron/*.AppImage
+            install-fuse: true
+
+          - name: linux-arm64
+            os: ubuntu-24.04-arm
+            script: dist:linux:arm64
+            artifact-name: PhotoRAG-Linux-arm64
+            artifact-pattern: frontend/dist-electron/*.AppImage
+            install-fuse: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - if: matrix.install-fuse
+        run: sudo apt-get install -y libfuse2
+
+      - run: npm ci
+        working-directory: frontend
+
+      - run: npm run ${{ matrix.script }}
+        working-directory: frontend
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact-name }}
+          path: ${{ matrix.artifact-pattern }}
+          retention-days: 30
+
+      - if: github.event_name == 'release'
+        run: gh release upload ${{ github.event.release.tag_name }} ${{ matrix.artifact-pattern }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
