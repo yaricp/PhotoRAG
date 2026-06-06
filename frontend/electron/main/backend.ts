@@ -2,9 +2,23 @@ import { spawn, ChildProcess } from 'child_process'
 import { app } from 'electron'
 import path from 'path'
 import net from 'net'
+import { existsSync, appendFileSync, mkdirSync } from 'fs'
 
 let backendProcess: ChildProcess | null = null
 let _port: number | null = null
+
+// Log file written to userData so users can share it when reporting issues.
+let _logPath: string | null = null
+function logToFile(line: string): void {
+    try {
+        if (!_logPath) {
+            const dir = app.getPath('userData')
+            mkdirSync(dir, { recursive: true })
+            _logPath = path.join(dir, 'photorag.log')
+        }
+        appendFileSync(_logPath, `${new Date().toISOString()} ${line}\n`)
+    } catch { /* ignore log errors */ }
+}
 
 export function locatePython(): string {
     if (app.isPackaged) {
@@ -17,15 +31,19 @@ export function locatePython(): string {
 }
 
 // Returns the venv Python created during setup (has all pip packages installed).
-// forServer=true returns pythonw.exe on Windows — a windowless variant that
-// never allocates a console, suitable for the background FastAPI process.
-// forServer=false returns python.exe, which allows stdout/stderr to be piped
-// during setup tasks (venv creation, pip install, init_db, model downloads).
+// forServer=true prefers pythonw.exe on Windows (windowless, no console window).
+// Falls back to python.exe if pythonw.exe was not bundled in this venv.
 export function locateVenvPython(forServer = false): string {
-    const rel = process.platform === 'win32'
-        ? path.join('Scripts', forServer ? 'pythonw.exe' : 'python.exe')
-        : path.join('bin', 'python3')
-    return path.join(app.getPath('userData'), 'venv', rel)
+    const venvBase = path.join(app.getPath('userData'), 'venv')
+    if (process.platform === 'win32') {
+        if (forServer) {
+            const pythonw = path.join(venvBase, 'Scripts', 'pythonw.exe')
+            if (existsSync(pythonw)) return pythonw
+            // pythonw.exe not present — fall back to python.exe (windowsHide suppresses the window)
+        }
+        return path.join(venvBase, 'Scripts', 'python.exe')
+    }
+    return path.join(venvBase, 'bin', 'python3')
 }
 
 export function locateBackend(): string {
@@ -70,15 +88,21 @@ export async function waitForBackend(port: number, maxRetries = 60): Promise<voi
 export async function startBackend(): Promise<number> {
     const port = await findFreePort()
     const appDataDir = getAppDataDir()
-    // Packaged: use venv pythonw (windowless on Windows) for the background server.
+    // Packaged: prefer pythonw.exe (windowless) for the server; falls back to python.exe.
     const python = app.isPackaged ? locateVenvPython(true) : 'python3'
     const backendDir = locateBackend()
+
+    logToFile(`[startup] python=${python} backendDir=${backendDir} port=${port}`)
+
+    // Collect startup output so we can include it in the error dialog if the
+    // backend fails to come up.
+    const startupLines: string[] = []
 
     backendProcess = spawn(python, ['run.py'], {
         cwd: backendDir,
         // detached on macOS/Linux lets the backend survive a renderer crash.
-        // On Windows detached always allocates a new console window; windowsHide
-        // is unreliable when combined with detached, so skip it there.
+        // On Windows, detached always allocates a new console window even with
+        // windowsHide, so we skip it there.
         detached: process.platform !== 'win32',
         windowsHide: true,
         env: {
@@ -90,17 +114,47 @@ export async function startBackend(): Promise<number> {
         },
     })
 
-    backendProcess.stdout?.on('data', (d: Buffer) =>
-        console.log('[backend]', d.toString().trimEnd()))
-    backendProcess.stderr?.on('data', (d: Buffer) =>
-        console.error('[backend]', d.toString().trimEnd()))
+    backendProcess.on('error', (err) => {
+        const msg = `[backend spawn error] ${err.message}`
+        console.error(msg)
+        logToFile(msg)
+        startupLines.push(msg)
+    })
+
+    backendProcess.stdout?.on('data', (d: Buffer) => {
+        const text = d.toString().trimEnd()
+        console.log('[backend]', text)
+        logToFile(`[backend:out] ${text}`)
+        startupLines.push(text)
+    })
+    backendProcess.stderr?.on('data', (d: Buffer) => {
+        const text = d.toString().trimEnd()
+        console.error('[backend]', text)
+        logToFile(`[backend:err] ${text}`)
+        startupLines.push(text)
+    })
     backendProcess.on('exit', (code: number | null) => {
-        console.log(`[backend] exited with code ${code}`)
+        const msg = `[backend] exited with code ${code}`
+        console.log(msg)
+        logToFile(msg)
         backendProcess = null
         _port = null
     })
 
     _port = port
+
+    // Wait here so the caller gets a rich error if startup fails.
+    try {
+        await waitForBackend(port)
+    } catch {
+        const tail = startupLines.slice(-30).join('\n') || '(no output captured)'
+        const logHint = _logPath ? `\n\nFull log: ${_logPath}` : ''
+        throw new Error(
+            `Backend did not respond on port ${port}.\n\n` +
+            `Last output:\n${tail}${logHint}`
+        )
+    }
+
     return port
 }
 
