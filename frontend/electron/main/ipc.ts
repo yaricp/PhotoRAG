@@ -1,5 +1,6 @@
 import { ipcMain, dialog, shell, app } from 'electron'
 import { existsSync, writeFileSync, readFileSync, rmSync } from 'fs'
+import { cp as cpAsync } from 'fs/promises'
 import { join } from 'path'
 import { spawn } from 'child_process'
 import { locatePython, locateBackend, startBackend, waitForBackend } from './backend'
@@ -40,8 +41,27 @@ export function registerIpcHandlers(port: number): void {
     ipcMain.handle('setup:install-deps', async (event) => {
         const userData = app.getPath('userData')
         const venvPath = join(userData, 'venv')
-        const python = locatePython()
         const backend = locateBackend()
+
+        // Step 0 (packaged Linux/Windows): the bundled Python stores its DLL
+        // search path relative to process.resourcesPath (RPATH on Linux,
+        // pyvenv.cfg `home` on Windows). After an app update that path is gone,
+        // breaking the venv. Fix: copy the entire Python tree to userData once
+        // and create the venv from that stable copy.
+        let python = locatePython()
+        if (app.isPackaged && process.platform !== 'darwin') {
+            const stablePythonDir = join(userData, 'python')
+            if (!existsSync(stablePythonDir)) {
+                const bundledDir = join(process.resourcesPath, 'python')
+                event.sender.send('setup:install-deps-progress', {
+                    line: 'Extracting Python runtime…', percent: 1,
+                })
+                await cpAsync(bundledDir, stablePythonDir, { recursive: true })
+            }
+            python = process.platform === 'win32'
+                ? join(stablePythonDir, 'python.exe')
+                : join(stablePythonDir, 'bin', 'python3')
+        }
 
         // Step 1: create venv (~5% progress)
         await spawnTracked(python, ['-m', 'venv', venvPath], {}, (line) => {
