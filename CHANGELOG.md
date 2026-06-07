@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.1](https://github.com/yaricp/PhotoRAG/compare/photorag-v0.1.0...photorag-v0.1.1) (2026-06-07)
+
+
+### Bug Fixes
+
+* **ci:** resolve 3 installer build failures ([0abdc95](https://github.com/yaricp/PhotoRAG/commit/0abdc95067a2a2479fbf6b1153fa8de6dab074a2))
+* **installer:** copy bundled Python to userData on Linux and Windows ([5957724](https://github.com/yaricp/PhotoRAG/commit/5957724e0a0395c03a99c5d152a1d65f3198d136))
+
 ## 1.0.0 (2026-06-06)
 
 
