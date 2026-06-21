@@ -47,7 +47,7 @@ class Database_Settings(BaseSettings):
 
 
 class Api_Settings(BaseSettings):
-    API_HOST: str = "localhost"
+    API_HOST: str = "127.0.0.1"
     API_PORT: int = 8001
     API_TOKEN: str = "secret"
 

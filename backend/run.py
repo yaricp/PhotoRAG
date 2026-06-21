@@ -51,6 +51,7 @@ def start_workers() -> list[subprocess.Popen]:
         list_queues.append("ocr")
     list_queues.append("folder_scan")
 
+    backend_dir = Path(__file__).parent
     logger.info(f"[workers] Starting workers for: {list_queues}")
     procs = []
     for model in list_queues:
@@ -69,7 +70,8 @@ def start_workers() -> list[subprocess.Popen]:
                 "1",
                 "-k",
                 "thread",
-            ]
+            ],
+            cwd=backend_dir,
         )
         procs.append(proc)
     return procs
