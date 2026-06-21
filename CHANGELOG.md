@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/yaricp/PhotoRAG/compare/photorag-v0.1.1...photorag-v0.1.2) (2026-06-21)
+
+
+### Bug Fixes
+
+* **backend:** resolve startup failure on Windows due to IPv6 and missing cwd ([babf396](https://github.com/yaricp/PhotoRAG/commit/babf3969036d825aeb17f337d86b3c8ee21e34c1))
+
 ## [0.1.1](https://github.com/yaricp/PhotoRAG/compare/photorag-v0.1.0...photorag-v0.1.1) (2026-06-07)
 
 
