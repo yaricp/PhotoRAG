@@ -1,8 +1,7 @@
 # ATOMIC MOCK: Must happen before any project imports
 import os
-import sys
 from datetime import datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 import sqlalchemy.orm

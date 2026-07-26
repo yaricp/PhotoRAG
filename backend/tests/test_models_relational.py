@@ -1,7 +1,5 @@
 # ATOMIC MOCK
 import os
-import sys
-from unittest.mock import MagicMock
 
 import pytest
 import sqlalchemy.orm
