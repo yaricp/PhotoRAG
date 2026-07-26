@@ -24,6 +24,6 @@
 - [x] 4.3 Smoke-start backend; `GET /api/system/status/` responds OK
 
 ## 5. Review & completion
-- [ ] 5.1 Code review of the full diff
-- [ ] 5.2 security-review before merge
+- [x] 5.1 Code review of the full diff
+- [x] 5.2 security-review before merge
 - [ ] 5.3 Merge / PR per user choice; archive change
