@@ -26,4 +26,4 @@
 ## 5. Review & completion
 - [x] 5.1 Code review of the full diff
 - [x] 5.2 security-review before merge
-- [ ] 5.3 Merge / PR per user choice; archive change
+- [x] 5.3 Merge / PR per user choice; archive change
