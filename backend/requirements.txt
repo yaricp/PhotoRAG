@@ -1,10 +1,12 @@
 pydantic-settings
-pytest
-pytest-asyncio
+langchain-core
+numpy
+python-dotenv
+pydantic
+requests
 fastapi
 uvicorn
 sqlalchemy
-pgvector
 watchdog
 huey==2.5.0
 langchain
@@ -14,9 +16,7 @@ easyocr
 Pillow
 open_clip_torch
 torch
-torchvision
 transformers
-accelerate
 qwen-vl-utils
 exifread
 einops
