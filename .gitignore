@@ -27,6 +27,7 @@ data/
 .claude/skills/
 .claude/worktrees/
 planning/
+.agent-workspace/
 
 # Coverage reports
 backend/.coverage
