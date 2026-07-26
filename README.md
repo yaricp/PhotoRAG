@@ -7,10 +7,10 @@ A local-first desktop app that catalogs your photo library with AI: vision-model
 ## Architecture
 
 - **Frontend** — Electron + React/TypeScript ([electron-vite](https://electron-vite.org/)). The Electron main process spawns the backend, picks a free port from 8000 upward, and polls `GET /api/system/status/` until it is healthy (`frontend/electron/main/backend.ts`). Runtime logs go to `photorag.log` in the Electron `userData` dir.
-- **Backend** — Python 3.13 + FastAPI (`backend/src/main.py`), started by `backend/run.py`, which also launches one [Huey](https://github.com/coleifer/huey) worker per pipeline stage (vision, CLIP, embedding, translation, OCR, folder scan — `backend/src/queues/`), each with its own SQLite queue storage.
+- **Backend** — Python 3.13 + FastAPI (`backend/src/main.py`), started by `backend/run.py`, which also launches a [Huey](https://github.com/coleifer/huey) worker for every pipeline stage running in `local` mode (vision, CLIP, embedding, translation, OCR — plus folder scan, which always runs; `backend/src/queues/`), each with its own SQLite queue storage.
 - **Storage** — SQLite only, with the [sqlite-vec](https://github.com/asg017/sqlite-vec) extension for vector search. WAL mode and a 30 s busy timeout are set on every connection (`backend/src/db/database.py`).
 - **AI models** — each stage runs `local` or `remote` (per-type `*_MODE` settings in `backend/src/config.py`, overridable at runtime via the `ai_model_configs` table):
-  - Local defaults: Qwen2-VL (descriptions), OpenCLIP (tags), nomic-embed (search), NLLB (translation), TrOCR/EasyOCR (text).
+  - Local defaults: Qwen2-VL (descriptions), OpenCLIP (tags), nomic-embed (search), NLLB (translation), EasyOCR (text).
   - Remote: any provider supported by LangChain `init_chat_model` (OpenAI, Anthropic, Google, Ollama, Groq, Mistral, Together, Cohere, or any OpenAI-compatible `base_url`). In remote mode, OCR and CLIP tagging are performed by a vision-capable LLM with structured prompts (`backend/src/model_services.py`).
 - **AI agent** — LangGraph-based chat agent with photo-library tools (`backend/src/graphs/`).
 
@@ -46,8 +46,8 @@ Run `make` with no arguments to list all targets.
 | `make init-db` | Create the backend DB schema (first run; `APP_DATA_DIR=<dir>` to override) |
 | `make lint` / `make format` | Ruff + ESLint / ruff format (black-style) |
 | `make test`, `test-backend`, `test-frontend` | Test suites |
-| `make dev`, `dev-backend` | Full app / standalone API |
-| `make ci` | Mirror the GitHub Actions jobs locally before pushing |
+| `make dev`, `dev-backend`, `dev-frontend` | Full app / standalone API / alias for `dev` |
+| `make ci`, `ci-backend`, `ci-frontend` | Mirror the GitHub Actions jobs locally before pushing |
 | `make e2e` | Playwright renderer tests (`npx playwright install` once beforehand) |
 | `make openspec-setup` | Install/refresh the OpenSpec CLI |
 | `make clean` | Delete venv, node_modules, and caches to reclaim disk |
@@ -60,7 +60,7 @@ Run `make` with no arguments to list all targets.
 
 ## Testing notes
 
-- **Backend** (~400 tests): heavy-ML tests (28 files needing torch/easyocr/open-clip) are excluded automatically via `conftest.collect_ignore`; the remaining tests mock heavy modules. CI installs the lightweight `backend/requirements-ci.txt` and enforces a 42% coverage floor.
+- **Backend** (~400 tests): heavy-ML tests (25 files needing torch/easyocr/open-clip) are excluded automatically via `conftest.collect_ignore`; the remaining tests mock heavy modules. CI installs the lightweight `backend/requirements-ci.txt` and enforces a 42% coverage floor.
 - **Frontend** (~240 tests): vitest + Testing Library; `make ci-frontend` adds the coverage run.
 - **E2E**: Playwright against the built renderer.
 

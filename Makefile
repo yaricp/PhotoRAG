@@ -14,7 +14,7 @@ VITEST   := node --require ./scripts/crypto-polyfill.cjs ./node_modules/.bin/vit
         ci ci-backend ci-frontend e2e clean
 
 help: ## List available targets
-	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  \033[1m%-16s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-z0-9-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  \033[1m%-16s\033[0m %s\n", $$1, $$2}'
 
 init: ## Install all dependencies (backend uv sync + frontend npm install + git hooks)
 	cd $(BACKEND) && uv sync
