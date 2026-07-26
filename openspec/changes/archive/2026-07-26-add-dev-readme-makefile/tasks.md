@@ -12,4 +12,4 @@
 ## 3. Review & completion
 - [x] 3.1 Code review of the diff
 - [x] 3.2 security-review before merge
-- [ ] 3.3 Merge per user choice; archive change
+- [x] 3.3 Merge per user choice; archive change
