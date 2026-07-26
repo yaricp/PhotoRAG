@@ -14,11 +14,6 @@ from unittest.mock import MagicMock, patch
 
 import sqlalchemy.types
 
-mock_pgvector = MagicMock()
-mock_pgvector.sqlalchemy.Vector = lambda size: sqlalchemy.types.JSON()
-sys.modules.setdefault("pgvector", mock_pgvector)
-sys.modules.setdefault("pgvector.sqlalchemy", mock_pgvector.sqlalchemy)
-
 # Native extensions and heavy deps unavailable in the test environment
 for _mod in [
     "sqlite_vec",

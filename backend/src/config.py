@@ -33,7 +33,6 @@ class TaskQueue_Settings(BaseSettings):
 
 
 class Database_Settings(BaseSettings):
-    DATABASE_DIALECT: str = "sqlite"
     DATABASE_NAME: str = str(_APP_DATA_DIR / "db.sqlite3")
     TASK_RESULTS_DATABASE_NAME: str = str(_APP_DATA_DIR / "task_results.db")
 

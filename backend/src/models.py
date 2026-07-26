@@ -15,12 +15,6 @@ from sqlalchemy import (
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
-try:
-    from pgvector.sqlalchemy import Vector  # noqa: F401
-except ImportError:
-    pass
-
-
 Base = declarative_base()
 
 

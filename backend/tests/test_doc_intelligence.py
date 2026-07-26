@@ -7,8 +7,6 @@ from src.models import Photo
 from src.tasks.vision_tasks import is_this_document_task, ocr_task
 
 # MOCK setup
-sys.modules["pgvector"] = MagicMock()
-sys.modules["pgvector.sqlalchemy"] = MagicMock()
 
 
 @pytest.fixture

@@ -1,18 +1,11 @@
+# ATOMIC MOCK
+import os
 import sys
 from unittest.mock import MagicMock, patch
 
-import sqlalchemy.types
-
-# ATOMIC MOCK
-mock_pgvector = MagicMock()
-mock_pgvector.sqlalchemy.Vector = lambda size: sqlalchemy.types.JSON()
-sys.modules["pgvector"] = mock_pgvector
-sys.modules["pgvector.sqlalchemy"] = mock_pgvector.sqlalchemy
-
-import os
-
 import pytest
 import sqlalchemy.orm
+import sqlalchemy.types
 from sqlalchemy import create_engine
 
 from src.db_service import (
