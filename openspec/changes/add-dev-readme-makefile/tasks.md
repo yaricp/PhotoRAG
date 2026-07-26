@@ -10,6 +10,6 @@
 - [x] 2.2 Cross-check every command in README against actual Makefile/scripts
 
 ## 3. Review & completion
-- [ ] 3.1 Code review of the diff
-- [ ] 3.2 security-review before merge
+- [x] 3.1 Code review of the diff
+- [x] 3.2 security-review before merge
 - [ ] 3.3 Merge per user choice; archive change
