@@ -2,6 +2,8 @@
 
 A local-first desktop app that catalogs your photo library with AI: vision-model descriptions, OCR, CLIP tagging, semantic search, duplicate detection, and EXIF geo-mapping. Everything runs on your machine by default; remote model providers are optional.
 
+License: MIT (see [LICENSE](LICENSE); third-party components audited in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)).
+
 **This README is for developers and contributors.** End users: see [README-installer.md](README-installer.md) for installation guides.
 
 ## Architecture

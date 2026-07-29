@@ -1,10 +1,10 @@
 # Tasks: add-user-site-and-license
 
 ## 1. Licensing (recovered work)
-- [ ] 1.1 Cherry-pick commit `2328f2e` (LICENSE, THIRD-PARTY-NOTICES.md, SetupWizard NLLB-200 warning + i18n) onto this branch
-- [ ] 1.2 Add `License: MIT` line near the top of root README.md
-- [ ] 1.3 Add `license = "MIT"` to `backend/pyproject.toml`; add `"license": "MIT"` to `frontend/package.json` if missing
-- [ ] 1.4 Verify: frontend `vitest run` + `tsc --noEmit` green after the cherry-pick
+- [x] 1.1 Cherry-pick commit `2328f2e` (LICENSE, THIRD-PARTY-NOTICES.md, SetupWizard NLLB-200 warning + i18n) onto this branch
+- [x] 1.2 Add `License: MIT` line near the top of root README.md
+- [x] 1.3 Add `license = "MIT"` to `backend/pyproject.toml`; add `"license": "MIT"` to `frontend/package.json` if missing
+- [x] 1.4 Verify: frontend `vitest run` + `tsc --noEmit` green after the cherry-pick
 
 ## 2. Platform support documentation
 - [ ] 2.1 Open GitHub issue "Known issues: Windows/Linux installer problems" with `help wanted` label
