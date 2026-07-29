@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PhotoRAG — Your photos, described and searchable, locally</title>
+<meta name="description" content="A local-first desktop app that catalogs your photo library with AI: descriptions, OCR, semantic search, and duplicate detection. Your photos never leave your machine by default.">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="128x128" href="assets/favicon-128.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="hero">
+  <img class="hero-icon" src="assets/favicon-128.png" alt="" width="72" height="72">
+  <h1>PhotoRAG</h1>
+  <p class="tagline">Your photo library, described and searchable by AI — private by default, and fully under your control.</p>
+  <div class="hero-actions">
+    <a class="btn btn-primary" href="https://github.com/yaricp/PhotoRAG/releases/latest">Download latest release</a>
+    <a class="btn btn-secondary" href="https://github.com/yaricp/PhotoRAG">View source on GitHub</a>
+  </div>
+</header>
+
+<main>
+
+  <section class="features">
+    <h2>What it does</h2>
+    <ul class="feature-grid">
+      <li><strong>AI descriptions</strong><br>Every photo gets a natural-language description from a vision model.</li>
+      <li><strong>Text extraction (OCR)</strong><br>Finds and indexes text that appears inside your photos.</li>
+      <li><strong>Semantic search</strong><br>Search your library by meaning, not just filenames or tags.</li>
+      <li><strong>Duplicate detection</strong><br>Finds exact and near-duplicate photos automatically.</li>
+      <li><strong>Private by default</strong><br>Descriptions, tags, and search all run on your machine out of the box — your photos never leave your computer unless you explicitly choose otherwise.</li>
+      <li><strong>Your choice of AI</strong><br>Every AI capability (descriptions, tagging, search, translation, chat) can be switched independently between a local model and a remote provider you configure yourself (OpenAI, Anthropic, Ollama, and more) — you decide where your data goes.</li>
+    </ul>
+  </section>
+
+  <!-- screenshots: add here once available (tracked as a follow-up) -->
+
+  <section class="platform-matrix">
+    <h2>Platform support</h2>
+    <table>
+      <thead>
+        <tr><th>Platform</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>macOS (Universal: Intel + Apple Silicon)</td><td class="status-ok">✅ Tested and working</td></tr>
+        <tr><td>Windows x64 / arm64</td><td class="status-warn">⚠️ Installer builds; known issues after install</td></tr>
+        <tr><td>Linux x64</td><td class="status-warn">⚠️ Installer builds; known issues after install</td></tr>
+        <tr><td>Linux arm64</td><td class="status-fail">❌ Currently fails to build</td></tr>
+      </tbody>
+    </table>
+    <p class="matrix-note">
+      Windows/Linux problems are tracked in
+      <a href="https://github.com/yaricp/PhotoRAG/issues/11">issue #11</a> — help testing and fixing these is welcome.
+    </p>
+  </section>
+
+</main>
+
+<footer>
+  <p>
+    <a href="https://github.com/yaricp/PhotoRAG/blob/main/README-installer.md">Detailed installation instructions</a>
+    · <a href="https://github.com/yaricp/PhotoRAG/blob/main/LICENSE">MIT License</a>
+    · <a href="https://github.com/yaricp/PhotoRAG/issues/11">Known issues</a>
+  </p>
+</footer>
+
+</body>
+</html>

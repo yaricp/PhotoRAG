@@ -12,11 +12,11 @@
 - [x] 2.3 Add short caveats to `README-installer.md` Windows/Linux sections linking to the matrix/issue
 
 ## 3. User site
-- [ ] 3.1 Create `site/index.html`: hero + download button (→ `releases/latest`) + feature list + platform matrix + footer (link to README-installer.md and the known-issues issue)
-- [ ] 3.2 Create `site/styles.css`: responsive, system font stack, no external dependencies
-- [ ] 3.3 Add a favicon under `site/assets/` reused from the existing app icon
-- [ ] 3.4 Leave an HTML comment placeholder for a future screenshots section
-- [ ] 3.5 Verify: open `site/index.html` locally in a browser and confirm it renders with no console errors, links resolve to the right targets
+- [x] 3.1 Create `site/index.html`: hero + download button (→ `releases/latest`) + feature list + platform matrix + footer (link to README-installer.md and the known-issues issue)
+- [x] 3.2 Create `site/styles.css`: responsive, system font stack, no external dependencies
+- [x] 3.3 Add a favicon under `site/assets/` reused from the existing app icon
+- [x] 3.4 Leave an HTML comment placeholder for a future screenshots section
+- [x] 3.5 Verify: open `site/index.html` locally in a browser and confirm it renders with no console errors, links resolve to the right targets
 
 ## 4. CI/CD deploy
 - [ ] 4.1 Add `.github/workflows/pages.yml` (configure-pages → upload-pages-artifact → deploy-pages), triggers: push to `main` path-filtered to `site/**`, plus `workflow_dispatch`
