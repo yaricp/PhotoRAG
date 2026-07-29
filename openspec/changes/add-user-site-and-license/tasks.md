@@ -23,7 +23,7 @@
 - [x] 4.2 Validate workflow YAML (actionlint or manual review); note that `deploy-pages` cannot succeed until the repository is public and Pages is enabled (Free plan limitation) — this is a separate follow-up requiring explicit user approval, not part of this change
 
 ## 5. README updates
-- [ ] 5.1 Replace the root README's `README-installer.md` link with "📖 User Guide" pointing at the site URL (`https://yaricp.github.io/PhotoRAG/`)
+- [x] 5.1 Replace the root README's `README-installer.md` link with "📖 User Guide" pointing at the site URL (`https://yaricp.github.io/PhotoRAG/`)
 
 ## 6. Review & completion
 - [ ] 6.1 Code review of the full diff
