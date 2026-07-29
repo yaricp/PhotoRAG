@@ -26,6 +26,6 @@
 - [x] 5.1 Replace the root README's `README-installer.md` link with "📖 User Guide" pointing at the site URL (`https://yaricp.github.io/PhotoRAG/`)
 
 ## 6. Review & completion
-- [ ] 6.1 Code review of the full diff
-- [ ] 6.2 security-review before merge
+- [x] 6.1 Code review of the full diff
+- [x] 6.2 security-review before merge
 - [ ] 6.3 Merge per user choice; archive change
