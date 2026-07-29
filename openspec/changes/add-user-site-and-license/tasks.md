@@ -28,4 +28,4 @@
 ## 6. Review & completion
 - [x] 6.1 Code review of the full diff
 - [x] 6.2 security-review before merge
-- [ ] 6.3 Merge per user choice; archive change
+- [x] 6.3 Merge per user choice; archive change
