@@ -14,6 +14,50 @@ permissions:
   contents: write
 
 jobs:
+  cleanup-old-releases:
+    name: Delete installer binaries from old releases
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Keep only the current and previous release's binaries
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CURRENT_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+
+          ALL_RELEASES=$(gh release list --json tagName,publishedAt)
+
+          OTHERS=$(echo "$ALL_RELEASES" | jq -r --arg current "$CURRENT_TAG" \
+            'map(select(.tagName != $current)) | sort_by(.publishedAt) | reverse | .[].tagName')
+
+          if [ -z "$OTHERS" ]; then
+            echo "No other releases exist — nothing to do."
+            exit 0
+          fi
+
+          PROTECTED_PREVIOUS=$(echo "$OTHERS" | head -1)
+          echo "Current release: $CURRENT_TAG"
+          echo "Protected previous release: $PROTECTED_PREVIOUS"
+
+          TO_CLEAN=$(echo "$OTHERS" | tail -n +2)
+          if [ -z "$TO_CLEAN" ]; then
+            echo "Only one other release exists — nothing older to clean."
+            exit 0
+          fi
+
+          echo "$TO_CLEAN" | while read -r tag; do
+            assets=$(gh release view "$tag" --json assets --jq '.assets[].name')
+            if [ -z "$assets" ]; then
+              echo "$tag: no assets to delete"
+              continue
+            fi
+            echo "$assets" | while read -r asset; do
+              echo "Deleting $asset from release $tag"
+              gh release delete-asset "$tag" "$asset" -y
+            done
+          done
+
   build:
     name: Build ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
