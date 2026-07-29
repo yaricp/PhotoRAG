@@ -19,8 +19,8 @@
 - [x] 3.5 Verify: open `site/index.html` locally in a browser and confirm it renders with no console errors, links resolve to the right targets
 
 ## 4. CI/CD deploy
-- [ ] 4.1 Add `.github/workflows/pages.yml` (configure-pages → upload-pages-artifact → deploy-pages), triggers: push to `main` path-filtered to `site/**`, plus `workflow_dispatch`
-- [ ] 4.2 Validate workflow YAML (actionlint or manual review); note that `deploy-pages` cannot succeed until the repository is public and Pages is enabled (Free plan limitation) — this is a separate follow-up requiring explicit user approval, not part of this change
+- [x] 4.1 Add `.github/workflows/pages.yml` (configure-pages → upload-pages-artifact → deploy-pages), triggers: push to `main` path-filtered to `site/**`, plus `workflow_dispatch`
+- [x] 4.2 Validate workflow YAML (actionlint or manual review); note that `deploy-pages` cannot succeed until the repository is public and Pages is enabled (Free plan limitation) — this is a separate follow-up requiring explicit user approval, not part of this change
 
 ## 5. README updates
 - [ ] 5.1 Replace the root README's `README-installer.md` link with "📖 User Guide" pointing at the site URL (`https://yaricp.github.io/PhotoRAG/`)
