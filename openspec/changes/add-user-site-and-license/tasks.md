@@ -7,9 +7,9 @@
 - [x] 1.4 Verify: frontend `vitest run` + `tsc --noEmit` green after the cherry-pick
 
 ## 2. Platform support documentation
-- [ ] 2.1 Open GitHub issue "Known issues: Windows/Linux installer problems" with `help wanted` label
-- [ ] 2.2 Write the platform status matrix content (macOS working; Windows/Linux x64 build-but-issues; Linux arm64 build failure) referencing the issue
-- [ ] 2.3 Add short caveats to `README-installer.md` Windows/Linux sections linking to the matrix/issue
+- [x] 2.1 Open GitHub issue "Known issues: Windows/Linux installer problems" with `help wanted` label
+- [x] 2.2 Write the platform status matrix content (macOS working; Windows/Linux x64 build-but-issues; Linux arm64 build failure) referencing the issue
+- [x] 2.3 Add short caveats to `README-installer.md` Windows/Linux sections linking to the matrix/issue
 
 ## 3. User site
 - [ ] 3.1 Create `site/index.html`: hero + download button (→ `releases/latest`) + feature list + platform matrix + footer (link to README-installer.md and the known-issues issue)

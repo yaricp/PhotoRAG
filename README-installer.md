@@ -1,5 +1,7 @@
 # PhotoDescriber2 — macOS Installation Guide
 
+> **Platform status:** macOS is tested and working. Windows and Linux installers build successfully but have known post-install issues — see the [platform support matrix](https://yaricp.github.io/PhotoRAG/) and [tracking issue](https://github.com/yaricp/PhotoRAG/issues/11) before installing on those platforms. This guide currently only covers macOS in detail.
+
 ## System Requirements
 
 | | Minimum |
