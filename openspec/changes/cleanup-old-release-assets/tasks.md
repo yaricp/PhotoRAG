@@ -9,6 +9,6 @@
 - [x] 2.3 Validate the modified workflow with `actionlint`
 
 ## 3. Review & completion
-- [ ] 3.1 Code review of the diff
+- [x] 3.1 Code review of the diff
 - [ ] 3.2 security-review before merge
 - [ ] 3.3 Merge per user choice; archive change

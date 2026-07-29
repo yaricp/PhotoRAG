@@ -26,7 +26,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          ALL_RELEASES=$(gh release list --json tagName,publishedAt)
+          ALL_RELEASES=$(gh release list --exclude-drafts --exclude-pre-releases --json tagName,publishedAt)
 
           OTHERS=$(echo "$ALL_RELEASES" | jq -r --arg current "$CURRENT_TAG" \
             'map(select(.tagName != $current)) | sort_by(.publishedAt) | reverse | .[].tagName')
@@ -54,7 +54,7 @@ jobs:
             fi
             echo "$assets" | while read -r asset; do
               echo "Deleting $asset from release $tag"
-              gh release delete-asset "$tag" "$asset" -y
+              gh release delete-asset "$tag" "$asset" -y || echo "  WARNING: failed to delete $asset from $tag (will retry on next release)"
             done
           done
 
