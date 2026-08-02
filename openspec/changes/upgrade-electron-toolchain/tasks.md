@@ -1,8 +1,8 @@
 # Tasks: upgrade-electron-toolchain
 
 ## 1. Bump dependencies
-- [ ] 1.1 Bump `electron`, `electron-builder`, `electron-vite` to latest stable in `frontend/package.json`; `npm install`
-- [ ] 1.2 `make ci-frontend` (lint + type-check + vitest) green
+- [x] 1.1 Bump `electron`, `electron-builder`, `electron-vite` to latest stable in `frontend/package.json`; `npm install`
+- [x] 1.2 `make ci-frontend` (lint + type-check + vitest) green
 
 ## 2. Local macOS build verification (the actual bug)
 - [ ] 2.1 `npm run dist:mac` builds successfully with the new toolchain
