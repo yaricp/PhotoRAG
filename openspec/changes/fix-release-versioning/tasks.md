@@ -7,9 +7,9 @@
 - [x] 1.4 Validate `release-please-config.json` and `.release-please-manifest.json` are well-formed JSON
 
 ## 2. One-time manual reconciliation
-- [ ] 2.1 Bump `frontend/package.json` `"version"` from `0.1.0` to `0.1.2`
-- [ ] 2.2 Bump `backend/pyproject.toml` `version` from `0.1.0` to `0.1.2`
-- [ ] 2.3 `make ci` still green after manual version bumps (version strings aren't consumed by app logic, but confirm no test asserts on them)
+- [x] 2.1 Bump `frontend/package.json` `"version"` from `0.1.0` to `0.1.2`
+- [x] 2.2 Bump `backend/pyproject.toml` `version` from `0.1.0` to `0.1.2`
+- [x] 2.3 `make ci` still green after manual version bumps (version strings aren't consumed by app logic, but confirm no test asserts on them)
 
 ## 3. Verification before touching GitHub
 - [ ] 3.1 Install the `release-please` CLI locally and dry-run it against this corrected config, if a non-mutating preview mode exists — confirm it would now propose bumping both `frontend/package.json` and `backend/pyproject.toml`
