@@ -18,4 +18,4 @@
 ## 5. Review & completion
 - [x] 5.1 Code review of the diff
 - [x] 5.2 security-review before merge
-- [ ] 5.3 Merge per user choice; archive change (release/publish is a separate later decision)
+- [x] 5.3 Merge per user choice; archive change (release/publish is a separate later decision)
