@@ -7,13 +7,13 @@
 ## 2. Local macOS build verification (the actual bug)
 - [x] 2.1 `npm run dist:mac` builds successfully with the new toolchain
 - [x] 2.2 Re-run the diagnostic from the original investigation: `codesign -dv --verbose=4` + `spctl -a -vvv -t execute` on the built app's main executable — confirm it no longer reports "notarization indicates this code has been revoked"
-- [ ] 2.3 Manual smoke test: launch the built `.app`, complete the setup wizard, confirm the backend spawns and the app reaches a working state
+- [x] 2.3 Manual smoke test: launch the built `.app`, complete the setup wizard, confirm the backend spawns and the app reaches a working state
 
 ## 3. Regression check
 - [ ] 3.1 Confirm Windows/Linux build jobs still succeed in CI with the new toolchain (not fixing their separate known issues — just confirming no new breakage)
 
 ## 4. Final acceptance (user's bar)
-- [ ] 4.1 Fresh install of the rebuilt `.dmg` on this Mac (mount, drag to Applications, launch) completes with zero system warnings
+- [x] 4.1 Fresh install of the rebuilt `.dmg` on this Mac (mount, drag to Applications, launch) completes with zero system warnings
 
 ## 5. Review & completion
 - [ ] 5.1 Code review of the diff
