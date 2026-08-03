@@ -4,6 +4,7 @@
       "release-type": "node",
       "package-name": "photorag",
       "bump-minor-pre-major": true,
+      "changelog-path": "/CHANGELOG.md",
       "extra-files": [
         {
           "type": "generic",
