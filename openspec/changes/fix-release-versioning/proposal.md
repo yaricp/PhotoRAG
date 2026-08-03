@@ -10,7 +10,7 @@ As a result, every past release-please run only ever bumped `.release-please-man
 
 ## What Changes
 
-- `release-please-config.json`: move the package key from `"."` to `"frontend"` (where `package.json` actually is); remove the non-functional `version-file` key; fix the `backend/pyproject.toml` extra-files entry to rely on an inline annotation instead of invented search/replace fields.
+- `release-please-config.json`: move the package key from `"."` to `"frontend"` (where `package.json` actually is); remove the non-functional `version-file` key; fix the `backend/pyproject.toml` extra-files entry to rely on an inline annotation instead of invented search/replace fields; pin `changelog-path` to `/CHANGELOG.md` — discovered mid-implementation via a live dry-run that, once the package moves off the repo root, release-please's default changelog path becomes package-directory-relative (`frontend/CHANGELOG.md`) unless rooted the same way as `extra-files`, which would have fragmented changelog history.
 - `backend/pyproject.toml`: add the `# x-release-please-version` annotation comment next to its `version` line.
 - `.release-please-manifest.json`: rename the package key from `"."` to `"frontend"` to match the corrected config.
 - One-time manual reconciliation: bump `frontend/package.json` and `backend/pyproject.toml` version fields from `0.1.0` to `0.1.2` by hand, so they match the true current state (the manifest/tags) before the next automated bump runs — otherwise the next release-please run would compute its bump from the wrong (stale `0.1.0`) baseline.

@@ -16,7 +16,7 @@
 - [ ] 3.2 If no safe local dry-run is possible, document why and rely on manually inspecting the bot's real PR diff before merging (task 5)
 
 ## 4. Review & merge the config fix
-- [ ] 4.1 Code review of the diff
+- [x] 4.1 Code review of the diff
 - [ ] 4.2 security-review before merge
 - [ ] 4.3 Merge per user choice; archive this change
 
