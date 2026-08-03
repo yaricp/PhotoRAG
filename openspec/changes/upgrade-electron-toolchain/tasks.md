@@ -10,7 +10,7 @@
 - [x] 2.3 Manual smoke test: launch the built `.app`, complete the setup wizard, confirm the backend spawns and the app reaches a working state
 
 ## 3. Regression check
-- [ ] 3.1 Confirm Windows/Linux build jobs still succeed in CI with the new toolchain (not fixing their separate known issues — just confirming no new breakage)
+- [x] 3.1 Confirm Windows/Linux build jobs still succeed in CI with the new toolchain (not fixing their separate known issues — just confirming no new breakage)
 
 ## 4. Final acceptance (user's bar)
 - [x] 4.1 Fresh install of the rebuilt `.dmg` on this Mac (mount, drag to Applications, launch) completes with zero system warnings
