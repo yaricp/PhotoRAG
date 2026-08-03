@@ -141,7 +141,7 @@
       "category": "Graphics",
       "artifactName": "${productName}-${version}-${arch}.${ext}"
     },
-    "afterSign": "../scripts/notarize.js",
+    "afterSign": "scripts/notarize.js",
     "files": [
       "out/**/*",
       "package.json"

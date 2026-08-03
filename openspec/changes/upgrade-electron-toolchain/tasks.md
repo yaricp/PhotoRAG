@@ -5,8 +5,8 @@
 - [x] 1.2 `make ci-frontend` (lint + type-check + vitest) green
 
 ## 2. Local macOS build verification (the actual bug)
-- [ ] 2.1 `npm run dist:mac` builds successfully with the new toolchain
-- [ ] 2.2 Re-run the diagnostic from the original investigation: `codesign -dv --verbose=4` + `spctl -a -vvv -t execute` on the built app's main executable — confirm it no longer reports "notarization indicates this code has been revoked"
+- [x] 2.1 `npm run dist:mac` builds successfully with the new toolchain
+- [x] 2.2 Re-run the diagnostic from the original investigation: `codesign -dv --verbose=4` + `spctl -a -vvv -t execute` on the built app's main executable — confirm it no longer reports "notarization indicates this code has been revoked"
 - [ ] 2.3 Manual smoke test: launch the built `.app`, complete the setup wizard, confirm the backend spawns and the app reaches a working state
 
 ## 3. Regression check
