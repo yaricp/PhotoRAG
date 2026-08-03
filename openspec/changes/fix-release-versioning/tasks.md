@@ -1,10 +1,10 @@
 # Tasks: fix-release-versioning
 
 ## 1. Fix release-please configuration
-- [ ] 1.1 `release-please-config.json`: change package key `"."` → `"frontend"`; remove `version-file`; fix `backend/pyproject.toml` extra-files entry to the real `generic` schema (drop invented `search-for`/`replace-with`)
-- [ ] 1.2 `backend/pyproject.toml`: add `# x-release-please-version` annotation on the `version` line
-- [ ] 1.3 `.release-please-manifest.json`: rename key `"."` → `"frontend"` (value stays `"0.1.2"`)
-- [ ] 1.4 Validate `release-please-config.json` and `.release-please-manifest.json` are well-formed JSON
+- [x] 1.1 `release-please-config.json`: change package key `"."` → `"frontend"`; remove `version-file`; fix `backend/pyproject.toml` extra-files entry to the real `generic` schema (drop invented `search-for`/`replace-with`)
+- [x] 1.2 `backend/pyproject.toml`: add `# x-release-please-version` annotation on the `version` line
+- [x] 1.3 `.release-please-manifest.json`: rename key `"."` → `"frontend"` (value stays `"0.1.2"`)
+- [x] 1.4 Validate `release-please-config.json` and `.release-please-manifest.json` are well-formed JSON
 
 ## 2. One-time manual reconciliation
 - [ ] 2.1 Bump `frontend/package.json` `"version"` from `0.1.0` to `0.1.2`

@@ -1,16 +1,13 @@
 {
   "packages": {
-    ".": {
+    "frontend": {
       "release-type": "node",
       "package-name": "photorag",
-      "version-file": "frontend/package.json",
       "bump-minor-pre-major": true,
       "extra-files": [
         {
           "type": "generic",
-          "path": "backend/pyproject.toml",
-          "search-for": "version = \"",
-          "replace-with": "version = \""
+          "path": "/backend/pyproject.toml"
         }
       ],
       "changelog-sections": [
