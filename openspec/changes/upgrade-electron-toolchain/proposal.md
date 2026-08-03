@@ -15,7 +15,7 @@ Root cause confirmed (2026-07-29, systematic debugging with reproducible evidenc
 ## Non-goals
 
 - Does not implement real Apple Developer ID signing/notarization.
-- Does not fix the separately-tracked Windows/Linux installer issues (GitHub issue #11) — CI must stay green for those platforms, but no active debugging of their runtime problems here.
+- Does not fix the separately-tracked Windows/Linux installer issues (GitHub issue #11) — the toolchain bump must not newly break Windows/Linux CI builds, but no active debugging of their existing runtime problems here. (Verified outcome: win-x64/win-arm64/linux-x64 build successfully; linux-arm64 still fails as before — a pre-existing issue whose failure signature changed with this bump, root-caused and documented on #11, not fixed here.)
 - Does not change the macOS "universal" (arm64+x64 fat binary) build strategy vs. per-architecture builds — a separate, unrelated decision, not revisited here.
 - Does not cut a new release (e.g., v0.1.3) — this change only merges the fix to `main`; releasing is a separate, later decision.
 

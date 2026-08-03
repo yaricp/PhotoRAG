@@ -10,12 +10,12 @@
 - [x] 2.3 Manual smoke test: launch the built `.app`, complete the setup wizard, confirm the backend spawns and the app reaches a working state
 
 ## 3. Regression check
-- [x] 3.1 Confirm Windows/Linux build jobs still succeed in CI with the new toolchain (not fixing their separate known issues — just confirming no new breakage)
+- [x] 3.1 Confirm Windows/Linux build jobs don't newly break in CI with the new toolchain: win-x64, win-arm64, linux-x64 succeed. linux-arm64 still fails (pre-existing, tracked in #11) — the failure *signature* changed (`ERR_ELECTRON_BUILDER_CANNOT_EXECUTE` → `spawn snapcraft ENOENT`) due to electron-builder 26's changed default-target fallback for architectures not covered by the repo's hardcoded `linux.target[0].arch: ["x64"]` config; root cause investigated and documented on issue #11, not fixed here (out of scope)
 
 ## 4. Final acceptance (user's bar)
 - [x] 4.1 Fresh install of the rebuilt `.dmg` on this Mac (mount, drag to Applications, launch) completes with zero system warnings
 
 ## 5. Review & completion
-- [ ] 5.1 Code review of the diff
+- [x] 5.1 Code review of the diff
 - [ ] 5.2 security-review before merge
 - [ ] 5.3 Merge per user choice; archive change (release/publish is a separate later decision)
