@@ -17,7 +17,7 @@
 
 ## 4. Review & merge the config fix
 - [x] 4.1 Code review of the diff
-- [ ] 4.2 security-review before merge
+- [x] 4.2 security-review before merge
 - [ ] 4.3 Merge per user choice; archive this change
 
 ## 5. Cut the real release (after the config fix is on main)
