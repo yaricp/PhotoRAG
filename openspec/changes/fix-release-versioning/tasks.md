@@ -12,7 +12,7 @@
 - [x] 2.3 `make ci` still green after manual version bumps (version strings aren't consumed by app logic, but confirm no test asserts on them)
 
 ## 3. Verification before touching GitHub
-- [ ] 3.1 Install the `release-please` CLI locally and dry-run it against this corrected config, if a non-mutating preview mode exists — confirm it would now propose bumping both `frontend/package.json` and `backend/pyproject.toml`
+- [x] 3.1 Install the `release-please` CLI locally and dry-run it against this corrected config, if a non-mutating preview mode exists — confirm it would now propose bumping both `frontend/package.json` and `backend/pyproject.toml`
 - [ ] 3.2 If no safe local dry-run is possible, document why and rely on manually inspecting the bot's real PR diff before merging (task 5)
 
 ## 4. Review & merge the config fix
