@@ -19,45 +19,46 @@
   </nav>
   <img class="hero-icon" src="assets/favicon-128.png" alt="" width="72" height="72">
   <h1>PhotoRAG</h1>
-  <p class="tagline">Your photo library, described and searchable by AI — private by default, and fully under your control.</p>
+  <p class="tagline" data-i18n="hero.tagline">Your photo library, described and searchable by AI — private by default, and fully under your control.</p>
   <div class="hero-actions">
-    <a class="btn btn-primary" href="https://github.com/yaricp/PhotoRAG/releases/latest">Download latest release</a>
-    <a class="btn btn-secondary" href="https://github.com/yaricp/PhotoRAG">View source on GitHub</a>
+    <a class="btn btn-primary" href="https://github.com/yaricp/PhotoRAG/releases/latest" data-i18n="hero.download">Download latest release</a>
+    <a class="btn btn-secondary" href="https://github.com/yaricp/PhotoRAG" data-i18n="hero.source">View source on GitHub</a>
   </div>
 </header>
 
 <main>
 
   <section class="features">
-    <h2>What it does</h2>
+    <h2 data-i18n="about.title">About</h2>
     <ul class="feature-grid">
-      <li><strong>AI descriptions</strong><br>Every photo gets a natural-language description from a vision model.</li>
-      <li><strong>Text extraction (OCR)</strong><br>Finds and indexes text that appears inside your photos.</li>
-      <li><strong>Semantic search</strong><br>Search your library by meaning, not just filenames or tags.</li>
-      <li><strong>Duplicate detection</strong><br>Finds exact and near-duplicate photos automatically.</li>
-      <li><strong>Private by default</strong><br>Descriptions, tags, and search all run on your machine out of the box — your photos never leave your computer unless you explicitly choose otherwise.</li>
-      <li><strong>Your choice of AI</strong><br>Every AI capability (descriptions, tagging, search, translation, chat) can be switched independently between a local model and a remote provider you configure yourself (OpenAI, Anthropic, Ollama, and more) — you decide where your data goes.</li>
+      <li><strong data-i18n="about.f1_title">AI descriptions</strong><br><span data-i18n="about.f1_desc">Every photo gets a natural-language description from a vision model.</span></li>
+      <li><strong data-i18n="about.f2_title">Text extraction (OCR)</strong><br><span data-i18n="about.f2_desc">Finds and indexes text that appears inside your photos.</span></li>
+      <li><strong data-i18n="about.f3_title">Semantic search</strong><br><span data-i18n="about.f3_desc">Search your library by meaning, not just filenames or tags.</span></li>
+      <li><strong data-i18n="about.f4_title">Duplicate detection</strong><br><span data-i18n="about.f4_desc">Finds exact and near-duplicate photos automatically.</span></li>
+      <li><strong data-i18n="about.f5_title">Private by default</strong><br><span data-i18n="about.f5_desc">Descriptions, tags, and search all run on your machine out of the box — your photos never leave your computer unless you explicitly choose otherwise.</span></li>
+      <li><strong data-i18n="about.f6_title">Your choice of AI</strong><br><span data-i18n="about.f6_desc">Every AI capability (descriptions, tagging, search, translation, chat) can be switched independently between a local model and a remote provider you configure yourself (OpenAI, Anthropic, Ollama, and more) — you decide where your data goes.</span></li>
     </ul>
   </section>
 
   <!-- screenshots: add here once available (tracked as a follow-up) -->
 
   <section class="platform-matrix">
-    <h2>Platform support</h2>
+    <h2 data-i18n="platform.title">Platform support</h2>
     <table>
       <thead>
-        <tr><th>Platform</th><th>Status</th></tr>
+        <tr><th data-i18n="platform.colPlatform">Platform</th><th data-i18n="platform.colStatus">Status</th></tr>
       </thead>
       <tbody>
-        <tr><td>macOS (Universal: Intel + Apple Silicon)</td><td class="status-ok">✅ Tested and working</td></tr>
-        <tr><td>Windows x64 / arm64</td><td class="status-warn">⚠️ Installer builds; known issues after install</td></tr>
-        <tr><td>Linux x64</td><td class="status-warn">⚠️ Installer builds; known issues after install</td></tr>
-        <tr><td>Linux arm64</td><td class="status-fail">❌ Currently fails to build</td></tr>
+        <tr><td data-i18n="platform.mac">macOS (Universal: Intel + Apple Silicon)</td><td class="status-ok" data-i18n="platform.macStatus">✅ Tested and working</td></tr>
+        <tr><td data-i18n="platform.win">Windows x64 / arm64</td><td class="status-warn" data-i18n="platform.winStatus">⚠️ Installer builds; known issues after install</td></tr>
+        <tr><td data-i18n="platform.linux">Linux x64</td><td class="status-warn" data-i18n="platform.linuxStatus">⚠️ Installer builds; known issues after install</td></tr>
+        <tr><td data-i18n="platform.linuxarm64">Linux arm64</td><td class="status-fail" data-i18n="platform.linuxarm64Status">❌ Currently fails to build</td></tr>
       </tbody>
     </table>
     <p class="matrix-note">
-      Windows/Linux problems are tracked in
-      <a href="https://github.com/yaricp/PhotoRAG/issues/11">issue #11</a> — help testing and fixing these is welcome.
+      <span data-i18n="platform.notePrefix">Windows/Linux problems are tracked in</span>
+      <a href="https://github.com/yaricp/PhotoRAG/issues/11" data-i18n="platform.noteLink">issue #11</a>
+      <span data-i18n="platform.noteSuffix">— help testing and fixing these is welcome.</span>
     </p>
   </section>
 
@@ -65,9 +66,9 @@
 
 <footer>
   <p>
-    <a href="https://github.com/yaricp/PhotoRAG/blob/main/README-installer.md">Detailed installation instructions</a>
-    · <a href="https://github.com/yaricp/PhotoRAG/blob/main/LICENSE">MIT License</a>
-    · <a href="https://github.com/yaricp/PhotoRAG/issues/11">Known issues</a>
+    <a href="https://github.com/yaricp/PhotoRAG/blob/main/README-installer.md" data-i18n="footer.installGuide">Detailed installation instructions</a>
+    · <a href="https://github.com/yaricp/PhotoRAG/blob/main/LICENSE" data-i18n="footer.license">MIT License</a>
+    · <a href="https://github.com/yaricp/PhotoRAG/issues/11" data-i18n="footer.issues">Known issues</a>
   </p>
 </footer>
 
