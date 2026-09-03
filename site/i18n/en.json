@@ -1,0 +1,72 @@
+{
+  "meta": { "langLabel": "Language" },
+  "hero": {
+    "tagline": "Your photo library, described and searchable by AI — private by default, and fully under your control.",
+    "download": "Download latest release",
+    "source": "View source on GitHub"
+  },
+  "about": {
+    "title": "About",
+    "f1_title": "AI descriptions",
+    "f1_desc": "Every photo gets a natural-language description from a vision model.",
+    "f2_title": "Text extraction (OCR)",
+    "f2_desc": "Finds and indexes text that appears inside your photos.",
+    "f3_title": "Semantic search",
+    "f3_desc": "Search your library by meaning, not just filenames or tags.",
+    "f4_title": "Duplicate detection",
+    "f4_desc": "Finds exact and near-duplicate photos automatically.",
+    "f5_title": "Private by default",
+    "f5_desc": "Descriptions, tags, and search all run on your machine out of the box — your photos never leave your computer unless you explicitly choose otherwise.",
+    "f6_title": "Your choice of AI",
+    "f6_desc": "Every AI capability (descriptions, tagging, search, translation, chat) can be switched independently between a local model and a remote provider you configure yourself (OpenAI, Anthropic, Ollama, and more) — you decide where your data goes."
+  },
+  "download": {
+    "title": "Download & Install",
+    "intro": "Download the installer for your platform from the latest release, then follow the steps below.",
+    "colPlatform": "Platform",
+    "colFile": "Installer file",
+    "mac": "macOS (Intel + Apple Silicon)",
+    "winx64": "Windows x64",
+    "winarm64": "Windows arm64",
+    "linuxx64": "Linux x64",
+    "linuxarm64": "Linux arm64",
+    "linuxarm64Status": "Not available yet — build currently fails, tracked in",
+    "linuxarm64Link": "the tracking issue",
+    "releaseLink": "Go to the latest release"
+  },
+  "gettingStarted": {
+    "title": "Getting Started",
+    "step1_title": "1. Install",
+    "step1_desc": "Download the file for your platform above, then open it. On macOS, if you see a warning that the app is from an unidentified developer, right-click the app and choose Open.",
+    "step1_linkText": "Full installation walkthrough",
+    "step2_title": "2. First launch — Setup Wizard",
+    "step2_desc": "On first launch, the Setup Wizard walks you through choosing which AI models to install. You can skip optional models and download them later from Settings.",
+    "step3_title": "3. Configure Settings and Models",
+    "step3_desc": "Open Settings to set your language and default photo folder. Open Models to choose which AI capabilities are active — descriptions, tagging, search, translation, and OCR.",
+    "step4_title": "4. Add your photos: Watcher or Scan",
+    "step4_desc": "On the Folders page, add a Watcher to automatically process new photos as they arrive in a folder (ideal for syncing from your phone), or run a one-time Scan to process an existing folder of photos.",
+    "step5_title": "5. See the results",
+    "step5_desc": "Track progress on the Processing page, then browse your described, searchable library in the Gallery."
+  },
+  "platform": {
+    "title": "Platform support",
+    "colPlatform": "Platform",
+    "colStatus": "Status",
+    "mac": "macOS (Universal: Intel + Apple Silicon)",
+    "macStatus": "✅ Tested and working",
+    "win": "Windows x64 / arm64",
+    "winStatus": "⚠️ Installer builds; known issues after install",
+    "linux": "Linux x64",
+    "linuxStatus": "⚠️ Installer builds; known issues after install",
+    "linuxarm64": "Linux arm64",
+    "linuxarm64Status": "❌ Currently fails to build",
+    "notePrefix": "Windows/Linux problems are tracked in",
+    "noteLink": "issue #11",
+    "noteSuffix": "— help testing and fixing these is welcome."
+  },
+  "footer": {
+    "installGuide": "Detailed installation instructions",
+    "license": "MIT License",
+    "issues": "Known issues"
+  }
+}

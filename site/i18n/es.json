@@ -1,0 +1,72 @@
+{
+  "meta": { "langLabel": "Idioma" },
+  "hero": {
+    "tagline": "Tu biblioteca de fotos, descrita y buscable con IA — privada por defecto y totalmente bajo tu control.",
+    "download": "Descargar última versión",
+    "source": "Ver código fuente en GitHub"
+  },
+  "about": {
+    "title": "Acerca de",
+    "f1_title": "Descripciones con IA",
+    "f1_desc": "Cada foto recibe una descripción en lenguaje natural generada por un modelo de visión.",
+    "f2_title": "Extracción de texto (OCR)",
+    "f2_desc": "Encuentra e indexa el texto que aparece dentro de tus fotos.",
+    "f3_title": "Búsqueda semántica",
+    "f3_desc": "Busca en tu biblioteca por significado, no solo por nombres de archivo o etiquetas.",
+    "f4_title": "Detección de duplicados",
+    "f4_desc": "Encuentra automáticamente fotos duplicadas o casi idénticas.",
+    "f5_title": "Privacidad por defecto",
+    "f5_desc": "Las descripciones, etiquetas y búsquedas se ejecutan en tu equipo de forma predeterminada — tus fotos nunca salen de tu ordenador a menos que tú lo decidas.",
+    "f6_title": "Tú eliges la IA",
+    "f6_desc": "Cada función de IA (descripciones, etiquetado, búsqueda, traducción, chat) puede alternarse de forma independiente entre un modelo local y un proveedor remoto que configures tú mismo (OpenAI, Anthropic, Ollama y otros) — tú decides adónde van tus datos."
+  },
+  "download": {
+    "title": "Descarga e instalación",
+    "intro": "Descarga el instalador para tu plataforma desde la última versión y sigue los pasos a continuación.",
+    "colPlatform": "Plataforma",
+    "colFile": "Archivo del instalador",
+    "mac": "macOS (Intel + Apple Silicon)",
+    "winx64": "Windows x64",
+    "winarm64": "Windows arm64",
+    "linuxx64": "Linux x64",
+    "linuxarm64": "Linux arm64",
+    "linuxarm64Status": "Aún no disponible — la compilación falla actualmente, seguimiento en",
+    "linuxarm64Link": "el issue de seguimiento",
+    "releaseLink": "Ir a la última versión"
+  },
+  "gettingStarted": {
+    "title": "Primeros pasos",
+    "step1_title": "1. Instalar",
+    "step1_desc": "Descarga el archivo para tu plataforma y ábrelo. En macOS, si aparece un aviso de desarrollador no identificado, haz clic derecho en la app y elige Abrir.",
+    "step1_linkText": "Guía de instalación completa",
+    "step2_title": "2. Primer inicio — Asistente de configuración",
+    "step2_desc": "En el primer inicio, el Asistente de configuración te guía para elegir qué modelos de IA instalar. Puedes omitir los modelos opcionales y descargarlos más tarde desde Ajustes.",
+    "step3_title": "3. Configura Ajustes y Modelos",
+    "step3_desc": "Abre Ajustes para establecer tu idioma y la carpeta de fotos predeterminada. Abre Modelos para elegir qué funciones de IA están activas — descripciones, etiquetado, búsqueda, traducción y OCR.",
+    "step4_title": "4. Añade tus fotos: Watcher o Scan",
+    "step4_desc": "En la página Carpetas, añade un Watcher para procesar automáticamente las fotos nuevas que lleguen a una carpeta (ideal para sincronizar desde tu teléfono), o ejecuta un Scan puntual para procesar una carpeta ya existente.",
+    "step5_title": "5. Ver los resultados",
+    "step5_desc": "Sigue el progreso en la página Procesamiento y luego explora tu biblioteca descrita y buscable en la Galería."
+  },
+  "platform": {
+    "title": "Compatibilidad de plataformas",
+    "colPlatform": "Plataforma",
+    "colStatus": "Estado",
+    "mac": "macOS (Universal: Intel + Apple Silicon)",
+    "macStatus": "✅ Probado y funcionando",
+    "win": "Windows x64 / arm64",
+    "winStatus": "⚠️ El instalador se genera; hay problemas conocidos tras la instalación",
+    "linux": "Linux x64",
+    "linuxStatus": "⚠️ El instalador se genera; hay problemas conocidos tras la instalación",
+    "linuxarm64": "Linux arm64",
+    "linuxarm64Status": "❌ La compilación falla actualmente",
+    "notePrefix": "Los problemas de Windows/Linux se siguen en",
+    "noteLink": "el issue #11",
+    "noteSuffix": "— la ayuda para probar y corregirlos es bienvenida."
+  },
+  "footer": {
+    "installGuide": "Instrucciones de instalación detalladas",
+    "license": "Licencia MIT",
+    "issues": "Problemas conocidos"
+  }
+}
