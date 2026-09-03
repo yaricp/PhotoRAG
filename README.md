@@ -2,7 +2,7 @@
 
 A local-first desktop app that catalogs your photo library with AI: vision-model descriptions, OCR, CLIP tagging, semantic search, duplicate detection, and EXIF geo-mapping. Everything runs on your machine by default; remote model providers are optional.
 
-License: MIT (see [LICENSE](LICENSE); third-party components audited in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)).
+License: MIT (see [LICENSE](LICENSE); third-party components and AI model licenses audited in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)). The MIT license covers the PhotoRAG application code only — any model you select or download (bundled default, local, or remote) carries its own license, and you are responsible for complying with it.
 
 **This README is for developers and contributors.** End users: see the 📖 [User Guide](https://yaricp.github.io/PhotoRAG/) for downloads and installation instructions.
 
