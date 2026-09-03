@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.1.3](https://github.com/yaricp/PhotoRAG/compare/photorag-v0.1.2...photorag-v0.1.3) (2026-09-03)
+
+
+### Features
+
+* add MIT license, third-party notices, and static user site with GitHub Pages deploy
+* point README at the live user site instead of the raw installer guide
+
+### Bug Fixes
+
+* replace leaked OpenAI key in backend/.env.example with a placeholder
+
+### Build System
+
+* upgrade Electron 31→43, electron-builder 24→26, electron-vite 2→5
+* remove dead Postgres code path; backend is SQLite-only
+* remove unused dependencies and add contributor README/Makefile
+* auto-delete old release binaries when a new release is published
+* temporarily disable the linux-arm64 installer build (snapcraft unavailable in CI)
+
 ## [0.1.2](https://github.com/yaricp/PhotoRAG/compare/photorag-v0.1.1...photorag-v0.1.2) (2026-06-21)
 
 
