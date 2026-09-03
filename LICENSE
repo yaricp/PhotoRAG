@@ -19,22 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----
-
-IMPORTANT NOTICE — THIRD-PARTY MODEL LICENSE RESTRICTION
-=========================================================
-
-This Software, when used with the default translation model
-"facebook/nllb-200-distilled-600M", is subject to the
-Creative Commons Attribution-NonCommercial 4.0 International License
-(CC BY-NC 4.0) imposed by Meta AI on that model.
-
-This means that use of PhotoRAG with the default NLLB-200 translation model
-for COMMERCIAL PURPOSES IS NOT PERMITTED under those model terms.
-
-For commercial use, configure PhotoRAG to use a remote translation API
-(OpenAI, Google Translate, Anthropic, or a self-hosted Ollama model)
-instead of the bundled NLLB-200 model.
-
-See THIRD-PARTY-NOTICES.md for complete third-party license information.

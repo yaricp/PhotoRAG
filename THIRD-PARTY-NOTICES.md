@@ -24,6 +24,24 @@ For commercial deployments, replace NLLB-200 with a permissively-licensed
 alternative such as a remote OpenAI / Google Translate / Anthropic API,
 or a self-hosted Ollama model with a compatible license.
 
+### Qwen/Qwen2.5-Coder-3B-Instruct
+
+| Field       | Value |
+|-------------|-------|
+| Purpose     | Default local code/text generation model (agent tools) |
+| License     | [Qwen RESEARCH LICENSE AGREEMENT](https://huggingface.co/Qwen/Qwen2.5-Coder-3B-Instruct/blob/main/LICENSE) |
+| Copyright   | Alibaba Cloud / Tongyi Qianwen |
+| Source      | https://huggingface.co/Qwen/Qwen2.5-Coder-3B-Instruct |
+
+**This model is licensed for NON-COMMERCIAL USE ONLY.**  
+Commercial applications require separate written permission from Alibaba Cloud —
+there is no monthly-active-user threshold that permits commercial use, unlike
+some other Qwen-family models.
+
+For commercial deployments, replace this model with a permissively-licensed
+alternative such as a remote OpenAI / Anthropic / Google API, or a self-hosted
+Ollama model with a compatible license.
+
 ---
 
 ## AI / ML Models
@@ -33,23 +51,16 @@ or a self-hosted Ollama model with a compatible license.
 | Field       | Value |
 |-------------|-------|
 | Purpose     | Vision-language model for photo description |
-| License     | [Qwen Community License](https://huggingface.co/Qwen/Qwen2-VL-2B-Instruct/blob/main/LICENSE) |
+| License     | [Apache 2.0](https://huggingface.co/Qwen/Qwen2-VL-2B-Instruct/blob/main/LICENSE) |
 | Copyright   | Alibaba Cloud / Tongyi Qianwen |
 | Source      | https://huggingface.co/Qwen/Qwen2-VL-2B-Instruct |
 
-Commercial use is permitted for deployments with fewer than 100 million monthly active users.
-Derivatives must carry the Qwen Community License.
+Fully permissive: commercial use, modification, and redistribution are allowed.
 
 ### Qwen2.5-Coder-3B-Instruct
 
-| Field       | Value |
-|-------------|-------|
-| Purpose     | Code/text generation (agent tools) |
-| License     | [Qwen Community License](https://huggingface.co/Qwen/Qwen2.5-Coder-3B-Instruct/blob/main/LICENSE) |
-| Copyright   | Alibaba Cloud / Tongyi Qianwen |
-| Source      | https://huggingface.co/Qwen/Qwen2.5-Coder-3B-Instruct |
-
-Same commercial terms as Qwen2-VL-2B above.
+Non-commercial only — see the "IMPORTANT: Non-Commercial Model Notice" section
+at the top of this file for full license details.
 
 ### CLIP (open_clip_torch / OpenCLIP)
 
@@ -105,6 +116,16 @@ Same commercial terms as Qwen2-VL-2B above.
 |---------|------------|
 | Copyright | Jaided AI |
 | Source | https://github.com/JaidedAI/EasyOCR |
+
+### python-bidi (EasyOCR dependency)
+
+| License | GNU Lesser General Public License v2.1 or later (LGPL-2.1+) |
+|---------|---------------------------------------------------------------|
+| Copyright | Meir kriheli and contributors |
+| Source | https://github.com/MeirKriheli/python-bidi |
+
+Used unmodified as a standard Python library dependency (imported, not statically
+linked into a single binary), which satisfies LGPL's relinking requirement.
 
 ### FastAPI
 
@@ -310,6 +331,31 @@ is governed by the PSF-2.0 license.
 
 ---
 
-*This file was last updated: May 2026.*  
+## User-Selected and Self-Downloaded Models
+
+PhotoRAG lets you choose, per pipeline stage, which AI model to run — one of the
+bundled local defaults listed above, a locally-installed model of your own
+choosing (e.g. via Ollama), or a remote provider API (OpenAI, Anthropic, Google,
+and others supported by LangChain's `init_chat_model`). This is configured
+through Settings / the setup wizard and stored in the `ai_model_configs` table
+(`backend/src/config.py`).
+
+**PhotoRAG's MIT license covers only the PhotoRAG application code.** It does not
+grant, extend, or otherwise affect the license of any model weights. When you
+select or download a model yourself — whether swapping a bundled default for a
+newer version, or pointing PhotoRAG at any other local or remote model — **you
+are solely responsible for reviewing and complying with that model's own license
+terms**, including any restrictions on commercial use, redistribution, or
+attribution. The notices in this document describe only the specific model
+versions PhotoRAG bundles or recommends as of the date below; they do not cover
+models you configure independently, and PhotoRAG's maintainers make no
+representation about the licensing of any model not listed here.
+
+As PhotoRAG's bundled default models are updated in future releases, this file
+will be updated to reflect the license of whatever ships as the new default.
+
+---
+
+*This file was last updated: September 2026.*  
 *For the most current license information for each package, refer to the  
 source repository or the package metadata distributed with each release.*
