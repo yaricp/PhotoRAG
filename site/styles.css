@@ -42,6 +42,29 @@ body {
   padding: 4rem 1.5rem 3rem;
 }
 
+.lang-switch {
+  display: flex;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-bottom: 1.5rem;
+}
+
+.lang-switch button {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: var(--radius);
+  padding: 0.3rem 0.7rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.lang-switch button.active {
+  background: var(--accent);
+  color: var(--accent-text);
+  border-color: var(--accent);
+}
+
 .hero-icon {
   border-radius: 20%;
   margin-bottom: 1rem;
@@ -121,6 +144,39 @@ h2 {
 .feature-grid strong {
   display: block;
   margin-bottom: 0.3rem;
+}
+
+.steps {
+  list-style: none;
+  margin: 1.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.steps li {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.15rem;
+}
+
+.steps strong {
+  display: block;
+  margin-bottom: 0.3rem;
+}
+
+.steps p {
+  margin: 0 0 0.5rem;
+  color: var(--text-muted);
+}
+
+.downloads code {
+  font-size: 0.85rem;
+  background: var(--bg);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
 }
 
 table {
