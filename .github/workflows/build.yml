@@ -90,12 +90,13 @@ jobs:
             artifact-pattern: frontend/dist-electron/*.AppImage
             install-fuse: true
 
-          - name: linux-arm64
-            os: ubuntu-latest
-            script: dist:linux:arm64
-            artifact-name: PhotoRAG-Linux-arm64
-            artifact-pattern: frontend/dist-electron/*.AppImage
-            install-fuse: true
+          # TODO: re-enable once snapcraft is available in the runner (ENOENT on ubuntu-latest)
+          # - name: linux-arm64
+          #   os: ubuntu-latest
+          #   script: dist:linux:arm64
+          #   artifact-name: PhotoRAG-Linux-arm64
+          #   artifact-pattern: frontend/dist-electron/*.AppImage
+          #   install-fuse: true
 
     steps:
       - uses: actions/checkout@v4
