@@ -1,4 +1,4 @@
-# Photo Describer 2 (PhotoRAG)
+# PhotoRAG
 
 ## 📖 Not a developer? Start here
 
