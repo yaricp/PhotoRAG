@@ -84,6 +84,18 @@ describe('StepInstallDeps', () => {
         expect(mockApi.installDeps).toHaveBeenCalled()
     })
 
+    it('ignores repeated Install clicks while installation is running', () => {
+        mockApi.installDeps.mockReturnValue(new Promise(() => {}))
+
+        render(<StepInstallDeps onDone={vi.fn()} />)
+        const button = screen.getByRole('button', { name: /install/i })
+
+        fireEvent.click(button)
+        fireEvent.click(button)
+
+        expect(mockApi.installDeps).toHaveBeenCalledTimes(1)
+    })
+
     it('progress bar updates on progress event', () => {
         render(<StepInstallDeps onDone={vi.fn()} />)
         fireEvent.click(screen.getByRole('button', { name: /install/i }))

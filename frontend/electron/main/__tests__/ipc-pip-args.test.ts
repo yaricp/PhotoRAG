@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildInstallArgs } from '../ipc'
+import { buildDownloadScript, buildInstallArgs } from '../ipc'
 
 describe('buildInstallArgs', () => {
     it('includes CPU-only torch index on linux', () => {
@@ -21,9 +21,23 @@ describe('buildInstallArgs', () => {
 
     it('always includes -r <requirements> and --progress-bar off', () => {
         const args = buildInstallArgs('linux', '/my/req.txt')
+        expect(args[0]).toBe('install')
         expect(args).toContain('-r')
         expect(args).toContain('/my/req.txt')
         expect(args).toContain('--progress-bar')
         expect(args).toContain('off')
+    })
+})
+
+describe('buildDownloadScript', () => {
+    it('checks for missing Windows VC++ runtime before PyTorch-backed model setup', () => {
+        const script = buildDownloadScript('clip')
+
+        expect(script).toContain('check_windows_torch_runtime(model_id)')
+        expect(script).toContain('import torch')
+        expect(script).toContain('Microsoft Visual C++ Redistributable x64 is required')
+        expect(script).toContain('https://aka.ms/vs/17/release/vc_redist.x64.exe')
+        expect(script).toContain('c10.dll')
+        expect(script).toContain('winerror == 126')
     })
 })

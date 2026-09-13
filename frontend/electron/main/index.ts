@@ -1,14 +1,14 @@
 import { app, BrowserWindow, dialog } from 'electron'
-import { existsSync } from 'fs'
 import { join } from 'path'
 import { registerIpcHandlers } from './ipc'
 import { registerAppProtocol } from './protocol'
-import { startBackend, stopBackend, waitForBackend } from './backend'
+import { getBackendSetupIssue, startBackend, stopBackend } from './backend'
 
 app.setName('PhotoRAG')
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+ 
 let mainWindow: BrowserWindow | null = null
+const gotSingleInstanceLock = app.requestSingleInstanceLock()
 
 function createMainWindow(): BrowserWindow {
     const win = new BrowserWindow({
@@ -33,39 +33,49 @@ function createMainWindow(): BrowserWindow {
     return win
 }
 
-app.whenReady().then(async () => {
-    registerAppProtocol()
+if (!gotSingleInstanceLock) {
+    app.quit()
+} else {
+    app.on('second-instance', () => {
+        if (!mainWindow) return
+        if (mainWindow.isMinimized()) mainWindow.restore()
+        mainWindow.focus()
+    })
 
-    const setupDone = existsSync(join(app.getPath('userData'), 'setup_done'))
+    app.whenReady().then(async () => {
+        registerAppProtocol()
 
-    if (!setupDone) {
-        // First run: show window immediately so the setup wizard can run.
-        // Backend will be started by setup:complete once the wizard finishes.
-        registerIpcHandlers(0)
-        mainWindow = createMainWindow()
-        return
-    }
+        const setupIssue = getBackendSetupIssue()
 
-    // Setup already done: start backend, then open window.
-    try {
-        const port = await startBackend()
-        await waitForBackend(port)
-        registerIpcHandlers(port)
-        mainWindow = createMainWindow()
-    } catch (err) {
-        console.error('[startup] Failed to start backend:', err)
-        dialog.showErrorBox(
-            'PhotoRAG — startup error',
-            `The Python backend failed to start.\n\n${err instanceof Error ? err.message : String(err)}\n\nCheck that the installation completed successfully via the Setup Wizard.`
-        )
-        app.quit()
-    }
-})
+        if (setupIssue) {
+            console.warn(`[startup] Setup wizard required: ${setupIssue}`)
+            // First run or stale setup: show the wizard so it can repair userData.
+            // Backend will be started by setup:complete once the wizard finishes.
+            registerIpcHandlers(0)
+            mainWindow = createMainWindow()
+            return
+        }
 
-app.on('will-quit', () => {
-    stopBackend()
-})
+        // Setup already done: start backend, then open window.
+        try {
+            const port = await startBackend()
+            registerIpcHandlers(port)
+            mainWindow = createMainWindow()
+        } catch (err) {
+            console.error('[startup] Failed to start backend:', err)
+            dialog.showErrorBox(
+                'PhotoRAG — startup error',
+                `The Python backend failed to start.\n\n${err instanceof Error ? err.message : String(err)}\n\nCheck that the installation completed successfully via the Setup Wizard.`
+            )
+            app.quit()
+        }
+    })
 
-app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') app.quit()
-})
+    app.on('will-quit', () => {
+        stopBackend()
+    })
+
+    app.on('window-all-closed', () => {
+        if (process.platform !== 'darwin') app.quit()
+    })
+}

@@ -13,13 +13,13 @@
     "predist:mac": "bash ../scripts/download-python.sh",
     "dist:mac": "npm run build && electron-builder --mac --universal",
     "predist:win": "bash ../scripts/download-python-win.sh",
-    "dist:win": "npm run build && electron-builder --win --x64",
+    "dist:win": "npm run build && electron-builder --win nsis:x64",
     "predist:linux": "bash ../scripts/download-python-linux.sh x64",
     "dist:linux": "npm run build && electron-builder --linux --x64",
     "predist:linux:arm64": "bash ../scripts/download-python-linux.sh arm64",
     "dist:linux:arm64": "npm run build && electron-builder --linux --arm64",
     "predist:win:arm64": "bash ../scripts/download-python-win-arm64.sh",
-    "dist:win:arm64": "npm run build && electron-builder --win --arm64",
+    "dist:win:arm64": "npm run build && electron-builder --win nsis:arm64",
     "lint": "eslint src/ electron/",
     "type-check": "tsc --noEmit",
     "test": "node --require ./scripts/crypto-polyfill.cjs ./node_modules/.bin/vitest",
@@ -89,22 +89,30 @@
           "**/*",
           "!.venv/**",
           "!__pycache__/**",
+          "!**/__pycache__/**",
           "!*.pyc",
+          "!**/*.pyc",
           "!.env",
+          "!.coverage",
+          "!.pytest_cache/**",
+          "!**/.pytest_cache/**",
+          "!.mypy_cache/**",
+          "!**/.mypy_cache/**",
+          "!.ruff_cache/**",
+          "!**/.ruff_cache/**",
+          "!test_*.sqlite3*",
+          "!**/test_*.sqlite3*",
+          "!test_photo_db*",
+          "!**/test_photo_db*",
           "!tests/**",
+          "!**/tests/**",
           "!data/**"
         ]
       }
     ],
     "win": {
       "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64",
-            "arm64"
-          ]
-        }
+        "nsis"
       ],
       "icon": "resources/icon.ico",
       "artifactName": "${productName}-Setup-${version}-${arch}.${ext}"

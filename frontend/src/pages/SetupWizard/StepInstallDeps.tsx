@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 interface Props {
@@ -11,6 +11,7 @@ export function StepInstallDeps({ onDone }: Props) {
     const [progress, setProgress] = useState(0)
     const [logLine, setLogLine] = useState('')
     const [error, setError] = useState<string | null>(null)
+    const startedRef = useRef(false)
 
     useEffect(() => {
         window.electronAPI.onInstallDepsProgress(({ percent, line }) => {
@@ -20,12 +21,15 @@ export function StepInstallDeps({ onDone }: Props) {
     }, [])
 
     const handleInstall = async () => {
+        if (startedRef.current) return
+        startedRef.current = true
         setInstalling(true)
         setError(null)
         try {
             await window.electronAPI.installDeps()
             onDone()
         } catch (e) {
+            startedRef.current = false
             setError(String(e))
             setInstalling(false)
         }
@@ -41,6 +45,7 @@ export function StepInstallDeps({ onDone }: Props) {
                     <button
                         className="wizard-btn wizard-btn--primary"
                         onClick={handleInstall}
+                        disabled={installing}
                     >
                         {t('wizard.stepInstallDeps.installButton')}
                     </button>

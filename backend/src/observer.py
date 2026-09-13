@@ -1,5 +1,7 @@
 import asyncio
+import os
 import threading
+import time
 
 from loguru import logger
 from watchdog.events import FileSystemEventHandler
@@ -13,6 +15,48 @@ from src.db_service import (
 )
 from src.incoming_pipeline import start_pipeline
 from src.utils import generate_file_hash, get_photo_capture_date, move_photo
+
+FILE_READY_ATTEMPTS = 60
+FILE_READY_DELAY_SECONDS = 0.5
+
+
+def wait_until_file_ready(
+    path: str,
+    attempts: int = FILE_READY_ATTEMPTS,
+    delay_seconds: float = FILE_READY_DELAY_SECONDS,
+) -> bool:
+    """
+    Wait until a newly-created file can be read and its size is stable.
+
+    Windows and sync providers such as OneDrive can emit a created event while
+    the file is still locked, being copied, or being hydrated locally. Trying to
+    hash or move it immediately raises PermissionError and drops the photo.
+    """
+    last_size: int | None = None
+    last_error: Exception | None = None
+
+    for attempt in range(1, attempts + 1):
+        try:
+            size = os.path.getsize(path)
+            with open(path, "rb") as file:
+                file.read(1)
+
+            if last_size == size:
+                if attempt > 1:
+                    logger.info(f"[observer] File is ready after {attempt} checks: {path}")
+                return True
+
+            last_size = size
+        except (OSError, PermissionError) as exc:
+            last_error = exc
+            if attempt == 1 or attempt == attempts or attempt % 10 == 0:
+                logger.info(f"[observer] Waiting for file to become readable: {path} ({exc})")
+
+        time.sleep(delay_seconds)
+
+    detail = f": {last_error}" if last_error else ""
+    logger.error(f"[observer] File was not ready after {attempts} checks: {path}{detail}")
+    return False
 
 
 class PhotoEventHandler(FileSystemEventHandler):
@@ -44,6 +88,9 @@ class PhotoEventHandler(FileSystemEventHandler):
 
         logger.info(f"[observer] New file: {src}")
         try:
+            if not wait_until_file_ready(src):
+                return
+
             file_hash = generate_file_hash(src)
 
             db = SessionLocal()

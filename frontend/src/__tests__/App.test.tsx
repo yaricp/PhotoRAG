@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { server } from '@/test/server'
 import { http, HttpResponse } from 'msw'
@@ -36,6 +36,18 @@ describe('App', () => {
             </MemoryRouter>
         )
         expect(screen.getByTestId('page-gallery')).toBeInTheDocument()
+    })
+
+    it('navigates from the sidebar to another page', async () => {
+        render(
+            <MemoryRouter initialEntries={['/']}>
+                <App />
+            </MemoryRouter>
+        )
+
+        fireEvent.click(screen.getByRole('link', { name: /search/i }))
+
+        expect(await screen.findByTestId('page-search')).toBeInTheDocument()
     })
 
     it('syncs i18n language from saved settings on mount', async () => {

@@ -13,12 +13,18 @@ class WatcherService:
     def __init__(self):
         self.active: list[dict] = []
 
+    def _get_active_watcher(self, watcher_id: int) -> dict | None:
+        return next((w for w in self.active if w["id"] == watcher_id), None)
+
     def start_all(self, db):
         logger.info("Starting all watchers...")
         watchers = get_all_watchers(db)
         logger.info(f"Found {len(watchers)} watchers")
 
         for watcher in watchers:
+            if self._get_active_watcher(watcher.id):
+                logger.info(f"Watcher {watcher.id} is already running in this process")
+                continue
             logger.info(f"Starting watcher for path: {watcher.path}")
             self.active.append(
                 {
@@ -35,8 +41,8 @@ class WatcherService:
     def start_watcher(self, db, path: str, destination_path: str) -> dict:
         logger.info(f"Starting watcher for path: {path}")
         watcher_db = get_or_create_watcher(db, path, destination_path)
-        if watcher_db.status == "active":
-            logger.info(f"Watcher for path {path} is already active")
+        if self._get_active_watcher(watcher_db.id):
+            logger.info(f"Watcher for path {path} is already running in this process")
             return watcher_db
         new_watcher = {
             "id": watcher_db.id,
@@ -67,10 +73,14 @@ class WatcherService:
     def stop_watcher(self, watcher_id: int, db):
         logger.info(f"Stopping watcher: {watcher_id}")
         logger.info(f"Active watchers: {self.active}")
-        watcher = list(filter(lambda w: w["id"] == watcher_id, self.active))[0]
-        logger.info(f"Stopping watcher for path: {watcher}")
-        watcher["observer"].stop()
-        watcher["observer"].join()
-        del_watcher = delete_watcher(db, watcher["id"])
-        logger.info(f"Stopped watcher for path: {watcher['path']}")
+        watcher = self._get_active_watcher(watcher_id)
+        if watcher:
+            logger.info(f"Stopping watcher for path: {watcher}")
+            watcher["observer"].stop()
+            watcher["observer"].join()
+            self.active = [w for w in self.active if w["id"] != watcher_id]
+        else:
+            logger.info(f"Watcher {watcher_id} is not running in this process; deleting DB record only")
+        del_watcher = delete_watcher(db, watcher_id)
+        logger.info(f"Stopped watcher: {watcher_id}")
         return del_watcher
