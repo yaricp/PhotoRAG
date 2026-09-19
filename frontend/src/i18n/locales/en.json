@@ -99,7 +99,13 @@
     "recent": "Recent",
     "noActive": "No active processing",
     "activeCount": "{{count}} active photo",
-    "activeCountPlural": "{{count}} active photos"
+    "activeCountPlural": "{{count}} active photos",
+    "retryTask": "Retry",
+    "rerunPipeline": "Run pipeline again",
+    "starting": "Starting…",
+    "rerunPipelineConfirmTitle": "Run the full pipeline again?",
+    "rerunPipelineConfirmMessage": "This will clear the photo tags and categories, then regenerate AI analysis for this photo.",
+    "rerunPipelineConfirm": "Run again"
   },
   "documents": {
     "noDocuments": "No documents",
@@ -245,12 +251,12 @@
       "suggestions": "Suggestions:",
       "localPlaceholder": "e.g. Qwen/Qwen2-VL-2B-Instruct",
       "remotePlaceholder": "e.g. gpt-4o-mini",
-      "labelVision": "Vision",
-      "labelClip": "CLIP",
-      "labelOcr": "OCR",
-      "labelEmbedding": "Embedding",
-      "labelTranslator": "Translator",
-      "labelChat": "Chat"
+      "labelVision": "Vision (photo descriptions)",
+      "labelClip": "CLIP (tags & categories)",
+      "labelOcr": "OCR (text extraction)",
+      "labelEmbedding": "Embedding (semantic search)",
+      "labelTranslator": "Translator (description language)",
+      "labelChat": "Chat (AI agent)"
     },
     "stepDone": {
       "title": "Setup Complete!",

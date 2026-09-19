@@ -177,3 +177,54 @@
     opacity: 0.8;
     margin-left: 2px;
 }
+
+.jobs-page__error {
+    padding: 10px 12px;
+    border: 1px solid rgba(255, 80, 80, 0.35);
+    border-radius: 8px;
+    background: rgba(255, 80, 80, 0.1);
+    color: #ff8a8a;
+    font-size: 13px;
+}
+
+.photo-row__header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.photo-row__rerun-btn,
+.task-chip__retry {
+    border: 1px solid rgba(255, 190, 70, 0.45);
+    background: rgba(255, 190, 70, 0.12);
+    color: #fbbf24;
+    border-radius: 7px;
+    cursor: pointer;
+    font-family: var(--font-sans);
+    transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+}
+
+.photo-row__rerun-btn {
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.task-chip__retry {
+    padding: 2px 7px;
+    margin-left: 4px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.photo-row__rerun-btn:hover,
+.task-chip__retry:hover {
+    background: rgba(255, 190, 70, 0.24);
+    border-color: rgba(255, 190, 70, 0.7);
+}
+
+.photo-row__rerun-btn:disabled,
+.task-chip__retry:disabled {
+    cursor: default;
+    opacity: 0.6;
+}

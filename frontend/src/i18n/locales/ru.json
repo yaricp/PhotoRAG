@@ -99,7 +99,13 @@
     "recent": "Недавние",
     "noActive": "Нет активной обработки",
     "activeCount": "{{count}} активное фото",
-    "activeCountPlural": "{{count}} активных фото"
+    "activeCountPlural": "{{count}} активных фото",
+    "retryTask": "Повторить",
+    "rerunPipeline": "Перезапустить конвейер",
+    "starting": "Запуск…",
+    "rerunPipelineConfirmTitle": "Перезапустить весь конвейер?",
+    "rerunPipelineConfirmMessage": "Это очистит теги и категории фото, затем заново запустит ИИ-обработку для этого фото.",
+    "rerunPipelineConfirm": "Запустить заново"
   },
   "documents": {
     "noDocuments": "Нет документов",
@@ -245,12 +251,12 @@
       "suggestions": "Предложения:",
       "localPlaceholder": "например Qwen/Qwen2-VL-2B-Instruct",
       "remotePlaceholder": "например gpt-4o-mini",
-      "labelVision": "Зрение",
-      "labelClip": "CLIP",
-      "labelOcr": "OCR",
-      "labelEmbedding": "Эмбеддинг",
-      "labelTranslator": "Переводчик",
-      "labelChat": "Чат"
+      "labelVision": "Зрение (описание фото)",
+      "labelClip": "CLIP (теги и категории)",
+      "labelOcr": "OCR (распознавание текста)",
+      "labelEmbedding": "Эмбеддинг (семантический поиск)",
+      "labelTranslator": "Переводчик (язык описаний)",
+      "labelChat": "Чат (ИИ-агент)"
     },
     "stepDone": {
       "title": "Установка завершена!",

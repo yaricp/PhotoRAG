@@ -1075,6 +1075,39 @@ def get_recent_pipeline_tasks_endpoint(
     return get_recent_pipeline_tasks(db, limit=limit)
 
 
+@app.post("/api/pipeline/tasks/{task_id}/retry", tags=["Pipeline"])
+async def retry_pipeline_task_endpoint(task_id: int, db: Session = Depends(get_db)):
+    """Retry one failed pipeline task without clearing other photo results."""
+    import threading
+
+    from src.incoming_pipeline import is_retryable_pipeline_task, retry_pipeline_task
+    from src.models import PipelineTask
+
+    task = db.query(PipelineTask).filter(PipelineTask.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail=f"Pipeline task {task_id} not found")
+    if task.status != "failed":
+        raise HTTPException(status_code=409, detail="Only failed pipeline tasks can be retried")
+    if not is_retryable_pipeline_task(task.task_name):
+        raise HTTPException(status_code=400, detail=f"Unsupported pipeline task: {task.task_name}")
+
+    photo_id = task.photo_id
+    task_name = task.task_name
+    task.status = "pending"
+    task.error = None
+    task.started_at = None
+    task.finished_at = None
+    db.commit()
+
+    def _run():
+        import asyncio
+
+        asyncio.run(retry_pipeline_task(photo_id, task_name))
+
+    threading.Thread(target=_run, daemon=True).start()
+    return {"status": "queued", "task_id": task_id, "photo_id": photo_id, "task_name": task_name}
+
+
 @app.get("/api/photos/{photo_id}/pipeline", tags=["Pipeline"], response_model=List[PipelineTaskSchema])
 def get_photo_pipeline_tasks_endpoint(photo_id: int, db: Session = Depends(get_db)):
     """Return all pipeline tasks for a specific photo."""

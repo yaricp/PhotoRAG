@@ -7,6 +7,11 @@ import './SettingsPage.css'
 
 const isElectron = typeof window !== 'undefined' && !!window.electronAPI?.uninstall
 
+export function getDefaultFolderPlaceholder(): string {
+    const platform = typeof window !== 'undefined' ? window.electronAPI?.platform : undefined
+    return platform === 'win32' ? String.raw`C:\Users\you\Pictures` : '/Users/you/Photos'
+}
+
 const LANGUAGE_CODES = ['en', 'ru', 'es'] as const
 
 export function SettingsPage() {
@@ -113,7 +118,7 @@ export function SettingsPage() {
                         className="settings-input"
                         value={defaultFolder}
                         onChange={e => setDefaultFolder(e.target.value)}
-                        placeholder="/Users/you/Photos"
+                        placeholder={getDefaultFolderPlaceholder()}
                     />
                     <span className="settings-row__hint">{t('settings.defaultFolderHint')}</span>
                 </div>

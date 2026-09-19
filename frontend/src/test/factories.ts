@@ -1,7 +1,7 @@
 import type {
     Photo, PhotoTag, PhotoCategory, Tag, Category,
     Camera, Geoposition, Watcher, Job, ModelStatus,
-    SystemStatus, ChatResponse, PaginatedPhotos
+    SystemStatus, ChatResponse, PaginatedPhotos, PipelineTask
 } from '@/types/api'
 
 export const makeTag = (overrides?: Partial<Tag>): Tag => ({
@@ -115,6 +115,20 @@ export const makeSystemStatus = (overrides?: Partial<SystemStatus>): SystemStatu
         makeModelStatus({ name: 'easyocr' }),
         makeModelStatus({ name: 'llava' }),
     ],
+    ...overrides
+})
+
+
+export const makePipelineTask = (overrides?: Partial<PipelineTask>): PipelineTask => ({
+    id: 1,
+    photo_id: 1,
+    phase: 'phase_1',
+    task_name: 'auto_tag_clip_task',
+    status: 'done',
+    error: null,
+    started_at: '2024-01-01T00:00:00Z',
+    finished_at: '2024-01-01T00:00:01Z',
+    created_at: '2024-01-01T00:00:00Z',
     ...overrides
 })
 

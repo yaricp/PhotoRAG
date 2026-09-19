@@ -415,6 +415,10 @@ export async function getPhotoPipelineTasks(photoId: number): Promise<PipelineTa
     return apiFetch<PipelineTask[]>(`/api/photos/${photoId}/pipeline`)
 }
 
+export async function retryPipelineTask(taskId: number): Promise<{ status: string; task_id: number; photo_id: number; task_name: string }> {
+    return apiFetch(`/api/pipeline/tasks/${taskId}/retry`, { method: 'POST' })
+}
+
 // ── Prompts ───────────────────────────────────────────────────────────────────
 
 export async function reindexPhoto(id: number): Promise<{ status: string; photo_id: number }> {

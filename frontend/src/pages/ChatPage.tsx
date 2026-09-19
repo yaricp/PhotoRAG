@@ -52,12 +52,21 @@ function ChatPhotoItem({
 
 export function ChatPage() {
     const { t } = useTranslation()
-    const { messages, threadId, contextPhotos, addMessage, setThreadId, setContextPhotos, clearConversation } =
-        useChatStore()
+    const {
+        messages,
+        threadId,
+        contextPhotos,
+        draftInput,
+        selectedPhotoIds,
+        addMessage,
+        setThreadId,
+        setContextPhotos,
+        setDraftInput,
+        setSelectedPhotoIds,
+        clearConversation,
+    } = useChatStore()
 
-    const [input, setInput] = useState('')
     const [loading, setLoading] = useState(false)
-    const [selectedPhotoIds, setSelectedPhotoIds] = useState<Set<number>>(new Set())
     const [busyPhotoIds, setBusyPhotoIds] = useState<Set<number>>(new Set())
     const [pending, setPending] = useState<PendingAction>(null)
     const [chatReady, setChatReady] = useState<boolean | null>(null)
@@ -98,33 +107,32 @@ export function ChatPage() {
             messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
     }, [messages, loading])
 
-    useEffect(() => {
-        setSelectedPhotoIds(new Set())
-    }, [contextPhotos])
-
     const allIds = contextPhotos.map(p => p.id)
-    const allSelected = allIds.length > 0 && allIds.every(id => selectedPhotoIds.has(id))
-    const someSelected = selectedPhotoIds.size > 0
+    const selectedSet = new Set(selectedPhotoIds)
+    const allSelected = allIds.length > 0 && allIds.every(id => selectedSet.has(id))
+    const someSelected = selectedPhotoIds.length > 0
+
+    useEffect(() => {
+        const validIds = new Set(allIds)
+        const filtered = selectedPhotoIds.filter(id => validIds.has(id))
+        if (filtered.length !== selectedPhotoIds.length) {
+            setSelectedPhotoIds(filtered)
+        }
+    }, [allIds.join(','), selectedPhotoIds, setSelectedPhotoIds])
 
     function toggleSelectAll() {
-        setSelectedPhotoIds(allSelected ? new Set() : new Set(allIds))
+        setSelectedPhotoIds(allSelected ? [] : allIds)
     }
 
     function togglePhoto(id: number) {
-        setSelectedPhotoIds(prev => {
-            const next = new Set(prev)
-            if (next.has(id)) { next.delete(id) } else { next.add(id) }
-            return next
-        })
+        const next = new Set(selectedPhotoIds)
+        if (next.has(id)) { next.delete(id) } else { next.add(id) }
+        setSelectedPhotoIds([...next])
     }
 
     function removeFromContext(ids: number[]) {
         setContextPhotos(contextPhotos.filter(p => !ids.includes(p.id)))
-        setSelectedPhotoIds(prev => {
-            const next = new Set(prev)
-            ids.forEach(id => next.delete(id))
-            return next
-        })
+        setSelectedPhotoIds(selectedPhotoIds.filter(id => !ids.includes(id)))
     }
 
     async function executeAction(action: PendingAction) {
@@ -141,14 +149,14 @@ export function ChatPage() {
     }
 
     const onSend = async () => {
-        if (!input.trim() || loading) return
+        if (!draftInput.trim() || loading) return
 
-        const finalMessage = selectedPhotoIds.size > 0
-            ? `${input.trim()}\n\n[Selected photo IDs: ${[...selectedPhotoIds].join(', ')}]`
-            : input.trim()
+        const finalMessage = selectedPhotoIds.length > 0
+            ? `${draftInput.trim()}\n\n[Selected photo IDs: ${selectedPhotoIds.join(', ')}]`
+            : draftInput.trim()
 
         addMessage({ role: 'user', content: finalMessage })
-        setInput('')
+        setDraftInput('')
         setLoading(true)
 
         try {
@@ -177,7 +185,7 @@ export function ChatPage() {
     }
 
     const isBusy = busyPhotoIds.size > 0
-    const selCount = selectedPhotoIds.size
+    const selCount = selectedPhotoIds.length
 
     const plural = selCount !== 1 ? 's' : ''
     const confirmTitle = pending?.type === 'delete'
@@ -214,14 +222,14 @@ export function ChatPage() {
                         <div className="chat-page__context-actions">
                             <button
                                 className="chat-page__ctx-btn chat-page__ctx-btn--archive"
-                                onClick={() => setPending({ type: 'archive', ids: [...selectedPhotoIds] })}
+                                onClick={() => setPending({ type: 'archive', ids: selectedPhotoIds })}
                                 disabled={isBusy}
                             >
                                 {t('chat.archive')}
                             </button>
                             <button
                                 className="chat-page__ctx-btn chat-page__ctx-btn--delete"
-                                onClick={() => setPending({ type: 'delete', ids: [...selectedPhotoIds] })}
+                                onClick={() => setPending({ type: 'delete', ids: selectedPhotoIds })}
                                 disabled={isBusy}
                             >
                                 {t('chat.delete')}
@@ -236,7 +244,7 @@ export function ChatPage() {
                         <ChatPhotoItem
                             key={photo.id}
                             photo={photo}
-                            checked={selectedPhotoIds.has(photo.id)}
+                            checked={selectedSet.has(photo.id)}
                             busy={busyPhotoIds.has(photo.id)}
                             onToggle={() => togglePhoto(photo.id)}
                         />
@@ -265,8 +273,8 @@ export function ChatPage() {
 
                 <div className="chat-page__input">
                     <textarea
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
+                        value={draftInput}
+                        onChange={(e) => setDraftInput(e.target.value)}
                         onKeyDown={(e) => {
                             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSend() }
                         }}

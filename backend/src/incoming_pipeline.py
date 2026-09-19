@@ -76,6 +76,37 @@ _PHASE_4_TASKS = [
 ]
 
 
+_TASK_RUNNERS = {
+    "metadata_task": metadata_task,
+    "compute_perceptual_hashes_task": compute_perceptual_hashes_task,
+    "brightness_task": brightness_task,
+    "edge_density_task": edge_density_task,
+    "blur_task": blur_task,
+    "entropy_task": entropy_task,
+    "auto_tag_clip_task": auto_tag_clip_task,
+    "categorize_photo_task": categorize_photo_task,
+    "vision_task": vision_task,
+    "final_embedding_task": final_embedding_task,
+    "is_this_document_task": is_this_document_task,
+    "translate_description_task": translate_description_task,
+    "ocr_task": ocr_task,
+    "screenshot_detect_task": screenshot_detect_task,
+    "embedding_document_text_task": embedding_document_text_task,
+}
+
+
+async def retry_pipeline_task(photo_id: int, task_name: str) -> None:
+    """Run one tracked pipeline task again for an existing photo."""
+    runner = _TASK_RUNNERS.get(task_name)
+    if runner is None:
+        raise ValueError(f"Unsupported pipeline task: {task_name}")
+    await runner(photo_id)
+
+
+def is_retryable_pipeline_task(task_name: str) -> bool:
+    return task_name in _TASK_RUNNERS
+
+
 async def start_pipeline(photo_id: int, folder_scanner_id: int = None) -> None:
     """
     Run the full async processing pipeline for a single photo.

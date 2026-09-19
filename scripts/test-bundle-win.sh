@@ -42,6 +42,7 @@ if [[ -n "$UNPACKED" ]]; then
         "resources/python/python.exe"
         "resources/backend/run.py"
         "resources/backend/requirements.txt"
+        "resources/backend/defaults/default_tags.json"
         "resources/backend/src"
         "resources/app.asar"
     )

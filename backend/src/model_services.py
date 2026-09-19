@@ -173,19 +173,25 @@ def _load_clip_names(path: str, kind: str) -> list[str]:
     except Exception as exc:
         logger.warning(f"[clip/remote] Could not load {kind} candidates from DB: {exc}")
 
-    bundled_name = "tags_names.json" if kind == "tags" else "categories_names.json"
-    bundled_path = Path(__file__).resolve().parents[1] / "data" / bundled_name
-    try:
-        with open(bundled_path, encoding="utf-8") as f:
-            data = json.load(f)
-        if isinstance(data, list):
-            names = [str(item).strip() for item in data if str(item).strip()]
-            if names:
-                logger.info(f"[clip/remote] Loaded {len(names)} {kind} candidates from bundled defaults")
-                return names
-    except Exception as exc:
-        logger.warning(f"[clip/remote] Could not load bundled {kind} candidates: {exc}")
+    backend_root = Path(__file__).resolve().parents[1]
+    bundled_paths = (
+        [backend_root / "defaults" / "default_tags.json", backend_root / "data" / "tags_names.json"]
+        if kind == "tags"
+        else [backend_root / "data" / "categories_names.json"]
+    )
+    for bundled_path in bundled_paths:
+        try:
+            with open(bundled_path, encoding="utf-8") as f:
+                data = json.load(f)
+            if isinstance(data, list):
+                names = [str(item).strip() for item in data if str(item).strip()]
+                if names:
+                    logger.info(f"[clip/remote] Loaded {len(names)} {kind} candidates from {bundled_path}")
+                    return names
+        except Exception:
+            continue
 
+    logger.warning(f"[clip/remote] Could not load bundled {kind} candidates")
     return []
 
 

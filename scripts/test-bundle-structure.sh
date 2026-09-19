@@ -78,6 +78,7 @@ assert_exists "backend/run.py"
 assert_exists "backend/src/main.py"
 assert_exists "backend/src/config.py"
 assert_exists "backend/src/data_dir.py"
+assert_exists "backend/defaults/default_tags.json"
 assert_exists "backend/requirements.txt"
 
 echo ""

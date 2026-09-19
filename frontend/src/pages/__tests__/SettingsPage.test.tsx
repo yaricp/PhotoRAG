@@ -3,12 +3,15 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { server } from '@/test/server'
 import { http, HttpResponse } from 'msw'
-import { SettingsPage } from '../SettingsPage'
+import { SettingsPage, getDefaultFolderPlaceholder } from '../SettingsPage'
 import i18n from '@/i18n'
 
 vi.mock('@/api/base', () => ({ getBaseUrl: async () => 'http://localhost:8000' }))
 
-afterEach(async () => { await i18n.changeLanguage('en') })
+afterEach(async () => {
+    delete (window as any).electronAPI
+    await i18n.changeLanguage('en')
+})
 
 const renderPage = () =>
     render(
@@ -18,6 +21,17 @@ const renderPage = () =>
     )
 
 describe('SettingsPage', () => {
+
+    it('uses a Windows-style default folder placeholder on Windows', () => {
+        ;(window as any).electronAPI = { platform: 'win32' }
+        expect(getDefaultFolderPlaceholder()).toBe(String.raw`C:\Users\you\Pictures`)
+    })
+
+    it('uses a Unix-style default folder placeholder outside Windows', () => {
+        ;(window as any).electronAPI = { platform: 'darwin' }
+        expect(getDefaultFolderPlaceholder()).toBe('/Users/you/Photos')
+    })
+
     it('renders default folder input', () => {
         renderPage()
         expect(screen.getByLabelText(/default folder/i)).toBeInTheDocument()

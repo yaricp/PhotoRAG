@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { getActivePipelineTasks, getRecentPipelineTasks } from '@/api/client'
+import { getActivePipelineTasks, getRecentPipelineTasks, retryPipelineTask, runPipelineForPhoto } from '@/api/client'
 import { Spinner } from '@/components/ui/Spinner'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import type { PipelineTask } from '@/types/api'
 import './JobProcessingPage.css'
 
@@ -46,21 +47,45 @@ function groupByPhoto(tasks: PipelineTask[]): PhotoGroup[] {
         .sort((a, b) => b.photo_id - a.photo_id)
 }
 
-function PhaseBlock({ phase, tasks, now }: { phase: string; tasks: PipelineTask[]; now: number }) {
+function PhaseBlock({
+    phase,
+    tasks,
+    now,
+    busyTaskId,
+    onRetryTask,
+}: {
+    phase: string
+    tasks: PipelineTask[]
+    now: number
+    busyTaskId: number | null
+    onRetryTask: (task: PipelineTask) => void
+}) {
+    const { t } = useTranslation()
     return (
         <div className="phase-block">
             <div className="phase-block__label">{phase.replace('_', ' ')}</div>
             <div className="phase-block__tasks">
-                {tasks.map(t => (
+                {tasks.map(task => (
                     <div
-                        key={t.id}
-                        className={`task-chip task-chip--${t.status}`}
-                        title={t.error ?? t.task_name}
+                        key={task.id}
+                        className={`task-chip task-chip--${task.status}`}
+                        title={task.error ?? task.task_name}
                     >
-                        <span className="task-chip__icon">{STATUS_ICON[t.status] ?? '?'}</span>
-                        <span className="task-chip__name">{shortName(t.task_name)}</span>
-                        {t.status === 'running' && t.started_at && (
-                            <span className="task-chip__elapsed">{formatElapsed(t.started_at, now)}</span>
+                        <span className="task-chip__icon">{STATUS_ICON[task.status] ?? '?'}</span>
+                        <span className="task-chip__name">{shortName(task.task_name)}</span>
+                        {task.status === 'running' && task.started_at && (
+                            <span className="task-chip__elapsed">{formatElapsed(task.started_at, now)}</span>
+                        )}
+                        {task.status === 'failed' && (
+                            <button
+                                type="button"
+                                className="task-chip__retry"
+                                onClick={() => onRetryTask(task)}
+                                disabled={busyTaskId === task.id}
+                                title={t('processing.retryTask')}
+                            >
+                                {busyTaskId === task.id ? '…' : t('processing.retryTask')}
+                            </button>
                         )}
                     </div>
                 ))}
@@ -69,7 +94,22 @@ function PhaseBlock({ phase, tasks, now }: { phase: string; tasks: PipelineTask[
     )
 }
 
-function PhotoRow({ photo_id, tasks, now }: PhotoGroup & { now: number }) {
+function PhotoRow({
+    photo_id,
+    tasks,
+    now,
+    busyTaskId,
+    busyPhotoId,
+    onRetryTask,
+    onRunPipeline,
+}: PhotoGroup & {
+    now: number
+    busyTaskId: number | null
+    busyPhotoId: number | null
+    onRetryTask: (task: PipelineTask) => void
+    onRunPipeline: (photoId: number) => void
+}) {
+    const { t } = useTranslation()
     const phases = Array.from(new Set(tasks.map(t => t.phase))).sort()
     const overallStatus = tasks.some(t => t.status === 'running')
         ? 'running'
@@ -83,9 +123,21 @@ function PhotoRow({ photo_id, tasks, now }: PhotoGroup & { now: number }) {
         <div className={`photo-row photo-row--${overallStatus}`}>
             <div className="photo-row__header">
                 <span className="photo-row__id">Photo #{photo_id}</span>
-                <span className={`photo-row__status photo-row__status--${overallStatus}`}>
-                    {STATUS_ICON[overallStatus]} {overallStatus}
-                </span>
+                <div className="photo-row__header-actions">
+                    {overallStatus === 'failed' && (
+                        <button
+                            type="button"
+                            className="photo-row__rerun-btn"
+                            onClick={() => onRunPipeline(photo_id)}
+                            disabled={busyPhotoId === photo_id}
+                        >
+                            {busyPhotoId === photo_id ? t('processing.starting') : t('processing.rerunPipeline')}
+                        </button>
+                    )}
+                    <span className={`photo-row__status photo-row__status--${overallStatus}`}>
+                        {STATUS_ICON[overallStatus]} {overallStatus}
+                    </span>
+                </div>
             </div>
             <div className="photo-row__phases">
                 {phases.map(phase => (
@@ -94,6 +146,8 @@ function PhotoRow({ photo_id, tasks, now }: PhotoGroup & { now: number }) {
                         phase={phase}
                         tasks={tasks.filter(t => t.phase === phase)}
                         now={now}
+                        busyTaskId={busyTaskId}
+                        onRetryTask={onRetryTask}
                     />
                 ))}
             </div>
@@ -107,6 +161,10 @@ export function JobProcessingPage() {
     const [recent, setRecent] = useState<PipelineTask[]>([])
     const [loading, setLoading] = useState(true)
     const [now, setNow] = useState(Date.now())
+    const [busyTaskId, setBusyTaskId] = useState<number | null>(null)
+    const [busyPhotoId, setBusyPhotoId] = useState<number | null>(null)
+    const [pendingRerunPhotoId, setPendingRerunPhotoId] = useState<number | null>(null)
+    const [actionError, setActionError] = useState<string | null>(null)
 
     const loadData = async () => {
         try {
@@ -131,6 +189,32 @@ export function JobProcessingPage() {
         }
     }, [])
 
+    async function handleRetryTask(task: PipelineTask) {
+        setActionError(null)
+        setBusyTaskId(task.id)
+        try {
+            await retryPipelineTask(task.id)
+            await loadData()
+        } catch (err) {
+            setActionError(err instanceof Error ? err.message : String(err))
+        } finally {
+            setBusyTaskId(null)
+        }
+    }
+
+    async function handleRunPipeline(photoId: number) {
+        setActionError(null)
+        setBusyPhotoId(photoId)
+        try {
+            await runPipelineForPhoto(photoId)
+            await loadData()
+        } catch (err) {
+            setActionError(err instanceof Error ? err.message : String(err))
+        } finally {
+            setBusyPhotoId(null)
+        }
+    }
+
     const activeGroups = groupByPhoto(active)
     const activeTaskIds = new Set(active.map(t => t.id))
     const recentGroups = groupByPhoto(recent.filter(t => !activeTaskIds.has(t.id)))
@@ -142,6 +226,8 @@ export function JobProcessingPage() {
                     ? t('processing.activeCountPlural', { count: activeGroups.length })
                     : t('processing.activeCount', { count: activeGroups.length })}</span>
             </div>
+
+            {actionError && <div className="jobs-page__error">{actionError}</div>}
 
             {loading && (
                 <div className="jobs-page__center">
@@ -155,7 +241,15 @@ export function JobProcessingPage() {
                         <section className="pipeline-section">
                             <h3 className="pipeline-section__title">{t('processing.active')}</h3>
                             {activeGroups.map(g => (
-                                <PhotoRow key={g.photo_id} {...g} now={now} />
+                                <PhotoRow
+                                    key={g.photo_id}
+                                    {...g}
+                                    now={now}
+                                    busyTaskId={busyTaskId}
+                                    busyPhotoId={busyPhotoId}
+                                    onRetryTask={handleRetryTask}
+                                    onRunPipeline={setPendingRerunPhotoId}
+                                />
                             ))}
                         </section>
                     ) : (
@@ -166,12 +260,32 @@ export function JobProcessingPage() {
                         <section className="pipeline-section pipeline-section--recent">
                             <h3 className="pipeline-section__title">{t('processing.recent')}</h3>
                             {recentGroups.map(g => (
-                                <PhotoRow key={g.photo_id} {...g} now={now} />
+                                <PhotoRow
+                                    key={g.photo_id}
+                                    {...g}
+                                    now={now}
+                                    busyTaskId={busyTaskId}
+                                    busyPhotoId={busyPhotoId}
+                                    onRetryTask={handleRetryTask}
+                                    onRunPipeline={setPendingRerunPhotoId}
+                                />
                             ))}
                         </section>
                     )}
                 </>
             )}
+
+            <ConfirmModal
+                open={pendingRerunPhotoId !== null}
+                title={t('processing.rerunPipelineConfirmTitle')}
+                message={t('processing.rerunPipelineConfirmMessage')}
+                confirmLabel={t('processing.rerunPipelineConfirm')}
+                variant="warning"
+                onConfirm={() => {
+                    if (pendingRerunPhotoId !== null) void handleRunPipeline(pendingRerunPhotoId)
+                }}
+                onClose={() => setPendingRerunPhotoId(null)}
+            />
         </div>
     )
 }

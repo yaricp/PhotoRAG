@@ -99,7 +99,13 @@
     "recent": "Reciente",
     "noActive": "Sin procesamiento activo",
     "activeCount": "{{count}} foto activa",
-    "activeCountPlural": "{{count}} fotos activas"
+    "activeCountPlural": "{{count}} fotos activas",
+    "retryTask": "Reintentar",
+    "rerunPipeline": "Ejecutar pipeline de nuevo",
+    "starting": "Iniciando…",
+    "rerunPipelineConfirmTitle": "¿Ejecutar todo el pipeline de nuevo?",
+    "rerunPipelineConfirmMessage": "Esto borrará las etiquetas y categorías de la foto y regenerará el análisis de IA para esta foto.",
+    "rerunPipelineConfirm": "Ejecutar de nuevo"
   },
   "documents": {
     "noDocuments": "Sin documentos",
@@ -245,12 +251,12 @@
       "suggestions": "Sugerencias:",
       "localPlaceholder": "ej. Qwen/Qwen2-VL-2B-Instruct",
       "remotePlaceholder": "ej. gpt-4o-mini",
-      "labelVision": "Visión",
-      "labelClip": "CLIP",
-      "labelOcr": "OCR",
-      "labelEmbedding": "Embedding",
-      "labelTranslator": "Traductor",
-      "labelChat": "Chat"
+      "labelVision": "Visión (descripciones de fotos)",
+      "labelClip": "CLIP (etiquetas y categorías)",
+      "labelOcr": "OCR (extracción de texto)",
+      "labelEmbedding": "Embeddings (búsqueda semántica)",
+      "labelTranslator": "Traductor (idioma de descripciones)",
+      "labelChat": "Chat (agente de IA)"
     },
     "stepDone": {
       "title": "¡Configuración completa!",

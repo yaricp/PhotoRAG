@@ -130,8 +130,16 @@ def _is_categories_cache_valid(cfg: CLIP_Settings, model_hash: str, db: Session)
     return ClipTagger().is_cache_category_valid(categories, cfg.CATEGORIES_HASH_PATH)
 
 
+def _backend_root() -> str:
+    return os.path.dirname(os.path.dirname(__file__))
+
+
 def _bundled_data_path(filename: str) -> str:
-    return os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", filename)
+    return os.path.join(_backend_root(), "data", filename)
+
+
+def _bundled_defaults_path(filename: str) -> str:
+    return os.path.join(_backend_root(), "defaults", filename)
 
 
 def _load_json_list(path: str) -> list[str]:
@@ -150,7 +158,8 @@ def _load_seed_tag_names(cfg: CLIP_Settings) -> list[str]:
 
     Fresh remote-only installs still need a tag vocabulary, but they should not
     depend on the local CLIP model download path. Prefer the mutable cached
-    tags_list.txt when present, then fall back to the bundled tags_names.json.
+    tags_list.txt when present, then fall back to bundled defaults/default_tags.json
+    and finally the legacy data/tags_names.json path used by development caches.
     """
     if os.path.exists(cfg.TAGS_LIST_PATH):
         with open(cfg.TAGS_LIST_PATH, encoding="utf-8") as f:
@@ -158,7 +167,15 @@ def _load_seed_tag_names(cfg: CLIP_Settings) -> list[str]:
         if tags:
             return tags
 
-    return _load_json_list(_bundled_data_path("tags_names.json"))
+    for path in (
+        _bundled_defaults_path("default_tags.json"),
+        _bundled_data_path("tags_names.json"),
+    ):
+        tags = _load_json_list(path)
+        if tags:
+            return tags
+
+    return []
 
 
 def ensure_clip_name_files(db: Session) -> None:

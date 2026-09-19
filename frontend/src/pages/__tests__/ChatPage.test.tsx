@@ -1,10 +1,11 @@
-import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { server } from '@/test/server'
 import { http, HttpResponse } from 'msw'
 import { makeChatResponse, makePhoto } from '@/test/factories'
 import { ChatPage } from '../ChatPage'
+import { useChatStore } from '@/stores/useChatStore'
 import i18n from '@/i18n'
 
 vi.mock('@/api/base', () => ({ getBaseUrl: async () => 'http://localhost:8000' }))
@@ -12,6 +13,11 @@ vi.mock('@/api/base', () => ({ getBaseUrl: async () => 'http://localhost:8000' }
 beforeAll(() => {
     // jsdom doesn't implement scrollIntoView
     window.HTMLElement.prototype.scrollIntoView = vi.fn()
+})
+
+beforeEach(() => {
+    useChatStore.getState().clearConversation()
+    localStorage.clear()
 })
 
 afterEach(() => { i18n.changeLanguage('en') })
@@ -84,6 +90,39 @@ describe('ChatPage', () => {
         expect(img.getAttribute('src')).toContain('thumbnail=1')
         expect(img.getAttribute('src')).toContain('width=360')
         expect(img.getAttribute('src')).toContain('height=270')
+    })
+
+
+    it('keeps unsent draft text after leaving and returning to chat', () => {
+        const first = renderPage()
+        const textarea = screen.getByPlaceholderText(/ask something/i)
+        fireEvent.change(textarea, { target: { value: 'draft question' } })
+        first.unmount()
+
+        renderPage()
+        expect(screen.getByPlaceholderText(/ask something/i)).toHaveValue('draft question')
+    })
+
+    it('keeps selected context photos after leaving and returning to chat', async () => {
+        const photo = makePhoto({ id: 99 })
+        server.use(
+            http.post('http://localhost:8000/api/chat/', () =>
+                HttpResponse.json({ ...makeChatResponse(), photos: [photo] })
+            )
+        )
+        const first = renderPage()
+        const textarea = screen.getByPlaceholderText(/ask something/i)
+        fireEvent.change(textarea, { target: { value: 'find' } })
+        fireEvent.click(screen.getByRole('button', { name: /send/i }))
+        await waitFor(() => expect(screen.getAllByRole('checkbox').length).toBeGreaterThan(1))
+
+        const photoCheckbox = screen.getAllByRole('checkbox')[1] as HTMLInputElement
+        fireEvent.click(photoCheckbox)
+        expect(photoCheckbox.checked).toBe(true)
+        first.unmount()
+
+        renderPage()
+        await waitFor(() => expect((screen.getAllByRole('checkbox')[1] as HTMLInputElement).checked).toBe(true))
     })
 
     it('undo button calls undo API and shows result', async () => {
