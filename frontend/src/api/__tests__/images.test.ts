@@ -16,7 +16,7 @@ describe('photoImageUrl', () => {
         (window as any).electronAPI = { getBackendPort: async () => 8000 }
         const { photoImageUrl } = await import('../images')
         const url = photoImageUrl('/Users/test/My Photos/img.png')
-        expect(url).toContain(encodeURIComponent('/Users/test/My Photos/img.png'))
+        expect(new URL(url).searchParams.get('path')).toBe('/Users/test/My Photos/img.png')
     })
 
     it('returns /api/static URL when in browser', async () => {
@@ -28,6 +28,17 @@ describe('photoImageUrl', () => {
     it('path is URL-encoded in browser mode too', async () => {
         const { photoImageUrl } = await import('../images')
         const url = photoImageUrl('/Users/test/My Photos/img.png')
-        expect(url).toContain(encodeURIComponent('/Users/test/My Photos/img.png'))
+        const params = new URLSearchParams(url.split('?')[1])
+        expect(params.get('path')).toBe('/Users/test/My Photos/img.png')
+    })
+
+    it('adds thumbnail parameters when requested', async () => {
+        (window as any).electronAPI = { getBackendPort: async () => 8000 }
+        const { photoThumbnailUrl } = await import('../images')
+        const url = photoThumbnailUrl('/Users/test/Photos/img.png')
+        const params = new URL(url).searchParams
+        expect(params.get('thumbnail')).toBe('1')
+        expect(params.get('width')).toBe('360')
+        expect(params.get('height')).toBe('270')
     })
 })

@@ -18,11 +18,14 @@ describe('PhotoCard', () => {
         expect(screen.getByText('sunset.png')).toBeInTheDocument()
     })
 
-    it('img src uses /api/static in browser (no electronAPI)', () => {
+    it('img src uses thumbnail URL in browser (no electronAPI)', () => {
         const photo = makePhoto({ file_path: '/photos/img.png' })
         renderCard(photo)
         const img = screen.getByRole('img')
         expect(img.getAttribute('src')).toContain('/api/static')
+        expect(img.getAttribute('src')).toContain('thumbnail=1')
+        expect(img).toHaveAttribute('loading', 'lazy')
+        expect(img).toHaveAttribute('decoding', 'async')
     })
 
     it('shows Document badge when is_doc=true', () => {

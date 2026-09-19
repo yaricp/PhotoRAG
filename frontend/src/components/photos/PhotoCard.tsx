@@ -1,7 +1,7 @@
 import React from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Badge } from '@/components/ui/Badge'
-import { photoImageUrl } from '@/api/images'
+import { photoThumbnailUrl } from '@/api/images'
 import type { Photo, Job } from '@/types/api'
 import './PhotoCard.css'
 
@@ -31,9 +31,11 @@ export function PhotoCard({ photo, job, onArchive, onDelete }: PhotoCardProps) {
         >
             <div className="photo-card__image-wrap">
                 <img
-                    src={photoImageUrl(photo.file_path)}
+                    src={photoThumbnailUrl(photo.file_path)}
                     alt={filename}
                     className="photo-card__image"
+                    loading="lazy"
+                    decoding="async"
                 />
                 <span className="photo-card__id-badge">#{photo.id}</span>
             </div>

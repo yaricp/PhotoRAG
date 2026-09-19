@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { getDuplicates, deletePhoto, archivePhotos, deleteDuplicateRecord } from '@/api/client'
 import type { DuplicatesResponse, DuplicateGroup, ExactDuplicateEntry, PerceptualDuplicateEntry } from '@/api/client'
-import { photoImageUrl } from '@/api/images'
+import { photoThumbnailUrl } from '@/api/images'
 import { Spinner } from '@/components/ui/Spinner'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import './DuplicatesPage.css'
@@ -36,10 +36,11 @@ function DupPhotoCard({
         <div className={`dup-card${checked ? ' dup-card--selected' : ''}`}>
             <div className="dup-card__image-wrap">
                 <img
-                    src={photoImageUrl(filePath)}
+                    src={photoThumbnailUrl(filePath)}
                     alt={basename(filePath)}
                     className="dup-card__image"
                     loading="lazy"
+                    decoding="async"
                 />
                 {photoId !== undefined && (
                     <span className="dup-card__id-badge">#{photoId}</span>
