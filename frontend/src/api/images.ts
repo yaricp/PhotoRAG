@@ -25,3 +25,7 @@ export function photoImageUrl(filePath: string, options: PhotoImageUrlOptions = 
 export function photoThumbnailUrl(filePath: string): string {
     return photoImageUrl(filePath, { thumbnail: true, width: 360, height: 270 })
 }
+
+export function photoFullImageUrl(filePath: string): string {
+    return photoImageUrl(filePath)
+}

@@ -247,7 +247,9 @@ except Exception:
         const skipped = new Set(payload?.skippedModels ?? [])
         const envLines: string[] = []
         if (skipped.has('vision'))      envLines.push('VISION_MODE=remote')
-        if (skipped.has('translation')) envLines.push('TRANSLATION_MODE=remote')
+        if (skipped.has('clip'))        envLines.push('CLIP_MODE=remote')
+        if (skipped.has('embedding'))   envLines.push('EMBEDDING_MODE=remote')
+        if (skipped.has('translation')) envLines.push('TRANSLATOR_MODE=remote')
         if (skipped.has('ocr'))         envLines.push('OCR_MODE=remote')
         if (skipped.has('chat'))        envLines.push('CHAT_MODE=remote')
 

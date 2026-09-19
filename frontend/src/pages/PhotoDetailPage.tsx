@@ -6,7 +6,7 @@ import { Spinner } from '@/components/ui/Spinner'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { OcrPanel } from './OcrPanel'
 import type { Photo } from '@/types/api'
-import { photoImageUrl } from '@/api/images'
+import { photoFullImageUrl } from '@/api/images'
 import './PhotoDetailPage.css'
 
 function Item({ label, value }: { label: string; value?: string | number | null }) {
@@ -100,7 +100,7 @@ export function PhotoDetailPage() {
 
             {/* IMAGE */}
             <div className="pd__image-wrap">
-                <img className="pd__image" src={photoImageUrl(photo.file_path)} alt={filename} />
+                <img className="pd__image" src={photoFullImageUrl(photo.file_path)} alt={filename} />
             </div>
 
             {/* MAIN INFO */}

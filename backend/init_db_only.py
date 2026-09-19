@@ -5,12 +5,12 @@ happen separately in the wizard's download step.
 """
 
 from src.db.database import SessionLocal
-from src.install import init_db, install_categories
+from src.install import init_db, seed_template_vocabularies
 
 db = SessionLocal()
 try:
     init_db(db)
-    install_categories(db)  # seed default categories so clip can compute embeddings
+    seed_template_vocabularies(db)  # seed categories/tags and remote CLIP candidate names
     db.commit()
 finally:
     db.close()

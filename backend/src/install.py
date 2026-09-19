@@ -5,6 +5,7 @@
 """
 
 import hashlib
+import json
 import os
 from typing import Optional
 
@@ -42,6 +43,8 @@ from sqlalchemy import text
 from src.db.database import engine
 from src.db_service import (
     get_all_categories,
+    get_all_template_categories_ordered,
+    get_all_template_tags_ordered,
     get_model_or_none,
     get_model_status,
     get_or_create_template_category,
@@ -127,6 +130,68 @@ def _is_categories_cache_valid(cfg: CLIP_Settings, model_hash: str, db: Session)
     return ClipTagger().is_cache_category_valid(categories, cfg.CATEGORIES_HASH_PATH)
 
 
+def _bundled_data_path(filename: str) -> str:
+    return os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", filename)
+
+
+def _load_json_list(path: str) -> list[str]:
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, list):
+            return [str(item).strip() for item in data if str(item).strip()]
+    except Exception:
+        return []
+    return []
+
+
+def _load_seed_tag_names(cfg: CLIP_Settings) -> list[str]:
+    """Load tag names without importing torch/open_clip.
+
+    Fresh remote-only installs still need a tag vocabulary, but they should not
+    depend on the local CLIP model download path. Prefer the mutable cached
+    tags_list.txt when present, then fall back to the bundled tags_names.json.
+    """
+    if os.path.exists(cfg.TAGS_LIST_PATH):
+        with open(cfg.TAGS_LIST_PATH, encoding="utf-8") as f:
+            tags = [line.strip() for line in f if line.strip()]
+        if tags:
+            return tags
+
+    return _load_json_list(_bundled_data_path("tags_names.json"))
+
+
+def ensure_clip_name_files(db: Session) -> None:
+    """Ensure remote CLIP has candidate tag/category names to classify against.
+
+    Local CLIP writes these files while computing embeddings. Remote CLIP does
+    not need embeddings, but it still needs the ordered candidate names. This is
+    safe and idempotent for both local and remote installs.
+    """
+    cfg = CLIP_Settings()
+
+    tag_names = [row.name for row in get_all_template_tags_ordered(db)]
+    if tag_names:
+        os.makedirs(os.path.dirname(cfg.TAGS_NAMES_PATH) or ".", exist_ok=True)
+        with open(cfg.TAGS_NAMES_PATH, "w", encoding="utf-8") as f:
+            json.dump(tag_names, f)
+        logger.info(f"[clip/tags] tags_names.json ensured ({len(tag_names)} tags)")
+
+    category_names = [row.name for row in get_all_template_categories_ordered(db)]
+    if category_names:
+        os.makedirs(os.path.dirname(cfg.CATEGORIES_NAMES_PATH) or ".", exist_ok=True)
+        with open(cfg.CATEGORIES_NAMES_PATH, "w", encoding="utf-8") as f:
+            json.dump(category_names, f)
+        logger.info(f"[clip/categories] categories_names.json ensured ({len(category_names)} categories)")
+
+
+def seed_template_vocabularies(db: Session) -> None:
+    """Seed foundational template vocabularies without loading ML libraries."""
+    install_categories(db)
+    _seed_template_tags_if_empty(db)
+    ensure_clip_name_files(db)
+
+
 # ---------------------------------------------------------------------------
 # Installers
 # ---------------------------------------------------------------------------
@@ -145,15 +210,10 @@ def _seed_template_tags_if_empty(db: Session) -> None:
         return
 
     cfg = CLIP_Settings()
-    if not os.path.exists(cfg.TAGS_LIST_PATH):
-        logger.info("[template_tags] Vocabulary file not found — will seed after download inside install_clip.")
-        return
-
-    with open(cfg.TAGS_LIST_PATH) as f:
-        tags = [line.strip() for line in f if line.strip()]
+    tags = _load_seed_tag_names(cfg)
 
     if not tags:
-        logger.info("[template_tags] Vocabulary file is empty — skipping seed.")
+        logger.info("[template_tags] No bundled or cached vocabulary found — skipping seed.")
         return
 
     logger.info(f"[template_tags] Seeding {len(tags)} tags from vocabulary file...")
@@ -438,15 +498,17 @@ def run_install(db: Session) -> None:
     if seeded:
         logger.info(f"[install] Seeded {seeded} prompt(s) from prompts.json")
 
-    # 2. Всегда — засеять категории в БД
-    install_categories(db)
+    # 2. Всегда — засеять категории/теги и имена кандидатов для remote CLIP
+    seed_template_vocabularies(db)
 
-    # 2b. Seed template_tags from vocabulary file if table is empty
-    # (runs before install_clip so existing-cache users also get the table populated)
-    _seed_template_tags_if_empty(db)
-
-    # 3. Всегда — CLIP (теги + категории .npy)
-    install_clip(db)
+    # 3. CLIP — download/compute local caches only if CLIP is local.
+    # Remote CLIP uses the seeded candidate name files above and does not need
+    # torch/open_clip, Visual C++ runtime, or local CLIP weights.
+    if "clip" in local_models:
+        install_clip(db)
+    else:
+        logger.info("[clip] Mode=remote, skipping local CLIP download.")
+        update_model_status(db, "clip", "ready")
 
     # 3. Vision — только если local
     if "vision" in local_models:

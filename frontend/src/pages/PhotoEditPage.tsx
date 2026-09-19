@@ -7,7 +7,7 @@ import { Spinner } from '@/components/ui/Spinner'
 import { TagPickerModal } from '@/components/photos/TagPickerModal'
 import { CategoryPickerModal } from '@/components/photos/CategoryPickerModal'
 import type { Photo } from '@/types/api'
-import { photoImageUrl } from '@/api/images'
+import { photoFullImageUrl } from '@/api/images'
 import './PhotoEditPage.css'
 
 function tagToLinked(pt: { tag?: { id: number; name: string } | null; confidence_score?: number | null }): LinkedTag | null {
@@ -116,7 +116,7 @@ export function PhotoEditPage() {
 
             {/* IMAGE */}
             <div className="pe__image-wrap">
-                <img className="pe__image" src={photoImageUrl(photo.file_path)} alt={filename} />
+                <img className="pe__image" src={photoFullImageUrl(photo.file_path)} alt={filename} />
             </div>
 
             {/* FIELDS */}

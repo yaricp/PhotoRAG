@@ -13,6 +13,7 @@ env-var settings if the DB is unavailable.
 import asyncio
 import base64
 import json
+from pathlib import Path
 from uuid import uuid4
 
 from loguru import logger
@@ -141,15 +142,51 @@ async def _call_remote_vision(cfg: dict, file_path: str, prompt_text: str) -> st
 # ---------------------------------------------------------------------------
 
 
-def _load_clip_names(path: str) -> list[str]:
-    """Load tag/category names from a JSON file, returning [] if unavailable."""
-    import json as _json
+def _load_clip_names(path: str, kind: str) -> list[str]:
+    """Load remote CLIP candidate names from cache, DB, or bundled defaults."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, list):
+            names = [str(item).strip() for item in data if str(item).strip()]
+            if names:
+                return names
+    except Exception:
+        pass
 
     try:
-        with open(path) as f:
-            return _json.load(f)
-    except Exception:
-        return []
+        from src.db.database import SessionLocal
+        from src.models import TemplateCategory, TemplateTag
+
+        db = SessionLocal()
+        try:
+            if kind == "tags":
+                rows = db.query(TemplateTag).order_by(TemplateTag.id).all()
+            else:
+                rows = db.query(TemplateCategory).order_by(TemplateCategory.id).all()
+            names = [row.name for row in rows if row.name]
+            if names:
+                logger.info(f"[clip/remote] Loaded {len(names)} {kind} candidates from DB")
+                return names
+        finally:
+            db.close()
+    except Exception as exc:
+        logger.warning(f"[clip/remote] Could not load {kind} candidates from DB: {exc}")
+
+    bundled_name = "tags_names.json" if kind == "tags" else "categories_names.json"
+    bundled_path = Path(__file__).resolve().parents[1] / "data" / bundled_name
+    try:
+        with open(bundled_path, encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, list):
+            names = [str(item).strip() for item in data if str(item).strip()]
+            if names:
+                logger.info(f"[clip/remote] Loaded {len(names)} {kind} candidates from bundled defaults")
+                return names
+    except Exception as exc:
+        logger.warning(f"[clip/remote] Could not load bundled {kind} candidates: {exc}")
+
+    return []
 
 
 async def _call_remote_clip(cfg: dict, file_path: str, task: str) -> list:
@@ -164,8 +201,14 @@ async def _call_remote_clip(cfg: dict, file_path: str, task: str) -> list:
     llm = _build_langchain_vision_model(provider, model_name, api_key, api_url)
 
     clip_cfg = CLIP_Settings()
-    all_tags = _load_clip_names(clip_cfg.TAGS_NAMES_PATH)
-    all_categories = _load_clip_names(clip_cfg.CATEGORIES_NAMES_PATH)
+    all_tags = _load_clip_names(clip_cfg.TAGS_NAMES_PATH, "tags")
+    all_categories = _load_clip_names(clip_cfg.CATEGORIES_NAMES_PATH, "categories")
+    if task == "tags" and not all_tags:
+        logger.warning("[clip/remote] No tag candidates available; returning []")
+        return []
+    if task == "categorize" and not all_categories:
+        logger.warning("[clip/remote] No category candidates available; returning []")
+        return []
 
     tagger = RemoteClipTagger(llm=llm, all_tags=all_tags, all_categories=all_categories)
 

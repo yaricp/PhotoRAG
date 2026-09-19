@@ -1,13 +1,54 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { sendChat, undoLastAction, archivePhotos, deletePhoto, getSystemStatus } from '@/api/client'
-import { PhotoCard } from '@/components/photos/PhotoCard'
+import { photoThumbnailUrl } from '@/api/images'
+import type { Photo } from '@/types/api'
 import { Spinner } from '@/components/ui/Spinner'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { useChatStore } from '@/stores/useChatStore'
 import './ChatPage.css'
 
 type PendingAction = { type: 'archive' | 'delete'; ids: number[] } | null
+
+
+function basename(path: string): string {
+    return path.split(/[\\/]/).pop() ?? path
+}
+
+function ChatPhotoItem({
+    photo,
+    checked,
+    busy,
+    onToggle,
+}: {
+    photo: Photo
+    checked: boolean
+    busy: boolean
+    onToggle: () => void
+}) {
+    const filename = basename(photo.file_path)
+    return (
+        <label className={`chat-photo-item${busy ? ' chat-photo-item--busy' : ''}`}>
+            <input
+                type="checkbox"
+                className="chat-photo-item__checkbox"
+                checked={checked}
+                onChange={onToggle}
+            />
+            <span className="chat-photo-item__thumb-wrap">
+                <img
+                    src={photoThumbnailUrl(photo.file_path)}
+                    alt={filename}
+                    className="chat-photo-item__thumb"
+                    loading="lazy"
+                    decoding="async"
+                />
+                <span className="chat-photo-item__id">#{photo.id}</span>
+            </span>
+            <span className="chat-photo-item__name" title={photo.file_path}>{filename}</span>
+        </label>
+    )
+}
 
 export function ChatPage() {
     const { t } = useTranslation()
@@ -192,18 +233,13 @@ export function ChatPage() {
                 {/* Scrollable photos */}
                 <div className="chat-page__photos">
                     {contextPhotos.map(photo => (
-                        <label
+                        <ChatPhotoItem
                             key={photo.id}
-                            className={`chat-photo-item${busyPhotoIds.has(photo.id) ? ' chat-photo-item--busy' : ''}`}
-                        >
-                            <input
-                                type="checkbox"
-                                className="chat-photo-item__checkbox"
-                                checked={selectedPhotoIds.has(photo.id)}
-                                onChange={() => togglePhoto(photo.id)}
-                            />
-                            <PhotoCard photo={photo} />
-                        </label>
+                            photo={photo}
+                            checked={selectedPhotoIds.has(photo.id)}
+                            busy={busyPhotoIds.has(photo.id)}
+                            onToggle={() => togglePhoto(photo.id)}
+                        />
                     ))}
                 </div>
             </div>

@@ -37,6 +37,18 @@ describe('PhotoDetailPage', () => {
         )
     })
 
+    it('uses full image URL on the detail page', async () => {
+        server.use(
+            http.get('http://localhost:8000/api/photos/:id', () =>
+                HttpResponse.json(makePhoto({ file_path: '/photos/full.jpg' }))
+            )
+        )
+        renderDetail()
+        const img = await screen.findByRole('img')
+        expect(img.getAttribute('src')).toContain('/api/static')
+        expect(img.getAttribute('src')).not.toContain('thumbnail=1')
+    })
+
     it('renders tags', async () => {
         server.use(
             http.get('http://localhost:8000/api/photos/:id', () =>

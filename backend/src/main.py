@@ -166,6 +166,16 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.warning(f"[startup] Could not seed prompts (table may not exist yet — run install): {exc}")
 
+    # Ensure fresh remote-only installs also have template tags and remote CLIP
+    # candidate name files. This repairs existing installs where init-db seeded
+    # categories but skipped template_tags.
+    try:
+        from src.install import seed_template_vocabularies
+
+        seed_template_vocabularies(db)
+    except Exception as exc:
+        logger.warning(f"[startup] Could not ensure template vocabularies: {exc}")
+
     # Remove duplicate embedding rows — a photo should have at most one vector.
     # Duplicates accumulate when the pipeline runs more than once for the same photo
     # without the old vector being deleted first (fixed in store_photo_embedding,

@@ -31,6 +31,16 @@ describe('GalleryPage', () => {
         )
     })
 
+    it('uses thumbnails for gallery card images', async () => {
+        renderGallery()
+        await waitFor(() => expect(screen.getAllByRole('article')).toHaveLength(3))
+        for (const img of screen.getAllByRole('img')) {
+            expect(img.getAttribute('src')).toContain('thumbnail=1')
+            expect(img.getAttribute('src')).toContain('width=360')
+            expect(img.getAttribute('src')).toContain('height=270')
+        }
+    })
+
     it('shows empty state when no photos', async () => {
         server.use(
             http.get('http://localhost:8000/api/photos/', () =>

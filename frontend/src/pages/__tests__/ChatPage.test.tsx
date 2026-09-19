@@ -68,6 +68,24 @@ describe('ChatPage', () => {
         )
     })
 
+    it('uses thumbnails for chat context photo images', async () => {
+        const photo = makePhoto({ id: 99 })
+        server.use(
+            http.post('http://localhost:8000/api/chat/', () =>
+                HttpResponse.json({ ...makeChatResponse(), photos: [photo] })
+            )
+        )
+        renderPage()
+        const textarea = screen.getByPlaceholderText(/ask something/i)
+        fireEvent.change(textarea, { target: { value: 'find' } })
+        fireEvent.click(screen.getByRole('button', { name: /send/i }))
+        await waitFor(() => expect(screen.getByRole('img')).toBeInTheDocument())
+        const img = screen.getByRole('img')
+        expect(img.getAttribute('src')).toContain('thumbnail=1')
+        expect(img.getAttribute('src')).toContain('width=360')
+        expect(img.getAttribute('src')).toContain('height=270')
+    })
+
     it('undo button calls undo API and shows result', async () => {
         server.use(
             http.post('http://localhost:8000/api/history/undo/', () =>
