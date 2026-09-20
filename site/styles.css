@@ -209,6 +209,8 @@ th {
 .status-warn { color: var(--warn); }
 .status-fail { color: var(--fail); }
 
+.download-note,
+.requirements-note,
 .matrix-note {
   color: var(--text-muted);
   font-size: 0.9rem;

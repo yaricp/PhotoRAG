@@ -61,7 +61,45 @@
         </tr>
       </tbody>
     </table>
+    <p class="download-note" data-i18n="download.windowsNote">Windows x64 is now tested and ready to use. On Windows, the current recommended setup uses remote AI models that you configure with your own API key; local model support for Windows is planned for a future release.</p>
     <p><a class="btn btn-primary" href="https://github.com/yaricp/PhotoRAG/releases/latest" data-i18n="download.releaseLink">Go to the latest release</a></p>
+  </section>
+
+  <section class="requirements">
+    <h2 data-i18n="requirements.title">System requirements</h2>
+    <p data-i18n="requirements.intro">PhotoRAG is a desktop app with a Python backend. The first launch needs an internet connection because the app downloads Python packages and prepares its runtime environment.</p>
+    <table>
+      <thead>
+        <tr>
+          <th data-i18n="requirements.colPlatform">Platform</th>
+          <th data-i18n="requirements.colMinimum">Minimum</th>
+          <th data-i18n="requirements.colNotes">Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td data-i18n="requirements.windowsPlatform">Windows 10/11 x64</td>
+          <td data-i18n="requirements.windowsMinimum">4 CPU cores, 2.5 GHz+, 8 GB RAM, 6–10 GB free disk space</td>
+          <td data-i18n="requirements.windowsNotes">Internet required during first setup; remote AI mode requires internet access and your API key. 16 GB RAM is recommended for larger libraries.</td>
+        </tr>
+        <tr>
+          <td data-i18n="requirements.winarm64Platform">Windows 11 arm64</td>
+          <td data-i18n="requirements.winarm64Minimum">4 CPU cores, 8 GB RAM, 6–10 GB free disk space</td>
+          <td data-i18n="requirements.winarm64Notes">Build available, but it needs more testing. Internet is required during first setup and for remote AI providers.</td>
+        </tr>
+        <tr>
+          <td data-i18n="requirements.macPlatform">macOS Intel / Apple Silicon</td>
+          <td data-i18n="requirements.macMinimum">4 CPU cores, 8 GB RAM, 6–10 GB free disk space</td>
+          <td data-i18n="requirements.macNotes">Internet required during first setup and for remote AI providers. Local models work better with 16 GB RAM or more.</td>
+        </tr>
+        <tr>
+          <td data-i18n="requirements.linuxPlatform">Linux x64</td>
+          <td data-i18n="requirements.linuxMinimum">4 CPU cores, 2.5 GHz+, 8 GB RAM, 6–10 GB free disk space</td>
+          <td data-i18n="requirements.linuxNotes">Use a recent desktop Linux distribution. Internet is required during first setup and for remote AI providers.</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="requirements-note" data-i18n="requirements.note">For large photo libraries, local models, or heavy OCR use, 16 GB RAM and a faster CPU are strongly recommended. GPU acceleration is optional and depends on your platform and model choices.</p>
   </section>
 
   <section class="getting-started">
@@ -101,13 +139,14 @@
       </thead>
       <tbody>
         <tr><td data-i18n="platform.mac">macOS (Universal: Intel + Apple Silicon)</td><td class="status-ok" data-i18n="platform.macStatus">✅ Tested and working</td></tr>
-        <tr><td data-i18n="platform.win">Windows x64 / arm64</td><td class="status-warn" data-i18n="platform.winStatus">⚠️ Installer builds; known issues after install</td></tr>
-        <tr><td data-i18n="platform.linux">Linux x64</td><td class="status-warn" data-i18n="platform.linuxStatus">⚠️ Installer builds; known issues after install</td></tr>
+        <tr><td data-i18n="platform.winx64">Windows x64</td><td class="status-ok" data-i18n="platform.winx64Status">✅ Tested and working</td></tr>
+        <tr><td data-i18n="platform.winarm64">Windows arm64</td><td class="status-warn" data-i18n="platform.winarm64Status">⚠️ Build available; needs more testing</td></tr>
+        <tr><td data-i18n="platform.linux">Linux x64</td><td class="status-warn" data-i18n="platform.linuxStatus">⚠️ Installer builds; needs more testing</td></tr>
         <tr><td data-i18n="platform.linuxarm64">Linux arm64</td><td class="status-fail" data-i18n="platform.linuxarm64Status">❌ Currently fails to build</td></tr>
       </tbody>
     </table>
     <p class="matrix-note">
-      <span data-i18n="platform.notePrefix">Windows/Linux problems are tracked in</span>
+      <span data-i18n="platform.notePrefix">Platform-specific problems are tracked in</span>
       <a href="https://github.com/yaricp/PhotoRAG/issues/11" data-i18n="platform.noteLink">issue #11</a>
       <span data-i18n="platform.noteSuffix">— help testing and fixing these is welcome.</span>
     </p>

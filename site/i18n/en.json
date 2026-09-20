@@ -1,5 +1,7 @@
 {
-  "meta": { "langLabel": "Language" },
+  "meta": {
+    "langLabel": "Language"
+  },
   "hero": {
     "tagline": "Your photo library, described and searchable by AI — private by default, and fully under your control.",
     "download": "Download latest release",
@@ -16,9 +18,9 @@
     "f4_title": "Duplicate detection",
     "f4_desc": "Finds exact and near-duplicate photos automatically.",
     "f5_title": "Private by default",
-    "f5_desc": "Descriptions, tags, and search all run on your machine out of the box — your photos never leave your computer unless you explicitly choose otherwise.",
+    "f5_desc": "Your library and app data stay on your computer. Photos are sent to an external provider only when you explicitly configure a remote AI model.",
     "f6_title": "Your choice of AI",
-    "f6_desc": "Every AI capability (descriptions, tagging, search, translation, chat) can be switched independently between a local model and a remote provider you configure yourself (OpenAI, Anthropic, Ollama, and more) — you decide where your data goes."
+    "f6_desc": "Use local models where supported, or connect a remote provider you configure yourself (OpenAI, Anthropic, Ollama, and more). On Windows, the current recommended workflow uses remote models while local model support is being prepared."
   },
   "download": {
     "title": "Download & Install",
@@ -32,7 +34,8 @@
     "linuxarm64": "Linux arm64",
     "linuxarm64Status": "Not available yet — build currently fails, tracked in",
     "linuxarm64Link": "the tracking issue",
-    "releaseLink": "Go to the latest release"
+    "releaseLink": "Go to the latest release",
+    "windowsNote": "Windows x64 is now tested and ready to use. On Windows, the current recommended setup uses remote AI models that you configure with your own API key; local model support for Windows is planned for a future release."
   },
   "gettingStarted": {
     "title": "Getting Started",
@@ -54,19 +57,41 @@
     "colStatus": "Status",
     "mac": "macOS (Universal: Intel + Apple Silicon)",
     "macStatus": "✅ Tested and working",
-    "win": "Windows x64 / arm64",
-    "winStatus": "⚠️ Installer builds; known issues after install",
     "linux": "Linux x64",
-    "linuxStatus": "⚠️ Installer builds; known issues after install",
+    "linuxStatus": "⚠️ Installer builds; needs more testing",
     "linuxarm64": "Linux arm64",
     "linuxarm64Status": "❌ Currently fails to build",
-    "notePrefix": "Windows/Linux problems are tracked in",
+    "notePrefix": "Platform-specific problems are tracked in",
     "noteLink": "issue #11",
-    "noteSuffix": "— help testing and fixing these is welcome."
+    "noteSuffix": "— help testing and fixing these is welcome.",
+    "winx64": "Windows x64",
+    "winx64Status": "✅ Tested and working",
+    "winarm64": "Windows arm64",
+    "winarm64Status": "⚠️ Build available; needs more testing"
   },
   "footer": {
     "installGuide": "Detailed installation instructions",
     "license": "MIT License",
     "issues": "Known issues"
+  },
+  "requirements": {
+    "title": "System requirements",
+    "intro": "PhotoRAG is a desktop app with a Python backend. The first launch needs an internet connection because the app downloads Python packages and prepares its runtime environment.",
+    "colPlatform": "Platform",
+    "colMinimum": "Minimum",
+    "colNotes": "Notes",
+    "windowsPlatform": "Windows 10/11 x64",
+    "windowsMinimum": "4 CPU cores, 2.5 GHz+, 8 GB RAM, 6–10 GB free disk space",
+    "windowsNotes": "Internet required during first setup; remote AI mode requires internet access and your API key. 16 GB RAM is recommended for larger libraries.",
+    "macPlatform": "macOS Intel / Apple Silicon",
+    "macMinimum": "4 CPU cores, 8 GB RAM, 6–10 GB free disk space",
+    "macNotes": "Internet required during first setup and for remote AI providers. Local models work better with 16 GB RAM or more.",
+    "linuxPlatform": "Linux x64",
+    "linuxMinimum": "4 CPU cores, 2.5 GHz+, 8 GB RAM, 6–10 GB free disk space",
+    "linuxNotes": "Use a recent desktop Linux distribution. Internet is required during first setup and for remote AI providers.",
+    "note": "For large photo libraries, local models, or heavy OCR use, 16 GB RAM and a faster CPU are strongly recommended. GPU acceleration is optional and depends on your platform and model choices.",
+    "winarm64Platform": "Windows 11 arm64",
+    "winarm64Minimum": "4 CPU cores, 8 GB RAM, 6–10 GB free disk space",
+    "winarm64Notes": "Build available, but it needs more testing. Internet is required during first setup and for remote AI providers."
   }
 }

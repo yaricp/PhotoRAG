@@ -1,5 +1,7 @@
 {
-  "meta": { "langLabel": "Idioma" },
+  "meta": {
+    "langLabel": "Idioma"
+  },
   "hero": {
     "tagline": "Tu biblioteca de fotos, descrita y buscable con IA — privada por defecto y totalmente bajo tu control.",
     "download": "Descargar última versión",
@@ -16,9 +18,9 @@
     "f4_title": "Detección de duplicados",
     "f4_desc": "Encuentra automáticamente fotos duplicadas o casi idénticas.",
     "f5_title": "Privacidad por defecto",
-    "f5_desc": "Las descripciones, etiquetas y búsquedas se ejecutan en tu equipo de forma predeterminada — tus fotos nunca salen de tu ordenador a menos que tú lo decidas.",
+    "f5_desc": "Tu biblioteca y los datos de la app permanecen en tu ordenador. Las fotos solo se envían a un proveedor externo si configuras explícitamente un modelo de IA remoto.",
     "f6_title": "Tú eliges la IA",
-    "f6_desc": "Cada función de IA (descripciones, etiquetado, búsqueda, traducción, chat) puede alternarse de forma independiente entre un modelo local y un proveedor remoto que configures tú mismo (OpenAI, Anthropic, Ollama y otros) — tú decides adónde van tus datos."
+    "f6_desc": "Usa modelos locales donde estén disponibles, o conecta un proveedor remoto configurado por ti (OpenAI, Anthropic, Ollama y otros). En Windows, el flujo recomendado actual usa modelos remotos mientras se prepara la compatibilidad con modelos locales."
   },
   "download": {
     "title": "Descarga e instalación",
@@ -32,7 +34,8 @@
     "linuxarm64": "Linux arm64",
     "linuxarm64Status": "Aún no disponible — la compilación falla actualmente, seguimiento en",
     "linuxarm64Link": "el issue de seguimiento",
-    "releaseLink": "Ir a la última versión"
+    "releaseLink": "Ir a la última versión",
+    "windowsNote": "Windows x64 ya está probado y listo para usarse. En Windows, la configuración recomendada actual usa modelos de IA remotos que configuras con tu propia clave API; la compatibilidad con modelos locales para Windows está prevista para una versión futura."
   },
   "gettingStarted": {
     "title": "Primeros pasos",
@@ -54,19 +57,41 @@
     "colStatus": "Estado",
     "mac": "macOS (Universal: Intel + Apple Silicon)",
     "macStatus": "✅ Probado y funcionando",
-    "win": "Windows x64 / arm64",
-    "winStatus": "⚠️ El instalador se genera; hay problemas conocidos tras la instalación",
     "linux": "Linux x64",
-    "linuxStatus": "⚠️ El instalador se genera; hay problemas conocidos tras la instalación",
+    "linuxStatus": "⚠️ El instalador se genera; necesita más pruebas",
     "linuxarm64": "Linux arm64",
     "linuxarm64Status": "❌ La compilación falla actualmente",
-    "notePrefix": "Los problemas de Windows/Linux se siguen en",
+    "notePrefix": "Los problemas específicos de cada plataforma se siguen en",
     "noteLink": "el issue #11",
-    "noteSuffix": "— la ayuda para probar y corregirlos es bienvenida."
+    "noteSuffix": "— la ayuda para probar y corregirlos es bienvenida.",
+    "winx64": "Windows x64",
+    "winx64Status": "✅ Probado y funcionando",
+    "winarm64": "Windows arm64",
+    "winarm64Status": "⚠️ Compilación disponible; necesita más pruebas"
   },
   "footer": {
     "installGuide": "Instrucciones de instalación detalladas",
     "license": "Licencia MIT",
     "issues": "Problemas conocidos"
+  },
+  "requirements": {
+    "title": "Requisitos del sistema",
+    "intro": "PhotoRAG es una aplicación de escritorio con backend en Python. El primer inicio necesita conexión a internet porque la app descarga paquetes de Python y prepara su entorno de ejecución.",
+    "colPlatform": "Plataforma",
+    "colMinimum": "Mínimo",
+    "colNotes": "Notas",
+    "windowsPlatform": "Windows 10/11 x64",
+    "windowsMinimum": "4 núcleos de CPU, 2.5 GHz+, 8 GB de RAM, 6–10 GB de espacio libre",
+    "windowsNotes": "Se requiere internet durante la configuración inicial; el modo de IA remota requiere internet y tu clave API. Se recomiendan 16 GB de RAM para bibliotecas grandes.",
+    "macPlatform": "macOS Intel / Apple Silicon",
+    "macMinimum": "4 núcleos de CPU, 8 GB de RAM, 6–10 GB de espacio libre",
+    "macNotes": "Se requiere internet durante la configuración inicial y para proveedores de IA remotos. Los modelos locales funcionan mejor con 16 GB de RAM o más.",
+    "linuxPlatform": "Linux x64",
+    "linuxMinimum": "4 núcleos de CPU, 2.5 GHz+, 8 GB de RAM, 6–10 GB de espacio libre",
+    "linuxNotes": "Usa una distribución Linux de escritorio reciente. Se requiere internet durante la configuración inicial y para proveedores de IA remotos.",
+    "note": "Para bibliotecas grandes, modelos locales o uso intensivo de OCR, se recomiendan encarecidamente 16 GB de RAM y una CPU más rápida. La aceleración por GPU es opcional y depende de tu plataforma y de los modelos elegidos.",
+    "winarm64Platform": "Windows 11 arm64",
+    "winarm64Minimum": "4 núcleos de CPU, 8 GB de RAM, 6–10 GB de espacio libre",
+    "winarm64Notes": "La compilación está disponible, pero necesita más pruebas. Se requiere internet durante la configuración inicial y para proveedores de IA remotos."
   }
 }
