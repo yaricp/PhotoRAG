@@ -1,5 +1,5 @@
 import { ipcMain, dialog, shell, app } from 'electron'
-import { closeSync, existsSync, openSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'fs'
+import { closeSync, existsSync, openSync, readdirSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'fs'
 import { cp as cpAsync } from 'fs/promises'
 import { join } from 'path'
 import { spawn } from 'child_process'
@@ -88,13 +88,47 @@ export function registerIpcHandlers(port: number): void {
                 const requirements = join(backend, 'requirements.txt')
                 const installArgs = ['-m', 'pip', ...buildInstallArgs(process.platform, requirements)]
                 let lineCount = 0
+                let installProgress: PipInstallProgress | null = null
+                let lastInstallSnapshot = 0
+                const sendInstallSnapshot = (force = false) => {
+                    if (!installProgress) return
+                    const now = Date.now()
+                    if (!force && now - lastInstallSnapshot < 1500) return
+                    lastInstallSnapshot = now
+                    const snapshot = readPipInstallProgress(venvPath, installProgress.packages)
+                    const percent = Math.min(98, Math.max(70, 70 + Math.round(snapshot.installedCount / Math.max(snapshot.totalCount, 1) * 28)))
+                    const line = snapshot.latestInstalled
+                        ? `Installing packages: ${snapshot.installedCount}/${snapshot.totalCount} — latest: ${snapshot.latestInstalled}`
+                        : `Installing packages: ${snapshot.installedCount}/${snapshot.totalCount}`
+                    event.sender.send('setup:install-deps-progress', {
+                        line,
+                        percent,
+                        phase: 'installing-packages',
+                        installedCount: snapshot.installedCount,
+                        totalCount: snapshot.totalCount,
+                        latestInstalled: snapshot.latestInstalled,
+                    })
+                }
+                let installPoll: ReturnType<typeof setInterval> | null = null
                 logToFile(`[setup] installing requirements: ${quoteCommand([venvPython, ...installArgs])}`)
-                await spawnTracked(venvPython, installArgs, { env: buildSetupProcessEnv() }, (line) => {
-                    logToFile(`[setup:pip] ${line}`)
-                    lineCount++
-                    const percent = Math.min(95, 5 + lineCount * 0.5)
-                    event.sender.send('setup:install-deps-progress', { line, percent })
-                })
+                try {
+                    await spawnTracked(venvPython, installArgs, { env: buildSetupProcessEnv() }, (line) => {
+                        logToFile(`[setup:pip] ${line}`)
+                        lineCount++
+                        const installing = parsePipInstallingPackagesLine(line)
+                        if (installing.length > 0) {
+                            installProgress = { packages: installing }
+                            sendInstallSnapshot(true)
+                            installPoll = setInterval(() => sendInstallSnapshot(), 1500)
+                            return
+                        }
+                        const percent = installProgress ? 70 : Math.min(95, 5 + lineCount * 0.5)
+                        event.sender.send('setup:install-deps-progress', { line, percent })
+                    })
+                } finally {
+                    if (installPoll) clearInterval(installPoll)
+                }
+                sendInstallSnapshot(true)
 
                 logToFile('[setup] Python dependencies installed')
                 event.sender.send('setup:install-deps-progress', { line: 'Done.', percent: 100 })
@@ -426,6 +460,74 @@ function spawnCaptured(
             reject(e)
         })
     })
+}
+
+interface PipInstallProgress {
+    packages: string[]
+}
+
+interface PipInstallSnapshot {
+    installedCount: number
+    totalCount: number
+    latestInstalled?: string
+}
+
+export function parsePipInstallingPackagesLine(line: string): string[] {
+    const match = line.match(/^Installing collected packages:\s*(.+)$/)
+    if (!match) return []
+    return match[1]
+        .split(',')
+        .map(name => name.trim())
+        .filter(Boolean)
+}
+
+function normalizePackageName(name: string): string {
+    return name.toLowerCase().replace(/[_.]+/g, '-')
+}
+
+function sitePackagesDir(venvPath: string): string {
+    if (process.platform === 'win32') return join(venvPath, 'Lib', 'site-packages')
+    const libDir = join(venvPath, 'lib')
+    try {
+        const pythonDir = readdirSync(libDir, { withFileTypes: true })
+            .find(entry => entry.isDirectory() && entry.name.startsWith('python'))?.name
+        if (pythonDir) return join(libDir, pythonDir, 'site-packages')
+    } catch { /* fall back below */ }
+    return join(libDir, 'python3', 'site-packages')
+}
+
+export function readPipInstallProgress(venvPath: string, packages: string[]): PipInstallSnapshot {
+    const totalCount = packages.length
+    if (totalCount === 0) return { installedCount: 0, totalCount: 0 }
+
+    const wanted = new Set(packages.map(normalizePackageName))
+    const installed: string[] = []
+    try {
+        for (const entry of readdirSync(sitePackagesDir(venvPath), { withFileTypes: true })) {
+            if (!entry.isDirectory() || !entry.name.endsWith('.dist-info')) continue
+            const normalizedEntry = normalizePackageName(entry.name.slice(0, -'.dist-info'.length))
+            for (const packageName of wanted) {
+                if (normalizedEntry.startsWith(`${packageName}-`)) {
+                    installed.push(packageName)
+                    break
+                }
+            }
+        }
+    } catch {
+        return { installedCount: 0, totalCount }
+    }
+
+    const uniqueInstalled = Array.from(new Set(installed))
+    const latestInstalled = packages
+        .slice()
+        .reverse()
+        .find(name => uniqueInstalled.includes(normalizePackageName(name)))
+
+    return {
+        installedCount: uniqueInstalled.length,
+        totalCount,
+        latestInstalled,
+    }
 }
 
 // Spawns a process, collects stdout/stderr line-by-line, rejects on non-zero exit.

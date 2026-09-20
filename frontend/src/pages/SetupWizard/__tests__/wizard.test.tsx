@@ -10,7 +10,7 @@ import { StepInitDb } from '../StepInitDb'
 import { StepDone } from '../StepDone'
 import i18n from '@/i18n'
 
-type ProgressCb = (data: { line: string; percent: number }) => void
+type ProgressCb = (data: { line: string; percent: number; phase?: string; installedCount?: number; totalCount?: number; latestInstalled?: string }) => void
 type DownloadCb = (data: { modelId: string; bytes: number; done: boolean }) => void
 
 const progressListeners: ProgressCb[] = []
@@ -108,6 +108,27 @@ describe('StepInstallDeps', () => {
         })
 
         expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '50')
+    })
+
+
+    it('shows live package install details during quiet pip install phase', () => {
+        render(<StepInstallDeps onDone={vi.fn()} />)
+        fireEvent.click(screen.getByRole('button', { name: /install/i }))
+
+        act(() => {
+            progressListeners.forEach(cb => cb({
+                percent: 75,
+                line: 'Installing packages: 2/3 — latest: torch',
+                phase: 'installing-packages',
+                installedCount: 2,
+                totalCount: 3,
+                latestInstalled: 'torch',
+            }))
+        })
+
+        expect(screen.getByText('Installing packages: 2 / 3')).toBeInTheDocument()
+        expect(screen.getByText('Latest installed: torch')).toBeInTheDocument()
+        expect(screen.getByText(/large packages are unpacked/i)).toBeInTheDocument()
     })
 })
 

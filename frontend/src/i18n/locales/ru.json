@@ -203,7 +203,11 @@
       "installButton": "Установить",
       "installing": "Установка…",
       "retryButton": "Повторить",
-      "errorMessage": "Установка не удалась: {{error}}"
+      "errorMessage": "Установка не удалась: {{error}}",
+      "installingPackages": "Установка пакетов: {{installed}} / {{total}}",
+      "latestInstalled": "Последний установленный пакет: {{packageName}}",
+      "lastActivity": "Последняя активность: {{time}}",
+      "installingPackagesHint": "На Windows этот этап может несколько минут не писать новых строк, пока распаковываются большие пакеты. Если этот текст обновляется, установка продолжается."
     },
     "stepInitDb": {
       "title": "Инициализация базы данных",

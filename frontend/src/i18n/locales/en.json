@@ -203,7 +203,11 @@
       "installButton": "Install",
       "installing": "Installing…",
       "retryButton": "Retry",
-      "errorMessage": "Installation failed: {{error}}"
+      "errorMessage": "Installation failed: {{error}}",
+      "installingPackages": "Installing packages: {{installed}} / {{total}}",
+      "latestInstalled": "Latest installed: {{packageName}}",
+      "lastActivity": "Last activity: {{time}}",
+      "installingPackagesHint": "This stage can stay quiet for several minutes on Windows while large packages are unpacked. If this text keeps updating, installation is still running."
     },
     "stepInitDb": {
       "title": "Initialising Database",

@@ -5,18 +5,31 @@ interface Props {
     onDone: () => void
 }
 
+interface InstallProgress {
+    line: string
+    percent: number
+    phase?: string
+    installedCount?: number
+    totalCount?: number
+    latestInstalled?: string
+}
+
 export function StepInstallDeps({ onDone }: Props) {
     const { t } = useTranslation()
     const [installing, setInstalling] = useState(false)
     const [progress, setProgress] = useState(0)
     const [logLine, setLogLine] = useState('')
+    const [installProgress, setInstallProgress] = useState<InstallProgress | null>(null)
+    const [lastActivity, setLastActivity] = useState('')
     const [error, setError] = useState<string | null>(null)
     const startedRef = useRef(false)
 
     useEffect(() => {
-        window.electronAPI.onInstallDepsProgress(({ percent, line }) => {
-            setProgress(percent)
-            setLogLine(line)
+        window.electronAPI.onInstallDepsProgress((data) => {
+            setProgress(data.percent)
+            setLogLine(data.line)
+            setInstallProgress(data)
+            setLastActivity(new Date().toLocaleTimeString())
         })
     }, [])
 
@@ -64,6 +77,23 @@ export function StepInstallDeps({ onDone }: Props) {
                         <div className="wizard-progressbar__fill" style={{ width: `${progress}%` }} />
                     </div>
                     {logLine && <p className="wizard-log">{logLine}</p>}
+                    {installProgress?.phase === 'installing-packages' && (
+                        <div className="wizard-progress-detail">
+                            <p>
+                                {t('wizard.stepInstallDeps.installingPackages', {
+                                    installed: installProgress.installedCount ?? 0,
+                                    total: installProgress.totalCount ?? '?',
+                                })}
+                            </p>
+                            {installProgress.latestInstalled && (
+                                <p>{t('wizard.stepInstallDeps.latestInstalled', { packageName: installProgress.latestInstalled })}</p>
+                            )}
+                            {lastActivity && (
+                                <p>{t('wizard.stepInstallDeps.lastActivity', { time: lastActivity })}</p>
+                            )}
+                            <p>{t('wizard.stepInstallDeps.installingPackagesHint')}</p>
+                        </div>
+                    )}
                 </div>
             )}
 

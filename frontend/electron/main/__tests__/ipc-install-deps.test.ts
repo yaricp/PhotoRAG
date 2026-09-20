@@ -8,6 +8,7 @@ let existsSyncMock = vi.fn(() => false)
 let openSyncMock = vi.fn(() => 42)
 let closeSyncMock = vi.fn()
 let unlinkSyncMock = vi.fn()
+let readdirSyncMock = vi.fn(() => [])
 
 function mockSuccessfulSpawn({ emitClose = true, emitExit = false } = {}) {
     const stdoutHandlers: Array<(data: Buffer) => void> = []
@@ -53,6 +54,7 @@ beforeEach(() => {
     openSyncMock = vi.fn(() => 42)
     closeSyncMock = vi.fn()
     unlinkSyncMock = vi.fn()
+    readdirSyncMock = vi.fn(() => [])
     spawnMock = vi.fn(() => mockSuccessfulSpawn())
 
     vi.doMock('electron', () => ({
@@ -74,6 +76,7 @@ beforeEach(() => {
             readFileSync: vi.fn(() => '{}'),
             rmSync: vi.fn(),
             unlinkSync: unlinkSyncMock,
+            readdirSync: readdirSyncMock,
         },
         closeSync: closeSyncMock,
         existsSync: existsSyncMock,
@@ -82,6 +85,7 @@ beforeEach(() => {
         readFileSync: vi.fn(() => '{}'),
         rmSync: vi.fn(),
         unlinkSync: unlinkSyncMock,
+        readdirSync: readdirSyncMock,
     }))
     vi.doMock('fs/promises', () => ({
         default: { cp: vi.fn().mockResolvedValue(undefined) },
@@ -158,6 +162,27 @@ describe('setup:install-deps', () => {
         expect(mockSend).toHaveBeenCalledWith('setup:install-deps-progress', {
             line: 'Done.',
             percent: 100,
+        })
+    })
+
+
+
+    it('parses pip install package lines and reads installed package progress', async () => {
+        const { parsePipInstallingPackagesLine, readPipInstallProgress } = await import('../ipc')
+
+        const packages = parsePipInstallingPackagesLine('Installing collected packages: torch, scikit-image, langchain')
+        expect(packages).toEqual(['torch', 'scikit-image', 'langchain'])
+
+        readdirSyncMock.mockReturnValue([
+            { isDirectory: () => true, name: 'torch-2.14.0+cpu.dist-info' },
+            { isDirectory: () => true, name: 'scikit_image-0.26.0.dist-info' },
+            { isDirectory: () => true, name: 'not_a_package.txt' },
+        ])
+
+        expect(readPipInstallProgress(String.raw`C:\Users\test\AppData\Roaming\PhotoRAG\venv`, packages)).toEqual({
+            installedCount: 2,
+            totalCount: 3,
+            latestInstalled: 'scikit-image',
         })
     })
 

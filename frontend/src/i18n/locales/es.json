@@ -203,7 +203,11 @@
       "installButton": "Instalar",
       "installing": "Instalando…",
       "retryButton": "Reintentar",
-      "errorMessage": "Instalación fallida: {{error}}"
+      "errorMessage": "Instalación fallida: {{error}}",
+      "installingPackages": "Instalando paquetes: {{installed}} / {{total}}",
+      "latestInstalled": "Último paquete instalado: {{packageName}}",
+      "lastActivity": "Última actividad: {{time}}",
+      "installingPackagesHint": "En Windows esta fase puede quedarse sin nuevas líneas durante varios minutos mientras se descomprimen paquetes grandes. Si este texto se actualiza, la instalación sigue en curso."
     },
     "stepInitDb": {
       "title": "Inicializando base de datos",

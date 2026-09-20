@@ -374,3 +374,20 @@
     border: 1px solid rgba(108, 143, 248, 0.35);
     color: #b8c8ff;
 }
+
+.wizard-progress-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.65rem 0.75rem;
+    background: rgba(108, 143, 248, 0.08);
+    border: 1px solid rgba(108, 143, 248, 0.22);
+    border-radius: 6px;
+    color: #b8c8ff;
+    font-size: 0.82rem;
+    line-height: 1.35;
+}
+
+.wizard-progress-detail p {
+    margin: 0;
+}

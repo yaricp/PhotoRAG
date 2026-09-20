@@ -33,7 +33,7 @@ export interface ElectronAPI {
     saveModelConfigs: (configs: ModelConfigBrief[]) => Promise<void>
 
     // Setup wizard — event subscriptions (main→renderer)
-    onInstallDepsProgress: (cb: (data: { line: string; percent: number }) => void) => void
+    onInstallDepsProgress: (cb: (data: { line: string; percent: number; phase?: string; installedCount?: number; totalCount?: number; latestInstalled?: string }) => void) => void
     onDownloadModelProgress: (cb: (data: { modelId: string; percent: number; bytes: number }) => void) => void
 }
 
