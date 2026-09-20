@@ -48,22 +48,20 @@ Expected output: empty.
 
 ## 5. Verify the installer hash
 
-For the current Windows x64 installer built from commit `71e798b`, the expected SHA256 is:
+Use the SHA256 published in the current release notes for the Windows x64 installer.
 
-```text
-0150e68211d2ecf41853d254c023c9b9118334906799e82a8d3e4849fa185bce
-```
-
-Check the downloaded installer:
+Check the downloaded installer, replacing the filename with the current release artifact name if needed:
 
 ```cmd
-powershell -NoProfile -Command "Get-FileHash \"$env:USERPROFILE\Downloads\PhotoRAG-Setup-0.1.3-x64.exe\" -Algorithm SHA256"
+powershell -NoProfile -Command "Get-FileHash \"$env:USERPROFILE\Downloads\PhotoRAG-Setup-<version>-x64.exe\" -Algorithm SHA256"
 ```
 
 ## 6. Install from scratch
 
+Run the current Windows x64 installer, for example:
+
 ```cmd
-"%USERPROFILE%\Downloads\PhotoRAG-Setup-0.1.3-x64.exe"
+"%USERPROFILE%\Downloads\PhotoRAG-Setup-<version>-x64.exe"
 ```
 
 If the installer is not in `Downloads`, run it from its actual location.

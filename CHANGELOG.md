@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.1.4](https://github.com/yaricp/PhotoRAG/compare/photorag-v0.1.3...photorag-v0.1.4) (2026-09-20)
+
+
+### Features
+
+* improve first-run setup, thumbnail usage, and pipeline recovery controls
+* expand the user site with current download status and platform requirements
+
+
+### Bug Fixes
+
+* make Windows first-run setup stable with remote models by default
+* prevent duplicate backend and worker startup on Windows
+* make pip package installation progress visible during quiet install phases
+* robustly detect the pip `Installing collected packages` phase on Windows
+* seed remote CLIP vocabularies so tags and categories can be assigned with remote models
+* use thumbnails in gallery, search, documents, and chat-side photo cards
+* ignore failed geocoding results instead of saving service errors as locations
+
 ## [0.1.3](https://github.com/yaricp/PhotoRAG/compare/photorag-v0.1.2...photorag-v0.1.3) (2026-09-03)
 
 
