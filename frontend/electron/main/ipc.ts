@@ -479,9 +479,16 @@ interface PipInstallSnapshot {
 }
 
 export function parsePipInstallingPackagesLine(line: string): string[] {
-    const match = line.match(/^Installing collected packages:\s*(.+)$/)
-    if (!match) return []
-    return match[1]
+    const ansiEscape = new RegExp(`${String.fromCharCode(27)}\\[[0-9;?]*[ -/]*[@-~]`, 'g')
+    const cleaned = line
+        .replace(ansiEscape, '')
+        .replace(/\r/g, '')
+        .trim()
+    const marker = 'Installing collected packages:'
+    const markerIndex = cleaned.indexOf(marker)
+    if (markerIndex === -1) return []
+    return cleaned
+        .slice(markerIndex + marker.length)
         .split(',')
         .map(name => name.trim())
         .filter(Boolean)

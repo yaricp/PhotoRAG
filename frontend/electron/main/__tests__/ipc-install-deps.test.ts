@@ -173,6 +173,9 @@ describe('setup:install-deps', () => {
         const packages = parsePipInstallingPackagesLine('Installing collected packages: torch, scikit-image, langchain')
         expect(packages).toEqual(['torch', 'scikit-image', 'langchain'])
 
+        const windowsLine = parsePipInstallingPackagesLine('\r\u001b[2K  Installing collected packages: sqlite-vec, mpmath, huey')
+        expect(windowsLine).toEqual(['sqlite-vec', 'mpmath', 'huey'])
+
         readdirSyncMock.mockReturnValue([
             { isDirectory: () => true, name: 'torch-2.14.0+cpu.dist-info' },
             { isDirectory: () => true, name: 'scikit_image-0.26.0.dist-info' },
