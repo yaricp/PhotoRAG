@@ -15,6 +15,7 @@
 * prevent duplicate backend and worker startup on Windows
 * make pip package installation progress visible during quiet install phases
 * robustly detect the pip `Installing collected packages` phase on Windows
+* pin the Electron builder hash dependency for reproducible installer builds
 * seed remote CLIP vocabularies so tags and categories can be assigned with remote models
 * use thumbnails in gallery, search, documents, and chat-side photo cards
 * ignore failed geocoding results instead of saving service errors as locations
