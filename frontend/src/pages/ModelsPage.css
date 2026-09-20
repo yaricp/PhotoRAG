@@ -429,3 +429,14 @@
     position: sticky;
     top: 16px;
 }
+
+.models-page__notice {
+    background: rgba(108, 143, 248, 0.12);
+    border: 1px solid rgba(108, 143, 248, 0.35);
+    color: #b8c8ff;
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 13px;
+    line-height: 1.45;
+    margin: 0 0 20px;
+}

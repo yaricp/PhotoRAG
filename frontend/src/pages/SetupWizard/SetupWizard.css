@@ -368,3 +368,9 @@
     position: sticky;
     top: 16px;
 }
+
+.wizard-notice--info {
+    background: rgba(108, 143, 248, 0.12);
+    border: 1px solid rgba(108, 143, 248, 0.35);
+    color: #b8c8ff;
+}

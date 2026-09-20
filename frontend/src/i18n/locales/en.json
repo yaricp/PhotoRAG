@@ -256,7 +256,8 @@
       "labelOcr": "OCR (text extraction)",
       "labelEmbedding": "Embedding (semantic search)",
       "labelTranslator": "Translator (description language)",
-      "labelChat": "Chat (AI agent)"
+      "labelChat": "Chat (AI agent)",
+      "windowsRemoteOnlyNotice": "Local models are temporarily unavailable in the Windows installer. This setup uses OpenAI remote models by default. Local models remain available on macOS/Linux, and Windows local-model support is planned for a future release."
     },
     "stepDone": {
       "title": "Setup Complete!",
@@ -382,7 +383,8 @@
       "downloading": "Downloading…",
       "pending": "Pending",
       "error": "Error"
-    }
+    },
+    "windowsRemoteOnlyNotice": "Local models are temporarily unavailable on Windows. This Windows build currently uses remote API models; local models are available on macOS/Linux and Windows local-model support is planned for a future release."
   },
   "privacy": {
     "shortTitle": "⚠ Privacy Notice",

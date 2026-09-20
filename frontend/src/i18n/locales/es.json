@@ -256,7 +256,8 @@
       "labelOcr": "OCR (extracción de texto)",
       "labelEmbedding": "Embeddings (búsqueda semántica)",
       "labelTranslator": "Traductor (idioma de descripciones)",
-      "labelChat": "Chat (agente de IA)"
+      "labelChat": "Chat (agente de IA)",
+      "windowsRemoteOnlyNotice": "Los modelos locales no están disponibles temporalmente en el instalador de Windows. Esta configuración usa modelos remotos de OpenAI por defecto. Los modelos locales siguen disponibles en macOS/Linux, y la compatibilidad con modelos locales en Windows está prevista para una versión futura."
     },
     "stepDone": {
       "title": "¡Configuración completa!",
@@ -382,7 +383,8 @@
       "downloading": "Descargando…",
       "pending": "Pendiente",
       "error": "Error"
-    }
+    },
+    "windowsRemoteOnlyNotice": "Los modelos locales no están disponibles temporalmente en Windows. Esta compilación para Windows usa modelos remotos por API; los modelos locales están disponibles en macOS/Linux y la compatibilidad en Windows está prevista para una versión futura."
   },
   "privacy": {
     "shortTitle": "⚠ Aviso de privacidad",

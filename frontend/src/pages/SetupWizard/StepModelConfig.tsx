@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ServerIcon, CloudIcon } from '@heroicons/react/24/outline'
 import { PrivacyWarning } from '@/components/ui/PrivacyWarning'
+import { applyWindowsRemoteModelDefaults, isWindowsAppPlatform } from '@/utils/windowsModelDefaults'
 
 interface ModelConfig {
     id: number
@@ -58,6 +59,7 @@ interface Props {
 
 export function StepModelConfig({ onDone }: Props) {
     const { t } = useTranslation()
+    const isWindowsSetup = isWindowsAppPlatform()
     const [configs, setConfigs] = useState<ModelConfig[]>([])
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
@@ -80,11 +82,15 @@ export function StepModelConfig({ onDone }: Props) {
                     const ib = PREFERRED_ORDER.indexOf(b.type)
                     return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib)
                 })
-                setConfigs(sorted as ModelConfig[])
+                const sortedConfigs = sorted as ModelConfig[]
+                const nextConfigs = isWindowsSetup
+                    ? applyWindowsRemoteModelDefaults(sortedConfigs)
+                    : sortedConfigs
+                setConfigs(nextConfigs)
                 setLoading(false)
             })
             .catch(e => { setError(String(e)); setLoading(false) })
-    }, [])
+    }, [isWindowsSetup])
 
     const handleChange = (type: string, field: keyof ModelConfig, value: string) => {
         setConfigs(prev => prev.map(c => {
@@ -124,6 +130,12 @@ export function StepModelConfig({ onDone }: Props) {
                 {t('wizard.stepModelConfig.subtitle')}
             </p>
 
+            {isWindowsSetup && (
+                <p className="wizard-notice wizard-notice--info">
+                    {t('wizard.stepModelConfig.windowsRemoteOnlyNotice')}
+                </p>
+            )}
+
             {error && <div className="models-page__error">{error}</div>}
 
             <div className="wizard-model-config-layout">
@@ -153,7 +165,9 @@ export function StepModelConfig({ onDone }: Props) {
                                     value={config.mode}
                                     onChange={e => handleChange(config.type, 'mode', e.target.value)}
                                 >
-                                    <option value="local">{t('wizard.stepModelConfig.localMode')}</option>
+                                    {!isWindowsSetup && (
+                                        <option value="local">{t('wizard.stepModelConfig.localMode')}</option>
+                                    )}
                                     <option value="remote">{t('wizard.stepModelConfig.remoteMode')}</option>
                                 </select>
                             </div>

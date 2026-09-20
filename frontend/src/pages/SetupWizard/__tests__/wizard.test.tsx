@@ -4,6 +4,7 @@ import { SetupWizard } from '../index'
 import { StepInstallDeps } from '../StepInstallDeps'
 import { StepModelPicker } from '../StepModelPicker'
 import { StepModelConfig } from '../StepModelConfig'
+import { applyWindowsRemoteModelDefaults } from '@/utils/windowsModelDefaults'
 import { StepDownloading } from '../StepDownloading'
 import { StepInitDb } from '../StepInitDb'
 import { StepDone } from '../StepDone'
@@ -16,6 +17,7 @@ const progressListeners: ProgressCb[] = []
 const downloadListeners: DownloadCb[] = []
 
 const mockApi = {
+    platform: 'darwin',
     checkSetupNeeded: vi.fn().mockResolvedValue({ needed: true }),
     installDeps: vi.fn().mockResolvedValue(undefined),
     initDb: vi.fn().mockResolvedValue(undefined),
@@ -44,6 +46,7 @@ beforeEach(() => {
     mockApi.getModelStatuses.mockResolvedValue({})
     mockApi.getModelConfigs.mockResolvedValue([])
     mockApi.saveModelConfigs.mockResolvedValue(undefined)
+    mockApi.platform = 'darwin'
     mockApi.onInstallDepsProgress.mockImplementation((cb: ProgressCb) => progressListeners.push(cb))
     mockApi.onDownloadModelProgress.mockImplementation((cb: DownloadCb) => downloadListeners.push(cb))
     Object.defineProperty(window, 'electronAPI', {
@@ -355,5 +358,53 @@ describe('StepModelConfig i18n', () => {
         await waitFor(() =>
             expect(screen.getByRole('heading', { name: /Configurar modelos de IA/i })).toBeInTheDocument()
         )
+    })
+
+
+    it('uses remote OpenAI defaults and hides local mode on Windows', async () => {
+        mockApi.platform = 'win32'
+        mockApi.getModelConfigs.mockResolvedValue([
+            { id: 1, type: 'vision', mode: 'local', model_name: 'Qwen/Qwen2-VL-2B-Instruct' },
+            { id: 2, type: 'embedding', mode: 'local', model_name: 'nomic-ai/nomic-embed-text-v1.5' },
+        ])
+
+        render(<StepModelConfig onDone={vi.fn()} />)
+
+        expect(await screen.findByText(/Local models are temporarily unavailable/i)).toBeInTheDocument()
+        expect(screen.queryByRole('option', { name: /Local/i })).not.toBeInTheDocument()
+        expect(screen.getAllByDisplayValue('gpt-4o-mini').length).toBeGreaterThanOrEqual(1)
+        expect(screen.getByDisplayValue('text-embedding-3-small')).toBeInTheDocument()
+    })
+
+    it('saves Windows first-run model configs as remote OpenAI configs', async () => {
+        mockApi.platform = 'win32'
+        mockApi.getModelConfigs.mockResolvedValue([
+            { id: 1, type: 'vision', mode: 'local', model_name: 'Qwen/Qwen2-VL-2B-Instruct' },
+            { id: 2, type: 'embedding', mode: 'local', model_name: 'nomic-ai/nomic-embed-text-v1.5' },
+        ])
+
+        render(<StepModelConfig onDone={vi.fn()} />)
+        fireEvent.click(await screen.findByRole('button', { name: /Continue/i }))
+
+        await waitFor(() => expect(mockApi.saveModelConfigs).toHaveBeenCalled())
+        const saved = mockApi.saveModelConfigs.mock.calls[0][0]
+        expect(saved).toEqual(expect.arrayContaining([
+            expect.objectContaining({ type: 'vision', mode: 'remote', model_provider: 'openai', model_name: 'gpt-4o-mini' }),
+            expect.objectContaining({ type: 'embedding', mode: 'remote', model_provider: 'openai', model_name: 'text-embedding-3-small' }),
+        ]))
+    })
+})
+
+describe('applyWindowsRemoteModelDefaults', () => {
+    it('keeps existing non-local remote provider settings', () => {
+        const result = applyWindowsRemoteModelDefaults([
+            { id: 1, type: 'chat', mode: 'remote', model_name: 'gemini-2.0-flash', model_provider: 'google_genai' },
+        ])
+
+        expect(result[0]).toEqual(expect.objectContaining({
+            mode: 'remote',
+            model_provider: 'google_genai',
+            model_name: 'gemini-2.0-flash',
+        }))
     })
 })

@@ -5,6 +5,7 @@ import type { AIModelConfig } from '@/types/api'
 import { ServerIcon, CloudIcon } from '@heroicons/react/24/outline'
 import { Spinner } from '@/components/ui/Spinner'
 import { PrivacyWarning } from '@/components/ui/PrivacyWarning'
+import { applyWindowsRemoteModelDefaults, isWindowsAppPlatform } from '@/utils/windowsModelDefaults'
 import './ModelsPage.css'
 
 type ModelStatusMap = Record<string, string>  // model type → status
@@ -96,6 +97,7 @@ export function ModelsPage() {
     const [saving, setSaving] = useState<string | null>(null)
     const [savedType, setSavedType] = useState<string | null>(null)
     const [modelStatuses, setModelStatuses] = useState<ModelStatusMap>({})
+    const isWindowsApp = isWindowsAppPlatform()
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
     const fetchStatuses = useCallback(() => {
@@ -120,12 +122,15 @@ export function ModelsPage() {
 
     useEffect(() => {
         getModelConfigs()
-            .then(data => { setConfigs(data); setError(null) })
+            .then(data => {
+                setConfigs(isWindowsApp ? applyWindowsRemoteModelDefaults(data) : data)
+                setError(null)
+            })
             .catch(err => setError(err.message || t('models.error')))
             .finally(() => setLoading(false))
         startPolling()
         return () => { if (pollRef.current) clearInterval(pollRef.current) }
-    }, [startPolling])
+    }, [startPolling, isWindowsApp])
 
     const handleSave = async (config: AIModelConfig) => {
         setSaving(config.type)
@@ -169,6 +174,12 @@ export function ModelsPage() {
     return (
         <div className="models-page">
             <p className="models-page__desc">{t('models.desc')}</p>
+
+            {isWindowsApp && (
+                <div className="models-page__notice">
+                    {t('models.windowsRemoteOnlyNotice')}
+                </div>
+            )}
 
             {error && <div className="models-page__error">{error}</div>}
 
@@ -234,7 +245,9 @@ export function ModelsPage() {
                                     value={config.mode}
                                     onChange={e => handleChange(config.type, 'mode', e.target.value)}
                                 >
-                                    <option value="local">{t('wizard.stepModelConfig.localMode')}</option>
+                                    {!isWindowsApp && (
+                                        <option value="local">{t('wizard.stepModelConfig.localMode')}</option>
+                                    )}
                                     <option value="remote">{t('wizard.stepModelConfig.remoteMode')}</option>
                                 </select>
                             </div>
