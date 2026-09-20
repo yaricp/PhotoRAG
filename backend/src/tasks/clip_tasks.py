@@ -30,6 +30,7 @@ from src.utils import extract_exif, parse_datetime
 
 def _metadata_sync(photo_id: int) -> None:
     from src.geo import GeoEnricher
+    from src.location_utils import normalize_geocoded_address
 
     db = SessionLocal()
     try:
@@ -47,13 +48,13 @@ def _metadata_sync(photo_id: int) -> None:
             photo.camera_id = camera.id
 
         geo_result = GeoEnricher().geocode_photo(exif_raw)
-        if geo_result.get("latitude") and geo_result.get("longitude"):
+        if geo_result.get("latitude") is not None and geo_result.get("longitude") is not None:
             update_photo_geoposition(
                 db,
                 photo_id,
                 geo_result["latitude"],
                 geo_result["longitude"],
-                geo_result["address"],
+                normalize_geocoded_address(geo_result.get("address")),
             )
 
         photo.image_width = exif_raw.get("ImageWidth")

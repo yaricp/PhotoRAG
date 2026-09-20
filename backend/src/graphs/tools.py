@@ -1249,6 +1249,7 @@ def add_geoposition_to_photos(
     - "Поставь геолокацию для фото 8: Москва, Красная площадь"
     """
     from src.geo import GeoEnricher
+    from src.location_utils import normalize_geocoded_address
 
     logger.info(f"[tool] add_geoposition_to_photos: ids={photo_ids} lat={latitude} lon={longitude} addr={address!r}")
     if latitude is None and longitude is None and not address:
@@ -1262,9 +1263,9 @@ def add_geoposition_to_photos(
                 return f"Error: could not geocode address '{address}'."
             latitude = loc.latitude
             longitude = loc.longitude
-            resolved_address = loc.address
+            resolved_address = normalize_geocoded_address(loc.address)
         else:
-            resolved_address = enricher.reverse_geocode(latitude, longitude)
+            resolved_address = normalize_geocoded_address(enricher.reverse_geocode(latitude, longitude))
         original_geo_ids = {}
         updated = []
         for pid in photo_ids:
@@ -1283,7 +1284,8 @@ def add_geoposition_to_photos(
                 undo_data={"original_geoposition_ids": original_geo_ids},
             )
         skipped = len(photo_ids) - len(updated)
-        result = f"Set location '{resolved_address}' ({latitude:.5f}, {longitude:.5f}) for {len(updated)} photo(s)."
+        location_label = resolved_address or "coordinates only"
+        result = f"Set location '{location_label}' ({latitude:.5f}, {longitude:.5f}) for {len(updated)} photo(s)."
         if skipped:
             result += f" Skipped {skipped} (not found)."
         return result
@@ -1314,6 +1316,7 @@ def geocode_photo_from_exif(photo_id: int) -> str:
     - "Сохрани геолокацию фото 6 из метаданных"
     """
     from src.geo import GeoEnricher
+    from src.location_utils import normalize_geocoded_address
     from src.metadata import get_exif_data as _exif_fn
 
     logger.info(f"[tool] geocode_photo_from_exif: {photo_id}")
@@ -1325,12 +1328,14 @@ def geocode_photo_from_exif(photo_id: int) -> str:
         exif_raw = _exif_fn(photo.file_path)
         enricher = GeoEnricher()
         geo = enricher.geocode_photo(exif_raw)
-        if not geo.get("latitude") or not geo.get("longitude"):
+        if geo.get("latitude") is None or geo.get("longitude") is None:
             return f"Photo {photo_id} has no GPS data in EXIF."
-        update_photo_geoposition(db, photo_id, geo["latitude"], geo["longitude"], geo.get("address"))
+        address = normalize_geocoded_address(geo.get("address"))
+        update_photo_geoposition(db, photo_id, geo["latitude"], geo["longitude"], address)
+        address_label = address or "coordinates only"
         return (
             f"Geocoded photo {photo_id}: lat={geo['latitude']:.5f}, "
-            f"lon={geo['longitude']:.5f}, address='{geo.get('address')}'"
+            f"lon={geo['longitude']:.5f}, address='{address_label}'"
         )
     finally:
         db.close()

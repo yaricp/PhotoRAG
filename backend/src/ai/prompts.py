@@ -5,6 +5,8 @@ from pathlib import Path
 
 from loguru import logger
 
+from src.location_utils import normalize_geocoded_address
+
 _PROMPTS_JSON_PATH = Path(__file__).parent.parent.parent / "prompts" / "prompts.json"
 
 
@@ -105,13 +107,16 @@ def normalize_for_embedding(
         if cats:
             parts.append(f"Category: {cats}.")
 
-    if location and location != "Unknown Location":
-        parts.append(f"Location: {location}.")
+    normalized_location = normalize_geocoded_address(location)
+    if normalized_location:
+        parts.append(f"Location: {normalized_location}.")
 
     return " ".join(parts)
 
 
-def build_photo_text_for_embedding(description: str, tags: list[str], categories: list[str], location: str) -> str:
+def build_photo_text_for_embedding(
+    description: str, tags: list[str], categories: list[str], location: str | None
+) -> str:
     text = normalize_for_embedding(description, categories, location)
     logger.debug(f"Normalized description for embedding: {text}")
     if tags:

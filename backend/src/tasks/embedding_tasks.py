@@ -30,7 +30,7 @@ def _read_embedding_input_sync(photo_id: int) -> dict | None:
             return None
         tags = [pt.tag.name for pt in photo.tags_rel]
         categories = [pc.category.name for pc in photo.categories_rel]
-        location = photo.geoposition.address if photo.geoposition and photo.geoposition.address else "Unknown Location"
+        location = photo.geoposition.address if photo.geoposition and photo.geoposition.address else None
         return {
             "description": photo.description,
             "tags": tags,

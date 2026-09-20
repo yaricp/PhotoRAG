@@ -102,3 +102,45 @@ class TestGetPrompt:
         con.commit()
         con.close()
         assert get_prompt("vision_analysis.describe_scene", db_path=populated_db) == "Updated!"
+
+
+def test_build_photo_text_for_embedding_ignores_geocoding_failure_location():
+    from src.ai.prompts import build_photo_text_for_embedding
+
+    text = build_photo_text_for_embedding(
+        description="A park fountain.",
+        tags=["fountain"],
+        categories=["nature"],
+        location="Geocoding Service Unavailable",
+    )
+
+    assert "Geocoding Service Unavailable" not in text
+    assert "Location:" not in text
+    assert "Tags: fountain." in text
+
+
+def test_build_photo_text_for_embedding_keeps_real_location():
+    from src.ai.prompts import build_photo_text_for_embedding
+
+    text = build_photo_text_for_embedding(
+        description="A park fountain.",
+        tags=[],
+        categories=[],
+        location="Tbilisi, Georgia",
+    )
+
+    assert "Location: Tbilisi, Georgia." in text
+
+
+def test_normalize_geocoded_address_rejects_service_errors():
+    from src.location_utils import normalize_geocoded_address
+
+    assert normalize_geocoded_address("Geocoding Service Unavailable") is None
+    assert normalize_geocoded_address("Unknown Location") is None
+    assert normalize_geocoded_address("Error: 1.0, 2.0") is None
+
+
+def test_normalize_geocoded_address_keeps_real_address():
+    from src.location_utils import normalize_geocoded_address
+
+    assert normalize_geocoded_address(" Paris, France ") == "Paris, France"

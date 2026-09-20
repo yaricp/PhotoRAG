@@ -3,6 +3,7 @@ from geopy.geocoders import Nominatim
 from loguru import logger
 from PIL import ExifTags
 
+from src.location_utils import normalize_geocoded_address
 from src.utils import make_json_safe
 
 
@@ -49,7 +50,7 @@ class GeoEnricher:
             logger.exception(f"Failed to extract GPS: {err}")
             return None
 
-    def reverse_geocode(self, latitude: float, longitude: float) -> str:
+    def reverse_geocode(self, latitude: float, longitude: float) -> str | None:
         """
         Converts coordinates to a human-readable address.
         Returns 'City, Country' or a full address if possible.
@@ -59,8 +60,9 @@ class GeoEnricher:
             location = self.geolocator.reverse(f"{latitude}, {longitude}", language="en")
 
             if location and "display_name" in location.raw:
-                logger.info(f"Location: {location.raw['display_name']}")
-                return location.raw["display_name"]
+                address = normalize_geocoded_address(location.raw["display_name"])
+                logger.info(f"Location: {address}")
+                return address
                 # address = location.raw['address']
                 # city = address.get('city') or address.get('town') or address.get('village', '')
                 # country = address.get('country', '')
@@ -71,18 +73,18 @@ class GeoEnricher:
                 # logger.info(f"Location: {location.address}")
                 # return location.address
             logger.info("Unknown Location")
-            return "Unknown Location"
+            return None
 
-        except (GeocoderTimedOut, GeocoderServiceError):
-            logger.error("Geocoding Service Unavailable")
-            return "Geocoding Service Unavailable"
-        except Exception as e:
-            logger.error(f"Geo Error: {e}")
-            return f"Error: {latitude}, {longitude}"
+        except (GeocoderTimedOut, GeocoderServiceError) as err:
+            logger.warning(f"Geocoding service unavailable for {latitude}, {longitude}: {err!r}")
+            return None
+        except Exception as err:
+            logger.exception(f"Geo error while reverse geocoding {latitude}, {longitude}: {err}")
+            return None
 
     def geocode_photo(self, exif_raw):
         self.extract_gps(exif_raw)
-        if self.lat and self.lon:
+        if self.lat is not None and self.lon is not None:
             self.address = self.reverse_geocode(self.lat, self.lon)
         else:
             self.address = None

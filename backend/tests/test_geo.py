@@ -39,4 +39,4 @@ def test_reverse_geocode_timeout(mock_reverse, geo_enricher):
     mock_reverse.side_effect = GeocoderTimedOut("Timeout")
 
     result = geo_enricher.reverse_geocode(48.8, 2.2)
-    assert "Unavailable" in result
+    assert result is None
