@@ -1,5 +1,11 @@
+import sys
 from types import SimpleNamespace
 from unittest.mock import ANY, MagicMock, patch
+
+for _module_name in ["src.watcher_service", "src.observer"]:
+    if _module_name in sys.modules and not hasattr(sys.modules[_module_name], "__file__"):
+        sys.modules.pop(_module_name, None)
+
 
 from src.watcher_service import WatcherService
 

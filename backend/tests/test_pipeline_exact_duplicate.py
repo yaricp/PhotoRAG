@@ -189,6 +189,7 @@ def test_observer_calls_record_exact_duplicate_on_hash_collision(db):
         patch("src.observer.create_photo_record") as mock_create,
         patch("src.observer.SessionLocal", return_value=db),
         patch("src.observer.generate_file_hash", return_value="hash_obs_coll"),
+        patch("src.observer.wait_until_file_ready", return_value=True),
     ):
         db.close = MagicMock()
         from src.observer import PhotoEventHandler

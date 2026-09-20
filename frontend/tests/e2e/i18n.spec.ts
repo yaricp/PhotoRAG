@@ -152,7 +152,7 @@ test.describe('Settings page i18n', () => {
             }
         })
 
-        await page.goto(`${BASE_URL}/settings`)
+        await page.goto(`${BASE_URL}/#/settings`)
 
         const langSelect = page.locator('select[id="default-language"]')
         await expect(langSelect).toBeVisible({ timeout: 8000 })
@@ -187,7 +187,7 @@ test.describe('Settings page i18n', () => {
             })
         })
 
-        await page.goto(`${BASE_URL}/settings`)
+        await page.goto(`${BASE_URL}/#/settings`)
 
         const langSelect = page.locator('select[id="default-language"]')
         await expect(langSelect).toBeVisible({ timeout: 8000 })
@@ -224,7 +224,7 @@ test.describe('Settings page i18n', () => {
             await route.fulfill({ status: 202, contentType: 'application/json', body: '{}' })
         })
 
-        await page.goto(`${BASE_URL}/settings`)
+        await page.goto(`${BASE_URL}/#/settings`)
 
         const langSelect = page.locator('select[id="default-language"]')
         await expect(langSelect).toBeVisible({ timeout: 8000 })
@@ -260,7 +260,7 @@ test.describe('Language persistence', () => {
         // Backend reports Russian as the stored language
         await mockSettingsApi(page, 'ru')
 
-        await page.goto(`${BASE_URL}/settings`)
+        await page.goto(`${BASE_URL}/#/settings`)
 
         // Settings page should show Russian text after i18n syncs
         await page.waitForTimeout(1500)
