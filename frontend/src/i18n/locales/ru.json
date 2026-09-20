@@ -204,6 +204,7 @@
       "installing": "Установка…",
       "retryButton": "Повторить",
       "errorMessage": "Установка не удалась: {{error}}",
+      "installingPackagesActive": "Установка продолжается. Распаковка больших пакетов может занимать несколько минут.",
       "installingPackages": "Установка пакетов: {{installed}} / {{total}}",
       "latestInstalled": "Последний установленный пакет: {{packageName}}",
       "lastActivity": "Последняя активность: {{time}}",

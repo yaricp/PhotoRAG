@@ -150,12 +150,35 @@
     background: #333;
     border-radius: 4px;
     overflow: hidden;
+    position: relative;
+}
+
+.wizard-progressbar--active::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.22), transparent);
+    animation: wizard-progress-sweep 1.4s linear infinite;
 }
 
 .wizard-progressbar__fill {
     height: 100%;
     background: #6c8ff8;
     transition: width 0.3s ease;
+}
+
+.wizard-progressbar__fill--active {
+    animation: wizard-progress-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes wizard-progress-sweep {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(100%); }
+}
+
+@keyframes wizard-progress-pulse {
+    0%, 100% { opacity: 0.78; }
+    50% { opacity: 1; }
 }
 
 .wizard-log {
@@ -388,6 +411,20 @@
     line-height: 1.35;
 }
 
+.wizard-progress-detail--active {
+    animation: wizard-progress-detail-pulse 1.8s ease-in-out infinite;
+}
+
+.wizard-progress-detail__status {
+    color: #dce5ff;
+    font-weight: 600;
+}
+
 .wizard-progress-detail p {
     margin: 0;
+}
+
+@keyframes wizard-progress-detail-pulse {
+    0%, 100% { border-color: rgba(108, 143, 248, 0.22); }
+    50% { border-color: rgba(108, 143, 248, 0.5); }
 }

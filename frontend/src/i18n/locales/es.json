@@ -204,6 +204,7 @@
       "installing": "Instalando…",
       "retryButton": "Reintentar",
       "errorMessage": "Instalación fallida: {{error}}",
+      "installingPackagesActive": "La instalación sigue en curso. Los paquetes grandes pueden tardar varios minutos en descomprimirse.",
       "installingPackages": "Instalando paquetes: {{installed}} / {{total}}",
       "latestInstalled": "Último paquete instalado: {{packageName}}",
       "lastActivity": "Última actividad: {{time}}",

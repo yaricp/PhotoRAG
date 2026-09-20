@@ -90,6 +90,7 @@ export function registerIpcHandlers(port: number): void {
                 let lineCount = 0
                 let installProgress: PipInstallProgress | null = null
                 let lastInstallSnapshot = 0
+                let lastInstallLogSnapshot = 0
                 const sendInstallSnapshot = (force = false) => {
                     if (!installProgress) return
                     const now = Date.now()
@@ -100,6 +101,10 @@ export function registerIpcHandlers(port: number): void {
                     const line = snapshot.latestInstalled
                         ? `Installing packages: ${snapshot.installedCount}/${snapshot.totalCount} — latest: ${snapshot.latestInstalled}`
                         : `Installing packages: ${snapshot.installedCount}/${snapshot.totalCount}`
+                    if (force || now - lastInstallLogSnapshot >= 10000) {
+                        lastInstallLogSnapshot = now
+                        logToFile(`[setup:pip:installing] ${line}`)
+                    }
                     event.sender.send('setup:install-deps-progress', {
                         line,
                         percent,
@@ -107,6 +112,7 @@ export function registerIpcHandlers(port: number): void {
                         installedCount: snapshot.installedCount,
                         totalCount: snapshot.totalCount,
                         latestInstalled: snapshot.latestInstalled,
+                        latestPackage: snapshot.latestInstalled,
                     })
                 }
                 let installPoll: ReturnType<typeof setInterval> | null = null

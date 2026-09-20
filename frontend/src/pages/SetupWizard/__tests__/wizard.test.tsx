@@ -10,7 +10,7 @@ import { StepInitDb } from '../StepInitDb'
 import { StepDone } from '../StepDone'
 import i18n from '@/i18n'
 
-type ProgressCb = (data: { line: string; percent: number; phase?: string; installedCount?: number; totalCount?: number; latestInstalled?: string }) => void
+type ProgressCb = (data: { line: string; percent: number; phase?: string; installedCount?: number; totalCount?: number; latestInstalled?: string; latestPackage?: string }) => void
 type DownloadCb = (data: { modelId: string; bytes: number; done: boolean }) => void
 
 const progressListeners: ProgressCb[] = []
@@ -126,6 +126,7 @@ describe('StepInstallDeps', () => {
             }))
         })
 
+        expect(screen.getByText('Installation is still running. Large packages can take several minutes to unpack.')).toBeInTheDocument()
         expect(screen.getByText('Installing packages: 2 / 3')).toBeInTheDocument()
         expect(screen.getByText('Latest installed: torch')).toBeInTheDocument()
         expect(screen.getByText(/large packages are unpacked/i)).toBeInTheDocument()

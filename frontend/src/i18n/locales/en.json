@@ -204,6 +204,7 @@
       "installing": "Installing…",
       "retryButton": "Retry",
       "errorMessage": "Installation failed: {{error}}",
+      "installingPackagesActive": "Installation is still running. Large packages can take several minutes to unpack.",
       "installingPackages": "Installing packages: {{installed}} / {{total}}",
       "latestInstalled": "Latest installed: {{packageName}}",
       "lastActivity": "Last activity: {{time}}",
