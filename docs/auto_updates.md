@@ -1,82 +1,109 @@
 # Auto-updates for installed desktop app
 
-## Goal
+## Decision
 
-PhotoRAG should be able to check whether a newer version is available after it has already been installed on a user's machine, then clearly offer the user an update path from inside the app.
+Implement auto-updates in stages. For the next practical implementation, PhotoRAG should use:
 
-## User-facing behavior to design
+**Update checker + full installer download + manual confirmation before installation.**
 
-- The installed app periodically checks for a newer release.
-- If a newer version is available, the app shows a clear, non-blocking notification with the version number and release notes summary.
-- The user can choose to install the update now, postpone it, or open the release/download page.
-- The app explains whether the update is a full installer download or a smaller patch/delta update.
-- Updates must not interrupt active photo processing without warning.
-- If an update fails, the current installed version should keep working and the user should get a useful error message.
+Do not start with binary patches/delta updates. Do not try to replace the running application in place.
 
-## Platforms to consider
+## Why this is the preferred first step
 
-- Windows NSIS installer: evaluate whether we can support in-app update installation or should download/run a new installer.
-- macOS DMG/app bundle: signing/notarization will matter for a smooth update flow.
-- Linux AppImage: likely needs a separate strategy from Windows/macOS; document whether we support update checks only or AppImage delta updates.
+PhotoRAG bundles an Electron shell, frontend assets, backend Python code, a managed Python runtime, a user venv, local queues, SQLite data, thumbnail cache, and optional local model caches. Updating all of that while the app is running would be fragile: old frontend code could talk to new backend code, backend workers could keep old modules loaded, and Windows can lock executable files during replacement.
 
-## Technical questions
+A full installer is larger, but it is much safer and easier to support across Windows, macOS, and Linux while the app is still stabilizing.
 
-- Where should release metadata live: GitHub Releases, a static JSON endpoint, or both?
-- Should we use Electron/electron-builder auto-update tooling, or keep a custom update checker that opens the latest release page?
-- Do we need patch/delta updates immediately, or is a full installer download acceptable for the first version?
-- How do we verify installer authenticity: checksums, signatures, code signing, or GitHub release provenance?
-- How often should the app check for updates, and how should the user disable or defer checks?
-- How should updates interact with first-run setup, local Python runtime, venv, cached models, user DB, and existing settings?
+## User-facing behavior for the first implementation
 
-## Acceptance criteria for a future OpenSpec change
+- The installed app checks for newer releases periodically, for example on startup and then at most once per day.
+- If a newer version exists, the app shows a non-blocking update banner/dialog.
+- The dialog shows the new version, short release notes, and installer size if available.
+- The user can choose:
+  - download and install;
+  - remind later;
+  - open the release page;
+  - disable automatic update checks in settings.
+- If photo processing is currently active, the app warns the user and suggests installing after processing finishes.
+- The app should not interrupt active processing without explicit confirmation.
 
-- A spec defines cross-platform update-check behavior and platform-specific installation behavior.
-- The app can detect a newer published version and present it to the user.
-- The user remains in control of installing updates.
-- Existing app data under the user data directory is preserved.
-- The update flow has tests or documented manual verification for Windows, macOS, and Linux.
+## Installation flow
 
-## Rough implementation estimate
+1. Fetch release metadata from GitHub Releases or a static JSON endpoint.
+2. Compare the published version with the current app version.
+3. Select the correct artifact for the current platform and architecture.
+4. Download the full installer/package.
+5. Verify the downloaded file using SHA256, and later code signing/signature validation where available.
+6. Ask the user to confirm installation.
+7. Stop PhotoRAG backend processes and workers cleanly.
+8. Launch the installer/package.
+9. Quit the current app.
+10. The newly installed app starts and reuses existing user data.
 
-### Option 1: update checker only
+## Release metadata shape
 
-The app checks GitHub Releases or a static release metadata JSON, detects that a newer version exists, and shows a non-blocking prompt with a link to download the installer manually.
+The release metadata should include enough information for the app to decide whether an update is available and which artifact to download.
 
-Estimated effort:
+Example:
 
-- Time: 1–2 working days.
-- Token budget: 40k–80k.
-- Risk: low.
-- Recommended as the first implementation step.
+```json
+{
+  "version": "0.1.4",
+  "published_at": "2026-09-20T00:00:00Z",
+  "notes": "Fixed Windows watcher, template tags, thumbnails, and pipeline retry.",
+  "downloads": {
+    "win-x64": {
+      "url": "https://example.com/PhotoRAG-Setup-0.1.4-x64.exe",
+      "sha256": "..."
+    },
+    "mac-universal": {
+      "url": "https://example.com/PhotoRAG-0.1.4-universal.dmg",
+      "sha256": "..."
+    },
+    "linux-x64": {
+      "url": "https://example.com/PhotoRAG-0.1.4-x64.AppImage",
+      "sha256": "..."
+    }
+  }
+}
+```
 
-Expected scope:
+## Platform notes
 
-- Read the current app version from the packaged app.
-- Fetch latest release metadata.
-- Compare semantic versions.
-- Show a banner/dialog when an update is available.
-- Add a user setting for automatic update checks.
-- Add tests and documentation/OpenSpec coverage.
+### Windows
 
-### Option 2: full in-app updater
+Use the NSIS installer as the update artifact. The app can download `PhotoRAG-Setup-<version>-x64.exe`, verify it, ask the user, stop backend processes, start the installer, and quit. This avoids replacing locked files while PhotoRAG is running.
 
-The app downloads an update, verifies it, and offers to install/restart from inside the app. Platform behavior differs across Windows, macOS, and Linux.
+### macOS
 
-Estimated effort:
+Use a signed/notarized DMG or a future auto-update mechanism once signing is stable. A smooth in-app update flow on macOS depends heavily on correct signing and notarization.
 
-- Time: 5–10 working days if there are no major platform surprises.
-- Token budget: 150k–300k.
-- Risk: medium/high.
-- Better to defer until installers are stable.
+### Linux
 
-Main complications:
+Use AppImage as the first update artifact. Initially, support update checks and download/open behavior. True AppImage delta updates can be evaluated later.
 
-- Windows NSIS updates while the Electron app is running.
-- macOS signing/notarization requirements for a smooth user experience.
-- Linux AppImage needs a separate update strategy.
-- Decision between full installer download and delta/patch updates.
-- Integrity verification via checksums, signatures, or release provenance.
-- Preservation of user data, venv, models, database, and settings.
-- Avoid interrupting active photo processing.
+## Deferred options
 
-Recommendation: implement Option 1 first, then consider adding in-app installer download, and only after that evaluate true delta updates.
+### True in-app auto-updater
+
+Electron/electron-builder update tooling can be evaluated later. It may be useful once code signing, release hosting, and installer behavior are stable on all target platforms.
+
+### Delta or patch updates
+
+Delta updates should be deferred. They add complexity around integrity, rollback, platform differences, Python runtime changes, backend dependency changes, and model/cache compatibility. Full installers are acceptable for the first stable update mechanism.
+
+### Hot-swapping components without restart
+
+Only small data-like resources should be considered for live updates, such as prompts, release metadata, or optional vocabulary files. Application code, backend code, Python runtime, and dependencies should update through a full installer and app restart.
+
+## Acceptance criteria for the future implementation
+
+- The app can detect a newer published version.
+- The app shows a clear update notification with version and release notes.
+- The user stays in control of downloading and installing.
+- The app downloads the correct artifact for platform and architecture.
+- The app verifies SHA256 before offering installation.
+- The app preserves existing user data under the user data directory.
+- The app stops backend processes before running an installer.
+- Update checks can be disabled in settings.
+- Failed downloads or failed verification leave the current app untouched and show a useful error.
