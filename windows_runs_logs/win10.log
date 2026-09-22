@@ -1,0 +1,117 @@
+Microsoft Windows [Version 10.0.19045.6466]
+(c) Microsoft Corporation. All rights reserved.
+
+C:\Users\qracu>chdir C:\Users\qracu\AppData\Local\Programs\PhotoRAG\resources\backend
+
+C:\Users\qracu\AppData\Local\Programs\PhotoRAG\resources\backend>C:\Users\qracu\AppData\Roaming\PhotoRAG\venv\Scripts\pythonw.exe port 8000
+
+C:\Users\qracu\AppData\Local\Programs\PhotoRAG\resources\backend>C:\Users\qracu\AppData\Roaming\PhotoRAG\venv\Scripts\pythonw.exe
+
+C:\Users\qracu\AppData\Local\Programs\PhotoRAG\resources\backend>chdir C:\Users\qracu\AppData\Roaming\PhotoRAG\venv\Scripts\
+
+C:\Users\qracu\AppData\Roaming\PhotoRAG\venv\Scripts>lsdir
+'lsdir' is not recognized as an internal or external command,
+operable program or batch file.
+
+C:\Users\qracu\AppData\Roaming\PhotoRAG\venv\Scripts>ls
+'ls' is not recognized as an internal or external command,
+operable program or batch file.
+
+C:\Users\qracu\AppData\Roaming\PhotoRAG\venv\Scripts>list
+'list' is not recognized as an internal or external command,
+operable program or batch file.
+
+C:\Users\qracu\AppData\Roaming\PhotoRAG\venv\Scripts>python.exe
+Python 3.13.13 (main, May 10 2026, 19:31:06) [MSC v.1944 64 bit (AMD64)] on win32
+Type "help", "copyright", "credits" or "license" for more information.
+>>>
+
+C:\Users\qracu\AppData\Roaming\PhotoRAG\venv\Scripts>pythonw.exe
+
+C:\Users\qracu\AppData\Roaming\PhotoRAG\venv\Scripts>python.exe C:\Users\qracu\AppData\Local\Programs\PhotoRAG\resources\backend\app.py
+python.exe: can't open file 'C:\\Users\\qracu\\AppData\\Local\\Programs\\PhotoRAG\\resources\\backend\\app.py': [Errno 2] No such file or directory
+
+C:\Users\qracu\AppData\Roaming\PhotoRAG\venv\Scripts>chdir C:\Users\qracu\AppData\Local\Programs\PhotoRAG\resources\backend
+
+C:\Users\qracu\AppData\Local\Programs\PhotoRAG\resources\backend>dir
+ Volume in drive C has no label.
+ Volume Serial Number is DC69-2D3B
+
+ Directory of C:\Users\qracu\AppData\Local\Programs\PhotoRAG\resources\backend
+
+09/12/2026  12:11 PM    <DIR>          .
+09/12/2026  12:11 PM    <DIR>          ..
+09/03/2026  12:46 PM             1,490 .env.example
+09/03/2026  12:46 PM                 6 .python-version
+09/12/2026  12:11 PM    <DIR>          defaults
+09/03/2026  12:46 PM               155 full_install.py
+09/03/2026  12:46 PM               486 init_db_only.py
+09/12/2026  12:11 PM    <DIR>          prompts
+09/03/2026  12:46 PM             1,393 pyproject.toml
+09/03/2026  12:46 PM                 0 README.md
+09/03/2026  12:46 PM               550 requirements-ci.txt
+09/03/2026  12:46 PM               342 requirements.txt
+09/03/2026  12:46 PM               471 ruff.toml
+09/03/2026  12:46 PM             4,399 run.py
+09/12/2026  12:17 PM    <DIR>          src
+09/03/2026  12:46 PM           463,962 uv.lock
+              11 File(s)        473,254 bytes
+               5 Dir(s)   4,687,048,704 bytes free
+
+C:\Users\qracu\AppData\Local\Programs\PhotoRAG\resources\backend>C:\Users\qracu\AppData\Roaming\PhotoRAG\venv\Scripts\python.exe run.py port 8000
+2026-09-12 12:31:35.987 | INFO     | __main__:<module>:124 - [startup] APP_DATA_DIR = C:\Users\qracu\AppData\Roaming\PhotoRAG
+2026-09-12 12:31:36.032 | INFO     | __main__:start_workers:55 - [workers] Starting workers for: ['clip', 'embedding', 'translate', 'folder_scan']
+2026-09-12 12:31:36.037 | INFO     | __main__:start_workers:62 - [workers] Starting worker for: clip → src.queues.clip_queue.clip_queue
+2026-09-12 12:31:36.128 | INFO     | __main__:start_workers:62 - [workers] Starting worker for: embedding → src.queues.embedding_queue.embedding_queue
+2026-09-12 12:31:36.183 | INFO     | __main__:start_workers:62 - [workers] Starting worker for: translate → src.queues.translation_queue.translation_queue
+2026-09-12 12:31:36.267 | INFO     | __main__:start_workers:62 - [workers] Starting worker for: folder_scan → src.queues.folder_scan_queue.folder_scan_queue
+2026-09-12 12:31:38.104 | INFO     | __main__:start_api:111 - [api] Starting FastAPI on 127.0.0.1:8001
+[2026-09-12 12:31:53,568] INFO:huey.consumer:MainThread:Huey consumer started with 1 thread, PID 1980 at 2026-09-12 19:31:53.568168
+[2026-09-12 12:31:53,717] INFO:huey.consumer:MainThread:Scheduler runs every 1 second(s).
+[2026-09-12 12:31:53,920] INFO:huey.consumer:MainThread:Periodic tasks are enabled.
+[2026-09-12 12:31:54,137] INFO:huey.consumer:MainThread:The following commands are available:
++ src.queues.embedding_queue.warmup_embedding_model
++ src.queues.embedding_queue.call_local_embedding_model
+[2026-09-12 12:31:53,712] INFO:huey.consumer:MainThread:Huey consumer started with 1 thread, PID 1792 at 2026-09-12 19:31:53.712431
+[2026-09-12 12:31:54,588] INFO:huey.consumer:MainThread:Scheduler runs every 1 second(s).
+[2026-09-12 12:31:54,689] INFO:huey.consumer:MainThread:Periodic tasks are enabled.
+[2026-09-12 12:31:54,932] INFO:huey.consumer:MainThread:The following commands are available:
++ src.queues.translation_queue.warmup_translation_model
++ src.queues.translation_queue.call_local_translation_model
+2026-09-12 12:31:55.201 | INFO     | src.queues.embedding_queue:_get_model:44 - [embedding_queue] mode=remote — skipping local model load
+[2026-09-12 12:31:55,413] INFO:huey.consumer:MainThread:Huey consumer started with 1 thread, PID 8068 at 2026-09-12 19:31:55.412734
+[2026-09-12 12:31:55,730] INFO:huey.consumer:MainThread:Scheduler runs every 1 second(s).
+[2026-09-12 12:31:55,966] INFO:huey.consumer:MainThread:Periodic tasks are enabled.
+[2026-09-12 12:31:56,106] INFO:huey.consumer:MainThread:The following commands are available:
++ src.queues.clip_queue.warmup_clip_model
++ src.queues.clip_queue.call_local_clip_model
+2026-09-12 12:31:55.816 | INFO     | src.queues.translation_queue:_get_model:43 - [translation_queue] mode=remote — skipping local model load
+2026-09-12 12:31:56.593 | INFO     | src.queues.clip_queue:_get_model:42 - [clip_queue] mode=remote — skipping local model load
+[2026-09-12 12:32:04,025] INFO:huey.consumer:MainThread:Huey consumer started with 1 thread, PID 8212 at 2026-09-12 19:32:04.025195
+[2026-09-12 12:32:04,028] INFO:huey.consumer:MainThread:Scheduler runs every 1 second(s).
+[2026-09-12 12:32:04,041] INFO:huey.consumer:MainThread:Periodic tasks are enabled.
+[2026-09-12 12:32:04,058] INFO:huey.consumer:MainThread:The following commands are available:
++ src.queues.folder_scan_queue.start_folder_scanner_task
+Microsoft Visual C++ Redistributable is not installed, this may lead to the DLL load failure.
+It can be downloaded at https://aka.ms/vs/17/release/vc_redist.x64.exe
+Microsoft Visual C++ Redistributable is not installed, this may lead to the DLL load failure.
+It can be downloaded at https://aka.ms/vs/17/release/vc_redist.x64.exe
+Microsoft Visual C++ Redistributable is not installed, this may lead to the DLL load failure.
+It can be downloaded at https://aka.ms/vs/17/release/vc_redist.x64.exe
+Microsoft Visual C++ Redistributable is not installed, this may lead to the DLL load failure.
+It can be downloaded at https://aka.ms/vs/17/release/vc_redist.x64.exe
+Microsoft Visual C++ Redistributable is not installed, this may lead to the DLL load failure.
+It can be downloaded at https://aka.ms/vs/17/release/vc_redist.x64.exe
+Microsoft Visual C++ Redistributable is not installed, this may lead to the DLL load failure.
+It can be downloaded at https://aka.ms/vs/17/release/vc_redist.x64.exe
+INFO:     Started server process [4796]
+INFO:     Waiting for application startup.
+2026-09-12 12:33:39.471 | INFO     | src.watcher_service:start_all:17 - Starting all watchers...
+2026-09-12 12:33:40.126 | INFO     | src.db.database:load_sqlite_extensions:22 - ✅ sqlite-vec loaded successfully
+2026-09-12 12:33:40.336 | INFO     | src.watcher_service:start_all:19 - Found 0 watchers
+2026-09-12 12:33:40.342 | INFO     | src.watcher_service:start_all:32 - All watchers started
+2026-09-12 12:33:40.425 | INFO     | src.bootstrap:apply_bootstrap_settings:40 - [bootstrap] Language already set to 'ru', skipping bootstrap
+2026-09-12 12:33:40.765 | INFO     | src.db.database:load_sqlite_extensions:22 - ✅ sqlite-vec loaded successfully
+2026-09-12 12:33:40.959 | INFO     | src.db.database:load_sqlite_extensions:22 - ✅ sqlite-vec loaded successfully
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8001 (Press CTRL+C to quit)
