@@ -16,9 +16,9 @@
 - [x] 2.10 Enforce a single Electron app instance so a second launch cannot start a second backend
 - [x] 2.11 Clean stale packaged Windows backend and Huey worker processes from the app venv on startup/shutdown
 - [x] 2.12 Use hash routing for the packaged renderer so sidebar navigation works from `file://`
-- [ ] 2.13 Keep dependency-install UI visibly alive while `pip` is installing packages after downloads complete
-- [ ] 2.14 Surface the current installation phase and recent package/activity details for all desktop platforms
-- [ ] 2.15 Avoid showing a stalled near-complete determinate bar during long package install phases
+- [x] 2.13 Keep dependency-install UI visibly alive while `pip` is installing packages after downloads complete
+- [x] 2.14 Surface the current installation phase and recent package/activity details for all desktop platforms
+- [x] 2.15 Avoid showing a stalled near-complete determinate bar during long package install phases
 - [x] 2.16 Detect missing Microsoft Visual C++ Redistributable before Windows local model setup imports PyTorch-backed installers
 - [x] 2.17 Surface an actionable Windows VC++ Redistributable message instead of a generic model-download process failure
 - [x] 2.18 Make backend startup idempotent so repeated setup/main startup calls cannot spawn duplicate `run.py` processes
@@ -34,8 +34,8 @@
 - [x] 3.4 Build Windows installer locally
 - [x] 3.5 Verify packaged Windows artifacts include the startup fix and exclude local test files
 - [x] 3.6 Add/update tests for duplicate setup guards, stale process cleanup, and sidebar navigation
-- [ ] 3.7 Add frontend tests for dependency-install activity feedback when percent does not change
-- [ ] 3.8 Verify the setup wizard communicates ongoing `pip install` work on Windows, macOS, and Linux
+- [x] 3.7 Add frontend tests for dependency-install activity feedback when percent does not change
+- [x] 3.8 Verify the setup wizard communicates ongoing `pip install` work on Windows, macOS, and Linux
 - [x] 3.9 Add/update tests for Windows model setup VC++ Redistributable diagnostics
 - [x] 3.10 Add/update tests for repeated backend startup reusing the in-flight or already-running process
 - [x] 3.10.1 Add/update tests for packaged Windows runtime lock reuse
