@@ -12,6 +12,7 @@ huey==2.5.0
 langchain
 langgraph
 langchain-huggingface
+langchain-ollama
 easyocr
 Pillow
 open_clip_torch

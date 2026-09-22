@@ -15,6 +15,10 @@ This release already contains enough risk and user-visible change:
 - clearer model labels;
 - failed pipeline task retry and per-photo full pipeline rerun.
 
+Must-fix before cutting the next release:
+
+- Ensure every packaged installer includes `langchain-ollama` in the first-run backend venv. Ollama is exposed as a remote provider in the UI on every platform, and without this dependency vision/categorization tasks fail before they can call the local Ollama server.
+
 Because of this, the release should not also include a full local-model support push or full auto-update implementation.
 
 ## Local models
