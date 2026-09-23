@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { ServerIcon, CloudIcon } from '@heroicons/react/24/outline'
 import { PrivacyWarning } from '@/components/ui/PrivacyWarning'
 import { applyWindowsRemoteModelDefaults, isWindowsAppPlatform } from '@/utils/windowsModelDefaults'
+import { getModelSuggestions, getProviderOptions, providerRequiresApiKey } from '@/utils/modelProviderOptions'
 
 interface ModelConfig {
     id: number
@@ -16,42 +17,6 @@ interface ModelConfig {
 }
 
 const PREFERRED_ORDER = ['vision', 'clip', 'ocr', 'embedding', 'translator', 'chat']
-
-const MODEL_SUGGESTIONS: Record<string, Record<string, string[]>> = {
-    openai: {
-        chat:       ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'],
-        vision:     ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'],
-        ocr:        ['gpt-4o', 'gpt-4o-mini'],
-        clip:       ['gpt-4o-mini', 'gpt-4o'],
-        translator: ['gpt-4o-mini', 'gpt-4o'],
-        embedding:  ['text-embedding-3-small', 'text-embedding-3-large', 'text-embedding-ada-002'],
-    },
-    anthropic: {
-        chat:       ['claude-opus-4-5', 'claude-sonnet-4-5', 'claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022'],
-        vision:     ['claude-opus-4-5', 'claude-sonnet-4-5', 'claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022'],
-        ocr:        ['claude-3-5-haiku-20241022', 'claude-sonnet-4-5'],
-        clip:       ['claude-3-5-haiku-20241022', 'claude-sonnet-4-5'],
-        translator: ['claude-3-5-haiku-20241022', 'claude-sonnet-4-5'],
-    },
-    google_genai: {
-        chat:       ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash-latest', 'gemini-1.5-pro-latest'],
-        vision:     ['gemini-2.0-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-pro-latest'],
-        ocr:        ['gemini-2.0-flash', 'gemini-1.5-flash-latest'],
-        clip:       ['gemini-2.0-flash', 'gemini-1.5-flash-latest'],
-        translator: ['gemini-2.0-flash', 'gemini-1.5-flash-latest'],
-    },
-    ollama: {
-        chat:       ['llama3.2', 'llama3.1', 'mistral', 'gemma3', 'phi4'],
-        vision:     ['llava', 'llava-llama3', 'moondream'],
-        ocr:        ['llava', 'llava-llama3'],
-        clip:       ['llava', 'llava-llama3'],
-        translator: ['llama3.2', 'mistral'],
-    },
-}
-
-function getSuggestions(provider: string, modelType: string): string[] {
-    return MODEL_SUGGESTIONS[provider]?.[modelType] ?? []
-}
 
 interface Props {
     onDone: (configs: ModelConfig[]) => void
@@ -184,7 +149,7 @@ export function StepModelConfig({ onDone }: Props) {
                                     }
                                 />
                                 {config.mode === 'remote' && config.model_provider && (() => {
-                                    const suggestions = getSuggestions(config.model_provider, config.type)
+                                    const suggestions = getModelSuggestions(config.model_provider, config.type)
                                     if (!suggestions.length) return null
                                     return (
                                         <div className="model-suggestions">
@@ -214,21 +179,17 @@ export function StepModelConfig({ onDone }: Props) {
                                             onChange={e => handleChange(config.type, 'model_provider', e.target.value)}
                                         >
                                             <option value="">{t('wizard.stepModelConfig.autoDetect')}</option>
-                                            <option value="openai">OpenAI</option>
-                                            {(config.type === 'chat' || config.type === 'vision' || config.type === 'clip' || config.type === 'ocr' || config.type === 'translator') && (
-                                                <option value="anthropic">Anthropic (Claude)</option>
-                                            )}
-                                            <option value="google_genai">Google Gemini (AI Studio key)</option>
-                                            <option value="ollama">Ollama (self-hosted)</option>
-                                            {config.type === 'chat' && <option value="groq">Groq</option>}
-                                            {config.type === 'chat' && <option value="mistralai">Mistral AI</option>}
-                                            {config.type === 'chat' && <option value="together">Together AI</option>}
-                                            {config.type === 'chat' && <option value="cohere">Cohere</option>}
-                                            {config.type === 'translator' && <option value="deepl">DeepL</option>}
-                                            {config.type === 'translator' && <option value="libretranslate">LibreTranslate (self-hosted)</option>}
+                                            {getProviderOptions(config.type).map(provider => (
+                                                <option key={provider.value} value={provider.value}>{provider.label}</option>
+                                            ))}
                                         </select>
                                         {config.model_provider === 'ollama' && (
-                                            <p className="model-field__hint">{t('wizard.stepModelConfig.ollamaHint')}</p>
+                                            <p className="model-field__hint">
+                                                {t('wizard.stepModelConfig.ollamaHint')}{' '}
+                                                <a href="#/help/local-ollama" className="help-article__link">
+                                                    {t('wizard.stepModelConfig.ollamaHelpLink')}
+                                                </a>
+                                            </p>
                                         )}
                                         {config.type === 'clip' && config.mode === 'remote' && (
                                             <p className="model-field__hint">
@@ -254,7 +215,7 @@ export function StepModelConfig({ onDone }: Props) {
                                         />
                                     </div>
 
-                                    {config.model_provider !== 'ollama' && config.model_provider !== 'google_vertexai' && (
+                                    {providerRequiresApiKey(config.model_provider) && (
                                         <div className="model-field">
                                             <label className="model-field__label">{t('wizard.stepModelConfig.apiKey')}</label>
                                             <input

@@ -170,6 +170,36 @@ def test_get_photo_by_id():
     assert response.json()["id"] == photo.id
 
 
+def test_update_model_rejects_unavailable_packaged_provider():
+    update_data = {
+        "mode": "remote",
+        "model_name": "llama-3.1-8b-instant",
+        "url": None,
+        "api_key": "123",
+        "model_provider": "groq",
+    }
+
+    response = client.put("/api/models/chat", json=update_data)
+
+    assert response.status_code == 400
+    assert "not supported by this packaged build" in response.json()["detail"]
+
+
+def test_update_model_rejects_provider_for_unsupported_capability():
+    update_data = {
+        "mode": "remote",
+        "model_name": "claude-3-5-haiku-20241022",
+        "url": None,
+        "api_key": "123",
+        "model_provider": "anthropic",
+    }
+
+    response = client.put("/api/models/embedding", json=update_data)
+
+    assert response.status_code == 400
+    assert "does not support model type 'embedding'" in response.json()["detail"]
+
+
 def test_get_photos_pagination_and_filtering():
     response = client.get("/api/photos/?limit=10&skip=0")
     assert response.status_code == 200

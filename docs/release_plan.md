@@ -15,9 +15,14 @@ This release already contains enough risk and user-visible change:
 - clearer model labels;
 - failed pipeline task retry and per-photo full pipeline rerun.
 
+Already addressed for this release:
+
+- Packaged installers include `langchain-ollama` in the first-run backend venv, so Ollama-backed model tasks can construct their LangChain client.
+- The packaged provider matrix now keeps the UI provider list aligned with `backend/requirements.txt`: OpenAI, Anthropic, Google Gemini, local Ollama, DeepL, and LibreTranslate are the supported provider paths for the current release. Other chat-only providers should stay hidden until their provider packages and setup guidance are included.
+
 Must-fix before cutting the next release:
 
-- Ensure every packaged installer includes `langchain-ollama` in the first-run backend venv. Ollama is exposed as a remote provider in the UI on every platform, and without this dependency vision/categorization tasks fail before they can call the local Ollama server.
+- Finish the local Ollama UX/docs work so users understand that `http://localhost:11434` is a local model path, not a cloud provider.
 
 Because of this, the release should not also include a full local-model support push or full auto-update implementation.
 

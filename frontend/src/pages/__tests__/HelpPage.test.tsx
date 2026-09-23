@@ -15,11 +15,11 @@ const renderAt = (path: string) =>
     )
 
 describe('HelpPage', () => {
-    it('renders help sidebar with all 17 topic links', () => {
+    it('renders help sidebar with all topic links', () => {
         renderAt('/help/getting-started')
         const sidebar = screen.getByTestId('help-sidebar')
         const links = within(sidebar).getAllByRole('link')
-        expect(links).toHaveLength(19)
+        expect(links).toHaveLength(20)
     })
 
     it('renders article for the current topic', () => {
@@ -90,5 +90,15 @@ describe('HelpPage', () => {
         links.forEach(link => {
             expect(link.getAttribute('href')).toMatch(/^\/help\/[\w-]+$/)
         })
+    })
+
+    it('renders local Ollama setup guidance', () => {
+        renderAt('/help/local-ollama')
+        const article = screen.getByTestId('help-article')
+        expect(within(article).getByRole('heading', { name: /Local Models via Ollama/i })).toBeInTheDocument()
+        expect(within(article).getByRole('link', { name: /Download Ollama/i })).toHaveAttribute('href', 'https://ollama.com/download')
+        expect(within(article).getAllByText(/http:\/\/localhost:11434/).length).toBeGreaterThan(0)
+        expect(within(article).getAllByText(/ollama pull qwen2\.5vl:7b/).length).toBeGreaterThan(0)
+        expect(within(article).getAllByText(/nomic-embed-text/).length).toBeGreaterThan(0)
     })
 })

@@ -11,6 +11,7 @@ export const HELP_TOPICS = [
     { id: 'processing' },
     { id: 'folders' },
     { id: 'models' },
+    { id: 'local-ollama' },
     { id: 'prompts' },
     { id: 'template-tags' },
     { id: 'template-categories' },

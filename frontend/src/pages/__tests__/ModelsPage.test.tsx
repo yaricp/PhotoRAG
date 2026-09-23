@@ -61,7 +61,7 @@ describe('ModelsPage i18n', () => {
         render(<MemoryRouter><ModelsPage /></MemoryRouter>)
 
         expect(await screen.findByText(/Local models are temporarily unavailable on Windows/i)).toBeInTheDocument()
-        expect(screen.queryByRole('option', { name: /Local/i })).not.toBeInTheDocument()
+        expect(screen.queryByRole('option', { name: /^Local \(GPU \/ CPU\)$/i })).not.toBeInTheDocument()
         expect(screen.getAllByDisplayValue('gpt-4o-mini').length).toBeGreaterThanOrEqual(1)
         expect(screen.getByDisplayValue('text-embedding-3-small')).toBeInTheDocument()
     })

@@ -1,0 +1,118 @@
+.docs-header {
+  max-width: 78rem;
+  margin: 0 auto;
+  padding: 1.5rem 1.5rem 0;
+}
+
+.docs-header .lang-switch {
+  justify-content: flex-end;
+  margin-bottom: 0.75rem;
+}
+
+.docs-home {
+  display: inline-block;
+  margin-bottom: 0.5rem;
+}
+
+.docs-header h1 {
+  margin: 0;
+  font-size: 2rem;
+}
+
+.docs-layout {
+  display: grid;
+  grid-template-columns: minmax(13rem, 17rem) minmax(0, 1fr);
+  gap: 2rem;
+  max-width: 78rem;
+  margin: 0 auto;
+  padding: 1.5rem 1.5rem 4rem;
+}
+
+.docs-nav {
+  min-width: 0;
+}
+
+.docs-toc {
+  position: sticky;
+  top: 1rem;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.9rem 1rem;
+}
+
+.docs-toc summary {
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.docs-toc ul {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+}
+
+.docs-toc li + li {
+  margin-top: 0.15rem;
+}
+
+.docs-toc a {
+  display: block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.docs-toc a:hover,
+.docs-toc a[aria-current="page"] {
+  background: var(--border);
+  color: var(--text);
+}
+
+.docs-main {
+  min-width: 0;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+.docs-article {
+  max-width: 48rem;
+}
+
+.docs-article h2 {
+  margin-top: 0;
+  font-size: 1.65rem;
+}
+
+.docs-article h3 {
+  margin: 1.75rem 0 0.5rem;
+  font-size: 1.15rem;
+}
+
+.docs-article p {
+  margin: 0 0 1.1rem;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  line-height: 1.7;
+}
+
+.docs-article .docs-intro {
+  color: var(--text-muted);
+  font-size: 1.05rem;
+}
+
+@media (max-width: 720px) {
+  .docs-layout {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .docs-toc {
+    position: static;
+    max-height: 50vh;
+  }
+}

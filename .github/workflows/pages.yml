@@ -3,7 +3,10 @@ name: Deploy user site to GitHub Pages
 on:
   push:
     branches: [main]
-    paths: ['site/**']
+    paths:
+      - 'site/**'
+      - 'frontend/src/i18n/locales/*.json'
+      - 'frontend/src/pages/HelpPage/topics.ts'
   workflow_dispatch:
 
 permissions:
@@ -23,7 +26,11 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
       - uses: actions/configure-pages@v5
+      - run: node site/sync-help.mjs
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site

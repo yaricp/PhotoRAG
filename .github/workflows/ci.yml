@@ -23,6 +23,7 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run type-check
+      - run: node ../site/sync-help.mjs --check
 
   lint-backend:
     name: Lint backend (Ruff)

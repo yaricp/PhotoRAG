@@ -11,7 +11,7 @@ VITEST   := node --require ./scripts/crypto-polyfill.cjs ./node_modules/.bin/vit
 
 .PHONY: help init init-db openspec-setup lint format \
         test test-backend test-frontend dev dev-backend dev-frontend \
-        ci ci-backend ci-frontend e2e clean
+        ci ci-backend ci-frontend ci-site e2e clean
 
 help: ## List available targets
 	@grep -E '^[a-z0-9-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  \033[1m%-16s\033[0m %s\n", $$1, $$2}'
@@ -51,7 +51,7 @@ dev-backend: ## Run the backend API standalone (run `make init-db` once first)
 dev-frontend: ## Alias for `make dev` (the Electron dev server owns the backend process)
 	$(MAKE) dev
 
-ci: ci-backend ci-frontend ## Mirror the GitHub Actions CI jobs locally
+ci: ci-backend ci-frontend ci-site ## Mirror the GitHub Actions CI jobs locally
 
 ci-backend: ## Backend CI: ruff check + format check + pytest with coverage gate
 	cd $(BACKEND) && uvx ruff check . && uvx ruff format --check .
@@ -60,6 +60,9 @@ ci-backend: ## Backend CI: ruff check + format check + pytest with coverage gate
 ci-frontend: ## Frontend CI: eslint + tsc + vitest with coverage
 	cd $(FRONTEND) && npm run lint && npm run type-check
 	cd $(FRONTEND) && $(VITEST) run --coverage
+
+ci-site: ## Site CI: ensure published help matches the app in all languages
+	node site/sync-help.mjs --check
 
 e2e: ## Run Playwright E2E tests (run `npx playwright install` once to fetch browsers)
 	cd $(FRONTEND) && npm run test:e2e

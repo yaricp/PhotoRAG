@@ -90,6 +90,7 @@
 .help-article p {
     margin: 0 0 1rem;
     color: var(--color-text);
+    white-space: pre-line;
 }
 
 .help-article__examples-heading {

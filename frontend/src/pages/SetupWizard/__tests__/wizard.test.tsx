@@ -393,7 +393,7 @@ describe('StepModelConfig i18n', () => {
         render(<StepModelConfig onDone={vi.fn()} />)
 
         expect(await screen.findByText(/Local models are temporarily unavailable/i)).toBeInTheDocument()
-        expect(screen.queryByRole('option', { name: /Local/i })).not.toBeInTheDocument()
+        expect(screen.queryByRole('option', { name: /^Local \(GPU \/ CPU\)$/i })).not.toBeInTheDocument()
         expect(screen.getAllByDisplayValue('gpt-4o-mini').length).toBeGreaterThanOrEqual(1)
         expect(screen.getByDisplayValue('text-embedding-3-small')).toBeInTheDocument()
     })

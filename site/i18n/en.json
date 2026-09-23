@@ -5,7 +5,15 @@
   "hero": {
     "tagline": "Your photo library, described and searchable by AI — private by default, and fully under your control.",
     "download": "Download latest release",
+    "documentation": "Documentation",
     "source": "View source on GitHub"
+  },
+  "docs": {
+    "home": "← Home",
+    "title": "Documentation",
+    "contents": "Contents",
+    "loading": "Loading documentation…",
+    "loadError": "Could not load the documentation. Please reload this page."
   },
   "about": {
     "title": "About",
@@ -20,7 +28,7 @@
     "f5_title": "Private by default",
     "f5_desc": "Your library and app data stay on your computer. Photos are sent to an external provider only when you explicitly configure a remote AI model.",
     "f6_title": "Your choice of AI",
-    "f6_desc": "Use local models where supported, or connect a remote provider you configure yourself (OpenAI, Anthropic, Ollama, and more). On Windows, the current recommended workflow uses remote models while local model support is being prepared."
+    "f6_desc": "Use built-in local models, a local Ollama server, or a cloud provider you configure yourself (OpenAI, Anthropic, Google Gemini, and more). On Windows, the current recommended workflow uses cloud APIs or local Ollama while built-in local model support is being prepared."
   },
   "download": {
     "title": "Download & Install",

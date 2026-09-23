@@ -13,6 +13,8 @@ langchain
 langgraph
 langchain-huggingface
 langchain-ollama
+langchain-anthropic
+langchain-google-genai
 easyocr
 Pillow
 open_clip_torch

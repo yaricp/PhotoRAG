@@ -52,6 +52,7 @@
       .then(function (dict) {
         applyTranslations(dict, lang);
         localStorage.setItem(STORAGE_KEY, lang);
+        window.dispatchEvent(new CustomEvent('photorag:languagechange', { detail: { lang: lang, dict: dict } }));
       })
       .catch(function (err) {
         console.error('[photorag-site-i18n] could not load language "' + lang + '":', err);

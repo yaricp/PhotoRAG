@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Documentation — PhotoRAG</title>
+<meta name="description" content="PhotoRAG documentation for every app page, setup, models, and local Ollama in English, Russian, and Spanish.">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="docs.css">
+</head>
+<body>
+
+<header class="docs-header">
+  <nav class="lang-switch" aria-label="Language">
+    <button type="button" data-lang="en" aria-pressed="true">EN</button>
+    <button type="button" data-lang="ru" aria-pressed="false">RU</button>
+    <button type="button" data-lang="es" aria-pressed="false">ES</button>
+  </nav>
+  <a class="docs-home" href="index.html" data-i18n="docs.home">← Home</a>
+  <h1 data-i18n="docs.title">Documentation</h1>
+</header>
+
+<div class="docs-layout">
+  <nav class="docs-nav" aria-label="Documentation topics">
+    <details class="docs-toc" open>
+      <summary data-i18n="docs.contents">Contents</summary>
+      <ul id="docs-topics"></ul>
+    </details>
+  </nav>
+  <main class="docs-main">
+    <p id="docs-status" role="status" data-i18n="docs.loading">Loading documentation…</p>
+    <article id="docs-article" class="docs-article" hidden></article>
+  </main>
+</div>
+
+<script src="i18n.js" defer></script>
+<script src="docs.js" defer></script>
+</body>
+</html>

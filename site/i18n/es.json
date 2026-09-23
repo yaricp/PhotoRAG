@@ -5,7 +5,15 @@
   "hero": {
     "tagline": "Tu biblioteca de fotos, descrita y buscable con IA — privada por defecto y totalmente bajo tu control.",
     "download": "Descargar última versión",
+    "documentation": "Documentación",
     "source": "Ver código fuente en GitHub"
+  },
+  "docs": {
+    "home": "← Inicio",
+    "title": "Documentación",
+    "contents": "Contenido",
+    "loading": "Cargando documentación…",
+    "loadError": "No se pudo cargar la documentación. Vuelve a cargar la página."
   },
   "about": {
     "title": "Acerca de",
@@ -20,7 +28,7 @@
     "f5_title": "Privacidad por defecto",
     "f5_desc": "Tu biblioteca y los datos de la app permanecen en tu ordenador. Las fotos solo se envían a un proveedor externo si configuras explícitamente un modelo de IA remoto.",
     "f6_title": "Tú eliges la IA",
-    "f6_desc": "Usa modelos locales donde estén disponibles, o conecta un proveedor remoto configurado por ti (OpenAI, Anthropic, Ollama y otros). En Windows, el flujo recomendado actual usa modelos remotos mientras se prepara la compatibilidad con modelos locales."
+    "f6_desc": "Usa modelos locales integrados, un servidor local de Ollama o un proveedor en la nube configurado por ti (OpenAI, Anthropic, Google Gemini y otros). En Windows, el flujo recomendado actual usa APIs en la nube u Ollama local mientras se prepara la compatibilidad con modelos locales integrados."
   },
   "download": {
     "title": "Descarga e instalación",

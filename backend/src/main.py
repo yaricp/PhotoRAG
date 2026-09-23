@@ -711,6 +711,13 @@ def update_model_endpoint(config_type: str, request: AIModelConfigUpdate, db: Se
         rebuild_embeddings_vss,
     )
 
+    if request.mode == "remote" and request.model_provider:
+        from src.provider_support import unsupported_provider_message
+
+        message = unsupported_provider_message(config_type, request.model_provider)
+        if message:
+            raise HTTPException(status_code=400, detail=message)
+
     if config_type == "embedding":
         new_dim = get_embedding_dimension(request.model_name)
         cur_dim = current_vss_dimension(db)
