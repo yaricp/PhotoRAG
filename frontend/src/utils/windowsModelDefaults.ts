@@ -22,7 +22,7 @@ export function isWindowsAppPlatform(): boolean {
 export function applyWindowsRemoteModelDefaults<T extends ModelConfigLike>(configs: T[]): T[] {
     return configs.map(config => {
         const defaultModel = WINDOWS_OPENAI_DEFAULT_MODELS[config.type] ?? 'gpt-4o-mini'
-        const shouldUseOpenAIDefaults = config.mode === 'local' || !config.model_provider || !config.model_name
+        const shouldUseOpenAIDefaults = config.mode === 'local' || !config.model_provider
         return {
             ...config,
             mode: 'remote',

@@ -99,8 +99,8 @@
     "local-ollama": {
       "title": "Local Models via Ollama",
       "intro": "Use Ollama when you want local models without PhotoRAG downloading and loading them directly.",
-      "body": "Ollama is a separate local app that runs AI models on your computer and exposes them through a local HTTP server. In PhotoRAG, choose Local via Ollama and use the default server URL http://localhost:11434. No API key is needed for a localhost Ollama server.\n\nInstall Ollama from the official page: [Download Ollama](https://ollama.com/download). After installation, open Ollama once. On Linux or headless setups, start the server with ollama serve if it is not already running.\n\nCheck that the local server is available:\nollama --version\ncurl http://localhost:11434/api/version\n\nPull models before selecting them in PhotoRAG:\nollama pull qwen2.5vl:3b\nollama pull qwen2.5vl:7b\nollama pull nomic-embed-text\nollama pull mxbai-embed-large\nollama pull gemma3:4b\n\nRecommended mapping: vision descriptions, OCR, tags, and categories can start with qwen2.5vl:3b and move to qwen2.5vl:7b for better quality. Semantic search uses embedding models; start with nomic-embed-text or use mxbai-embed-large for stronger search quality. Chat and translation can start with gemma3:4b; use gemma3:12b if your computer has enough memory.\n\nResource rule of thumb: 3B-4B models are the safest first test on 8-16 GB RAM. 7B models usually need more memory but give better photo understanding. Larger models are for machines with more RAM and, ideally, GPU acceleration.",
-      "examples": "Example: install Ollama, run ollama pull qwen2.5vl:7b and ollama pull nomic-embed-text. In PhotoRAG, set Vision, OCR, CLIP, and Categories to Local via Ollama with model qwen2.5vl:7b. Set Embedding to Local via Ollama with model nomic-embed-text, then re-index search if you already processed photos."
+      "body": "Ollama is a separate local app that runs models on your computer. [Install Ollama](https://ollama.com/download), then choose Local via Ollama and select a model for each PhotoRAG task. PhotoRAG checks the local server, downloads the model in the background and shows progress. No command line or API key is needed. The default server address is http://localhost:11434.\n\nYou choose which models to download and can try different models later. Open the Ollama Models page to see installed models, their sizes and free disk space, or to remove models you no longer need. Ollama models are stored by Ollama and may also be used by other applications.",
+      "examples": "For example, choose qwen3-vl:2b-instruct for photo descriptions and chat, and nomic-embed-text for semantic search. PhotoRAG downloads each distinct selected model when you continue setup or save its configuration."
     },
     "prompts": {
       "title": "Prompts & Templates",
@@ -144,5 +144,62 @@
       "body": "Supported architectures:\n\n• macOS — Universal binary: runs natively on both Intel (x86_64) and Apple Silicon (ARM64) Macs with the same .dmg file.\n• Windows — x64 installer for Intel/AMD PCs; ARM64 installer for Snapdragon / Surface devices. Windows ARM64 can also run the x64 installer via the built-in emulation layer.\n• Linux — x86_64 AppImage for Intel/AMD; ARM64 AppImage for Raspberry Pi 4/5, AWS Graviton, and similar boards.\n\nNo administrator or root access required:\n\n• macOS: drag PhotoRAG.app to any folder (e.g. Applications or your home folder). No system-level changes are made.\n• Windows: the installer uses user-level install (no UAC prompt). It installs to %LocalAppData%\\Programs\\PhotoRAG and writes data to %AppData%\\PhotoRAG.\n• Linux: AppImage needs no installation — mark it executable and run it. No files are written outside ~/.config/PhotoRAG.\n\nLinux: if the AppImage does not launch (FUSE error):\n\nSome systems (Ubuntu 22.04+, Debian 12+) do not include libfuse2 by default. Two solutions — choose either:\n\n1. Install libfuse2 (requires sudo once):\n   sudo apt install libfuse2\n\n2. Run without FUSE (no sudo ever needed):\n   APPIMAGE_EXTRACT_AND_RUN=1 ./PhotoRAG-*.AppImage\n   You can make this permanent by adding it to a launcher or shell alias.",
       "examples": "Example: on a shared Ubuntu server where you have no sudo access, download the AppImage, then run:\n   chmod +x PhotoRAG-1.0.0-x64.AppImage\n   APPIMAGE_EXTRACT_AND_RUN=1 ./PhotoRAG-1.0.0-x64.AppImage\nThe app runs entirely from your home directory — no system changes required."
     }
+  },
+  "ollama": {
+    "recommendations": "Recommended starting points",
+    "function": "PhotoRAG task",
+    "smaller": "Smaller",
+    "larger": "More capable / larger",
+    "requirement": "Qwen3-VL needs Ollama 0.12.7 or newer. Ollama lists qwen3-vl:2b-instruct at about 1.9 GB and qwen3-vl:4b-instruct at about 3.3 GB; allow extra free disk space for downloads and runtime files. You can reuse the 2B model for chat and translation to save disk space, but check how well it handles agent tools and translations on your data. These are starting points; results and memory use depend on your computer and photos. Tags and categories use a vision model rather than CLIP when configured through Ollama.",
+    "manualTitle": "Working with Ollama yourself",
+    "manualIntro": "These commands are optional. Use a terminal to inspect, download or remove models yourself. Replace MODEL_NAME with the exact name shown by ollama list.",
+    "capabilityLabels": {
+      "labelVision": "Vision (photo descriptions)",
+      "labelOcr": "OCR (text extraction)",
+      "labelClip": "CLIP (tags & categories)",
+      "labelEmbedding": "Embedding (semantic search)",
+      "labelChat": "Chat (AI agent)",
+      "labelTranslator": "Translator (description language)"
+    },
+    "rows": [
+      {
+        "label": "labelVision",
+        "small": "qwen3-vl:2b-instruct",
+        "large": "qwen3-vl:4b-instruct"
+      },
+      {
+        "label": "labelOcr",
+        "small": "qwen3-vl:2b-instruct",
+        "large": "qwen3-vl:4b-instruct"
+      },
+      {
+        "label": "labelClip",
+        "small": "qwen3-vl:2b-instruct",
+        "large": "qwen3-vl:4b-instruct"
+      },
+      {
+        "label": "labelEmbedding",
+        "small": "nomic-embed-text",
+        "large": "mxbai-embed-large"
+      },
+      {
+        "label": "labelChat",
+        "small": "qwen3-vl:2b-instruct",
+        "large": "gemma3:4b"
+      },
+      {
+        "label": "labelTranslator",
+        "small": "qwen3-vl:2b-instruct",
+        "large": "gemma3:4b"
+      }
+    ],
+    "commands": [
+      "ollama --version",
+      "ollama list",
+      "ollama pull qwen3-vl:2b-instruct",
+      "ollama pull nomic-embed-text",
+      "ollama pull gemma3:4b",
+      "ollama rm MODEL_NAME"
+    ]
   }
 }

@@ -22,6 +22,10 @@ const mockApi = {
     installDeps: vi.fn().mockResolvedValue(undefined),
     initDb: vi.fn().mockResolvedValue(undefined),
     downloadModel: vi.fn().mockResolvedValue(undefined),
+    listOllamaModels: vi.fn().mockResolvedValue([]),
+    pullOllamaModel: vi.fn().mockResolvedValue(undefined),
+    cancelOllamaPulls: vi.fn().mockResolvedValue(undefined),
+    onOllamaPullProgress: vi.fn().mockReturnValue(() => {}),
     cancelDownload: vi.fn().mockResolvedValue(undefined),
     completeSetup: vi.fn().mockResolvedValue(undefined),
     getModelStatuses: vi.fn().mockResolvedValue({}),
@@ -41,6 +45,10 @@ beforeEach(() => {
     mockApi.installDeps.mockResolvedValue(undefined)
     mockApi.initDb.mockResolvedValue(undefined)
     mockApi.downloadModel.mockResolvedValue(undefined)
+    mockApi.listOllamaModels.mockResolvedValue([])
+    mockApi.pullOllamaModel.mockResolvedValue(undefined)
+    mockApi.cancelOllamaPulls.mockResolvedValue(undefined)
+    mockApi.onOllamaPullProgress.mockReturnValue(() => {})
     mockApi.cancelDownload.mockResolvedValue(undefined)
     mockApi.completeSetup.mockResolvedValue(undefined)
     mockApi.getModelStatuses.mockResolvedValue({})
@@ -171,6 +179,36 @@ describe('StepModelPicker', () => {
 describe('StepDownloading', () => {
     const selectedModels = new Set(['clip', 'embedding'])
 
+    it('downloads the user-selected Ollama model once when several tasks share it', async () => {
+        const onDone = vi.fn()
+        render(<StepDownloading selectedModels={new Set()} ollamaModels={[
+            { name: 'qwen3-vl:4b-instruct' }, { name: 'qwen3-vl:4b-instruct' },
+        ]} onDone={onDone} />)
+        await waitFor(() => expect(onDone).toHaveBeenCalled())
+        expect(mockApi.pullOllamaModel).toHaveBeenCalledTimes(1)
+        expect(mockApi.pullOllamaModel).toHaveBeenCalledWith({ model: 'qwen3-vl:4b-instruct', url: undefined })
+    })
+
+    it('skips Ollama models that are already installed', async () => {
+        mockApi.listOllamaModels.mockResolvedValue(['gemma3:4b'])
+        const onDone = vi.fn()
+        render(<StepDownloading selectedModels={new Set()} ollamaModels={[{ name: 'gemma3:4b' }]} onDone={onDone} />)
+        await waitFor(() => expect(onDone).toHaveBeenCalled())
+        expect(mockApi.pullOllamaModel).not.toHaveBeenCalled()
+    })
+
+    it('does not start an Ollama pull after cancellation during the installed-model check', async () => {
+        let finishList!: (models: string[]) => void
+        mockApi.listOllamaModels.mockReturnValue(new Promise<string[]>(resolve => { finishList = resolve }))
+        const onDone = vi.fn()
+        render(<StepDownloading selectedModels={new Set()} ollamaModels={[{ name: 'gemma3:4b' }]} onDone={onDone} />)
+        await waitFor(() => expect(mockApi.listOllamaModels).toHaveBeenCalled())
+        fireEvent.click(screen.getByRole('button', { name: /cancel/i }))
+        await act(async () => { finishList([]) })
+        expect(mockApi.pullOllamaModel).not.toHaveBeenCalled()
+        expect(onDone).not.toHaveBeenCalled()
+    })
+
     it('shows per-model progress bars', async () => {
         render(<StepDownloading selectedModels={selectedModels} onDone={vi.fn()} />)
         await waitFor(() => expect(mockApi.getModelStatuses).toHaveBeenCalled())
@@ -249,8 +287,10 @@ describe('StepDownloading', () => {
         expect(mockApi.downloadModel).toHaveBeenCalledWith({ modelId: 'clip' })
         expect(mockApi.downloadModel).toHaveBeenCalledWith({ modelId: 'embedding' })
 
-        resolveClip()
-        resolveEmbedding()
+        await act(async () => {
+            resolveClip()
+            resolveEmbedding()
+        })
     })
 
     it('skips already-ready models and shows them at 100%', async () => {
@@ -357,6 +397,54 @@ describe('i18n — Russian titles', () => {
     })
 })
 
+describe('StepModelConfig Ollama choice', () => {
+    it('shows the compact Ollama model for OCR and chat in the Windows wizard', async () => {
+        mockApi.platform = 'win32'
+        mockApi.getModelConfigs.mockResolvedValue([
+            { id: 1, type: 'ocr', mode: 'local', model_name: 'easyocr' },
+            { id: 2, type: 'chat', mode: 'remote', model_name: 'gpt-4o-mini', model_provider: 'openai' },
+        ])
+
+        render(<StepModelConfig onDone={vi.fn()} />)
+        const modes = await screen.findAllByRole('combobox')
+        fireEvent.change(modes[0], { target: { value: 'ollama' } })
+        fireEvent.change(modes[2], { target: { value: 'ollama' } })
+
+        expect(screen.getAllByRole('button', { name: 'qwen3-vl:2b-instruct' })).toHaveLength(2)
+    })
+
+    it('requires the user to choose a model before saving', async () => {
+        mockApi.getModelConfigs.mockResolvedValue([
+            { id: 1, type: 'vision', mode: 'remote', model_name: 'gpt-4o-mini', model_provider: 'openai' },
+        ])
+        render(<StepModelConfig onDone={vi.fn()} />)
+        const mode = (await screen.findAllByRole('combobox'))[0]
+        fireEvent.change(mode, { target: { value: 'ollama' } })
+        fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
+        expect(await screen.findByText(/Choose an Ollama model/)).toBeInTheDocument()
+        expect(mockApi.saveModelConfigs).not.toHaveBeenCalled()
+        fireEvent.click(screen.getByRole('button', { name: 'qwen3-vl:4b-instruct' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
+        await waitFor(() => expect(mockApi.saveModelConfigs).toHaveBeenCalledWith([
+            expect.objectContaining({ mode: 'remote', model_provider: 'ollama', model_name: 'qwen3-vl:4b-instruct' }),
+        ]))
+    })
+
+    it('opens Ollama help in the selected wizard language without leaving setup', async () => {
+        await i18n.changeLanguage('ru')
+        mockApi.getModelConfigs.mockResolvedValue([
+            { id: 1, type: 'vision', mode: 'remote', model_name: 'qwen3-vl:4b-instruct', model_provider: 'ollama' },
+        ])
+        render(<StepModelConfig onDone={vi.fn()} />)
+        fireEvent.click(await screen.findByRole('button', { name: /Установить Ollama и выбрать модели/i }))
+        expect(screen.getByRole('dialog', { name: 'Локальные модели через Ollama' })).toBeInTheDocument()
+        expect(screen.queryByTestId('help-sidebar')).not.toBeInTheDocument()
+        fireEvent.click(screen.getByRole('button', { name: 'Закрыть' }))
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+        expect(screen.getByDisplayValue('qwen3-vl:4b-instruct')).toBeInTheDocument()
+    })
+})
+
 describe('StepModelConfig i18n', () => {
     it('renders Russian title', async () => {
         i18n.changeLanguage('ru')
@@ -392,7 +480,7 @@ describe('StepModelConfig i18n', () => {
 
         render(<StepModelConfig onDone={vi.fn()} />)
 
-        expect(await screen.findByText(/Local models are temporarily unavailable/i)).toBeInTheDocument()
+        expect(await screen.findByText(/Built-in local models are not available/i)).toBeInTheDocument()
         expect(screen.queryByRole('option', { name: /^Local \(GPU \/ CPU\)$/i })).not.toBeInTheDocument()
         expect(screen.getAllByDisplayValue('gpt-4o-mini').length).toBeGreaterThanOrEqual(1)
         expect(screen.getByDisplayValue('text-embedding-3-small')).toBeInTheDocument()
@@ -427,6 +515,18 @@ describe('applyWindowsRemoteModelDefaults', () => {
             mode: 'remote',
             model_provider: 'google_genai',
             model_name: 'gemini-2.0-flash',
+        }))
+    })
+
+    it('keeps an explicit Ollama choice while its model name is being selected', () => {
+        const result = applyWindowsRemoteModelDefaults([
+            { id: 1, type: 'ocr', mode: 'remote', model_name: '', model_provider: 'ollama' },
+        ])
+
+        expect(result[0]).toEqual(expect.objectContaining({
+            mode: 'remote',
+            model_provider: 'ollama',
+            model_name: '',
         }))
     })
 })

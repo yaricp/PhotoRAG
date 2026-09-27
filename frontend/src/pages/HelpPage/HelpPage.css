@@ -105,3 +105,9 @@
     text-decoration: underline;
     text-underline-offset: 2px;
 }
+
+.help-article__table-scroll { overflow-x: auto; margin-bottom: 1rem; }
+.help-article__table { width: 100%; border-collapse: collapse; text-align: left; }
+.help-article__table th, .help-article__table td { padding: 0.5rem; border-bottom: 1px solid var(--color-border); }
+.help-article__table code, .help-article__commands { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+.help-article__commands { overflow-x: auto; padding: 1rem; border-radius: 6px; background: var(--color-surface-2); }

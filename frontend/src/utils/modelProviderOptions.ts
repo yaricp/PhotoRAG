@@ -51,13 +51,49 @@ export const MODEL_SUGGESTIONS: Record<string, Partial<Record<ModelCapability, s
         embedding:  ['models/text-embedding-004', 'models/embedding-001'],
     },
     ollama: {
-        chat:       ['llama3.2', 'llama3.1', 'mistral', 'gemma3', 'phi4'],
-        vision:     ['qwen2.5vl:3b', 'qwen2.5vl:7b', 'llava', 'llava-llama3'],
-        ocr:        ['qwen2.5vl:3b', 'qwen2.5vl:7b', 'llava'],
-        clip:       ['qwen2.5vl:3b', 'qwen2.5vl:7b', 'llava'],
-        translator: ['gemma3:4b', 'llama3.2', 'mistral'],
+        chat:       ['qwen3-vl:2b-instruct', 'gemma3:4b', 'gemma3:12b'],
+        vision:     ['qwen3-vl:2b-instruct', 'qwen3-vl:4b-instruct', 'qwen3-vl:8b-instruct', 'qwen2.5vl:3b'],
+        ocr:        ['qwen3-vl:2b-instruct', 'qwen3-vl:4b-instruct', 'qwen3-vl:8b-instruct', 'qwen2.5vl:3b'],
+        clip:       ['qwen3-vl:2b-instruct', 'qwen3-vl:4b-instruct', 'qwen3-vl:8b-instruct', 'qwen2.5vl:3b'],
+        translator: ['qwen3-vl:2b-instruct', 'gemma3:4b', 'gemma3:12b'],
         embedding:  ['nomic-embed-text', 'mxbai-embed-large'],
     },
+}
+
+export const LOCAL_MODEL_NAMES: Record<ModelCapability, string> = {
+    vision: 'Qwen/Qwen2-VL-2B-Instruct',
+    clip: 'ViT-B-32',
+    ocr: 'easyocr',
+    embedding: 'nomic-ai/nomic-embed-text-v1.5',
+    translator: 'facebook/nllb-200-distilled-600M',
+    chat: 'Qwen/Qwen2.5-Coder-3B-Instruct',
+}
+
+export function changeProcessingMode<T extends { type: string; mode: 'local' | 'remote'; model_name: string; model_provider?: string; url?: string; api_key?: string }>(config: T, choice: string): T {
+    if (choice === 'ollama') return {
+        ...config, mode: 'remote', model_provider: 'ollama',
+        model_name: '',
+        url: 'http://localhost:11434', api_key: '',
+    }
+    if (choice === 'local') return {
+        ...config, mode: 'local', model_provider: undefined,
+        model_name: LOCAL_MODEL_NAMES[config.type as ModelCapability] ?? config.model_name,
+        url: '', api_key: '',
+    }
+    return {
+        ...config, mode: 'remote', model_provider: 'openai',
+        model_name: getModelSuggestions('openai', config.type)[0] ?? '', url: '', api_key: '',
+    }
+}
+
+export function changeProvider<T extends { type: string; model_name: string; model_provider?: string; url?: string; api_key?: string }>(config: T, provider: string): T {
+    return {
+        ...config,
+        model_provider: provider || undefined,
+        model_name: provider === 'ollama' ? '' : getModelSuggestions(provider, config.type)[0] ?? '',
+        url: provider === 'ollama' ? 'http://localhost:11434' : '',
+        api_key: '',
+    }
 }
 
 export function getProviderOptions(modelType: string): ProviderOption[] {
@@ -72,4 +108,13 @@ export function getModelSuggestions(provider: string, modelType: string): string
 
 export function providerRequiresApiKey(provider: string | undefined): boolean {
     return provider !== 'ollama'
+}
+
+export function isLocalOllamaUrl(value?: string | null): boolean {
+    try {
+        const url = new URL(value?.trim() || 'http://localhost:11434')
+        return url.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)
+    } catch {
+        return false
+    }
 }

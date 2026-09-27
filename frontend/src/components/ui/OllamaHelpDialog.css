@@ -1,0 +1,43 @@
+.ollama-help-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background: rgba(0, 0, 0, 0.72);
+    display: grid;
+    place-items: center;
+    padding: 1.25rem;
+}
+
+.ollama-help-dialog {
+    position: relative;
+    width: min(860px, 100%);
+    max-height: min(90vh, 900px);
+    overflow: auto;
+    border-radius: 12px;
+    border: 1px solid var(--color-border, #444);
+    background: var(--color-bg, #1a1a2e);
+}
+
+.ollama-help-close {
+    position: sticky;
+    top: 0.75rem;
+    float: right;
+    margin: 0.75rem;
+    z-index: 1;
+    border: 0;
+    border-radius: 6px;
+    background: var(--color-surface-2, #333);
+    color: var(--color-text, white);
+    font-size: 1.5rem;
+    cursor: pointer;
+}
+
+.ollama-help-dialog .help-article { max-width: none; }
+.help-article__link-button {
+    display: inline;
+    border: 0;
+    padding: 0;
+    background: none;
+    font: inherit;
+    cursor: pointer;
+}

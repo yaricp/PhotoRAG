@@ -105,6 +105,42 @@
   font-size: 1.05rem;
 }
 
+.docs-table-scroll {
+  overflow-x: auto;
+  margin-bottom: 1.1rem;
+}
+
+.docs-article table {
+  width: 100%;
+  min-width: 33rem;
+  border-collapse: collapse;
+}
+
+.docs-article th,
+.docs-article td {
+  border: 1px solid var(--border);
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+}
+
+.docs-article thead,
+.docs-commands {
+  background: var(--bg-elevated);
+}
+
+.docs-article code,
+.docs-commands {
+  overflow-wrap: anywhere;
+}
+
+.docs-commands {
+  overflow-x: auto;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  line-height: 1.55;
+}
+
 @media (max-width: 720px) {
   .docs-layout {
     grid-template-columns: 1fr;

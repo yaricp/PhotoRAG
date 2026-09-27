@@ -9,6 +9,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.on('backend-ready', (_, port) => cb(port))
     },
     platform: process.platform,
+    listOllamaModels: (url?: string) => ipcRenderer.invoke('ollama:list-models', url),
+    getOllamaInventory: (url?: string) => ipcRenderer.invoke('ollama:inventory', url),
+    deleteOllamaModel: (payload: { model: string; url?: string }) => ipcRenderer.invoke('ollama:delete-model', payload),
+    pullOllamaModel: (payload: { model: string; url?: string }) => ipcRenderer.invoke('ollama:pull-model', payload),
+    cancelOllamaPulls: () => ipcRenderer.invoke('ollama:cancel-pulls'),
+    onOllamaPullProgress: (cb: (data: { model: string; status: string; total: number; completed: number; done: boolean }) => void) => {
+        const listener = (_: unknown, data: { model: string; status: string; total: number; completed: number; done: boolean }) => cb(data)
+        ipcRenderer.on('ollama:pull-progress', listener)
+        return () => { ipcRenderer.removeListener('ollama:pull-progress', listener) }
+    },
 
     // Setup wizard — invoke channels
     checkSetupNeeded: () => ipcRenderer.invoke('setup:check-needed'),

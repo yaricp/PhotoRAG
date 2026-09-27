@@ -19,6 +19,7 @@ const links = [
     { to: '/processing', key: 'processing', icon: '📹' },
     { to: '/folders', key: 'folders', icon: '📁' },
     { to: '/models', key: 'models', icon: '🤖' },
+    { to: '/ollama-models', key: 'ollamaModels', icon: '🦙' },
     { to: '/prompts', key: 'prompts', icon: '📝' },
     { to: '/settings', key: 'settings', icon: '⚙️' },
 ]

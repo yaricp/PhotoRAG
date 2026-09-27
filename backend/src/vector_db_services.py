@@ -22,6 +22,7 @@ _DIMENSION_MAP = {
     # Nomic
     "nomic-embed-text": 768,
     "nomic": 768,
+    "mxbai-embed-large": 1024,
     # BAAI / FlagEmbedding
     "bge-large": 1024,
     "bge-base": 768,

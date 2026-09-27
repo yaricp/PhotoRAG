@@ -8,6 +8,7 @@ import { StepModelConfig } from './StepModelConfig'
 import { StepDownloading } from './StepDownloading'
 import { StepDone } from './StepDone'
 import { MODELS } from './models'
+import { isLocalOllamaUrl } from '@/utils/modelProviderOptions'
 import icon from '../../assets/icon.png'
 import './SetupWizard.css'
 
@@ -40,6 +41,7 @@ export function SetupWizard({ onComplete }: Props) {
     const { t, i18n } = useTranslation()
     const [step, setStep] = useState<Step>('language')
     const [selectedModels, setSelectedModels] = useState<Set<string>>(new Set())
+    const [ollamaModels, setOllamaModels] = useState<Array<{ name: string; url?: string }>>([])
     const [selectedLanguage, setSelectedLanguage] = useState(i18n.language ?? 'en')
 
     const advance = (to: Step) => setStep(to)
@@ -60,8 +62,12 @@ export function SetupWizard({ onComplete }: Props) {
         // Downloadable = models that exist in the MODELS download list AND are local
         const downloadable = new Set(MODELS.filter(m => localIds.has(m.id)).map(m => m.id))
         setSelectedModels(downloadable)
+        const ollama = configs
+            .filter(c => c.mode === 'remote' && c.model_provider === 'ollama' && c.model_name.trim() && isLocalOllamaUrl(c.url))
+            .map(c => ({ name: c.model_name.trim(), url: c.url }))
+        setOllamaModels(ollama)
 
-        if (downloadable.size === 0) {
+        if (downloadable.size === 0 && ollama.length === 0) {
             advance('done')
         } else {
             advance('downloading')
@@ -107,6 +113,7 @@ export function SetupWizard({ onComplete }: Props) {
                 {step === 'downloading' && (
                     <StepDownloading
                         selectedModels={selectedModels}
+                        ollamaModels={ollamaModels}
                         onDone={() => advance('done')}
                         onBack={() => advance('model-config')}
                     />

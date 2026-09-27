@@ -308,6 +308,8 @@
     animation: slideUp 0.18s ease;
 }
 
+.model-modal--download { width: min(620px, 90vw); max-width: 90vw; }
+
 @keyframes slideUp {
     from { transform: translateY(8px); opacity: 0; }
     to   { transform: translateY(0);   opacity: 1; }

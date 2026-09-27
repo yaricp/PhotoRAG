@@ -1,12 +1,16 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 import { getModelConfigs, updateModelConfig, getSystemStatus } from '@/api/client'
 import type { AIModelConfig } from '@/types/api'
 import { ServerIcon, CloudIcon } from '@heroicons/react/24/outline'
 import { Spinner } from '@/components/ui/Spinner'
 import { PrivacyWarning } from '@/components/ui/PrivacyWarning'
 import { applyWindowsRemoteModelDefaults, isWindowsAppPlatform } from '@/utils/windowsModelDefaults'
-import { getModelSuggestions, getProviderOptions, providerRequiresApiKey } from '@/utils/modelProviderOptions'
+import { changeProcessingMode, changeProvider, getModelSuggestions, getProviderOptions, isLocalOllamaUrl, providerRequiresApiKey } from '@/utils/modelProviderOptions'
+import { OllamaHelpDialog } from '@/components/ui/OllamaHelpDialog'
+import { StepDownloading } from './SetupWizard/StepDownloading'
+import './SetupWizard/SetupWizard.css'
 import './ModelsPage.css'
 
 type ModelStatusMap = Record<string, string>  // model type → status
@@ -45,6 +49,8 @@ export function ModelsPage() {
     const [error, setError] = useState<string | null>(null)
     const [saving, setSaving] = useState<string | null>(null)
     const [savedType, setSavedType] = useState<string | null>(null)
+    const [helpOpen, setHelpOpen] = useState(false)
+    const [pendingOllamaConfig, setPendingOllamaConfig] = useState<AIModelConfig | null>(null)
     const [modelStatuses, setModelStatuses] = useState<ModelStatusMap>({})
     const isWindowsApp = isWindowsAppPlatform()
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -81,7 +87,7 @@ export function ModelsPage() {
         return () => { if (pollRef.current) clearInterval(pollRef.current) }
     }, [startPolling, isWindowsApp])
 
-    const handleSave = async (config: AIModelConfig) => {
+    const persistConfig = async (config: AIModelConfig) => {
         setSaving(config.type)
         try {
             const updated = await updateModelConfig(config.type, {
@@ -102,9 +108,27 @@ export function ModelsPage() {
         }
     }
 
+    const handleSave = (config: AIModelConfig) => {
+        if (config.mode === 'remote' && config.model_provider === 'ollama') {
+            if (!config.model_name.trim()) {
+                setError(t('wizard.stepModelConfig.ollamaModelRequired'))
+                return
+            }
+            if (!isLocalOllamaUrl(config.url)) {
+                void persistConfig(config)
+                return
+            }
+            setPendingOllamaConfig(config)
+            return
+        }
+        void persistConfig(config)
+    }
+
     const handleChange = (type: string, field: keyof AIModelConfig, value: string) => {
         setConfigs(prev => prev.map(c => {
             if (c.type !== type) return c
+            if (field === 'mode') return changeProcessingMode(c, value)
+            if (field === 'model_provider') return changeProvider(c, value)
             if (field === 'similarity_limit') {
                 const num = parseFloat(value)
                 return { ...c, similarity_limit: isNaN(num) ? undefined : num }
@@ -123,6 +147,7 @@ export function ModelsPage() {
     return (
         <div className="models-page">
             <p className="models-page__desc">{t('models.desc')}</p>
+            <p><Link to="/ollama-models" className="help-article__link">{t('sidebar.ollamaModels')}</Link></p>
 
             {isWindowsApp && (
                 <div className="models-page__notice">
@@ -131,6 +156,18 @@ export function ModelsPage() {
             )}
 
             {error && <div className="models-page__error">{error}</div>}
+
+            {pendingOllamaConfig && <div className="model-modal-overlay">
+                <div className="model-modal model-modal--download" role="dialog" aria-modal="true">
+                    <StepDownloading selectedModels={new Set()} ollamaModels={[{ name: pendingOllamaConfig.model_name.trim(), url: pendingOllamaConfig.url || undefined }]}
+                        onDone={() => {
+                            const config = pendingOllamaConfig
+                            setPendingOllamaConfig(null)
+                            void persistConfig(config)
+                        }} onBack={() => setPendingOllamaConfig(null)} />
+                </div>
+            </div>}
+            {helpOpen && <OllamaHelpDialog onClose={() => setHelpOpen(false)} />}
 
             <div className="models-page__layout">
 
@@ -146,7 +183,8 @@ export function ModelsPage() {
                                     {t(`wizard.stepModelConfig.label${savedType.charAt(0).toUpperCase()}${savedType.slice(1)}`, { defaultValue: savedType })}{' '}
                                     {configs.find(c => c.type === savedType)?.mode === 'local'
                                         ? t('models.modelLoading')
-                                        : t('models.modelRemote')}
+                                        : configs.find(c => c.type === savedType)?.model_provider === 'ollama'
+                                            ? t('models.modelOllama') : t('models.modelRemote')}
                                 </span>
                             </div>
                             {savedType === 'embedding' && (
@@ -170,15 +208,17 @@ export function ModelsPage() {
                     <div key={config.id} className="model-card">
                         <div className="model-card__header">
                             <h2 className="model-card__title">
-                                {config.mode === 'local'
+                                {config.mode === 'local' || config.model_provider === 'ollama'
                                     ? <ServerIcon className="model-card__icon model-card__icon--local" />
                                     : <CloudIcon  className="model-card__icon model-card__icon--remote" />
                                 }
                                 {t(MODEL_TYPE_LABEL_KEY[config.type] ?? '', { defaultValue: config.type })}
                             </h2>
                             <div className="model-card__badges">
-                                <span className={`model-card__badge model-card__badge--${config.mode}`}>
-                                    {config.mode === 'local' ? t('models.local') : t('models.remote')}
+                                <span className={`model-card__badge model-card__badge--${config.mode === 'local' || config.model_provider === 'ollama' ? 'local' : 'remote'}`}>
+                                    {config.mode === 'local' ? t('models.local')
+                                        : config.model_provider === 'ollama' ? t('wizard.stepModelConfig.ollamaMode')
+                                        : t('models.remote')}
                                 </span>
                                 {config.mode === 'local' && (
                                     <ModelStatusBadge status={modelStatuses[config.type]} />
@@ -191,15 +231,51 @@ export function ModelsPage() {
                                 <label className="model-field__label">{t('wizard.stepModelConfig.processingMode')}</label>
                                 <select
                                     className="model-field__select"
-                                    value={config.mode}
+                                    value={config.mode === 'remote' && config.model_provider === 'ollama' ? 'ollama' : config.mode}
                                     onChange={e => handleChange(config.type, 'mode', e.target.value)}
                                 >
                                     {!isWindowsApp && (
                                         <option value="local">{t('wizard.stepModelConfig.localMode')}</option>
                                     )}
                                     <option value="remote">{t('wizard.stepModelConfig.remoteMode')}</option>
+                                    <option value="ollama">{t('wizard.stepModelConfig.ollamaMode')}</option>
                                 </select>
                             </div>
+
+                            {config.mode === 'remote' && (
+                                <div className="model-field">
+                                    <label className="model-field__label">{t('wizard.stepModelConfig.provider')}</label>
+                                    <select
+                                        className="model-field__select"
+                                        value={config.model_provider || ''}
+                                        onChange={e => handleChange(config.type, 'model_provider', e.target.value)}
+                                    >
+                                        <option value="">{t('wizard.stepModelConfig.autoDetect')}</option>
+                                        {getProviderOptions(config.type).map(provider => (
+                                            <option key={provider.value} value={provider.value}>{provider.label}</option>
+                                        ))}
+                                    </select>
+                                    {config.model_provider === 'ollama' && (
+                                        <p className="model-field__hint">
+                                            {t(isLocalOllamaUrl(config.url) ? 'wizard.stepModelConfig.ollamaHint' : 'wizard.stepModelConfig.ollamaRemoteHint')}{' '}
+                                            <button type="button" className="help-article__link help-article__link-button" onClick={() => setHelpOpen(true)}>
+                                                {t('wizard.stepModelConfig.ollamaHelpLink')}
+                                            </button>
+                                        </p>
+                                    )}
+                                    {config.type === 'clip' && (
+                                        <p className="model-field__hint">{t('wizard.stepModelConfig.remoteClipHint')}</p>
+                                    )}
+                                    {config.model_provider === 'deepl' && (
+                                        <p className="model-field__hint">{t('wizard.stepModelConfig.deepLHint')}</p>
+                                    )}
+                                    {config.model_provider === 'libretranslate' && (
+                                        <p className="model-field__hint">
+                                            Self-hosted LibreTranslate. Set the base URL to your server. Model name is not used.
+                                        </p>
+                                    )}
+                                </div>
+                            )}
 
                             <div className="model-field">
                                 <label className="model-field__label">{t('wizard.stepModelConfig.modelName')}</label>
@@ -209,8 +285,10 @@ export function ModelsPage() {
                                     onChange={e => handleChange(config.type, 'model_name', e.target.value)}
                                     placeholder={config.mode === 'local'
                                         ? t('wizard.stepModelConfig.localPlaceholder')
+                                        : config.model_provider === 'ollama'
+                                            ? getModelSuggestions('ollama', config.type)[0] ?? ''
                                         : config.type === 'vision' || config.type === 'clip' || config.type === 'ocr'
-                                            ? 'e.g. gpt-4o  /  claude-3-haiku-20240307  /  llava'
+                                            ? 'e.g. gpt-4o  /  claude-3-haiku-20240307'
                                             : config.type === 'translator'
                                                 ? 'e.g. gpt-4o-mini  (not needed for deepl/libretranslate)'
                                                 : t('wizard.stepModelConfig.remotePlaceholder')
@@ -241,38 +319,6 @@ export function ModelsPage() {
 
                             {config.mode === 'remote' && (
                                 <div className="model-card__remote">
-                                    <div className="model-field">
-                                        <label className="model-field__label">{t('wizard.stepModelConfig.provider')}</label>
-                                        <select
-                                            className="model-field__select"
-                                            value={config.model_provider || ''}
-                                            onChange={e => handleChange(config.type, 'model_provider', e.target.value)}
-                                        >
-                                            <option value="">{t('wizard.stepModelConfig.autoDetect')}</option>
-                                            {getProviderOptions(config.type).map(provider => (
-                                                <option key={provider.value} value={provider.value}>{provider.label}</option>
-                                            ))}
-                                        </select>
-                                        {config.model_provider === 'ollama' && (
-                                            <p className="model-field__hint">
-                                                {t('wizard.stepModelConfig.ollamaHint')}{' '}
-                                                <a href="#/help/local-ollama" className="help-article__link">
-                                                    {t('wizard.stepModelConfig.ollamaHelpLink')}
-                                                </a>
-                                            </p>
-                                        )}
-                                        {config.type === 'clip' && config.mode === 'remote' && (
-                                            <p className="model-field__hint">{t('wizard.stepModelConfig.remoteClipHint')}</p>
-                                        )}
-                                        {config.model_provider === 'deepl' && (
-                                            <p className="model-field__hint">{t('wizard.stepModelConfig.deepLHint')}</p>
-                                        )}
-                                        {config.model_provider === 'libretranslate' && (
-                                            <p className="model-field__hint">
-                                                Self-hosted LibreTranslate. Set the base URL to your server. Model name is not used.
-                                            </p>
-                                        )}
-                                    </div>
                                     <div className="model-field">
                                         <label className="model-field__label">
                                             {config.model_provider === 'ollama'

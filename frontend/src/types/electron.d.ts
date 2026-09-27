@@ -18,6 +18,15 @@ export interface ElectronAPI {
     getBackendPort: () => Promise<number>
     onBackendReady: (cb: (port: number) => void) => void
     platform: Platform
+    listOllamaModels: (url?: string) => Promise<string[]>
+    getOllamaInventory: (url?: string) => Promise<{
+        models: Array<{ name: string; size: number; digest: string }>
+        storagePath: string | null; freeBytes: number | null; totalBytes: number | null; storageVerified: boolean
+    }>
+    deleteOllamaModel: (payload: { model: string; url?: string }) => Promise<void>
+    pullOllamaModel: (payload: { model: string; url?: string }) => Promise<void>
+    cancelOllamaPulls: () => Promise<void>
+    onOllamaPullProgress: (cb: (data: { model: string; status: string; total: number; completed: number; done: boolean }) => void) => () => void
 
     // Setup wizard — invoke channels
     checkSetupNeeded: () => Promise<{ needed: boolean }>

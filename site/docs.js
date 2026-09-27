@@ -50,6 +50,55 @@
     article.append(p);
   }
 
+  function addHeading(text) {
+    var heading = document.createElement('h3');
+    heading.textContent = text;
+    article.append(heading);
+  }
+
+  function renderOllamaHelp() {
+    var ollama = currentDocs.ollama;
+    addHeading(ollama.recommendations);
+    var scroll = document.createElement('div');
+    scroll.className = 'docs-table-scroll';
+    var table = document.createElement('table');
+    var thead = document.createElement('thead');
+    var header = document.createElement('tr');
+    [ollama.function, ollama.smaller, ollama.larger].forEach(function (label) {
+      var cell = document.createElement('th');
+      cell.textContent = label;
+      header.append(cell);
+    });
+    thead.append(header);
+    table.append(thead);
+    var tbody = document.createElement('tbody');
+    ollama.rows.forEach(function (row) {
+      var tr = document.createElement('tr');
+      var task = document.createElement('th');
+      task.scope = 'row';
+      task.textContent = ollama.capabilityLabels[row.label];
+      tr.append(task);
+      [row.small, row.large].forEach(function (name) {
+        var cell = document.createElement('td');
+        var code = document.createElement('code');
+        code.textContent = name;
+        cell.append(code);
+        tr.append(cell);
+      });
+      tbody.append(tr);
+    });
+    table.append(tbody);
+    scroll.append(table);
+    article.append(scroll);
+    addParagraph(ollama.requirement);
+    addHeading(ollama.manualTitle);
+    addParagraph(ollama.manualIntro);
+    var commands = document.createElement('pre');
+    commands.className = 'docs-commands';
+    commands.textContent = ollama.commands.join('\n');
+    article.append(commands);
+  }
+
   function render() {
     if (!currentDocs) return;
     var id = currentTopicId();
@@ -73,10 +122,9 @@
     topic.body.split('\n\n').forEach(function (paragraph) {
       addParagraph(paragraph);
     });
+    if (id === 'local-ollama') renderOllamaHelp();
     if (topic.examples) {
-      var examplesHeading = document.createElement('h3');
-      examplesHeading.textContent = currentDocs.examplesHeading;
-      article.append(examplesHeading);
+      addHeading(currentDocs.examplesHeading);
       topic.examples.split('\n\n').forEach(function (paragraph) {
         addParagraph(paragraph);
       });

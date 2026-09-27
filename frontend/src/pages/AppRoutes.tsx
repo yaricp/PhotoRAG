@@ -9,6 +9,7 @@ import { PhotoDetailPage } from './PhotoDetailPage'
 import { JobProcessingPage } from './JobProcessingPage'
 import { FoldersPage } from './FoldersPage'
 import { ModelsPage } from './ModelsPage'
+import { OllamaModelsPage } from './OllamaModelsPage'
 import { DuplicatesPage } from './DuplicatesPage'
 import { GarbageBadPhotoPage } from './GarbageBadPhotoPage'
 import { TemplateTagsPage } from './TemplateTagsPage'
@@ -31,6 +32,7 @@ export function AppRoutes() {
             <Route path="/processing" element={<JobProcessingPage />} />
             <Route path="/folders" element={<FoldersPage />} />
             <Route path="/models" element={<ModelsPage />} />
+            <Route path="/ollama-models" element={<OllamaModelsPage />} />
             <Route path="/prompts" element={<PromptsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/template-tags" element={<TemplateTagsPage />} />

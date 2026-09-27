@@ -11,7 +11,8 @@
     "models": "Modelos",
     "prompts": "Prompts",
     "settings": "Configuración",
-    "help": "Ayuda"
+    "help": "Ayuda",
+    "ollamaModels": "Modelos Ollama"
   },
   "gallery": {
     "prev": "Anterior",
@@ -219,8 +220,10 @@
     "stepDownloading": {
       "title": "Descargando modelos",
       "cancelButton": "Cancelar",
+      "cancelled": "Descarga cancelada. Vuelve atrás para elegir un modelo.",
       "backButton": "← Volver a la selección de modelos",
-      "errorMessage": "Error de descarga: {{error}}"
+      "errorMessage": "Error de descarga: {{error}}",
+      "ollamaUnavailable": "Ollama no está disponible. Instálala y ejecútala; luego vuelve a intentarlo."
     },
     "stepModelPicker": {
       "title": "Elegir modelos para descargar",
@@ -228,12 +231,12 @@
       "skipAllOptional": "Omitir todos los opcionales",
       "totalDownload": "Descarga total: {{size}}",
       "continueButton": "Continuar",
-      "noLocalModels": "Todos los modelos están configurados para usar APIs remotas — no se necesitan descargas locales.",
+      "noLocalModels": "No hay que descargar modelos integrados. Los modelos de Ollama elegidos se descargarán automáticamente.",
       "nllbNotice": "⚠️ NLLB-200 (modelo de traducción) está licenciado bajo CC BY-NC 4.0 — solo uso no comercial. Para uso comercial, cambia a una API de traducción remota en el siguiente paso."
     },
     "stepModelConfig": {
       "title": "Configurar modelos de IA",
-      "subtitle": "Elige local (corre en tu Mac) o remoto (requiere clave API) para cada tarea.",
+      "subtitle": "Elige cómo ejecutar cada función: modelo local integrado, Ollama local o API en la nube.",
       "loadingModels": "Cargando configuraciones de modelos…",
       "errorLoadingModels": "Error al cargar configuraciones",
       "processingMode": "Modo de procesamiento",
@@ -248,7 +251,7 @@
       "apiKey": "Clave API",
       "baseUrl": "URL base de API (opcional)",
       "ollamaUrl": "URL del servidor Ollama",
-      "ollamaHint": "No se necesita clave API. Usa un servidor local de Ollama, por ejemplo http://localhost:11434.",
+      "ollamaHint": "Elige un modelo de las sugerencias o introduce su nombre. PhotoRAG lo descargará con Ollama local al continuar o guardar.",
       "ollamaHelpLink": "Instalar Ollama y elegir modelos",
       "remoteClipHint": "CLIP remoto usa un LLM de visión para clasificar etiquetas. Puedes reusar tu modelo de visión.",
       "deepLHint": "Ingresa tu clave API de DeepL. El nombre del modelo no se usa.",
@@ -263,7 +266,10 @@
       "labelEmbedding": "Embeddings (búsqueda semántica)",
       "labelTranslator": "Traductor (idioma de descripciones)",
       "labelChat": "Chat (agente de IA)",
-      "windowsRemoteOnlyNotice": "Los modelos locales no están disponibles temporalmente en el instalador de Windows. Esta configuración usa modelos remotos de OpenAI por defecto. Los modelos locales siguen disponibles en macOS/Linux, y la compatibilidad con modelos locales en Windows está prevista para una versión futura."
+      "windowsRemoteOnlyNotice": "Los modelos locales integrados aún no están disponibles en esta versión de Windows. Puedes usar modelos locales mediante una instalación separada de Ollama.",
+      "ollamaMode": "Modelo local mediante Ollama",
+      "ollamaModelRequired": "Elige un modelo de Ollama antes de continuar.",
+      "ollamaRemoteHint": "Las descargas automáticas están disponibles para Ollama en este equipo. Esta URL envía solicitudes al servidor configurado; administra allí sus modelos."
     },
     "stepDone": {
       "title": "¡Configuración completa!",
@@ -365,7 +371,7 @@
   },
   "models": {
     "title": "Modelos de IA",
-    "desc": "Configure qué modelos ejecutan cada tarea. Los modelos locales se descargan automáticamente en el primer uso.",
+    "desc": "Elige un modelo para cada función. PhotoRAG descarga los modelos de Ollama seleccionados y muestra el progreso.",
     "local": "Local",
     "remote": "Remoto (API)",
     "loading": "Cargando configuraciones de modelos…",
@@ -390,7 +396,8 @@
       "pending": "Pendiente",
       "error": "Error"
     },
-    "windowsRemoteOnlyNotice": "Los modelos locales no están disponibles temporalmente en Windows. Esta compilación para Windows usa modelos remotos por API; los modelos locales están disponibles en macOS/Linux y la compatibilidad en Windows está prevista para una versión futura."
+    "windowsRemoteOnlyNotice": "Los modelos locales integrados aún no están disponibles en esta versión de Windows. Puedes usar modelos locales mediante una instalación separada de Ollama.",
+    "modelOllama": "ahora usa un modelo local mediante Ollama."
   },
   "privacy": {
     "shortTitle": "⚠ Aviso de privacidad",
@@ -559,9 +566,44 @@
       "local-ollama": {
         "title": "Modelos locales con Ollama",
         "intro": "Usa Ollama cuando quieras modelos locales sin que PhotoRAG los descargue y cargue directamente.",
-        "body": "Ollama es una aplicación local separada que ejecuta modelos de IA en tu computadora y los expone mediante un servidor HTTP local. En PhotoRAG, elige Local via Ollama y usa la URL predeterminada http://localhost:11434. No se necesita clave API para un servidor Ollama en localhost.\n\nInstala Ollama desde la página oficial: [Download Ollama](https://ollama.com/download). Después de instalarlo, abre Ollama una vez. En Linux o sistemas sin interfaz, inicia el servidor con ollama serve si no está ejecutándose.\n\nComprueba que el servidor local esté disponible:\nollama --version\ncurl http://localhost:11434/api/version\n\nDescarga modelos antes de seleccionarlos en PhotoRAG:\nollama pull qwen2.5vl:3b\nollama pull qwen2.5vl:7b\nollama pull nomic-embed-text\nollama pull mxbai-embed-large\nollama pull gemma3:4b\n\nRecomendación: para descripciones, OCR, etiquetas y categorías empieza con qwen2.5vl:3b y usa qwen2.5vl:7b para mejor calidad. La búsqueda semántica usa modelos de embeddings; empieza con nomic-embed-text o usa mxbai-embed-large para mayor calidad. Chat y traducción pueden empezar con gemma3:4b; usa gemma3:12b si tu computadora tiene memoria suficiente.\n\nRegla práctica de recursos: los modelos 3B-4B son la primera prueba más segura con 8-16 GB de RAM. Los modelos 7B suelen necesitar más memoria, pero entienden mejor las fotos. Los modelos más grandes son para equipos con más RAM y, preferiblemente, aceleración GPU.",
-        "examples": "Ejemplo: instala Ollama, ejecuta ollama pull qwen2.5vl:7b y ollama pull nomic-embed-text. En PhotoRAG configura Vision, OCR, CLIP y Categories como Local via Ollama con el modelo qwen2.5vl:7b. Configura Embedding como Local via Ollama con nomic-embed-text y reindexa la búsqueda si ya procesaste fotos."
+        "body": "Ollama es una aplicación separada que ejecuta modelos en tu equipo. [Instala Ollama](https://ollama.com/download), elige «Modelo local mediante Ollama» y selecciona un modelo para cada función de PhotoRAG. PhotoRAG comprobará el servidor local, descargará el modelo en segundo plano y mostrará el progreso. No necesitas la terminal ni una clave API. La dirección predeterminada es http://localhost:11434.\n\nTú decides qué modelos descargar y puedes probar otros más adelante. La página «Modelos Ollama» muestra los modelos instalados, su tamaño y el espacio libre; también permite borrar modelos innecesarios. Otras aplicaciones pueden usar los mismos modelos de Ollama.",
+        "examples": "Por ejemplo, elige qwen3-vl:2b-instruct para describir fotos y chatear, y nomic-embed-text para la búsqueda semántica. PhotoRAG descargará cada modelo distinto que selecciones al continuar el asistente o guardar la configuración."
       }
+    },
+    "ollama": {
+      "recommendations": "Modelos recomendados para empezar",
+      "function": "Función de PhotoRAG",
+      "smaller": "Más pequeño",
+      "larger": "Más capaz / grande",
+      "requirement": "Qwen3-VL requiere Ollama 0.12.7 o posterior. Ollama indica unos 1,9 GB para qwen3-vl:2b-instruct y unos 3,3 GB para qwen3-vl:4b-instruct; deja espacio adicional para la descarga y los archivos de trabajo. También puedes usar el modelo 2B para chat y traducción y ahorrar espacio, pero comprueba con tus datos cómo maneja las herramientas del agente y las traducciones. Son puntos de partida: los resultados y el uso de memoria dependen del equipo y las fotos. Las etiquetas y categorías usan un modelo visual, no CLIP, cuando se configuran con Ollama.",
+      "manualTitle": "Uso manual de Ollama",
+      "manualIntro": "Estos comandos son opcionales. Puedes usar una terminal para consultar, descargar o borrar modelos. Sustituye MODEL_NAME por el nombre exacto que muestra ollama list."
     }
+  },
+  "ollamaManager": {
+    "title": "Modelos Ollama",
+    "subtitle": "Modelos instalados mediante Ollama en este equipo. Otras aplicaciones también pueden usarlos.",
+    "loading": "Comprobando Ollama…",
+    "empty": "No hay modelos de Ollama instalados. Elige uno en la página Modelos para descargarlo.",
+    "size": "Tamaño del modelo",
+    "free": "Espacio libre en el disco de modelos",
+    "unknown": "No se conoce la ubicación del disco de modelos. Comprueba OLLAMA_MODELS en Ollama.",
+    "estimate": "La ubicación del disco es estimada; comprueba Ollama si moviste los modelos.",
+    "low": "Queda poco espacio en disco. Puedes borrar modelos que ya no uses.",
+    "used": "Usado por PhotoRAG: {{tasks}}",
+    "unused": "No seleccionado en PhotoRAG",
+    "delete": "Eliminar",
+    "deleteAll": "Eliminar todos los modelos",
+    "confirmOne": "¿Eliminar {{model}} de Ollama? Otras aplicaciones tendrán que descargarlo de nuevo.",
+    "confirmAll": "¿Eliminar los {{count}} modelos de Ollama? Otras aplicaciones tendrán que descargarlos de nuevo.",
+    "refresh": "Actualizar",
+    "deleting": "Eliminando…",
+    "error": "No se pudieron cargar los modelos de Ollama: {{error}}",
+    "deleteError": "No se pudo eliminar el modelo: {{error}}",
+    "disk": "Carpeta de modelos: {{path}}",
+    "total": "Suma de tamaños de los modelos: {{size}}",
+    "shared": "Los modelos pueden compartir archivos; al borrar uno podría liberarse menos espacio que su tamaño indicado.",
+    "downloadLabel": "Modelo para descargar",
+    "download": "Descargar modelo"
   }
 }

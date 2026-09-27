@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog } from 'electron'
+import { app, BrowserWindow, dialog, shell } from 'electron'
 import { join } from 'path'
 import { registerIpcHandlers } from './ipc'
 import { registerAppProtocol } from './protocol'
@@ -20,6 +20,11 @@ function createMainWindow(): BrowserWindow {
             contextIsolation: true,
             nodeIntegration: false,
         },
+    })
+
+    win.webContents.setWindowOpenHandler(({ url }) => {
+        if (url.startsWith('https://') || url.startsWith('http://')) void shell.openExternal(url)
+        return { action: 'deny' }
     })
 
     if (!app.isPackaged) {

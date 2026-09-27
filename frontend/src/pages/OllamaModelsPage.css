@@ -1,0 +1,17 @@
+.ollama-manager { max-width: 960px; margin: 0 auto; padding: 2rem; color: var(--color-text); }
+.ollama-manager__header, .ollama-manager__list li { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+.ollama-manager h1 { margin: 0; }
+.ollama-manager p { color: var(--color-text-dim); }
+.ollama-manager button { border: 1px solid var(--color-border); border-radius: 6px; padding: .5rem .8rem; background: var(--color-surface-2); color: var(--color-text); cursor: pointer; }
+.ollama-manager button:disabled { opacity: .5; cursor: default; }
+.ollama-manager__summary { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: 1rem; }
+.ollama-manager__summary p { margin: .35rem 0; overflow-wrap: anywhere; }
+.ollama-manager__warning { border: 1px solid #c77a36; background: rgba(199, 122, 54, .12); border-radius: 8px; padding: .8rem; }
+.ollama-manager__actions { display: flex; justify-content: flex-end; margin: 1rem 0; }
+.ollama-manager__list { list-style: none; padding: 0; }
+.ollama-manager__list li { border-bottom: 1px solid var(--color-border); padding: 1rem 0; }
+.ollama-manager__list p { margin: .3rem 0 0; }
+.ollama-manager__install { display: flex; align-items: center; gap: .7rem; flex-wrap: wrap; margin: 1rem 0; }
+.ollama-manager__install input { padding: .5rem; min-width: 220px; border: 1px solid var(--color-border); border-radius: 6px; background: var(--color-surface); color: var(--color-text); }
+.ollama-manager__overlay { position: fixed; inset: 0; z-index: 1200; display: grid; place-items: center; background: rgba(0, 0, 0, .7); }
+.ollama-manager__download { width: min(620px, 90vw); border-radius: 12px; background: var(--color-surface); padding: 1.5rem; }

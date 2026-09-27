@@ -1,6 +1,7 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import ollamaHelpData from './ollamaHelpData.json'
 
 interface Props {
     topic: string
@@ -49,6 +50,25 @@ export function HelpArticle({ topic }: Props) {
             {body.split('\n\n').map((para, i) => (
                 <p key={i}><RichPara text={para} /></p>
             ))}
+            {topic === 'local-ollama' && (
+                <>
+                    <h2 className="help-article__examples-heading">{t('help.ollama.recommendations')}</h2>
+                    <div className="help-article__table-scroll">
+                        <table className="help-article__table">
+                            <thead><tr><th>{t('help.ollama.function')}</th><th>{t('help.ollama.smaller')}</th><th>{t('help.ollama.larger')}</th></tr></thead>
+                            <tbody>
+                                {ollamaHelpData.rows.map(({ label, small, large }) => (
+                                    <tr key={label}><th scope="row">{t(`wizard.stepModelConfig.${label}`)}</th><td><code>{small}</code></td><td><code>{large}</code></td></tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                    <p>{t('help.ollama.requirement')}</p>
+                    <h2 className="help-article__examples-heading">{t('help.ollama.manualTitle')}</h2>
+                    <p>{t('help.ollama.manualIntro')}</p>
+                    <pre className="help-article__commands">{ollamaHelpData.commands.join('\n')}</pre>
+                </>
+            )}
             {examples && (
                 <>
                     <h2 className="help-article__examples-heading">{t('help.examplesHeading')}</h2>

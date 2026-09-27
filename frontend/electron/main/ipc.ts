@@ -4,6 +4,7 @@ import { cp as cpAsync } from 'fs/promises'
 import { join } from 'path'
 import { spawn } from 'child_process'
 import { locatePython, locateBackend, startBackend, logToFile, getBackendSetupIssue } from './backend'
+import { cancelOllamaPulls, deleteOllamaModel, getOllamaInventory, listOllamaModels, pullOllamaModel } from './ollama'
 
 // Mutable so setup:complete can update it after starting the backend.
 let currentPort = 0
@@ -33,6 +34,16 @@ export function registerIpcHandlers(port: number): void {
     })
 
     ipcMain.handle('get-backend-port', () => currentPort)
+
+    ipcMain.handle('ollama:list-models', (_, url?: string) => listOllamaModels(url))
+    ipcMain.handle('ollama:inventory', (_, url?: string) => getOllamaInventory(url))
+    ipcMain.handle('ollama:delete-model', (_, payload: { model: string; url?: string }) => deleteOllamaModel(payload.model, payload.url))
+    ipcMain.handle('ollama:pull-model', (event, payload: { model: string; url?: string }) =>
+        pullOllamaModel(payload.model, payload.url, progress => {
+            if (!event.sender.isDestroyed()) event.sender.send('ollama:pull-progress', progress)
+        })
+    )
+    ipcMain.handle('ollama:cancel-pulls', () => cancelOllamaPulls())
 
     // Check whether first-run setup wizard is needed.
     ipcMain.handle('setup:check-needed', () => {

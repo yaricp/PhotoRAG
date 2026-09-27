@@ -6,10 +6,16 @@ const siteDir = path.dirname(fileURLToPath(import.meta.url))
 const repoDir = path.dirname(siteDir)
 const sourceTopics = await readFile(path.join(repoDir, 'frontend/src/pages/HelpPage/topics.ts'), 'utf8')
 const topicIds = [...sourceTopics.matchAll(/\{ id: '([^']+)' \}/g)].map(match => match[1])
+const ollamaHelpData = JSON.parse(await readFile(path.join(repoDir, 'frontend/src/pages/HelpPage/ollamaHelpData.json'), 'utf8'))
 const checkOnly = process.argv.includes('--check')
 
 if (topicIds.length === 0 || new Set(topicIds).size !== topicIds.length) {
     throw new Error('Help topic IDs are missing or duplicated')
+}
+if (!Array.isArray(ollamaHelpData.rows) || ollamaHelpData.rows.length === 0 ||
+    !ollamaHelpData.rows.every(row => ['label', 'small', 'large'].every(key => typeof row[key] === 'string')) ||
+    !Array.isArray(ollamaHelpData.commands) || !ollamaHelpData.commands.every(command => typeof command === 'string')) {
+    throw new Error('Incomplete Ollama help recommendations or commands')
 }
 
 const outputDir = path.join(siteDir, 'help-content')
@@ -31,12 +37,27 @@ for (const lang of ['en', 'ru', 'es']) {
             throw new Error(`Incomplete ${lang} help topic: ${id}`)
         }
     }
+    if (!help.ollama || !['recommendations', 'function', 'smaller', 'larger', 'requirement', 'manualTitle', 'manualIntro']
+        .every(key => typeof help.ollama[key] === 'string')) {
+        throw new Error(`Incomplete ${lang} Ollama help translation`)
+    }
+    const capabilityLabels = Object.fromEntries(ollamaHelpData.rows.map(row => {
+        const label = source.wizard?.stepModelConfig?.[row.label]
+        if (typeof label !== 'string') throw new Error(`Missing ${lang} capability label: ${row.label}`)
+        return [row.label, label]
+    }))
 
     const output = JSON.stringify({
         title: help.title,
         examplesHeading: help.examplesHeading,
         topicOrder: topicIds,
         topics: help.topics,
+        ollama: {
+            ...help.ollama,
+            capabilityLabels,
+            rows: ollamaHelpData.rows,
+            commands: ollamaHelpData.commands,
+        },
     }, null, 2) + '\n'
     const file = path.join(outputDir, `${lang}.json`)
     if (checkOnly) {

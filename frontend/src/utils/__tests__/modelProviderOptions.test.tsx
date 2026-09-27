@@ -66,4 +66,10 @@ describe('packaged provider options', () => {
             'mxbai-embed-large',
         ])
     })
+
+    it('offers a vision model under 2.5 GB first for Ollama image tasks', () => {
+        for (const type of ['vision', 'ocr', 'clip'] as const) {
+            expect(getModelSuggestions('ollama', type)[0]).toBe('qwen3-vl:2b-instruct')
+        }
+    })
 })

@@ -141,8 +141,65 @@
     "local-ollama": {
       "title": "Локальные модели через Ollama",
       "intro": "Используйте Ollama, если хотите запускать локальные модели без прямой загрузки и запуска моделей внутри PhotoRAG.",
-      "body": "Ollama — отдельное локальное приложение, которое запускает AI-модели на вашем компьютере и отдаёт их через локальный HTTP-сервер. В PhotoRAG выберите Local via Ollama и используйте URL сервера http://localhost:11434. Для localhost-сервера Ollama API-ключ не нужен.\n\nУстановите Ollama с официальной страницы: [Download Ollama](https://ollama.com/download). После установки откройте Ollama один раз. На Linux или headless-системах запустите сервер командой ollama serve, если он не стартовал сам.\n\nПроверьте, что локальный сервер доступен:\nollama --version\ncurl http://localhost:11434/api/version\n\nСкачайте модели перед выбором в PhotoRAG:\nollama pull qwen2.5vl:3b\nollama pull qwen2.5vl:7b\nollama pull nomic-embed-text\nollama pull mxbai-embed-large\nollama pull gemma3:4b\n\nРекомендации: для описаний, OCR, тегов и категорий начните с qwen2.5vl:3b, а для лучшего качества используйте qwen2.5vl:7b. Семантический поиск использует эмбеддинги; начните с nomic-embed-text или выберите mxbai-embed-large для более сильного поиска. Для чата и перевода подойдёт gemma3:4b; gemma3:12b имеет смысл, если компьютеру хватает памяти.\n\nОриентир по ресурсам: модели 3B-4B — самый безопасный первый тест на 8-16 ГБ RAM. Модели 7B обычно требуют больше памяти, но лучше понимают фото. Более крупные модели подходят для машин с большим объёмом RAM и, желательно, GPU-ускорением.",
-      "examples": "Пример: установите Ollama, выполните ollama pull qwen2.5vl:7b и ollama pull nomic-embed-text. В PhotoRAG настройте Vision, OCR, CLIP и Categories как Local via Ollama с моделью qwen2.5vl:7b. Для Embedding выберите Local via Ollama и модель nomic-embed-text, затем переиндексируйте поиск, если фото уже были обработаны."
+      "body": "Ollama — отдельная программа для запуска моделей на вашем компьютере. [Установите Ollama](https://ollama.com/download), затем выберите «Локальная модель через Ollama» и модель для каждой функции PhotoRAG. Программа проверит локальный сервер, скачает модель в фоновом режиме и покажет ход загрузки. Командная строка и API-ключ не нужны. Адрес сервера по умолчанию: http://localhost:11434.\n\nВы сами выбираете, какие модели скачивать, и можете позже пробовать другие. На странице «Модели Ollama» видны установленные модели, их размер и свободное место; там же можно удалить ненужные. Модели хранятся в Ollama и могут использоваться другими программами.",
+      "examples": "Например, выберите qwen3-vl:2b-instruct для описаний фото и чата, а nomic-embed-text — для смыслового поиска. PhotoRAG скачает каждую уникальную выбранную модель после продолжения мастера или сохранения настройки."
     }
+  },
+  "ollama": {
+    "recommendations": "Рекомендуемые варианты для начала",
+    "function": "Функция PhotoRAG",
+    "smaller": "Компактнее",
+    "larger": "Мощнее / крупнее",
+    "requirement": "Для Qwen3-VL нужна Ollama версии 0.12.7 или новее. В каталоге Ollama размер qwen3-vl:2b-instruct — около 1,9 ГБ, qwen3-vl:4b-instruct — около 3,3 ГБ; оставьте дополнительное место для загрузки и рабочих файлов. Модель 2B можно также использовать для чата и перевода, чтобы сэкономить место, но проверьте на своих данных, насколько хорошо она вызывает инструменты агента и переводит. Это отправные варианты: результат и расход памяти зависят от компьютера и фотографий. Для тегов и категорий через Ollama используется модель зрения, а не CLIP.",
+    "manualTitle": "Самостоятельная работа с Ollama",
+    "manualIntro": "Эти команды необязательны. Через терминал можно самостоятельно посмотреть, скачать или удалить модели. Замените MODEL_NAME точным именем из ollama list.",
+    "capabilityLabels": {
+      "labelVision": "Зрение (описание фото)",
+      "labelOcr": "OCR (распознавание текста)",
+      "labelClip": "CLIP (теги и категории)",
+      "labelEmbedding": "Эмбеддинг (семантический поиск)",
+      "labelChat": "Чат (ИИ-агент)",
+      "labelTranslator": "Переводчик (язык описаний)"
+    },
+    "rows": [
+      {
+        "label": "labelVision",
+        "small": "qwen3-vl:2b-instruct",
+        "large": "qwen3-vl:4b-instruct"
+      },
+      {
+        "label": "labelOcr",
+        "small": "qwen3-vl:2b-instruct",
+        "large": "qwen3-vl:4b-instruct"
+      },
+      {
+        "label": "labelClip",
+        "small": "qwen3-vl:2b-instruct",
+        "large": "qwen3-vl:4b-instruct"
+      },
+      {
+        "label": "labelEmbedding",
+        "small": "nomic-embed-text",
+        "large": "mxbai-embed-large"
+      },
+      {
+        "label": "labelChat",
+        "small": "qwen3-vl:2b-instruct",
+        "large": "gemma3:4b"
+      },
+      {
+        "label": "labelTranslator",
+        "small": "qwen3-vl:2b-instruct",
+        "large": "gemma3:4b"
+      }
+    ],
+    "commands": [
+      "ollama --version",
+      "ollama list",
+      "ollama pull qwen3-vl:2b-instruct",
+      "ollama pull nomic-embed-text",
+      "ollama pull gemma3:4b",
+      "ollama rm MODEL_NAME"
+    ]
   }
 }

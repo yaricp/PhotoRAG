@@ -305,12 +305,14 @@ async def call_vision_model(file_path: str, prompt_key: str) -> str:
 
 def _apply_embedding_prefix(text: str, model_name: str, purpose: str) -> str:
     """Apply model-specific text prefix before encoding.
-    Currently only nomic models use instruction prefixes."""
+    Nomic uses separate document/query prefixes; mxbai recommends a query prefix."""
     if "nomic" in model_name.lower():
         if purpose == "save":
             return f"search_document: {text}"
         if purpose == "search":
             return f"search_query: {text}"
+    if "mxbai-embed-large" in model_name.lower() and purpose == "search":
+        return f"Represent this sentence for searching relevant passages: {text}"
     return text
 
 

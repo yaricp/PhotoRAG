@@ -27,6 +27,18 @@ import src.queues.ocr_queue  # noqa: F401
 import src.queues.translation_queue  # noqa: F401
 import src.queues.vision_queue  # noqa: F401
 
+
+def test_mxbai_embedding_configuration_uses_correct_dimension_and_query_prefix():
+    from src.model_services import _apply_embedding_prefix
+    from src.vector_db_services import get_embedding_dimension
+
+    assert get_embedding_dimension("mxbai-embed-large") == 1024
+    assert _apply_embedding_prefix("blue sky", "mxbai-embed-large", "search") == (
+        "Represent this sentence for searching relevant passages: blue sky"
+    )
+    assert _apply_embedding_prefix("blue sky", "mxbai-embed-large", "save") == "blue sky"
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
