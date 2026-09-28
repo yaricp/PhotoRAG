@@ -9,7 +9,7 @@ Run the commands below in **macOS Terminal**. They cover a standard `PhotoRAG.ap
 Choose **PhotoRAG → Quit PhotoRAG** or press **⌘Q**. Close any installer windows and wait a few seconds for the Python processes to exit. Check for remaining processes:
 
 ```bash
-pgrep -fl 'PhotoRAG\.app|Application Support/PhotoRAG/(venv|python)' || true
+/bin/ps -axo pid=,command= | /usr/bin/awk '$0 ~ /PhotoRAG[.]app|Application Support\/PhotoRAG\/(venv|python)/ { print }'
 ```
 
 If the command lists PhotoRAG or its Python environment, stop only those listed PIDs in Activity Monitor or with `kill PID`. Repeat the check; it should print nothing before you delete files. Do not stop every process named `python`, since other apps may use Python too.
@@ -54,7 +54,7 @@ for path in "/Applications/PhotoRAG.app" "$HOME/Applications/PhotoRAG.app" \
   "$HOME/Library/Preferences/com.photorag.app.plist"; do
   if [ -e "$path" ] || [ -L "$path" ]; then printf 'REMAINS: %s\n' "$path"; fi
 done
-pgrep -fl 'PhotoRAG\.app|Application Support/PhotoRAG/(venv|python)' || true
+/bin/ps -axo pid=,command= | /usr/bin/awk '$0 ~ /PhotoRAG[.]app|Application Support\/PhotoRAG\/(venv|python)/ { print }'
 ```
 
 Expected result: **no `REMAINS` lines and no PhotoRAG processes**. If anything remains, check its path and remove only that item after stopping its process.
