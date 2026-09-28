@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useSyncExternalStore } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { getModelConfigs, updateModelConfig, getSystemStatus } from '@/api/client'
@@ -8,9 +8,8 @@ import { Spinner } from '@/components/ui/Spinner'
 import { PrivacyWarning } from '@/components/ui/PrivacyWarning'
 import { applyWindowsRemoteModelDefaults, isWindowsAppPlatform } from '@/utils/windowsModelDefaults'
 import { changeProcessingMode, changeProvider, getModelSuggestions, getProviderOptions, isLocalOllamaUrl, providerRequiresApiKey } from '@/utils/modelProviderOptions'
+import { ensureOllamaModel, getOllamaDownloadStates, ollamaDownloadKey, subscribeOllamaDownloads } from '@/utils/ollamaDownloads'
 import { OllamaHelpDialog } from '@/components/ui/OllamaHelpDialog'
-import { StepDownloading } from './SetupWizard/StepDownloading'
-import './SetupWizard/SetupWizard.css'
 import './ModelsPage.css'
 
 type ModelStatusMap = Record<string, string>  // model type → status
@@ -47,10 +46,14 @@ export function ModelsPage() {
     const [configs, setConfigs] = useState<AIModelConfig[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const [saving, setSaving] = useState<string | null>(null)
+    const [saving, setSaving] = useState<Set<string>>(new Set())
     const [savedType, setSavedType] = useState<string | null>(null)
     const [helpOpen, setHelpOpen] = useState(false)
-    const [pendingOllamaConfig, setPendingOllamaConfig] = useState<AIModelConfig | null>(null)
+    const [pendingOllama, setPendingOllama] = useState<Record<string, string>>({})
+    const [ollamaErrors, setOllamaErrors] = useState<Record<string, string>>({})
+    const [ollamaSaved, setOllamaSaved] = useState<Set<string>>(new Set())
+    const pendingTypes = useRef(new Set<string>())
+    const ollamaDownloads = useSyncExternalStore(subscribeOllamaDownloads, getOllamaDownloadStates)
     const [modelStatuses, setModelStatuses] = useState<ModelStatusMap>({})
     const isWindowsApp = isWindowsAppPlatform()
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -87,8 +90,8 @@ export function ModelsPage() {
         return () => { if (pollRef.current) clearInterval(pollRef.current) }
     }, [startPolling, isWindowsApp])
 
-    const persistConfig = async (config: AIModelConfig) => {
-        setSaving(config.type)
+    const persistConfig = async (config: AIModelConfig, showModal = true) => {
+        setSaving(prev => new Set(prev).add(config.type))
         try {
             const updated = await updateModelConfig(config.type, {
                 mode: config.mode,
@@ -99,32 +102,68 @@ export function ModelsPage() {
                 similarity_limit: config.similarity_limit ?? undefined,
             })
             setConfigs(prev => prev.map(c => c.type === updated.type ? updated : c))
-            setSavedType(config.type)
+            if (showModal) setSavedType(config.type)
             if (config.mode === 'local') startPolling()
         } catch (err: any) {
-            setError(err.message || t('models.errorSaving'))
+            if (showModal) setError(err.message || t('models.errorSaving'))
+            throw err
         } finally {
-            setSaving(null)
+            setSaving(prev => {
+                const next = new Set(prev)
+                next.delete(config.type)
+                return next
+            })
         }
     }
 
     const handleSave = (config: AIModelConfig) => {
+        if (pendingTypes.current.has(config.type)) return
         if (config.mode === 'remote' && config.model_provider === 'ollama') {
             if (!config.model_name.trim()) {
                 setError(t('wizard.stepModelConfig.ollamaModelRequired'))
                 return
             }
             if (!isLocalOllamaUrl(config.url)) {
-                void persistConfig(config)
+                void persistConfig(config).catch(() => {})
                 return
             }
-            setPendingOllamaConfig(config)
+            const key = ollamaDownloadKey(config.model_name, config.url)
+            pendingTypes.current.add(config.type)
+            setPendingOllama(prev => ({ ...prev, [config.type]: key }))
+            setOllamaErrors(prev => ({ ...prev, [config.type]: '' }))
+            setOllamaSaved(prev => {
+                const next = new Set(prev)
+                next.delete(config.type)
+                return next
+            })
+            void (async () => {
+                try {
+                    await ensureOllamaModel(config.model_name, config.url)
+                    await persistConfig(config, false)
+                    setOllamaSaved(prev => new Set(prev).add(config.type))
+                } catch (cause) {
+                    setOllamaErrors(prev => ({ ...prev, [config.type]: String(cause) }))
+                } finally {
+                    pendingTypes.current.delete(config.type)
+                    setPendingOllama(prev => {
+                        const next = { ...prev }
+                        delete next[config.type]
+                        return next
+                    })
+                }
+            })()
             return
         }
-        void persistConfig(config)
+        void persistConfig(config).catch(() => {})
     }
 
     const handleChange = (type: string, field: keyof AIModelConfig, value: string) => {
+        setOllamaSaved(prev => {
+            const next = new Set(prev)
+            next.delete(type)
+            return next
+        })
+        setOllamaErrors(prev => ({ ...prev, [type]: '' }))
         setConfigs(prev => prev.map(c => {
             if (c.type !== type) return c
             if (field === 'mode') return changeProcessingMode(c, value)
@@ -157,16 +196,6 @@ export function ModelsPage() {
 
             {error && <div className="models-page__error">{error}</div>}
 
-            {pendingOllamaConfig && <div className="model-modal-overlay">
-                <div className="model-modal model-modal--download" role="dialog" aria-modal="true">
-                    <StepDownloading selectedModels={new Set()} ollamaModels={[{ name: pendingOllamaConfig.model_name.trim(), url: pendingOllamaConfig.url || undefined }]}
-                        onDone={() => {
-                            const config = pendingOllamaConfig
-                            setPendingOllamaConfig(null)
-                            void persistConfig(config)
-                        }} onBack={() => setPendingOllamaConfig(null)} />
-                </div>
-            </div>}
             {helpOpen && <OllamaHelpDialog onClose={() => setHelpOpen(false)} />}
 
             <div className="models-page__layout">
@@ -204,8 +233,14 @@ export function ModelsPage() {
             )}
 
             <div className="models-grid">
-                {configs.map(config => (
-                    <div key={config.id} className="model-card">
+                {configs.map(config => {
+                    const pendingKey = pendingOllama[config.type]
+                    const download = pendingKey ? ollamaDownloads[pendingKey] : undefined
+                    const busy = Boolean(pendingKey) || saving.has(config.type)
+                    const percent = download?.total
+                        ? Math.min(99, Math.round(download.completed / download.total * 100))
+                        : download?.phase === 'ready' ? 100 : 0
+                    return <div key={config.id} className="model-card">
                         <div className="model-card__header">
                             <h2 className="model-card__title">
                                 {config.mode === 'local' || config.model_provider === 'ollama'
@@ -231,6 +266,7 @@ export function ModelsPage() {
                                 <label className="model-field__label">{t('wizard.stepModelConfig.processingMode')}</label>
                                 <select
                                     className="model-field__select"
+                                    disabled={busy}
                                     value={config.mode === 'remote' && config.model_provider === 'ollama' ? 'ollama' : config.mode}
                                     onChange={e => handleChange(config.type, 'mode', e.target.value)}
                                 >
@@ -247,6 +283,7 @@ export function ModelsPage() {
                                     <label className="model-field__label">{t('wizard.stepModelConfig.provider')}</label>
                                     <select
                                         className="model-field__select"
+                                        disabled={busy}
                                         value={config.model_provider || ''}
                                         onChange={e => handleChange(config.type, 'model_provider', e.target.value)}
                                     >
@@ -281,6 +318,7 @@ export function ModelsPage() {
                                 <label className="model-field__label">{t('wizard.stepModelConfig.modelName')}</label>
                                 <input
                                     className="model-field__input"
+                                    disabled={busy}
                                     value={config.model_name}
                                     onChange={e => handleChange(config.type, 'model_name', e.target.value)}
                                     placeholder={config.mode === 'local'
@@ -306,6 +344,7 @@ export function ModelsPage() {
                                                         key={name}
                                                         className="model-suggestions__chip"
                                                         type="button"
+                                                        disabled={busy}
                                                         onClick={() => handleChange(config.type, 'model_name', name)}
                                                     >
                                                         {name}
@@ -327,6 +366,7 @@ export function ModelsPage() {
                                         </label>
                                         <input
                                             className="model-field__input"
+                                            disabled={busy}
                                             value={config.url || ''}
                                             onChange={e => handleChange(config.type, 'url', e.target.value)}
                                             placeholder={config.model_provider === 'ollama' ? 'http://localhost:11434' : 'https://api.openai.com/v1'}
@@ -338,6 +378,7 @@ export function ModelsPage() {
                                             <input
                                                 className="model-field__input"
                                                 type="password"
+                                                disabled={busy}
                                                 value={config.api_key || ''}
                                                 onChange={e => handleChange(config.type, 'api_key', e.target.value)}
                                                 placeholder="sk-…"
@@ -354,6 +395,7 @@ export function ModelsPage() {
                                 <input
                                     className="model-field__input"
                                     type="number"
+                                    disabled={busy}
                                     step="0.01"
                                     min="0.1"
                                     max="2.0"
@@ -365,25 +407,41 @@ export function ModelsPage() {
                             </div>
                         )}
 
+                        {pendingKey && <div className="model-card__download" role="status" aria-live="polite">
+                            <span>{saving.has(config.type) ? t('models.saving')
+                                : download?.phase === 'downloading' ? t('models.ollamaDownloading', { model: config.model_name.trim() })
+                                    : t('models.ollamaChecking', { model: config.model_name.trim() })}</span>
+                            {download?.status && <span>{download.status}</span>}
+                            {download?.phase === 'downloading' && <div className="model-card__progress" role="progressbar"
+                                aria-label={config.model_name.trim()} aria-valuemin={0} aria-valuemax={100}
+                                aria-valuenow={download.total ? percent : undefined}>
+                                <div className="model-card__progress-fill" style={{ width: download.total ? `${percent}%` : '100%' }} />
+                            </div>}
+                            {download?.phase === 'downloading' && download.total > 0 && <span>{percent}%</span>}
+                        </div>}
+                        {ollamaErrors[config.type] && <p className="model-card__download-error" role="alert">
+                            {t('models.ollamaDownloadError', { error: ollamaErrors[config.type] })}
+                        </p>}
+                        {ollamaSaved.has(config.type) && !pendingKey && <p className="model-card__saved" role="status">{t('models.configSaved')}</p>}
                         <div className="model-card__footer">
                             <button
                                 className="model-card__save-btn"
                                 onClick={() => handleSave(config)}
-                                disabled={saving === config.type}
+                                disabled={busy}
                             >
-                                {saving === config.type ? (
+                                {busy ? (
                                     <>
                                         <svg className="model-card__spinner" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                             <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" opacity="0.25" />
                                             <path fill="currentColor" opacity="0.75" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                                         </svg>
-                                        {t('models.saving')}
+                                    {saving.has(config.type) ? t('models.saving') : t('models.ollamaPreparing')}
                                     </>
                                 ) : t('models.save')}
                             </button>
                         </div>
                     </div>
-                ))}
+                })}
             </div>
                 <PrivacyWarning />
             </div>

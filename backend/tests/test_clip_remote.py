@@ -6,7 +6,8 @@ Tests cover:
 - RemoteClipTagger parses LLM JSON response correctly
 - RemoteClipTagger filters results by threshold
 - RemoteClipTagger.get_categories works the same way
-- RemoteClipTagger returns empty list on malformed JSON (with warning)
+- RemoteClipTagger fails on malformed JSON or a provider error
+- RemoteClipTagger splits candidates when the model context is too small
 - RemoteClipTagger.encode_image raises NotImplementedError
 - call_clip_model routes to local Huey task when mode=local
 - call_clip_model routes to remote when mode=remote
@@ -104,21 +105,49 @@ class TestRemoteClipTaggerGetTags:
         tag_names = [r[0] for r in result]
         assert "unknown_hallucinated_tag" not in tag_names
 
-    def test_returns_empty_list_on_malformed_json(self, tmp_path):
+    def test_raises_on_malformed_json(self, tmp_path):
         f = tmp_path / "img.jpg"
         f.write_bytes(b"\xff\xd8\xff\xe0" + b"\x00" * 20)
 
         tagger = self._make_tagger("not valid json { broken")
-        result = tagger.get_tags(str(f))
-        assert result == []
+        with pytest.raises(json.JSONDecodeError):
+            tagger.get_tags(str(f))
 
-    def test_returns_empty_list_on_unexpected_structure(self, tmp_path):
+    def test_raises_on_unexpected_structure(self, tmp_path):
         f = tmp_path / "img.jpg"
         f.write_bytes(b"\xff\xd8\xff\xe0" + b"\x00" * 20)
 
         tagger = self._make_tagger(json.dumps({"error": "sorry"}))
-        result = tagger.get_tags(str(f))
-        assert result == []
+        with pytest.raises(ValueError, match="Expected a JSON array"):
+            tagger.get_tags(str(f))
+
+    def test_raises_provider_failure_instead_of_reporting_empty_tags(self, tmp_path):
+        from src.ai.clip_remote import RemoteClipTagger
+
+        f = tmp_path / "img.jpg"
+        f.write_bytes(b"image")
+        llm = MagicMock()
+        llm.invoke.side_effect = RuntimeError("Ollama unavailable")
+        tagger = RemoteClipTagger(llm, SAMPLE_TAGS, SAMPLE_CATEGORIES)
+
+        with pytest.raises(RuntimeError, match="Ollama unavailable"):
+            tagger.get_tags(str(f))
+
+    def test_splits_candidates_after_context_overflow(self, tmp_path):
+        from src.ai.clip_remote import RemoteClipTagger
+
+        f = tmp_path / "img.jpg"
+        f.write_bytes(b"image")
+        llm = MagicMock()
+        llm.invoke.side_effect = [
+            RuntimeError("request (4229 tokens) exceeds the available context size (4096 tokens)"),
+            MagicMock(content='[{"tag": "tag_0", "score": 0.9}]'),
+            MagicMock(content='[{"tag": "tag_19", "score": 0.8}]'),
+        ]
+        tagger = RemoteClipTagger(llm, SAMPLE_TAGS, SAMPLE_CATEGORIES)
+
+        assert tagger.get_tags(str(f)) == [("tag_0", 0.9), ("tag_19", 0.8)]
+        assert llm.invoke.call_count == 3
 
 
 class TestRemoteClipTaggerGetCategories:

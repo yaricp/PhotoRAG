@@ -5,10 +5,11 @@ Uses a vision-capable LLM to classify images against a tag/category vocabulary,
 replacing the local OpenCLIP zero-shot model when mode=remote.
 
 Design:
-- Sends image + up to 200 candidate tag names in one LLM call.
+- Sends image + up to 200 candidate tag names, splitting the list if the
+  provider's context window is too small.
 - Asks the LLM for JSON: [{"tag": "...", "score": 0.0-1.0}, ...]
 - Filters results by threshold and validates against the known vocabulary.
-- Returns [] on malformed JSON (logs a warning, pipeline continues without tags).
+- Propagates provider and invalid-response errors so the pipeline marks the task failed.
 """
 
 import base64
@@ -101,16 +102,21 @@ class RemoteClipTagger:
                 if raw.startswith("json"):
                     raw = raw[4:]
             items = json.loads(raw)
-        except json.JSONDecodeError as exc:
-            logger.warning(f"[RemoteClipTagger] Malformed JSON from LLM: {exc} — returning []")
-            return []
         except Exception as exc:
+            message = str(exc).lower()
+            if len(candidates) > 1 and "context" in message and ("exceed" in message or "too long" in message):
+                middle = len(candidates) // 2
+                logger.warning(
+                    f"[RemoteClipTagger] Context too small; retrying in groups of {middle} and {len(candidates) - middle}"
+                )
+                return self._classify(file_path, candidates[:middle], valid_vocab) + self._classify(
+                    file_path, candidates[middle:], valid_vocab
+                )
             logger.error(f"[RemoteClipTagger] LLM call failed: {exc}")
-            return []
+            raise
 
         if not isinstance(items, list):
-            logger.warning("[RemoteClipTagger] Unexpected LLM response structure — returning []")
-            return []
+            raise ValueError("[RemoteClipTagger] Expected a JSON array from the vision model")
 
         vocab_set = set(valid_vocab)
         results = []

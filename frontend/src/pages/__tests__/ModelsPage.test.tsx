@@ -1,5 +1,5 @@
-import { describe, it, expect, afterEach, beforeEach } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { server } from '@/test/server'
 import { http, HttpResponse } from 'msw'
 import { MemoryRouter } from 'react-router-dom'
@@ -19,6 +19,72 @@ beforeEach(() => {
 afterEach(() => { i18n.changeLanguage('en') })
 
 describe('ModelsPage i18n', () => {
+    it('reuses an installed Ollama model without opening a download dialog', async () => {
+        const list = vi.fn().mockResolvedValue(['qwen3-vl:2b-instruct'])
+        const pull = vi.fn()
+        window.electronAPI = {
+            platform: 'darwin', listOllamaModels: list, pullOllamaModel: pull,
+            onOllamaPullProgress: vi.fn().mockReturnValue(() => {}),
+        } as unknown as typeof window.electronAPI
+        server.use(
+            http.get('http://localhost:8000/api/models/', () => HttpResponse.json([
+                { id: 1, type: 'vision', mode: 'remote', model_name: 'qwen3-vl:2b-instruct', model_provider: 'ollama' },
+                { id: 2, type: 'chat', mode: 'remote', model_name: 'qwen3-vl:2b-instruct', model_provider: 'ollama' },
+            ])),
+            http.put('http://localhost:8000/api/models/:type', async ({ params, request }) =>
+                HttpResponse.json({ ...await request.json() as object, id: params.type === 'vision' ? 1 : 2, type: params.type })),
+        )
+        render(<MemoryRouter><ModelsPage /></MemoryRouter>)
+        const vision = (await screen.findByText('Vision (photo descriptions)')).closest('.model-card') as HTMLElement
+        const chat = screen.getByText('Chat (AI agent)').closest('.model-card') as HTMLElement
+
+        fireEvent.click(within(vision).getByRole('button', { name: 'Save' }))
+        await within(vision).findByText('Configuration saved')
+        fireEvent.click(within(chat).getByRole('button', { name: 'Save' }))
+        await within(chat).findByText('Configuration saved')
+
+        expect(list).toHaveBeenCalledTimes(2)
+        expect(pull).not.toHaveBeenCalled()
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+
+    it('shares one background pull while other model cards remain usable', async () => {
+        let finishPull: (() => void) | undefined
+        let reportProgress: ((progress: { model: string; status: string; total: number; completed: number; done: boolean }) => void) | undefined
+        const pull = vi.fn().mockImplementation(() => new Promise<void>(resolve => { finishPull = resolve }))
+        window.electronAPI = {
+            platform: 'darwin', listOllamaModels: vi.fn().mockResolvedValue([]), pullOllamaModel: pull,
+            onOllamaPullProgress: vi.fn().mockImplementation(callback => {
+                reportProgress = callback
+                return () => {}
+            }),
+        } as unknown as typeof window.electronAPI
+        server.use(
+            http.get('http://localhost:8000/api/models/', () => HttpResponse.json([
+                { id: 1, type: 'vision', mode: 'remote', model_name: 'qwen3-vl:2b-instruct', model_provider: 'ollama' },
+                { id: 2, type: 'chat', mode: 'remote', model_name: 'qwen3-vl:2b-instruct', model_provider: 'ollama' },
+            ])),
+            http.put('http://localhost:8000/api/models/:type', async ({ params, request }) =>
+                HttpResponse.json({ ...await request.json() as object, id: params.type === 'vision' ? 1 : 2, type: params.type })),
+        )
+        render(<MemoryRouter><ModelsPage /></MemoryRouter>)
+        const vision = (await screen.findByText('Vision (photo descriptions)')).closest('.model-card') as HTMLElement
+        const chat = screen.getByText('Chat (AI agent)').closest('.model-card') as HTMLElement
+
+        fireEvent.click(within(vision).getByRole('button', { name: 'Save' }))
+        await waitFor(() => expect(pull).toHaveBeenCalledTimes(1))
+        expect(within(chat).getByRole('button', { name: 'Save' })).toBeEnabled()
+        fireEvent.click(within(chat).getByRole('button', { name: 'Save' }))
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+        act(() => reportProgress?.({ model: 'qwen3-vl:2b-instruct', status: 'pulling', total: 100, completed: 40, done: false }))
+        await waitFor(() => expect(within(vision).getByRole('progressbar')).toHaveAttribute('aria-valuenow', '40'))
+        expect(within(chat).getByRole('progressbar')).toHaveAttribute('aria-valuenow', '40')
+        await act(async () => finishPull?.())
+        await within(vision).findByText('Configuration saved')
+        await within(chat).findByText('Configuration saved')
+        expect(pull).toHaveBeenCalledTimes(1)
+    })
+
     it('shows the compact Ollama model for OCR and chat on Windows', async () => {
         Object.defineProperty(window, 'electronAPI', {
             value: { platform: 'win32' },

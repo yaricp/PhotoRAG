@@ -29,6 +29,29 @@ describe('local Ollama API integration', () => {
         }))
     })
 
+    it('shares one pull and progress stream across callers for the same model', async () => {
+        const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async input => {
+            if (String(input).endsWith('/api/version')) return { ok: true } as Response
+            const body = new ReadableStream<Uint8Array>({
+                start(controller) {
+                    controller.enqueue(new TextEncoder().encode('{"status":"success"}\n'))
+                    controller.close()
+                },
+            })
+            return { ok: true, body } as Response
+        })
+        const first = vi.fn()
+        const second = vi.fn()
+        await Promise.all([
+            pullOllamaModel('gemma3:4b', undefined, first),
+            pullOllamaModel('gemma3:4b', undefined, second),
+        ])
+
+        expect(fetchMock.mock.calls.filter(([input]) => String(input).endsWith('/api/pull'))).toHaveLength(1)
+        expect(first).toHaveBeenCalledWith(expect.objectContaining({ status: 'success', done: true }))
+        expect(second).toHaveBeenCalledWith(expect.objectContaining({ status: 'success', done: true }))
+    })
+
     it('reports an Ollama pull failure instead of completing the download', async () => {
         vi.spyOn(globalThis, 'fetch').mockImplementation(async input => {
             if (String(input).endsWith('/api/version')) return { ok: true } as Response

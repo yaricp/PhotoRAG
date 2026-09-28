@@ -33,6 +33,16 @@ PhotoRAG SHALL check the local Ollama server for the model explicitly chosen by 
 - **WHEN** multiple setup tasks choose the same Ollama model and server URL
 - **THEN** PhotoRAG downloads it at most once
 
+#### Scenario: Configuring several tasks on the Models page
+
+- **WHEN** a user saves an Ollama model for one task and continues configuring another task
+- **THEN** the Models page remains usable, shows download progress within the affected task card, and shares an in-progress pull for the same model and local server
+
+#### Scenario: Saving an already installed model on the Models page
+
+- **WHEN** the chosen Ollama model is already installed
+- **THEN** PhotoRAG saves the task configuration without showing a download modal or starting a pull
+
 #### Scenario: Pull fails or Ollama is missing
 
 - **WHEN** Ollama cannot be reached or a pull fails
@@ -109,3 +119,17 @@ PhotoRAG SHALL state that built-in local models are unavailable in the Windows b
 
 - **WHEN** the setup wizard runs on Windows
 - **THEN** it offers local Ollama and displays the distinction between built-in and Ollama models
+
+### Requirement: Remote CLIP failures are visible and context overflow is retried
+
+PhotoRAG SHALL mark remote image-tagging and categorization tasks as failed when the model call fails or returns an invalid response. An empty but valid result SHALL remain successful. When a provider rejects a candidate list for exceeding its context window, PhotoRAG SHALL retry with smaller candidate groups before reporting failure.
+
+#### Scenario: Model rejects an oversized candidate list
+
+- **WHEN** Ollama reports that a remote CLIP prompt exceeds its context window
+- **THEN** PhotoRAG divides the candidate list and retries the smaller groups without losing their accepted tags or categories
+
+#### Scenario: Model call or response is invalid
+
+- **WHEN** a remote CLIP model call fails or returns malformed JSON
+- **THEN** the corresponding pipeline task is marked failed with the error, rather than shown as complete with zero results

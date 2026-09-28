@@ -234,6 +234,41 @@
     gap: 12px;
 }
 
+.model-card__download {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: var(--color-text-dim);
+    font-size: 12px;
+}
+
+.model-card__progress {
+    height: 7px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--color-surface-2);
+}
+
+.model-card__progress-fill {
+    height: 100%;
+    border-radius: inherit;
+    background: var(--color-accent);
+    transition: width 0.2s ease;
+}
+
+.model-card__download-error {
+    margin: 0;
+    color: var(--color-error);
+    font-size: 12px;
+    overflow-wrap: anywhere;
+}
+
+.model-card__saved {
+    margin: 0;
+    color: #4ade80;
+    font-size: 12px;
+}
+
 /* ── Footer ── */
 .model-card__footer {
     display: flex;

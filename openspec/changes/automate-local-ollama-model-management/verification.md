@@ -1,5 +1,21 @@
 # Candidate build verification
 
+## Cross-platform follow-up test installers: 0.1.5-pre.5
+
+Built locally on 2026-09-28 from the same application source after replacing the blocking Ollama download dialog on the Models page with per-card progress and correcting remote CLIP failure handling. The application checks whether a chosen Ollama model is already installed, shares an active pull for that model, and leaves other model cards usable. Oversized remote CLIP candidate lists are retried in smaller groups; provider failures are reported as task failures.
+
+| Target | Artifact in `frontend/dist-electron/ollama-candidate-pre.5/` | SHA-256 |
+| --- | --- | --- |
+| macOS universal | `PhotoRAG-0.1.5-pre.5-universal.dmg` | `c7e8facf032bcfaa5180fd6d987ecf12a96db6b12d83c515c2ce4e7581fd605b` |
+| Windows x64 | `PhotoRAG-Setup-0.1.5-pre.5-x64.exe` | `7971c0831c412694647f9de26cacd7aa88970374e7fb466d46f2330a3a6d1740` |
+| Windows ARM64 | `PhotoRAG-Setup-0.1.5-pre.5-arm64.exe` | `113d8ec6b9bfc0d1f0d0286d93c8b2c87d416c2480a6f5b0b021a3e6073a85b1` |
+| Linux x64 | `PhotoRAG-0.1.5-pre.5-x86_64.AppImage` | `1643ad7866539ed7d04c07c19014a296981afba86206d815bf39d0dec38b11db` |
+| Linux ARM64 | `PhotoRAG-0.1.5-pre.5-arm64.AppImage` | `0383b1f4e9f4165e95d433fb4acc8dad44b4e2760b2fe53d04467257298fa364` |
+
+All five files passed `shasum -a 256 -c SHA256SUMS`. The DMG passed `hdiutil verify`. Unpacked applications reported version `0.1.5-pre.5` and contained matching Python runtimes: universal macOS, x64/ARM64 Windows and x64/ARM64 Linux. The Windows installers were inspected as NSIS executables and the Linux AppImages as architecture-matched ELF files. The packaged Windows x64 renderer was inspected for the new inline progress UI.
+
+Frontend validation passed 307 tests, type checking, lint (14 existing warnings) and production build. Backend validation passed 422 tests with one skip. Strict OpenSpec validation passed. Electron Builder used cached Electron 43.2.0 archives previously checked against the official release manifest, with download-time checksum validation disabled for these local test builds. The DMG is unsigned and not notarized; signing of the other targets was not verified. None of these installers has yet been run on its target OS or published, so real installation and Ollama workflow checks remain in task 5.4.
+
 ## Windows follow-up test installers: 0.1.5-pre.4
 
 Built locally on 2026-09-26 after adding `qwen3-vl:2b-instruct` to Ollama chat/translation suggestions, keeping the existing OCR suggestion, and moving the provider choice before the model field in the wizard and Models page. The model field also shows the first Ollama suggestion as its placeholder. These test installers are local and have not been run on Windows or published.
@@ -33,4 +49,4 @@ Linux ARM64 was built locally with an explicit `--linux AppImage --arm64` target
 
 ## Earlier test installers: 0.1.5-pre.2
 
-The four previous candidates remain in `frontend/dist-electron/ollama-candidate/` for comparison. They precede the shared-help synchronization and compact vision-model suggestion. Use `0.1.5-pre.4` for Windows testing and `0.1.5-pre.3` for macOS/Linux testing.
+The four previous candidates remain in `frontend/dist-electron/ollama-candidate/` for comparison. They precede the shared-help synchronization and compact vision-model suggestion. Use `0.1.5-pre.5` for new tests on all platforms.

@@ -11,7 +11,14 @@ export interface OllamaPullProgress {
     done: boolean
 }
 
-const pulls = new Map<string, AbortController>()
+interface ActivePull {
+    controller: AbortController
+    promise: Promise<void>
+    listeners: Set<(progress: OllamaPullProgress) => void>
+    lastProgress?: OllamaPullProgress
+}
+
+const pulls = new Map<string, ActivePull>()
 const DEFAULT_URL = 'http://localhost:11434'
 
 export interface OllamaInventory {
@@ -117,24 +124,44 @@ export async function deleteOllamaModel(model: string, url?: string): Promise<vo
     if (!response.ok) throw new Error(`Could not delete ${model}: ${await response.text()}`)
 }
 
-export async function pullOllamaModel(
+export function pullOllamaModel(
     model: string,
     url: string | undefined,
     onProgress: (progress: OllamaPullProgress) => void,
 ): Promise<void> {
     const name = model.trim()
-    if (!name || !/^[\w./:-]+$/.test(name)) throw new Error('Select a valid Ollama model name.')
-    const baseUrl = localBaseUrl(url)
-    await ensureServer(baseUrl)
-    const key = `${baseUrl}/${name}`
-    const controller = new AbortController()
-    pulls.set(key, controller)
+    if (!name || !/^[\w./:-]+$/.test(name)) return Promise.reject(new Error('Select a valid Ollama model name.'))
+    let baseUrl: string
     try {
+        baseUrl = localBaseUrl(url)
+    } catch (cause) {
+        return Promise.reject(cause)
+    }
+    const key = `${baseUrl}/${name}`
+    const existing = pulls.get(key)
+    if (existing) {
+        existing.listeners.add(onProgress)
+        if (existing.lastProgress) onProgress(existing.lastProgress)
+        return existing.promise
+    }
+
+    const operation: ActivePull = {
+        controller: new AbortController(),
+        promise: Promise.resolve(),
+        listeners: new Set([onProgress]),
+    }
+    pulls.set(key, operation)
+    const report = (progress: OllamaPullProgress) => {
+        operation.lastProgress = progress
+        for (const listener of operation.listeners) listener(progress)
+    }
+    operation.promise = (async () => {
+        await ensureServer(baseUrl)
         const response = await fetch(`${baseUrl}/api/pull`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ model: name, stream: true }),
-            signal: controller.signal,
+            signal: operation.controller.signal,
         })
         if (!response.ok || !response.body) {
             throw new Error(`Ollama download failed (${response.status}): ${await response.text()}`)
@@ -154,7 +181,7 @@ export async function pullOllamaModel(
                 const item = JSON.parse(line) as { status?: string; error?: string; total?: number; completed?: number }
                 if (item.error) throw new Error(item.error)
                 succeeded ||= item.status === 'success'
-                onProgress({ model: name, status: item.status ?? '', total: item.total ?? 0,
+                report({ model: name, status: item.status ?? '', total: item.total ?? 0,
                     completed: item.completed ?? 0, done: item.status === 'success' })
             }
         }
@@ -162,15 +189,16 @@ export async function pullOllamaModel(
             const item = JSON.parse(pending) as { status?: string; error?: string }
             if (item.error) throw new Error(item.error)
             succeeded ||= item.status === 'success'
-            onProgress({ model: name, status: item.status ?? '', completed: 0, total: 0, done: item.status === 'success' })
+            report({ model: name, status: item.status ?? '', completed: 0, total: 0, done: item.status === 'success' })
         }
         if (!succeeded) throw new Error('Ollama ended the download before confirming success.')
-    } finally {
-        pulls.delete(key)
-    }
+    })().finally(() => {
+        if (pulls.get(key) === operation) pulls.delete(key)
+    })
+    return operation.promise
 }
 
 export function cancelOllamaPulls(): void {
-    for (const controller of pulls.values()) controller.abort()
+    for (const operation of pulls.values()) operation.controller.abort()
     pulls.clear()
 }
