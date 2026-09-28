@@ -2,15 +2,15 @@
 
 ## Cross-platform follow-up test installers: 0.1.5-pre.5
 
-Built locally on 2026-09-28 from the same application source after replacing the blocking Ollama download dialog on the Models page with per-card progress and correcting remote CLIP failure handling. The application checks whether a chosen Ollama model is already installed, shares an active pull for that model, and leaves other model cards usable. Oversized remote CLIP candidate lists are retried in smaller groups; provider failures are reported as task failures.
+Built locally on 2026-09-28 from application commit `8bfe3c8` after replacing the blocking Ollama download dialog on the Models page with per-card progress and correcting remote CLIP failure handling. The application checks whether a chosen Ollama model is already installed, shares an active pull for that model, and leaves other model cards usable. Oversized remote CLIP candidate lists are retried in smaller groups; provider failures are reported as task failures.
 
 | Target | Artifact in `frontend/dist-electron/ollama-candidate-pre.5/` | SHA-256 |
 | --- | --- | --- |
-| macOS universal | `PhotoRAG-0.1.5-pre.5-universal.dmg` | `c7e8facf032bcfaa5180fd6d987ecf12a96db6b12d83c515c2ce4e7581fd605b` |
-| Windows x64 | `PhotoRAG-Setup-0.1.5-pre.5-x64.exe` | `7971c0831c412694647f9de26cacd7aa88970374e7fb466d46f2330a3a6d1740` |
-| Windows ARM64 | `PhotoRAG-Setup-0.1.5-pre.5-arm64.exe` | `113d8ec6b9bfc0d1f0d0286d93c8b2c87d416c2480a6f5b0b021a3e6073a85b1` |
-| Linux x64 | `PhotoRAG-0.1.5-pre.5-x86_64.AppImage` | `1643ad7866539ed7d04c07c19014a296981afba86206d815bf39d0dec38b11db` |
-| Linux ARM64 | `PhotoRAG-0.1.5-pre.5-arm64.AppImage` | `0383b1f4e9f4165e95d433fb4acc8dad44b4e2760b2fe53d04467257298fa364` |
+| macOS universal | `PhotoRAG-0.1.5-pre.5-universal.dmg` | `3cb8017e1ca8d56fa9ad4bee22a658c962c9f19fc89a8f5e527bd030c88e9ebb` |
+| Windows x64 | `PhotoRAG-Setup-0.1.5-pre.5-x64.exe` | `ecd65355eda51d388d3fe23ddd7adbc17fa1c0eff90f853746db26c9ae879e25` |
+| Windows ARM64 | `PhotoRAG-Setup-0.1.5-pre.5-arm64.exe` | `811a0a72e6e1888701fbf9060750749aa57b315ae6a1f91e99d92e5e034d0b81` |
+| Linux x64 | `PhotoRAG-0.1.5-pre.5-x86_64.AppImage` | `ad737341ae6f31685d89f62da3840749f311da472e411e88b8ddbeaf21042933` |
+| Linux ARM64 | `PhotoRAG-0.1.5-pre.5-arm64.AppImage` | `e251452422c1d18f3ef00d201c37c1e947827ca919286ab519ccd56727b33fe5` |
 
 All five files passed `shasum -a 256 -c SHA256SUMS`. The DMG passed `hdiutil verify`. Unpacked applications reported version `0.1.5-pre.5` and contained matching Python runtimes: universal macOS, x64/ARM64 Windows and x64/ARM64 Linux. The Windows installers were inspected as NSIS executables and the Linux AppImages as architecture-matched ELF files. The packaged Windows x64 renderer was inspected for the new inline progress UI.
 
