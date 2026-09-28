@@ -1,28 +1,28 @@
-# Чистая переустановка PhotoRAG на macOS
+# PhotoRAG clean reinstall test procedure for macOS
 
-Эта инструкция позволяет проверить первый запуск PhotoRAG так, будто приложение ещё не устанавливали для текущего пользователя macOS. Она удаляет приложение, базу фотографий и очереди задач, настройки, виртуальное окружение Python, загруженные через PhotoRAG встроенные модели, кэш и журналы. **Исходные фотографии в ваших папках не удаляются.** Для проверки установки зависимостей с нуля необходимо удалить именно папку `~/Library/Application Support/PhotoRAG`: простое перемещение `.app` в Корзину сохраняет данные предыдущей установки.
+Use this procedure to test PhotoRAG's first launch as if it had never been installed for the current macOS user. It removes the app, photo database and task queues, settings, Python virtual environment, models downloaded by PhotoRAG, caches, and logs. **Your original photo files are not deleted.** To test dependency installation from scratch, remove `~/Library/Application Support/PhotoRAG`; moving only the `.app` to the Trash leaves the previous installation's data in place.
 
-Команды ниже вводятся в **Терминале macOS**. Они рассчитаны на стандартную установку `PhotoRAG.app` в `/Applications` или `~/Applications`. Если приложение находится в другом месте, удалите также ту копию вручную. [Инструкция для Windows](windows_clean_reinstall.md) лежит рядом.
+Run the commands below in **macOS Terminal**. They cover a standard `PhotoRAG.app` installation in `/Applications` or `~/Applications`. If you installed the app elsewhere, remove that copy manually as well. The [Windows procedure](windows_clean_reinstall.md) is in the same directory.
 
-## 1. Закройте приложение
+## 1. Quit the app
 
-Выберите **PhotoRAG → Завершить PhotoRAG** или нажмите **⌘Q**. Закройте открытые окна установщика и подождите несколько секунд, чтобы завершились процессы Python. Проверьте их:
+Choose **PhotoRAG → Quit PhotoRAG** or press **⌘Q**. Close any installer windows and wait a few seconds for the Python processes to exit. Check for remaining processes:
 
 ```bash
 pgrep -fl 'PhotoRAG\.app|Application Support/PhotoRAG/(venv|python)' || true
 ```
 
-Если команда показывает процессы PhotoRAG или его Python-окружения, завершите их по указанным PID через «Мониторинг системы» или командой `kill PID`. Повторите проверку; перед удалением она должна ничего не выводить. Не завершайте все процессы с именем `python`: они могут принадлежать другим программам.
+If the command lists PhotoRAG or its Python environment, stop only those listed PIDs in Activity Monitor or with `kill PID`. Repeat the check; it should print nothing before you delete files. Do not stop every process named `python`, since other apps may use Python too.
 
-## 2. Удалите PhotoRAG и его данные
+## 2. Remove PhotoRAG and its data
 
-Сначала можно посмотреть, какие основные пути существуют:
+You can inspect the main paths first:
 
 ```bash
 ls -ld "/Applications/PhotoRAG.app" "$HOME/Applications/PhotoRAG.app" "$HOME/Library/Application Support/PhotoRAG" 2>/dev/null || true
 ```
 
-Затем удалите приложение и данные **текущего пользователя**:
+Then remove the app and **the current user's** data:
 
 ```bash
 sudo rm -rf "/Applications/PhotoRAG.app"
@@ -38,9 +38,9 @@ defaults delete com.photorag.app 2>/dev/null || true
 rm -f "$HOME/Library/Preferences/com.photorag.app.plist"
 ```
 
-`sudo` может запросить пароль учётной записи macOS для удаления приложения из общей папки `/Applications`. Команды не удаляют скачанный `.dmg` и ваши фотографии. Папка `Application Support/PhotoRAG` содержит в том числе `venv`, `setup_done`, базы SQLite, очереди и `.hf_cache`; после её удаления мастер первоначальной настройки должен запуститься заново и установить пакеты Python.
+`sudo` may ask for your macOS account password to remove the app from the shared `/Applications` directory. These commands do not remove the downloaded `.dmg` or your photo files. `Application Support/PhotoRAG` contains `venv`, `setup_done`, SQLite databases, task queues, and `.hf_cache`; removing it makes the first-run wizard start again and reinstall the Python packages.
 
-## 3. Проверьте очистку
+## 3. Verify cleanup
 
 ```bash
 for path in "/Applications/PhotoRAG.app" "$HOME/Applications/PhotoRAG.app" \
@@ -52,35 +52,35 @@ for path in "/Applications/PhotoRAG.app" "$HOME/Applications/PhotoRAG.app" \
   "$HOME/Library/HTTPStorages/com.photorag.app" \
   "$HOME/Library/WebKit/com.photorag.app" \
   "$HOME/Library/Preferences/com.photorag.app.plist"; do
-  if [ -e "$path" ] || [ -L "$path" ]; then printf 'ОСТАЛОСЬ: %s\n' "$path"; fi
+  if [ -e "$path" ] || [ -L "$path" ]; then printf 'REMAINS: %s\n' "$path"; fi
 done
 pgrep -fl 'PhotoRAG\.app|Application Support/PhotoRAG/(venv|python)' || true
 ```
 
-Нормальный результат — **нет строк `ОСТАЛОСЬ` и нет процессов PhotoRAG**. Если что-то осталось, проверьте путь и удалите только соответствующий объект после остановки процесса.
+Expected result: **no `REMAINS` lines and no PhotoRAG processes**. If anything remains, check its path and remove only that item after stopping its process.
 
-## 4. При необходимости сбросьте также Ollama
+## 4. Reset Ollama only if needed
 
-Для чистой установки **PhotoRAG** этот шаг не нужен: Ollama — отдельная программа, а её модели могут использовать другие приложения. Если вы хотите проверить и установку Ollama с нуля, сначала завершите Ollama через значок в строке меню и убедитесь, что её процессы остановились. Затем следуйте [официальной инструкции Ollama для macOS](https://github.com/ollama/ollama/blob/main/docs/macos.mdx#uninstall). В частности, удаление `~/.ollama` удалит **все** скачанные модели Ollama; при нестандартном `OLLAMA_MODELS` проверьте и его путь отдельно. Если Ollama была установлена через менеджер пакетов или в нестандартное место, удаляйте её тем же способом, которым устанавливали.
+This step is not required for a clean **PhotoRAG** installation. Ollama is a separate app, and other apps may use its models. To test Ollama installation from scratch as well, first quit Ollama from its menu bar icon and make sure its processes have stopped. Then follow [Ollama's official macOS uninstall instructions](https://github.com/ollama/ollama/blob/main/docs/macos.mdx#uninstall). Deleting `~/.ollama` removes **all** downloaded Ollama models. If you configured a custom `OLLAMA_MODELS` directory, check that location separately. If you installed Ollama with a package manager or in a custom location, uninstall it using the corresponding method.
 
-## 5. Проверьте установочный файл
+## 5. Verify the installer
 
-Для тестового `0.1.5-pre.5` выполните команду, подставив фактический путь к DMG:
+For the `0.1.5-pre.5` test build, run this command with the actual path to the DMG:
 
 ```bash
 shasum -a 256 "$HOME/Downloads/PhotoRAG-0.1.5-pre.5-universal.dmg"
 ```
 
-Ожидаемый SHA-256 для собранного тестового файла: `3cb8017e1ca8d56fa9ad4bee22a658c962c9f19fc89a8f5e527bd030c88e9ebb`. Для другой версии берите сумму из её `SHA256SUMS` или примечаний к сборке.
+Expected SHA-256 for this test build: `3cb8017e1ca8d56fa9ad4bee22a658c962c9f19fc89a8f5e527bd030c88e9ebb`. For another version, use its `SHA256SUMS` file or build notes.
 
-## 6. Установите и проверьте первый запуск
+## 6. Install and check the first launch
 
-Откройте DMG, перетащите `PhotoRAG.app` в «Программы», извлеките образ и запустите копию из «Программ». Для неподписанной тестовой сборки macOS может потребовать открыть приложение через контекстное меню **Открыть**. Должен появиться мастер первоначальной настройки с выбором языка и установкой зависимостей.
+Open the DMG, drag `PhotoRAG.app` into Applications, eject the disk image, and launch the copy in Applications. For an unsigned test build, macOS may require you to right-click the app and choose **Open**. The first-run wizard should appear with language selection and dependency installation.
 
-Пока мастер работает, можно наблюдать журнал в отдельном окне Терминала:
+While the wizard runs, you can watch its log in another Terminal window:
 
 ```bash
 tail -n 120 -f "$HOME/Library/Application Support/PhotoRAG/photorag.log"
 ```
 
-Если журнал ещё не создан, дождитесь начала настройки и повторите команду. После завершения мастер создаст новую папку `~/Library/Application Support/PhotoRAG` и маркер `setup_done`; старые фото и незавершённые очереди в неё не вернутся.
+If the log does not exist yet, wait for setup to begin and retry the command. When setup finishes, the wizard creates a new `~/Library/Application Support/PhotoRAG` directory and `setup_done` marker; the old photo database and unfinished task queues will not return.
