@@ -26,6 +26,8 @@ data/
 .github/skills/
 .claude/skills/
 .claude/worktrees/
+.worktrees/
+.superpowers/
 planning/
 .agent-workspace/
 
