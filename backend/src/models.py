@@ -286,6 +286,21 @@ class HistoryAction(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class PipelineRun(Base):
+    """Persistent outcome of one photo processing invocation."""
+
+    __tablename__ = "pipeline_runs"
+
+    id = Column(Integer, primary_key=True)
+    photo_id = Column(Integer, ForeignKey("photos.id", ondelete="CASCADE"), nullable=False, index=True)
+    source = Column(String, nullable=False, default="manual")
+    status = Column(String, nullable=False, default="queued", index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    started_at = Column(DateTime, nullable=True)
+    finished_at = Column(DateTime, nullable=True)
+    summary = Column(String, nullable=True)
+
+
 class PipelineTask(Base):
     """Per-task progress record for the Processing Page."""
 
@@ -293,6 +308,10 @@ class PipelineTask(Base):
 
     id = Column(Integer, primary_key=True)
     photo_id = Column(Integer, ForeignKey("photos.id", ondelete="CASCADE"), nullable=False, index=True)
+    run_id = Column(Integer, ForeignKey("pipeline_runs.id", ondelete="CASCADE"), nullable=True, index=True)
+    attempt = Column(Integer, nullable=False, default=1)
+    skip_reason = Column(String, nullable=True)
+    required = Column(Boolean, nullable=False, default=True)
     phase = Column(String, nullable=False)
     task_name = Column(String, nullable=False)
     status = Column(String, nullable=False, default="pending")  # pending|running|done|failed

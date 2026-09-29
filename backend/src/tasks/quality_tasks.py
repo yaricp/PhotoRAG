@@ -31,8 +31,9 @@ def _quality_check_sync(photo_id: int, check_fn, issue_type: str) -> None:
                 logger.info(f"[quality] Photo {photo_id} flagged '{issue_type}' (score={score})")
             db.commit()
         except Exception as check_err:
-            logger.warning(f"[quality] {issue_type} check failed for photo {photo_id}: {check_err} — skipping")
+            logger.warning(f"[quality] {issue_type} check failed for photo {photo_id}: {check_err}")
             db.rollback()
+            raise
     except Exception:
         db.rollback()
         raise

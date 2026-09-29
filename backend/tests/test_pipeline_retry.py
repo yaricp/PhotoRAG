@@ -2,6 +2,8 @@ import sys
 
 import pytest
 
+from tests.test_pipeline_runs import store
+
 
 def import_real_incoming_pipeline():
     for module_name in ["src.incoming_pipeline", "src.tasks"]:
@@ -18,20 +20,21 @@ def import_real_incoming_pipeline():
 
 
 @pytest.mark.asyncio
-async def test_retry_pipeline_task_runs_registered_runner(monkeypatch):
+async def test_retry_pipeline_task_runs_registered_runner(monkeypatch, store):  # noqa: F811 - shared pytest fixture
     incoming_pipeline = import_real_incoming_pipeline()
 
+    _, factory, photo_id = store
     calls = []
 
     async def fake_runner(photo_id: int) -> None:
         calls.append(photo_id)
 
-    monkeypatch.setattr(incoming_pipeline, "_TASK_RUNNERS", {"fake_task": fake_runner})
+    monkeypatch.setattr(incoming_pipeline, "_TASK_RUNNERS", {"metadata_task": fake_runner})
 
-    await incoming_pipeline.retry_pipeline_task(123, "fake_task")
+    await incoming_pipeline.retry_pipeline_task(photo_id, "metadata_task")
 
-    assert calls == [123]
-    assert incoming_pipeline.is_retryable_pipeline_task("fake_task") is True
+    assert calls == [photo_id]
+    assert incoming_pipeline.is_retryable_pipeline_task("metadata_task") is True
 
 
 @pytest.mark.asyncio

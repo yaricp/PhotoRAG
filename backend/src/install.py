@@ -459,6 +459,9 @@ def install_ocr(db: Session) -> None:
 
 def init_db(db: Session):
     logger.info("[db] Creating tables...")
+    from src.db.database import migrate_pipeline_runs
+
+    migrate_pipeline_runs(engine)
     Base.metadata.create_all(bind=engine)
     with engine.begin() as conn:
         conn.execute(

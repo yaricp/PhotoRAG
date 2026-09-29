@@ -10,7 +10,7 @@ from src.config import Embedding_Settings, Main_Settings
 from src.db.database import SessionLocal
 from src.db_service import get_photo_by_id, get_setting
 from src.model_services import call_embedding_model, call_translation_model
-from src.pipeline_tracker import track_task
+from src.pipeline_tracker import mark_task_skipped, track_task
 from src.vector_db_services import store_photo_embedding
 
 _DB_PATH = _DB_Settings().DATABASE_PATH
@@ -83,6 +83,7 @@ async def final_embedding_task(photo_id: int) -> None:
     async with track_task(photo_id, "phase_2", "final_embedding_task"):
         inputs = await asyncio.to_thread(_read_embedding_input_sync, photo_id)
         if inputs is None:
+            mark_task_skipped(photo_id, "phase_2", "final_embedding_task", "Photo missing")
             return
 
         photo_text = build_photo_text_for_embedding(
@@ -93,6 +94,8 @@ async def final_embedding_task(photo_id: int) -> None:
         )
         logger.debug(f"[embedding] Photo {photo_id}: built text for embedding: {photo_text}")
         embedding = await call_embedding_model(text=photo_text, purpose="save")
+        if not embedding:
+            raise ValueError("Empty embedding")
         await asyncio.to_thread(_save_embedding_sync, photo_id, embedding)
         logger.info(f"[embedding] Photo {photo_id}: vector saved ✓")
 
@@ -106,7 +109,13 @@ async def embedding_document_text_task(photo_id: int) -> None:
     async with track_task(photo_id, "phase_4", "embedding_document_text_task"):
         is_doc, ocr_text = await asyncio.to_thread(_read_doc_input_sync, photo_id)
         if not is_doc or not ocr_text:
-            logger.info(f"[embedding/doc] Photo {photo_id}: skipping (not a doc or no OCR text)")
+            mark_task_skipped(
+                photo_id,
+                "phase_4",
+                "embedding_document_text_task",
+                "Not a document" if not is_doc else "Missing OCR text",
+                required=is_doc,
+            )
             return
 
         db_lang = SessionLocal()
@@ -116,5 +125,7 @@ async def embedding_document_text_task(photo_id: int) -> None:
             db_lang.close()
         doc_text_en = await call_translation_model(ocr_text, backward=True, target_lang=lang)
         embedding = await call_embedding_model(text=doc_text_en, purpose="save")
+        if not embedding:
+            raise ValueError("Empty embedding")
         await asyncio.to_thread(_save_embedding_sync, photo_id, embedding)
         logger.info(f"[embedding/doc] Photo {photo_id}: doc vector saved ✓")

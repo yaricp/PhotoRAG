@@ -18,7 +18,15 @@ import asyncio
 from loguru import logger
 
 from src.config import TaskQueue_Settings
-from src.pipeline_tracker import init_pipeline_tasks
+from src.pipeline_tracker import (
+    create_pipeline_run,
+    finalize_pipeline_run,
+    get_task_outcome,
+    init_pipeline_tasks,
+    mark_task_skipped,
+    pipeline_run_context,
+    track_task,
+)
 
 
 def _log_phase_results(photo_id: int, phase: str, results: list) -> None:
@@ -95,91 +103,89 @@ _TASK_RUNNERS = {
 }
 
 
-async def retry_pipeline_task(photo_id: int, task_name: str) -> None:
-    """Run one tracked pipeline task again for an existing photo."""
-    runner = _TASK_RUNNERS.get(task_name)
-    if runner is None:
+def _mark_run_running(photo_id, run_id):
+    from datetime import datetime, timezone
+
+    from src.models import PipelineRun
+    from src.pipeline_tracker import SessionLocal
+
+    with SessionLocal() as db:
+        run = db.get(PipelineRun, run_id)
+        if run is None or run.photo_id != photo_id:
+            raise ValueError("Pipeline run does not belong to this photo")
+        run.status = "running"
+        run.started_at = datetime.now(timezone.utc)
+        db.commit()
+
+
+async def retry_pipeline_task(photo_id: int, task_name: str, *, run_id: int | None = None) -> None:
+    """Append a retry run and refresh dependent outputs without clearing good results."""
+    if task_name not in _TASK_RUNNERS:
         raise ValueError(f"Unsupported pipeline task: {task_name}")
-    await runner(photo_id)
+    run_id = run_id if run_id is not None else create_pipeline_run(photo_id, f"retry:{task_name}")
+    _mark_run_running(photo_id, run_id)
+    selected = {task_name}
+    for phase, names in _PHASES.items():
+        for name in names:
+            if any(dependency in selected for dependency in _DEPENDENCIES.get(name, [])):
+                selected.add(name)
+    with pipeline_run_context(run_id):
+        for phase, names in _PHASES.items():
+            names = [name for name in names if name in selected]
+            init_pipeline_tasks(photo_id, phase, names)
+            results = await asyncio.gather(
+                *[_run_task(photo_id, phase, name, _TASK_RUNNERS[name]) for name in names],
+                return_exceptions=True,
+            )
+            _log_phase_results(photo_id, phase, results)
+    finalize_pipeline_run(run_id)
 
 
 def is_retryable_pipeline_task(task_name: str) -> bool:
     return task_name in _TASK_RUNNERS
 
 
-async def start_pipeline(photo_id: int, folder_scanner_id: int = None) -> None:
-    """
-    Run the full async processing pipeline for a single photo.
+_PHASES = {
+    "phase_0": _PHASE_0_TASKS,
+    "phase_1": _PHASE_1_TASKS,
+    "phase_2": _PHASE_2_TASKS,
+    "phase_3": _PHASE_3_TASKS,
+    "phase_4": _PHASE_4_TASKS,
+}
+_TASK_PHASES = {name: phase for phase, names in _PHASES.items() for name in names}
+_DEPENDENCIES = {
+    "translate_description_task": ["vision_task"],
+    "final_embedding_task": ["vision_task"],
+    "ocr_task": ["is_this_document_task"],
+    "embedding_document_text_task": ["ocr_task"],
+}
 
-    Each phase waits for all tasks in the previous phase to complete before
-    starting. Within a phase, all tasks run concurrently.
-    """
-    logger.info(f"[pipeline] Starting for photo {photo_id}")
 
-    # ------------------------------------------------------------------
-    # Phase 0 — fast, model-free: makes the photo immediately browsable
-    # ------------------------------------------------------------------
-    init_pipeline_tasks(photo_id, "phase_0", _PHASE_0_TASKS)
-    results = await asyncio.gather(
-        metadata_task(photo_id),
-        compute_perceptual_hashes_task(photo_id),
-        brightness_task(photo_id),
-        edge_density_task(photo_id),
-        blur_task(photo_id),
-        entropy_task(photo_id),
-        return_exceptions=True,
-    )
-    _log_phase_results(photo_id, "phase_0", results)
-    logger.info(f"[pipeline] Phase 0 complete for photo {photo_id}")
+async def _run_task(photo_id, phase, name, runner):
+    for dependency in _DEPENDENCIES.get(name, []):
+        status, required = get_task_outcome(photo_id, _TASK_PHASES[dependency], dependency)
+        if status is not None and status != "done":
+            mark_task_skipped(
+                photo_id, phase, name, f"Prerequisite {dependency}: {status}", required=required or status != "skipped"
+            )
+            return
+    async with track_task(photo_id, phase, name):
+        await runner(photo_id)
 
-    # ------------------------------------------------------------------
-    # Phase 1 — AI models: CLIP + vision + OCR
-    # ------------------------------------------------------------------
-    init_pipeline_tasks(photo_id, "phase_1", _PHASE_1_TASKS)
-    results = await asyncio.gather(
-        auto_tag_clip_task(photo_id),
-        categorize_photo_task(photo_id),
-        vision_task(photo_id),
-        return_exceptions=True,
-    )
-    _log_phase_results(photo_id, "phase_1", results)
-    logger.info(f"[pipeline] Phase 1 complete for photo {photo_id}")
 
-    # ------------------------------------------------------------------
-    # Phase 2
-    # ------------------------------------------------------------------
-    init_pipeline_tasks(photo_id, "phase_2", _PHASE_2_TASKS)
-    results = await asyncio.gather(
-        final_embedding_task(photo_id),
-        is_this_document_task(photo_id),
-        translate_description_task(photo_id),
-        return_exceptions=True,
-    )
-    _log_phase_results(photo_id, "phase_2", results)
-    logger.info(f"[pipeline] Phase 2 complete for photo {photo_id}")
-
-    # ------------------------------------------------------------------
-    # Phase 3
-    # ------------------------------------------------------------------
-    init_pipeline_tasks(photo_id, "phase_3", _PHASE_3_TASKS)
-    results = await asyncio.gather(
-        ocr_task(photo_id),
-        screenshot_detect_task(photo_id),
-        return_exceptions=True,
-    )
-    _log_phase_results(photo_id, "phase_3", results)
-    logger.info(f"[pipeline] Phase 3 complete for photo {photo_id}")
-
-    # ------------------------------------------------------------------
-    # Phase 4
-    # ------------------------------------------------------------------
-    init_pipeline_tasks(photo_id, "phase_4", _PHASE_4_TASKS)
-    results = await asyncio.gather(
-        embedding_document_text_task(photo_id),
-        return_exceptions=True,
-    )
-    _log_phase_results(photo_id, "phase_4", results)
-    logger.info(f"[pipeline] Phase 4 complete for photo {photo_id}")
+async def start_pipeline(photo_id: int, folder_scanner_id: int = None, *, run_id: int | None = None) -> None:
+    """Execute all phases under one persistent run, retaining independent results."""
+    run_id = run_id if run_id is not None else create_pipeline_run(photo_id, "manual")
+    _mark_run_running(photo_id, run_id)
+    with pipeline_run_context(run_id):
+        for phase, names in _PHASES.items():
+            init_pipeline_tasks(photo_id, phase, names)
+            results = await asyncio.gather(
+                *[_run_task(photo_id, phase, name, globals()[name]) for name in names],
+                return_exceptions=True,
+            )
+            _log_phase_results(photo_id, phase, results)
+    outcome = finalize_pipeline_run(run_id)
 
     # ------------------------------------------------------------------
     # Update folder scanner progress
@@ -198,7 +204,7 @@ async def start_pipeline(photo_id: int, folder_scanner_id: int = None) -> None:
         finally:
             db.close()
 
-    logger.info(f"[pipeline] FINISHED processing photo {photo_id}")
+    logger.info(f"[pipeline] photo={photo_id} run={run_id} outcome={outcome}")
 
 
 async def run_pipelines_batch(

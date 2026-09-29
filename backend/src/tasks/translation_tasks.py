@@ -8,7 +8,7 @@ from src.config import Main_Settings
 from src.db.database import SessionLocal
 from src.db_service import get_photo_by_id, get_setting
 from src.model_services import call_translation_model
-from src.pipeline_tracker import track_task
+from src.pipeline_tracker import mark_task_skipped, track_task
 
 
 def _get_description_sync(photo_id: int) -> str | None:
@@ -67,13 +67,18 @@ async def translate_description_task(photo_id: int) -> None:
     async with track_task(photo_id, "phase_2", "translate_description_task"):
         lang = await asyncio.to_thread(_get_target_language)
         if lang == "en":
-            logger.info(f"[translate] Photo {photo_id}: language is en, skipping")
+            mark_task_skipped(
+                photo_id, "phase_2", "translate_description_task", "Target language is English", required=False
+            )
             return
 
         description = await asyncio.to_thread(_get_description_sync, photo_id)
         if not description:
+            mark_task_skipped(photo_id, "phase_2", "translate_description_task", "Missing description")
             return
 
         translated = await call_translation_model(description, backward=False, target_lang=lang)
+        if not translated or not translated.strip():
+            raise ValueError("Empty translated description")
         await asyncio.to_thread(_save_translation_sync, photo_id, translated)
         logger.info(f"[translate] Photo {photo_id}: translation saved ✓")
