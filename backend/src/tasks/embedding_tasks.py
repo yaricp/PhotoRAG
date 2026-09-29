@@ -124,6 +124,8 @@ async def embedding_document_text_task(photo_id: int) -> None:
         finally:
             db_lang.close()
         doc_text_en = await call_translation_model(ocr_text, backward=True, target_lang=lang)
+        if not doc_text_en or not doc_text_en.strip():
+            raise ValueError("Empty translated document text")
         embedding = await call_embedding_model(text=doc_text_en, purpose="save")
         if not embedding:
             raise ValueError("Empty embedding")

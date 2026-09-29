@@ -79,7 +79,8 @@ def test_legacy_migration_preserves_rows_and_interrupts_unfinished_work(tmp_path
             (7, "failed", "old error"),
             (8, "interrupted", None),
         ]
-        assert conn.execute(text("SELECT count(*) FROM pipeline_runs")).scalar() == 2
+        assert conn.execute(text("SELECT photo_id, status FROM pipeline_runs")).all() == [(1, "interrupted")]
+        assert conn.execute(text("SELECT count(*) FROM pipeline_runs WHERE photo_id=2")).scalar() == 0
         assert conn.execute(text("SELECT count(*) FROM pipeline_tasks WHERE run_id IS NULL")).scalar() == 0
     assert path.with_suffix(".db.pre-pipeline-runs.bak").exists()
 
@@ -359,3 +360,37 @@ async def test_retry_is_running_during_execution_and_retains_failed_attempt(stor
             "retry failed",
         ]
         assert [r.status for r in db.query(models.PipelineRun)] == ["completed-with-errors", "completed-with-errors"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("translated", ["", " \t\n"])
+async def test_document_embedding_rejects_empty_translation_before_vector_persistence(store, monkeypatch, translated):
+    from src.tasks import embedding_tasks
+
+    _, factory, photo_id = store
+    monkeypatch.setattr(embedding_tasks, "SessionLocal", factory)
+    monkeypatch.setattr(embedding_tasks, "_read_doc_input_sync", lambda pid: (True, "Document text"))
+    persisted_vectors = []
+
+    async def translate(*args, **kwargs):
+        return translated
+
+    async def embed(*args, **kwargs):
+        return [0.5, 0.5]
+
+    monkeypatch.setattr(embedding_tasks, "call_translation_model", translate)
+    monkeypatch.setattr(embedding_tasks, "call_embedding_model", embed)
+    monkeypatch.setattr(embedding_tasks, "_save_embedding_sync", lambda *args: persisted_vectors.append(args))
+    run = tracker.create_pipeline_run(photo_id, "manual")
+    with tracker.pipeline_run_context(run):
+        tracker.init_pipeline_tasks(photo_id, "phase_4", ["embedding_document_text_task"])
+        try:
+            await embedding_tasks.embedding_document_text_task(photo_id)
+        except ValueError:
+            pass
+    assert persisted_vectors == [], "Invalid translated text must never replace a stored vector"
+    assert tracker.finalize_pipeline_run(run) == "completed-with-errors"
+    with factory() as db:
+        task = db.query(models.PipelineTask).one()
+        assert task.status == "failed"
+        assert "Empty" in task.error

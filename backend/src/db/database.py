@@ -68,7 +68,7 @@ def migrate_pipeline_runs(bind=engine) -> None:
             conn.exec_driver_sql("ALTER TABLE pipeline_tasks ADD COLUMN skip_reason TEXT")
             conn.exec_driver_sql("ALTER TABLE pipeline_tasks ADD COLUMN required BOOLEAN NOT NULL DEFAULT 1")
             conn.exec_driver_sql("CREATE INDEX IF NOT EXISTS ix_pipeline_tasks_run_id ON pipeline_tasks(run_id)")
-            photo_ids = conn.execute(text("SELECT id FROM photos")).scalars().all()
+            photo_ids = conn.execute(text("SELECT DISTINCT photo_id FROM pipeline_tasks")).scalars().all()
             for photo_id in photo_ids:
                 statuses = (
                     conn.execute(text("SELECT status FROM pipeline_tasks WHERE photo_id=:id"), {"id": photo_id})
