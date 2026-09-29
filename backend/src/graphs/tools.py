@@ -35,7 +35,6 @@ from src.db_service import (
     get_photos_by_tag_id as _get_photos_by_tag_id,
 )
 from src.model_services import call_clip_model, call_ocr_model, call_vision_model
-from src.models import PhotoCategory, PhotoTag
 from src.schemas import Photo
 from src.utils import archive_photos_to_zip, extract_exif, resize_image
 
@@ -1620,26 +1619,13 @@ def rerun_pipeline_for_photos(photo_ids: List[int]) -> str:
         for pid in photo_ids:
             if not get_photo_by_id(db, pid):
                 return f"Photo {pid} not found. Aborting."
-        # Clear tags and categories so CLIP detection starts from a clean slate
-        for pid in photo_ids:
-            db.query(PhotoTag).filter_by(photo_id=pid).delete()
-            db.query(PhotoCategory).filter_by(photo_id=pid).delete()
-        db.commit()
     finally:
         db.close()
 
-    def _run():
-        import asyncio
+    from src.pipeline_queue import enqueue_photo_run
 
-        from src.incoming_pipeline import run_pipelines_batch
-
-        asyncio.run(run_pipelines_batch(photo_ids))
-
-    import threading
-
-    t = threading.Thread(target=_run, daemon=True)
-    t.start()
+    run_ids = [enqueue_photo_run(pid, "agent", clear_outputs=True) for pid in photo_ids]
     return (
-        f"Full pipeline started for {len(photo_ids)} photo(s). IDs: {photo_ids}. "
-        "Tags and categories cleared. Check the Processing page for status."
+        f"Full pipeline queued for {len(photo_ids)} photo(s). IDs: {photo_ids}. Runs: {run_ids}. "
+        "Check the Processing page for status."
     )

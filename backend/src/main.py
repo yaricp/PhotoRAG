@@ -141,9 +141,11 @@ async def lifespan(app: FastAPI):
     import asyncio
     import threading
 
-    from src.incoming_pipeline import run_pipelines_batch
-    from src.pipeline_tracker import recover_interrupted_pipelines
+    from src.db.database import engine
+    from src.pipeline_queue import initialize_queue, run_scheduler
 
+    initialize_queue(engine)
+    scheduler = asyncio.create_task(run_scheduler())
     db = SessionLocal()
     watcher_service.start_all(db)
 
@@ -218,11 +220,6 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.warning(f"[startup] Could not verify embedding VSS dimension: {exc}")
 
-    stuck_ids = recover_interrupted_pipelines(db)
-    if stuck_ids:
-        logger.info(f"[startup] Recovering {len(stuck_ids)} interrupted pipeline(s): {stuck_ids}")
-        asyncio.create_task(run_pipelines_batch(stuck_ids))
-
     # Eager-load chat model in background if configured as local
     chat_config = get_model_config(db, "chat")
     chat_mode = chat_config.mode if chat_config else "local"
@@ -230,14 +227,15 @@ async def lifespan(app: FastAPI):
         logger.info("[startup] Spawning background thread to warm up local chat model")
         threading.Thread(target=_eager_load_chat_model, name="chat-warmup", daemon=True).start()
 
-    yield
-
-    watcher_service.stop_all(db)
-    get_notifier().stop_all()
-    db.close()
-    from src.db.database import engine
-
-    engine.dispose()  # closes all pooled connections → SQLite WAL checkpoints and cleans up
+    try:
+        yield
+    finally:
+        watcher_service.stop_all(db)
+        scheduler.cancel()
+        await asyncio.gather(scheduler, return_exceptions=True)
+        get_notifier().stop_all()
+        db.close()
+        engine.dispose()  # closes pooled connections and checkpoints SQLite WAL
 
 
 app = FastAPI(
@@ -1034,28 +1032,13 @@ async def run_pipeline_for_photo_endpoint(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
-    """Clear tags/categories and re-run the full pipeline for a single photo."""
-    from src.models import PhotoCategory, PhotoTag
+    """Admit a full rerun; clear classifications only when execution begins."""
+    from src.pipeline_queue import enqueue_photo_run
 
-    photo = get_photo_by_id(db, photo_id)
-    if not photo:
+    if not get_photo_by_id(db, photo_id):
         raise HTTPException(status_code=404, detail=f"Photo {photo_id} not found")
-    db.query(PhotoTag).filter_by(photo_id=photo_id).delete()
-    db.query(PhotoCategory).filter_by(photo_id=photo_id).delete()
-    db.commit()
-
-    def _run():
-        import asyncio
-
-        from src.incoming_pipeline import run_pipelines_batch
-
-        asyncio.run(run_pipelines_batch([photo_id]))
-
-    import threading
-
-    t = threading.Thread(target=_run, daemon=True)
-    t.start()
-    return {"status": "queued", "photo_id": photo_id}
+    run_id = enqueue_photo_run(photo_id, "manual", clear_outputs=True)
+    return {"status": "queued", "photo_id": photo_id, "run_id": run_id}
 
 
 # ---------------------------------------------------------------------------
@@ -1085,10 +1068,9 @@ def get_recent_pipeline_tasks_endpoint(
 @app.post("/api/pipeline/tasks/{task_id}/retry", tags=["Pipeline"])
 async def retry_pipeline_task_endpoint(task_id: int, db: Session = Depends(get_db)):
     """Retry one failed pipeline task without clearing other photo results."""
-    import threading
-
-    from src.incoming_pipeline import is_retryable_pipeline_task, retry_pipeline_task
+    from src.incoming_pipeline import is_retryable_pipeline_task
     from src.models import PipelineTask
+    from src.pipeline_queue import enqueue_photo_run
 
     task = db.query(PipelineTask).filter(PipelineTask.id == task_id).first()
     if not task:
@@ -1100,19 +1082,8 @@ async def retry_pipeline_task_endpoint(task_id: int, db: Session = Depends(get_d
 
     photo_id = task.photo_id
     task_name = task.task_name
-    task.status = "pending"
-    task.error = None
-    task.started_at = None
-    task.finished_at = None
-    db.commit()
-
-    def _run():
-        import asyncio
-
-        asyncio.run(retry_pipeline_task(photo_id, task_name))
-
-    threading.Thread(target=_run, daemon=True).start()
-    return {"status": "queued", "task_id": task_id, "photo_id": photo_id, "task_name": task_name}
+    run_id = enqueue_photo_run(photo_id, "retry", retry_task_name=task_name)
+    return {"status": "queued", "task_id": task_id, "photo_id": photo_id, "task_name": task_name, "run_id": run_id}
 
 
 @app.get("/api/photos/{photo_id}/pipeline", tags=["Pipeline"], response_model=List[PipelineTaskSchema])

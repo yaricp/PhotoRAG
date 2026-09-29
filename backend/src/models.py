@@ -334,3 +334,14 @@ class Prompt(Base):
     text = Column(Text, nullable=False)  # The actual prompt text
     description = Column(String, nullable=True)  # Usage hint shown in UI
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class PipelineQueueEntry(Base):
+    """Execution intent retained separately from run/task outcome history."""
+
+    __tablename__ = "pipeline_queue_entries"
+    run_id = Column(Integer, ForeignKey("pipeline_runs.id", ondelete="CASCADE"), primary_key=True)
+    lane = Column(String, nullable=False)
+    folder_scanner_id = Column(Integer, nullable=True)
+    retry_task_name = Column(String, nullable=True)
+    clear_outputs = Column(Boolean, nullable=False, default=False)

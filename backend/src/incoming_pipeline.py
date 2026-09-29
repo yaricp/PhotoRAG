@@ -8,16 +8,14 @@ Phase 1 (parallel, AI models):  CLIP tags, CLIP categories, vision description, 
 Phase 2 (parallel):             is_document check, description translation, final embedding
 Phase 3 (parallel):             document text embedding, screenshot detection
 
-Use `run_pipelines_batch(photo_ids)` to process multiple photos concurrently.
-Each photo's phases remain sequential; phases across photos run in parallel,
-bounded by `TaskQueue_Settings.MAX_CONCURRENT_PIPELINES`.
+Use `run_pipelines_batch(photo_ids)` to admit multiple photos to the shared queue.
+The backend scheduler bounds concurrent execution across all producers.
 """
 
 import asyncio
 
 from loguru import logger
 
-from src.config import TaskQueue_Settings
 from src.pipeline_tracker import (
     create_pipeline_run,
     finalize_pipeline_run,
@@ -211,20 +209,9 @@ async def run_pipelines_batch(
     photo_ids: list[int],
     folder_scanner_id: int | None = None,
 ) -> None:
-    """
-    Run `start_pipeline` for every photo_id concurrently, bounded by
-    MAX_CONCURRENT_PIPELINES.  Phases within each photo remain sequential;
-    photos never block each other.
-    """
-    if not photo_ids:
-        return
+    """Compatibility admission entry point; execution belongs to the scheduler."""
+    from src.pipeline_queue import enqueue_photo_run
 
-    max_concurrent = TaskQueue_Settings().MAX_CONCURRENT_PIPELINES
-    sem = asyncio.Semaphore(max_concurrent)
-    logger.info(f"[pipeline] batch: {len(photo_ids)} photos, max_concurrent={max_concurrent}")
-
-    async def _guarded(photo_id: int) -> None:
-        async with sem:
-            await start_pipeline(photo_id, folder_scanner_id)
-
-    await asyncio.gather(*[_guarded(pid) for pid in photo_ids], return_exceptions=True)
+    source = "scanner" if folder_scanner_id is not None else "manual"
+    for photo_id in photo_ids:
+        enqueue_photo_run(photo_id, source, folder_scanner_id)

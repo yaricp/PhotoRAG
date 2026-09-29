@@ -1,4 +1,3 @@
-import asyncio
 import os
 from datetime import datetime
 
@@ -59,9 +58,11 @@ def start_folder_scanner_task(path: str) -> bool:
                     continue
                 photo = create_photo_record(db, file_hash, file_path, file_created_at)
                 logger.info(f"Photo {file_path} created in DB with ID: {photo.id}")
-                from src.incoming_pipeline import start_pipeline
+                from src.pipeline_queue import enqueue_photo_run
 
-                asyncio.run(start_pipeline(photo.id, folder_scanner.id))
+                photo_id, scanner_id = photo.id, folder_scanner.id
+                db.commit()
+                enqueue_photo_run(photo_id, "scanner", scanner_id)
                 logger.debug(f"Pipeline started for photo {photo.id}")
             except Exception as e:
                 logger.error(f"Error starting pipeline for photo {photo.id}: {e}")

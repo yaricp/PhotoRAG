@@ -1,4 +1,3 @@
-import asyncio
 import os
 from datetime import datetime
 
@@ -26,10 +25,10 @@ folder_scan_queue = SqliteHuey(
 @folder_scan_queue.task()
 def start_folder_scanner_task(path: str) -> bool:
     """
-    Scan a folder and process all photos in parallel.
+    Scan a folder and admit new photos to the shared processing queue.
 
     Pass 1 (sync): walk directory, hash files, register new photos in DB.
-    Pass 2 (async): run all photo pipelines concurrently via run_pipelines_batch.
+    Pass 2: persist photo runs for the backend scheduler.
     """
     if not os.path.exists(path):
         logger.error(f"[folder_scan] Path does not exist: {path}")
@@ -95,10 +94,11 @@ def start_folder_scanner_task(path: str) -> bool:
 
     # ── Pass 2: run all pipelines concurrently ─────────────────────────────
     logger.info(f"[folder_scan] Launching pipelines for {len(new_photo_ids)} photos")
-    from src.incoming_pipeline import run_pipelines_batch
+    from src.pipeline_queue import enqueue_photo_run
 
-    asyncio.run(run_pipelines_batch(new_photo_ids, scanner_id))
-    logger.info("[folder_scan] All pipelines complete.")
+    for photo_id in new_photo_ids:
+        enqueue_photo_run(photo_id, "scanner", scanner_id)
+    logger.info("[folder_scan] All pipelines queued.")
     return True
 
 

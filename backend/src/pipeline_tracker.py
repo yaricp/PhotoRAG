@@ -162,16 +162,14 @@ def get_recent_pipeline_tasks(db: Session, limit: int = 50) -> list[PipelineTask
 
 
 def recover_interrupted_pipelines(db: Session) -> list[int]:
-    """
-    Called at startup: find photos with stuck (pending/running) tasks left over
-    from a previous crash, delete all their task records, and return the photo_ids
-    so the caller can re-run the full pipeline for each one.
-    """
-    rows = db.query(PipelineTask.photo_id).filter(PipelineTask.status.in_(["pending", "running"])).distinct().all()
-    photo_ids = [r[0] for r in rows]
-    if not photo_ids:
-        return []
-
-    db.query(PipelineTask).filter(PipelineTask.photo_id.in_(photo_ids)).delete(synchronize_session=False)
+    """Preserve unfinished runs and task evidence; callers must not replay them."""
+    runs = db.query(PipelineRun).filter(PipelineRun.status.in_(["queued", "running"])).all()
+    photo_ids = sorted({run.photo_id for run in runs})
+    for run in runs:
+        run.status = "interrupted"
+        run.finished_at = datetime.utcnow()
+    db.query(PipelineTask).filter(PipelineTask.status.in_(["pending", "running"])).update(
+        {PipelineTask.status: "interrupted"}, synchronize_session=False
+    )
     db.commit()
     return photo_ids

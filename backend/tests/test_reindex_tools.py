@@ -125,14 +125,20 @@ class TestReindexPhotosTool:
 
 
 class TestRerunPipelineTool:
-    def test_returns_started_message_for_valid_ids(self, db_factory, photo_with_tags):
-        with patch("src.graphs.tools.SessionLocal", side_effect=db_factory), patch("threading.Thread") as mock_thread:
+    def test_returns_queued_message_for_valid_ids(self, db_factory, photo_with_tags):
+        with (
+            patch("src.graphs.tools.SessionLocal", side_effect=db_factory),
+            patch("src.pipeline_queue.SessionLocal", side_effect=db_factory),
+        ):
             from src.graphs.tools import rerun_pipeline_for_photos
 
             result = rerun_pipeline_for_photos.invoke({"photo_ids": [photo_with_tags.id]})
 
         assert "1 photo" in result
-        mock_thread.return_value.start.assert_called_once()
+        from src.models import PipelineRun
+
+        with db_factory() as db:
+            assert db.query(PipelineRun).filter_by(status="queued").count() == 1
 
     def test_returns_error_for_unknown_id(self, db_factory):
         with patch("src.graphs.tools.SessionLocal", side_effect=db_factory), patch("threading.Thread") as mock_thread:
@@ -144,20 +150,23 @@ class TestRerunPipelineTool:
         assert "not found" in result.lower()
         mock_thread.return_value.start.assert_not_called()
 
-    def test_clears_tags_and_categories_before_pipeline(self, db_factory, photo_with_tags):
+    def test_preserves_tags_and_categories_until_execution(self, db_factory, photo_with_tags):
         db = db_factory()
         assert db.query(PhotoTag).filter_by(photo_id=photo_with_tags.id).count() == 1
         assert db.query(PhotoCategory).filter_by(photo_id=photo_with_tags.id).count() == 1
         db.close()
 
-        with patch("src.graphs.tools.SessionLocal", side_effect=db_factory), patch("threading.Thread"):
+        with (
+            patch("src.graphs.tools.SessionLocal", side_effect=db_factory),
+            patch("src.pipeline_queue.SessionLocal", side_effect=db_factory),
+        ):
             from src.graphs.tools import rerun_pipeline_for_photos
 
             rerun_pipeline_for_photos.invoke({"photo_ids": [photo_with_tags.id]})
 
         db = db_factory()
-        assert db.query(PhotoTag).filter_by(photo_id=photo_with_tags.id).count() == 0
-        assert db.query(PhotoCategory).filter_by(photo_id=photo_with_tags.id).count() == 0
+        assert db.query(PhotoTag).filter_by(photo_id=photo_with_tags.id).count() == 1
+        assert db.query(PhotoCategory).filter_by(photo_id=photo_with_tags.id).count() == 1
         db.close()
 
     def test_returns_message_for_empty_list(self, db_factory):
