@@ -1,9 +1,9 @@
 ## 1. Persistent run records and truthful task states
 
-- [ ] 1.1 Add a migration-safe photo-run/attempt data model; preserve existing photos, outputs, configurations, task evidence, venv, and downloaded Ollama models.
+- [x] 1.1 Add a migration-safe photo-run/attempt data model; preserve existing photos, outputs, configurations, task evidence, venv, and downloaded Ollama models.
 - [ ] 1.2 Aggregate task outcomes into queued, running, completed, completed-with-errors, paused, and interrupted run states; record skipped tasks and prerequisite reasons instead of green no-op success.
-- [ ] 1.3 Replace unconditional pipeline-success reporting with a final summary of required outputs, failed tasks, and skipped dependencies; add focused tests for partial phase-1 failure and phase-4 no-op behavior.
-- [ ] 1.4 Make task retry dependency-aware so a recovered description can trigger missing translation/embedding without clearing successful independent results; preserve prior attempts.
+- [x] 1.3 Replace unconditional pipeline-success reporting with a final summary of required outputs, failed tasks, and skipped dependencies; add focused tests for partial phase-1 failure and phase-4 no-op behavior.
+- [x] 1.4 Make task retry dependency-aware so a recovered description can trigger missing translation/embedding without clearing successful independent results; preserve prior attempts.
 
 ## 2. Model-agnostic Ollama inference policy
 
