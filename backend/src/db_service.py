@@ -510,7 +510,7 @@ class ModelConfigurationBusyError(ValueError):
     """Model settings cannot change while a photo owns an execution lane."""
 
 
-def update_model_config(db: Session, config_type: str, schema: AIModelConfigUpdate):
+def update_model_config(db: Session, config_type: str, schema: AIModelConfigUpdate, *, commit: bool = True):
     from sqlalchemy import text
 
     from src.models import PipelineRun
@@ -530,8 +530,10 @@ def update_model_config(db: Session, config_type: str, schema: AIModelConfigUpda
         config.api_key = schema.api_key
         config.model_provider = schema.model_provider
         config.similarity_limit = schema.similarity_limit
-        db.commit()
-        db.refresh(config)
+        db.flush()
+        if commit:
+            db.commit()
+            db.refresh(config)
     else:
         db.rollback()
     return config

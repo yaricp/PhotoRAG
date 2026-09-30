@@ -724,18 +724,23 @@ def update_model_endpoint(config_type: str, request: AIModelConfigUpdate, db: Se
     from src.db_service import ModelConfigurationBusyError
 
     try:
-        config = update_model_config(db, config_type, request)
+        config = update_model_config(db, config_type, request, commit=False)
+        if not config:
+            raise HTTPException(status_code=404, detail="Model config not found")
+        if config_type == "embedding":
+            new_dim = get_embedding_dimension(request.model_name)
+            cur_dim = current_vss_dimension(db)
+            if new_dim != cur_dim:
+                logger.info(f"[models] Embedding dimension changed {cur_dim}→{new_dim}, rebuilding VSS table")
+                rebuild_embeddings_vss(db, new_dim, commit=False)
+        db.commit()
+        db.refresh(config)
     except ModelConfigurationBusyError as exc:
+        db.rollback()
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    if not config:
-        raise HTTPException(status_code=404, detail="Model config not found")
-
-    if config_type == "embedding":
-        new_dim = get_embedding_dimension(request.model_name)
-        cur_dim = current_vss_dimension(db)
-        if new_dim != cur_dim:
-            logger.info(f"[models] Embedding dimension changed {cur_dim}→{new_dim}, rebuilding VSS table")
-            rebuild_embeddings_vss(db, new_dim)
+    except Exception:
+        db.rollback()
+        raise
 
     # When switching to local, trigger eager loading immediately
     if request.mode == "local":

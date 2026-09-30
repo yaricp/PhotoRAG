@@ -158,3 +158,124 @@ async def test_startup_failure_releases_lifecycle_owner(routes, queue_store, mon
         await anext(lifetime)
     owner = queue.initialize_queue(factory.kw["bind"])
     owner.close()
+
+
+@pytest.fixture
+def embedding_store(routes, queue_store, monkeypatch):
+    import sqlite_vec
+    from sqlalchemy import event, text
+
+    queue, factory = queue_store
+    engine = factory.kw["bind"]
+
+    def load_vectors(connection, _):
+        connection.enable_load_extension(True)
+        sqlite_vec.load(connection)
+        connection.enable_load_extension(False)
+
+    event.listen(engine, "connect", load_vectors)
+    engine.dispose()
+    monkeypatch.delitem(sys.modules, "src.vector_db_services")
+    vectors = importlib.import_module("src.vector_db_services")
+    with factory() as db:
+        db.add(models.AIModelConfig(type="embedding", mode="remote", model_provider="openai", model_name="old-model"))
+        db.add(models.PhotoEmbedding(id=1, photo_id=1, model="old-model"))
+        db.execute(text("CREATE VIRTUAL TABLE photo_embeddings_vss USING vec0(embedding FLOAT[3])"))
+        db.execute(text("INSERT INTO photo_embeddings_vss(rowid, embedding) VALUES (1, '[1,2,3]')"))
+        db.commit()
+    return vectors
+
+
+def test_embedding_transition_blocks_claim_until_config_and_storage_match(
+    routes, queue_store, embedding_store, monkeypatch
+):
+    import threading
+    from concurrent.futures import ThreadPoolExecutor, TimeoutError
+
+    from src.schemas import AIModelConfigUpdate
+
+    queue, factory = queue_store
+    vectors = embedding_store
+    run_id = queue.enqueue_photo_run(1, "manual")
+    original_rebuild = vectors.rebuild_embeddings_vss
+    started = threading.Event()
+    claims = []
+
+    def claim():
+        started.set()
+        run = queue.claim_next_run()
+        with factory() as db:
+            return (
+                run.id,
+                db.query(models.AIModelConfig).filter_by(type="embedding").one().model_name,
+                vectors.current_vss_dimension(db),
+                db.query(models.PhotoEmbedding).count(),
+            )
+
+    with ThreadPoolExecutor(max_workers=1) as workers:
+
+        def rebuild(db, dimension, **kwargs):
+            claims.append(workers.submit(claim))
+            assert started.wait(2)
+            with pytest.raises(TimeoutError):
+                claims[0].result(timeout=0.1)
+            original_rebuild(db, dimension, **kwargs)
+
+        monkeypatch.setattr(vectors, "rebuild_embeddings_vss", rebuild)
+        with factory() as db:
+            routes.update_model_endpoint(
+                "embedding", AIModelConfigUpdate(mode="remote", model_provider="openai", model_name="bge-small"), db
+            )
+        assert claims[0].result(timeout=3) == (run_id, "bge-small", 512, 0)
+
+
+def test_embedding_rebuild_failure_rolls_back_config_vectors_and_map(routes, queue_store, embedding_store, monkeypatch):
+    from sqlalchemy import text
+
+    from src.schemas import AIModelConfigUpdate
+
+    _, factory = queue_store
+    vectors = embedding_store
+    original_rebuild = vectors.rebuild_embeddings_vss
+
+    def fail_after_rebuild(db, dimension, **kwargs):
+        original_rebuild(db, dimension, **kwargs)
+        raise RuntimeError("rebuild interrupted")
+
+    monkeypatch.setattr(vectors, "rebuild_embeddings_vss", fail_after_rebuild)
+    with factory() as db:
+        with pytest.raises(RuntimeError, match="rebuild interrupted"):
+            routes.update_model_endpoint(
+                "embedding", AIModelConfigUpdate(mode="remote", model_provider="openai", model_name="bge-small"), db
+            )
+    with factory() as db:
+        assert db.query(models.AIModelConfig).filter_by(type="embedding").one().model_name == "old-model"
+        assert vectors.current_vss_dimension(db) == 3
+        assert db.query(models.PhotoEmbedding).one().model == "old-model"
+        assert db.execute(text("SELECT rowid FROM photo_embeddings_vss")).scalars().all() == [1]
+
+
+def test_standalone_vector_rebuild_still_commits(queue_store, embedding_store):
+    _, factory = queue_store
+    vectors = embedding_store
+    with factory() as db:
+        assert vectors.current_vss_dimension(db) == 3
+        vectors.rebuild_embeddings_vss(db, 512)
+    with factory() as db:
+        assert vectors.current_vss_dimension(db) == 512
+        assert db.query(models.PhotoEmbedding).count() == 0
+
+
+def test_standalone_vector_ddl_failure_restores_old_storage(queue_store, embedding_store):
+    from sqlalchemy import text
+    from sqlalchemy.exc import OperationalError
+
+    _, factory = queue_store
+    vectors = embedding_store
+    with factory() as db:
+        with pytest.raises(OperationalError):
+            vectors.rebuild_embeddings_vss(db, 0)
+    with factory() as db:
+        assert vectors.current_vss_dimension(db) == 3
+        assert db.query(models.PhotoEmbedding).count() == 1
+        assert db.execute(text("SELECT rowid FROM photo_embeddings_vss")).scalars().all() == [1]

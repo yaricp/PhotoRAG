@@ -67,23 +67,32 @@ def current_vss_dimension(db) -> int:
     return 768
 
 
-def rebuild_embeddings_vss(db, new_dimension: int) -> None:
-    """
-    Drop and recreate photo_embeddings_vss with a new dimension.
-    Also clears photo_embedding_map so photos will be re-embedded.
+def rebuild_embeddings_vss(db, new_dimension: int, *, commit: bool = True) -> None:
+    """Rebuild vectors and clear mappings on the caller's single connection.
+
+    By default this commits for existing standalone callers. Pass commit=False
+    to include the rebuild in a larger transaction (such as a model change).
+    SQLite needs an explicit BEGIN for virtual-table DDL to roll back together
+    with ordinary rows when the sqlite3 driver uses legacy transaction control.
     """
     logger.info(f"[vector_db] Rebuilding photo_embeddings_vss with dim={new_dimension}")
-    with db.bind.begin() as conn:
-        conn.execute(text("DROP TABLE IF EXISTS photo_embeddings_vss"))
-        conn.execute(
+    try:
+        if not db.connection().connection.driver_connection.in_transaction:
+            db.execute(text("BEGIN IMMEDIATE"))
+        db.execute(text("DROP TABLE IF EXISTS photo_embeddings_vss"))
+        db.execute(
             text(f"""
             CREATE VIRTUAL TABLE photo_embeddings_vss
             USING vec0(embedding FLOAT[{new_dimension}])
         """)
         )
-    db.execute(text("DELETE FROM photo_embedding_map"))
-    db.commit()
-    logger.info("[vector_db] Rebuild complete — photo_embedding_map cleared, re-embedding needed")
+        db.execute(text("DELETE FROM photo_embedding_map"))
+        if commit:
+            db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    logger.info("[vector_db] Rebuild prepared — photo_embedding_map cleared, re-embedding needed")
 
 
 # ----------------------------
