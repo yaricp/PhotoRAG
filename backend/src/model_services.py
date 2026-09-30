@@ -10,7 +10,6 @@ Mode (local | remote) is read from ai_model_configs in the main DB, falling back
 env-var settings if the DB is unavailable.
 """
 
-import asyncio
 import base64
 import json
 from pathlib import Path
@@ -27,6 +26,7 @@ from src.config import (
     Vision_Settings,
 )
 from src.config import Database_Settings as _DB_Settings
+from src.pipeline_tracker import run_in_thread
 from src.queues.queue_config import read_model_config_from_db
 from src.task_notifier import get_notifier
 
@@ -130,9 +130,8 @@ async def _call_remote_vision(cfg: dict, file_path: str, prompt_text: str) -> st
             {"type": "text", "text": prompt_text},
         ]
     )
-    loop = asyncio.get_running_loop()
     logger.debug(f"[vision/remote] Sending image to remote model {model_name} at {api_url or 'default endpoint'}")
-    response = await loop.run_in_executor(None, llm.invoke, [msg])
+    response = await run_in_thread(llm.invoke, [msg])
     logger.debug(f"[vision/remote] Received response from remote model: {response}")
     return response.content
 
@@ -218,17 +217,16 @@ async def _call_remote_clip(cfg: dict, file_path: str, task: str) -> list:
 
     tagger = RemoteClipTagger(llm=llm, all_tags=all_tags, all_categories=all_categories)
 
-    loop = asyncio.get_running_loop()
     logger.debug(
         f"[clip/remote] Running remote CLIP tagger for task '{task}' on model '{model_name}' at {api_url or 'default endpoint'}"
     )
     if task == "tags":
-        result = await loop.run_in_executor(None, tagger.get_tags, file_path)
+        result = await run_in_thread(tagger.get_tags, file_path)
         logger.debug(f"[clip/remote] result: {result}")
         logger.debug(f"[clip/remote] task '{task}' completed successfully")
         return result
     elif task == "categorize":
-        result = await loop.run_in_executor(None, tagger.get_categories, file_path)
+        result = await run_in_thread(tagger.get_categories, file_path)
         logger.debug(f"[clip/remote] result: {result}")
         logger.debug(f"[clip/remote] task '{task}' completed successfully")
         return result
@@ -353,8 +351,7 @@ async def _call_remote_embedding(text: str, purpose: str, cfg: dict | None, emb_
     provider = (cfg and cfg.get("model_provider")) or None
 
     embedder = _build_langchain_embedder(provider, model_name, api_key, api_url)
-    loop = asyncio.get_running_loop()
-    vector = await loop.run_in_executor(None, embedder.embed_query, text)
+    vector = await run_in_thread(embedder.embed_query, text)
     logger.debug(f"[embedding/{purpose}] remote vector dim={len(vector)}")
     return vector
 
@@ -448,10 +445,9 @@ async def _call_remote_translation(
         llm = _build_langchain_vision_model(provider, model_name or "gpt-4o-mini", api_key, api_url)
         translator = RemoteTranslator(llm=llm, tgt_lang=tgt_name)
 
-    loop = asyncio.get_running_loop()
     logger.debug(f"[translation/remote] '{provider or 'LLM'}' → {tgt_name} | model='{model_name or 'default'}'")
     # Always pass backward=False: direction is already encoded in tgt_name
-    result = await loop.run_in_executor(None, translator.translate, text, False)
+    result = await run_in_thread(translator.translate, text, False)
     logger.debug(f"[translation/remote] result: {result[:60]}{'...' if len(result) > 60 else ''}")
     return result
 
@@ -499,8 +495,7 @@ async def _call_remote_ocr(cfg: dict, file_path: str) -> str:
 
     llm = _build_langchain_vision_model(provider, model_name, api_key, api_url)
     ocr = RemoteOCR(llm)
-    loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(None, ocr.extract_text, file_path)
+    return await run_in_thread(ocr.extract_text, file_path)
 
 
 async def call_ocr_model(file_path: str) -> str:

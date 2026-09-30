@@ -1,12 +1,10 @@
 """Phase-0 and phase-3 image quality detection tasks — called by incoming_pipeline.py."""
 
-import asyncio
-
 from loguru import logger
 
 from src.db.database import SessionLocal
 from src.db_service import create_quality_issue, get_photo_by_id
-from src.pipeline_tracker import track_task
+from src.pipeline_tracker import run_in_thread, track_task
 from src.quality_checks import (
     check_blur,
     check_brightness,
@@ -43,7 +41,7 @@ def _quality_check_sync(photo_id: int, check_fn, issue_type: str) -> None:
 
 async def _quality_task(photo_id: int, phase: str, task_name: str, check_fn, issue_type: str) -> None:
     async with track_task(photo_id, phase, task_name):
-        await asyncio.to_thread(_quality_check_sync, photo_id, check_fn, issue_type)
+        await run_in_thread(_quality_check_sync, photo_id, check_fn, issue_type)
 
 
 async def brightness_task(photo_id: int) -> None:

@@ -119,9 +119,9 @@ def test_local_lane_does_not_block_unrelated_models(queue_store, provider, url):
         config.url = url
         db.commit()
     other = queue.enqueue_photo_run(3, "manual")
+    assert queue.claim_next_run().id == blocked
     assert queue.claim_next_run().id == other
     assert queue.claim_next_run() is None
-    assert blocked != other
 
 
 @pytest.mark.asyncio
@@ -187,7 +187,8 @@ def test_upgrade_initialization_recovers_before_accepting_new_work(queue_store):
     old = queue.enqueue_photo_run(1, "watcher")
     PipelineQueueEntry.__table__.drop(factory.kw["bind"])
     assert hasattr(queue, "initialize_queue"), "upgrade initialization is missing"
-    queue.initialize_queue(factory.kw["bind"])
+    owner = queue.initialize_queue(factory.kw["bind"])
+    owner.close()
     with factory() as db:
         assert db.get(models.PipelineRun, old).status == "interrupted"
     new = queue.enqueue_photo_run(2, "watcher")
@@ -348,3 +349,187 @@ def test_local_claim_limit_is_shared_by_separate_processes(queue_store):
         results = list(workers.map(_claim_in_separate_process, [str(factory.kw["bind"].url)] * 2))
     assert sorted(value for value in results if value is not None) == [first]
     assert results.count(None) == 1
+
+
+def test_second_backend_cannot_recover_live_owner_work(queue_store):
+    queue, factory = queue_store
+    owner = queue.initialize_queue(factory.kw["bind"])
+    try:
+        run_id = queue.enqueue_photo_run(1, "watcher")
+        queue.claim_next_run()
+        with pytest.raises(RuntimeError, match="already owns"):
+            queue.initialize_queue(factory.kw["bind"])
+        with factory() as db:
+            assert db.get(models.PipelineRun, run_id).status == "running"
+        assert queue.enqueue_photo_run(1, "manual") == run_id
+    finally:
+        if owner is not None:
+            owner.close()
+    next_owner = queue.initialize_queue(factory.kw["bind"])
+    try:
+        with factory() as db:
+            assert db.get(models.PipelineRun, run_id).status == "interrupted"
+    finally:
+        next_owner.close()
+
+
+@pytest.mark.asyncio
+async def test_cancel_drains_thread_writes_before_releasing_run(queue_store, monkeypatch):
+    import asyncio
+    import sys
+    import threading
+    from types import SimpleNamespace
+
+    from src import pipeline_tracker as tracker
+    from src.tasks import quality_tasks
+
+    queue, factory = queue_store
+    monkeypatch.setattr(tracker, "SessionLocal", factory)
+    started, release = threading.Event(), threading.Event()
+
+    def write_after_release(*args):
+        started.set()
+        release.wait(5)
+        with factory() as db:
+            db.get(models.Photo, 1).description = "worker finished"
+            db.commit()
+
+    monkeypatch.setattr(quality_tasks, "_quality_check_sync", write_after_release)
+
+    async def execute(photo_id, scanner_id, *, run_id):
+        with tracker.pipeline_run_context(run_id):
+            tracker.init_pipeline_tasks(photo_id, "phase_0", ["brightness_task", "pending_work"])
+            await quality_tasks.brightness_task(photo_id)
+
+    monkeypatch.setitem(sys.modules, "src.incoming_pipeline", SimpleNamespace(start_pipeline=execute))
+    first = queue.enqueue_photo_run(1, "manual")
+    queue.enqueue_photo_run(2, "manual")
+    task = asyncio.create_task(queue.run_scheduler())
+    try:
+        for _ in range(100):
+            if started.is_set():
+                break
+            await asyncio.sleep(0.01)
+        assert started.is_set()
+        task.cancel()
+        await asyncio.sleep(0.05)
+        assert not task.done(), "cancellation released ownership while a worker can still write"
+        task.cancel()
+        await asyncio.sleep(0.01)
+        assert not task.done(), "repeated cancellation must also drain worker writes"
+        assert queue.claim_next_run() is None
+        assert queue.enqueue_photo_run(1, "manual") == first
+    finally:
+        release.set()
+        await asyncio.gather(task, return_exceptions=True)
+    with factory() as db:
+        assert db.get(models.Photo, 1).description == "worker finished"
+        assert db.get(models.PipelineRun, first).status == "interrupted"
+        assert {t.status for t in db.query(models.PipelineTask).filter_by(run_id=first)} == {"interrupted"}
+    assert queue.claim_next_run() is not None
+
+
+def test_claim_reclassifies_queued_work_after_provider_switch(queue_store):
+    queue, factory = queue_store
+    with factory() as db:
+        config = db.query(models.AIModelConfig).one()
+        config.model_provider = "openai"
+        config.url = "https://api.openai.com"
+        db.commit()
+    first = queue.enqueue_photo_run(1, "manual")
+    queue.enqueue_photo_run(2, "manual")
+    with factory() as db:
+        config = db.query(models.AIModelConfig).one()
+        config.model_provider = "ollama"
+        config.url = "http://localhost:11434"
+        db.commit()
+    assert queue.claim_next_run().id == first
+    assert queue.claim_next_run() is None, "stale cloud lane allowed two local Ollama runs"
+
+
+def _hold_lifecycle_until_terminated(database_url, ready):
+    import time
+
+    from src.pipeline_queue import initialize_queue
+
+    engine = create_engine(database_url)
+    owner = initialize_queue(engine)
+    ready.send(True)
+    try:
+        while True:
+            time.sleep(1)
+    finally:
+        owner.close()
+
+
+def test_lifecycle_owner_is_process_exclusive_and_crash_released(queue_store):
+    import multiprocessing
+    import time
+
+    queue, factory = queue_store
+    context = multiprocessing.get_context("spawn")
+    receiver, sender = context.Pipe(duplex=False)
+    process = context.Process(target=_hold_lifecycle_until_terminated, args=(str(factory.kw["bind"].url), sender))
+    process.start()
+    try:
+        assert receiver.poll(10), "child failed to acquire lifecycle ownership"
+        assert receiver.recv() is True
+        before = time.monotonic()
+        with pytest.raises(RuntimeError, match="already owns"):
+            queue.initialize_queue(factory.kw["bind"])
+        assert time.monotonic() - before < 1, "second backend should fail promptly"
+    finally:
+        process.terminate()
+        process.join(10)
+        receiver.close()
+        sender.close()
+    assert not process.is_alive()
+    owner = queue.initialize_queue(factory.kw["bind"])
+    owner.close()
+
+
+def test_configuration_save_and_claim_serialize(queue_store):
+    import threading
+
+    from src.db_service import ModelConfigurationBusyError, update_model_config
+    from src.schemas import AIModelConfigUpdate
+
+    queue, factory = queue_store
+    for photo_id in range(1, 9):
+        with factory() as db:
+            config = db.query(models.AIModelConfig).one()
+            config.model_provider = "openai"
+            config.url = "https://api.openai.com"
+            db.commit()
+        run_id = queue.enqueue_photo_run(photo_id, "manual")
+        barrier = threading.Barrier(2)
+
+        def save():
+            barrier.wait()
+            with factory() as db:
+                try:
+                    update_model_config(
+                        db,
+                        "vision",
+                        AIModelConfigUpdate(
+                            mode="remote", model_provider="ollama", model_name="test", url="http://localhost:11434"
+                        ),
+                    )
+                    return True
+                except ModelConfigurationBusyError:
+                    return False
+
+        def claim():
+            barrier.wait()
+            return queue.claim_next_run()
+
+        with ThreadPoolExecutor(max_workers=2) as workers:
+            saved_future = workers.submit(save)
+            claimed_future = workers.submit(claim)
+            saved, claimed = saved_future.result(), claimed_future.result()
+        assert claimed.id == run_id
+        with factory() as db:
+            assert db.get(models.PipelineQueueEntry, run_id).lane == ("local-ollama" if saved else "other")
+            assert db.query(models.AIModelConfig).one().model_provider == ("ollama" if saved else "openai")
+            db.get(models.PipelineRun, run_id).status = "completed"
+            db.commit()

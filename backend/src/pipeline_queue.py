@@ -7,7 +7,7 @@ from sqlalchemy import text
 
 from src.config import TaskQueue_Settings
 from src.db.database import SessionLocal
-from src.models import AIModelConfig, Photo, PipelineQueueEntry, PipelineRun
+from src.models import AIModelConfig, Photo, PipelineQueueEntry, PipelineRun, PipelineTask
 
 ACTIVE = ("queued", "running")
 
@@ -54,8 +54,15 @@ def claim_next_run():
     """Atomically claim the oldest eligible run; local Ollama permits one owner."""
     with SessionLocal() as db:
         db.execute(text("BEGIN IMMEDIATE"))
+        current_lane = _lane(db)
+        queued_ids = db.query(PipelineRun.id).filter(PipelineRun.status == "queued")
+        db.query(PipelineQueueEntry).filter(PipelineQueueEntry.run_id.in_(queued_ids)).update(
+            {PipelineQueueEntry.lane: current_lane}, synchronize_session=False
+        )
         running = db.query(PipelineQueueEntry.lane).join(PipelineRun).filter(PipelineRun.status == "running").all()
-        local_busy = any(lane == "local-ollama" for (lane,) in running)
+        local_busy = (
+            bool(running) if current_lane == "local-ollama" else any(lane == "local-ollama" for (lane,) in running)
+        )
         query = db.query(PipelineRun).join(PipelineQueueEntry).filter(PipelineRun.status == "queued")
         if local_busy:
             query = query.filter(PipelineQueueEntry.lane != "local-ollama")
@@ -91,16 +98,41 @@ def resume_run(run_id):
 
 
 def initialize_queue(bind):
-    """Upgrade first, then interrupt old work before any watchers can submit."""
+    """Own the backend lifecycle before recovery; caller closes after workers drain.
+
+    A separate SQLite exclusive transaction provides a cross-platform OS-released
+    lock without blocking writes to the application database. Never unlink this
+    sidecar: other processes must contend on the same file.
+    """
+    import sqlite3
+    from pathlib import Path
+
     from sqlalchemy.orm import Session
 
     from src.db.database import migrate_pipeline_runs
     from src.pipeline_tracker import recover_interrupted_pipelines
 
-    migrate_pipeline_runs(bind)
-    PipelineQueueEntry.__table__.create(bind, checkfirst=True)
-    with Session(bind) as db:
-        recover_interrupted_pipelines(db)
+    database = bind.url.database
+    if not database or database == ":memory:":
+        raise ValueError("Pipeline lifecycle ownership requires a file-backed database")
+    owner = sqlite3.connect(str(Path(database).resolve()) + ".pipeline-owner.sqlite3", timeout=0)
+    try:
+        owner.execute("BEGIN EXCLUSIVE")
+    except sqlite3.OperationalError as exc:
+        owner.close()
+        raise RuntimeError(
+            "Another backend already owns this photo-processing database. "
+            "Close the other application instance before starting this one."
+        ) from exc
+    try:
+        migrate_pipeline_runs(bind)
+        PipelineQueueEntry.__table__.create(bind, checkfirst=True)
+        with Session(bind) as db:
+            recover_interrupted_pipelines(db)
+    except BaseException:
+        owner.close()
+        raise
+    return owner
 
 
 async def execute_claimed_run(run):
@@ -132,6 +164,9 @@ async def execute_claimed_run(run):
             stored.status = "interrupted" if isinstance(exc, asyncio.CancelledError) else "completed-with-errors"
             stored.summary = str(exc)[:2000] or "Processing interrupted"
             stored.finished_at = datetime.utcnow()
+            db.query(PipelineTask).filter(
+                PipelineTask.run_id == run.id, PipelineTask.status.in_(["pending", "running"])
+            ).update({PipelineTask.status: "interrupted", PipelineTask.finished_at: stored.finished_at})
             db.commit()
         if isinstance(exc, asyncio.CancelledError):
             raise

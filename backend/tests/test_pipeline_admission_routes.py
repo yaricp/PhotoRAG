@@ -116,3 +116,45 @@ async def test_startup_migrates_and_recovers_before_watchers(routes, queue_store
             assert db.query(models.PipelineRun).filter_by(photo_id=2).one().status == "queued"
     finally:
         await lifetime.aclose()
+    owner = queue.initialize_queue(factory.kw["bind"])
+    owner.close()
+
+
+def test_model_save_conflicts_with_running_photo_without_mutation(routes, queue_store):
+    from fastapi import HTTPException
+
+    from src.schemas import AIModelConfigUpdate
+
+    queue, factory = queue_store
+    queue.enqueue_photo_run(1, "manual")
+    queue.claim_next_run()
+    with factory() as db:
+        with pytest.raises(HTTPException) as conflict:
+            routes.update_model_endpoint(
+                "vision",
+                AIModelConfigUpdate(
+                    mode="remote", model_provider="openai", model_name="test", url="https://api.openai.com"
+                ),
+                db,
+            )
+        assert conflict.value.status_code == 409
+        db.expire_all()
+        assert db.query(models.AIModelConfig).one().model_provider == "ollama"
+
+
+@pytest.mark.asyncio
+async def test_startup_failure_releases_lifecycle_owner(routes, queue_store, monkeypatch):
+    from src.db import database
+
+    queue, factory = queue_store
+    monkeypatch.setattr(database, "engine", factory.kw["bind"])
+
+    def fail_start(db):
+        raise RuntimeError("watcher startup failed")
+
+    monkeypatch.setattr(routes.watcher_service, "start_all", fail_start)
+    lifetime = routes.lifespan(routes.app)
+    with pytest.raises(RuntimeError, match="watcher startup failed"):
+        await anext(lifetime)
+    owner = queue.initialize_queue(factory.kw["bind"])
+    owner.close()

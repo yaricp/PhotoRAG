@@ -144,98 +144,103 @@ async def lifespan(app: FastAPI):
     from src.db.database import engine
     from src.pipeline_queue import initialize_queue, run_scheduler
 
-    initialize_queue(engine)
+    pipeline_owner = initialize_queue(engine)
     scheduler = asyncio.create_task(run_scheduler())
     db = SessionLocal()
-    watcher_service.start_all(db)
-
-    # Apply installer bootstrap (language choice written by NSIS on Windows)
     try:
-        from src.bootstrap import apply_bootstrap_settings
+        watcher_service.start_all(db)
 
-        apply_bootstrap_settings(db)
-    except Exception as exc:
-        logger.warning(f"[startup] Bootstrap read failed (non-fatal): {exc}")
+        # Apply installer bootstrap (language choice written by NSIS on Windows)
+        try:
+            from src.bootstrap import apply_bootstrap_settings
 
-    # Seed prompts table from prompts.json for new rows (idempotent — user edits preserved)
-    try:
-        from pathlib import Path
+            apply_bootstrap_settings(db)
+        except Exception as exc:
+            logger.warning(f"[startup] Bootstrap read failed (non-fatal): {exc}")
 
-        _prompts_json = Path(__file__).parent.parent / "prompts" / "prompts.json"
-        seeded = seed_prompts_from_json(db, _prompts_json)
-        if seeded:
-            logger.info(f"[startup] Seeded {seeded} new prompt(s) from prompts.json")
-    except Exception as exc:
-        logger.warning(f"[startup] Could not seed prompts (table may not exist yet — run install): {exc}")
+        # Seed prompts table from prompts.json for new rows (idempotent — user edits preserved)
+        try:
+            from pathlib import Path
 
-    # Ensure fresh remote-only installs also have template tags and remote CLIP
-    # candidate name files. This repairs existing installs where init-db seeded
-    # categories but skipped template_tags.
-    try:
-        from src.install import seed_template_vocabularies
+            _prompts_json = Path(__file__).parent.parent / "prompts" / "prompts.json"
+            seeded = seed_prompts_from_json(db, _prompts_json)
+            if seeded:
+                logger.info(f"[startup] Seeded {seeded} new prompt(s) from prompts.json")
+        except Exception as exc:
+            logger.warning(f"[startup] Could not seed prompts (table may not exist yet — run install): {exc}")
 
-        seed_template_vocabularies(db)
-    except Exception as exc:
-        logger.warning(f"[startup] Could not ensure template vocabularies: {exc}")
+        # Ensure fresh remote-only installs also have template tags and remote CLIP
+        # candidate name files. This repairs existing installs where init-db seeded
+        # categories but skipped template_tags.
+        try:
+            from src.install import seed_template_vocabularies
 
-    # Remove duplicate embedding rows — a photo should have at most one vector.
-    # Duplicates accumulate when the pipeline runs more than once for the same photo
-    # without the old vector being deleted first (fixed in store_photo_embedding,
-    # but existing DBs may already have stale rows).
-    try:
-        from sqlalchemy import text as _text
+            seed_template_vocabularies(db)
+        except Exception as exc:
+            logger.warning(f"[startup] Could not ensure template vocabularies: {exc}")
 
-        dupes_removed = db.execute(
-            _text("""
-            DELETE FROM photo_embedding_map
-            WHERE id NOT IN (
-                SELECT MIN(id) FROM photo_embedding_map GROUP BY photo_id
+        # Remove duplicate embedding rows — a photo should have at most one vector.
+        # Duplicates accumulate when the pipeline runs more than once for the same photo
+        # without the old vector being deleted first (fixed in store_photo_embedding,
+        # but existing DBs may already have stale rows).
+        try:
+            from sqlalchemy import text as _text
+
+            dupes_removed = db.execute(
+                _text("""
+                DELETE FROM photo_embedding_map
+                WHERE id NOT IN (
+                    SELECT MIN(id) FROM photo_embedding_map GROUP BY photo_id
+                )
+            """)
+            ).rowcount
+            db.commit()
+            if dupes_removed:
+                logger.info(f"[startup] Removed {dupes_removed} duplicate embedding map row(s)")
+        except Exception as exc:
+            db.rollback()
+            logger.warning(f"[startup] Could not clean duplicate embedding rows: {exc}")
+
+        # Ensure the VSS table dimension matches the configured embedding model.
+        # This matters when the model was changed via the setup wizard (which writes
+        # directly to the DB, bypassing the API endpoint that normally triggers a rebuild).
+        try:
+            from src.vector_db_services import (
+                current_vss_dimension,
+                get_embedding_dimension,
+                rebuild_embeddings_vss,
             )
-        """)
-        ).rowcount
-        db.commit()
-        if dupes_removed:
-            logger.info(f"[startup] Removed {dupes_removed} duplicate embedding map row(s)")
-    except Exception as exc:
-        db.rollback()
-        logger.warning(f"[startup] Could not clean duplicate embedding rows: {exc}")
 
-    # Ensure the VSS table dimension matches the configured embedding model.
-    # This matters when the model was changed via the setup wizard (which writes
-    # directly to the DB, bypassing the API endpoint that normally triggers a rebuild).
-    try:
-        from src.vector_db_services import (
-            current_vss_dimension,
-            get_embedding_dimension,
-            rebuild_embeddings_vss,
-        )
+            emb_config = get_model_config(db, "embedding")
+            if emb_config:
+                new_dim = get_embedding_dimension(emb_config.model_name)
+                cur_dim = current_vss_dimension(db)
+                if new_dim != cur_dim:
+                    logger.info(f"[startup] Embedding dimension mismatch {cur_dim}→{new_dim}, rebuilding VSS table")
+                    rebuild_embeddings_vss(db, new_dim)
+        except Exception as exc:
+            logger.warning(f"[startup] Could not verify embedding VSS dimension: {exc}")
 
-        emb_config = get_model_config(db, "embedding")
-        if emb_config:
-            new_dim = get_embedding_dimension(emb_config.model_name)
-            cur_dim = current_vss_dimension(db)
-            if new_dim != cur_dim:
-                logger.info(f"[startup] Embedding dimension mismatch {cur_dim}→{new_dim}, rebuilding VSS table")
-                rebuild_embeddings_vss(db, new_dim)
-    except Exception as exc:
-        logger.warning(f"[startup] Could not verify embedding VSS dimension: {exc}")
+        # Eager-load chat model in background if configured as local
+        chat_config = get_model_config(db, "chat")
+        chat_mode = chat_config.mode if chat_config else "local"
+        if chat_mode == "local":
+            logger.info("[startup] Spawning background thread to warm up local chat model")
+            threading.Thread(target=_eager_load_chat_model, name="chat-warmup", daemon=True).start()
 
-    # Eager-load chat model in background if configured as local
-    chat_config = get_model_config(db, "chat")
-    chat_mode = chat_config.mode if chat_config else "local"
-    if chat_mode == "local":
-        logger.info("[startup] Spawning background thread to warm up local chat model")
-        threading.Thread(target=_eager_load_chat_model, name="chat-warmup", daemon=True).start()
-
-    try:
         yield
     finally:
-        watcher_service.stop_all(db)
-        scheduler.cancel()
-        await asyncio.gather(scheduler, return_exceptions=True)
-        get_notifier().stop_all()
-        db.close()
-        engine.dispose()  # closes pooled connections and checkpoints SQLite WAL
+        try:
+            watcher_service.stop_all(db)
+        finally:
+            scheduler.cancel()
+            await asyncio.gather(scheduler, return_exceptions=True)
+            try:
+                get_notifier().stop_all()
+            finally:
+                db.close()
+                engine.dispose()
+                pipeline_owner.close()
 
 
 app = FastAPI(
@@ -716,16 +721,21 @@ def update_model_endpoint(config_type: str, request: AIModelConfigUpdate, db: Se
         if message:
             raise HTTPException(status_code=400, detail=message)
 
+    from src.db_service import ModelConfigurationBusyError
+
+    try:
+        config = update_model_config(db, config_type, request)
+    except ModelConfigurationBusyError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if not config:
+        raise HTTPException(status_code=404, detail="Model config not found")
+
     if config_type == "embedding":
         new_dim = get_embedding_dimension(request.model_name)
         cur_dim = current_vss_dimension(db)
         if new_dim != cur_dim:
             logger.info(f"[models] Embedding dimension changed {cur_dim}→{new_dim}, rebuilding VSS table")
             rebuild_embeddings_vss(db, new_dim)
-
-    config = update_model_config(db, config_type, request)
-    if not config:
-        raise HTTPException(status_code=404, detail="Model config not found")
 
     # When switching to local, trigger eager loading immediately
     if request.mode == "local":

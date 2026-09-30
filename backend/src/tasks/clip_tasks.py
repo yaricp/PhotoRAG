@@ -1,6 +1,5 @@
 """Phase-0 CPU tasks and phase-1 CLIP tasks — called by incoming_pipeline.py."""
 
-import asyncio
 from time import time
 
 from loguru import logger
@@ -19,7 +18,7 @@ from src.db_service import (
     update_photo_geoposition,
 )
 from src.model_services import call_clip_model
-from src.pipeline_tracker import mark_task_skipped, track_task
+from src.pipeline_tracker import mark_task_skipped, run_in_thread, track_task
 from src.quality_checks import check_exif, check_resolution
 from src.utils import extract_exif, parse_datetime
 
@@ -87,7 +86,7 @@ async def metadata_task(photo_id: int) -> None:
     """Extract EXIF, geolocation, and camera info — CPU-only, runs in thread pool."""
     logger.info(f"[metadata] Start: photo_id={photo_id}")
     async with track_task(photo_id, "phase_0", "metadata_task"):
-        await asyncio.to_thread(_metadata_sync, photo_id)
+        await run_in_thread(_metadata_sync, photo_id)
 
 
 def _perceptual_hashes_sync(photo_id: int) -> None:
@@ -127,7 +126,7 @@ async def compute_perceptual_hashes_task(photo_id: int) -> None:
     """Compute dHash/aHash/pHash and detect near-duplicate photos — runs in thread pool."""
     logger.info(f"[perceptual] Start: photo_id={photo_id}")
     async with track_task(photo_id, "phase_0", "compute_perceptual_hashes_task"):
-        await asyncio.to_thread(_perceptual_hashes_sync, photo_id)
+        await run_in_thread(_perceptual_hashes_sync, photo_id)
 
 
 # ---------------------------------------------------------------------------
@@ -177,14 +176,14 @@ async def auto_tag_clip_task(photo_id: int) -> None:
     """CLIP: find tags for photo."""
     logger.info(f"[clip/tags] Start: photo_id={photo_id}")
     async with track_task(photo_id, "phase_1", "auto_tag_clip_task"):
-        file_path = await asyncio.to_thread(_get_file_path_sync, photo_id)
+        file_path = await run_in_thread(_get_file_path_sync, photo_id)
         if not file_path:
             mark_task_skipped(photo_id, "phase_1", "auto_tag_clip_task", "Photo or file path missing")
             return
         t0 = time()
         tags = await call_clip_model(file_path, task="tags")
         logger.debug(f"[clip/tags] Photo {photo_id}: model took {time() - t0:.2f}s, {len(tags)} tags")
-        await asyncio.to_thread(_save_tags_sync, photo_id, tags)
+        await run_in_thread(_save_tags_sync, photo_id, tags)
         logger.info(f"[clip/tags] Photo {photo_id}: {len(tags)} tags ✓")
 
 
@@ -192,12 +191,12 @@ async def categorize_photo_task(photo_id: int) -> None:
     """CLIP: determine categories of photo."""
     logger.info(f"[clip/categories] Start: photo_id={photo_id}")
     async with track_task(photo_id, "phase_1", "categorize_photo_task"):
-        file_path = await asyncio.to_thread(_get_file_path_sync, photo_id)
+        file_path = await run_in_thread(_get_file_path_sync, photo_id)
         if not file_path:
             mark_task_skipped(photo_id, "phase_1", "categorize_photo_task", "Photo or file path missing")
             return
         t0 = time()
         cat_results = await call_clip_model(file_path=file_path, task="categorize")
         logger.debug(f"[clip/categories] Photo {photo_id}: model took {time() - t0:.2f}s, {len(cat_results)} cats")
-        await asyncio.to_thread(_save_categories_sync, photo_id, cat_results)
+        await run_in_thread(_save_categories_sync, photo_id, cat_results)
         logger.info(f"[clip/categories] Photo {photo_id}: {len(cat_results)} categories ✓")

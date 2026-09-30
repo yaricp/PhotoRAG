@@ -1,5 +1,6 @@
 """Persistent run and task-attempt tracking for photo processing."""
 
+import asyncio
 from contextlib import asynccontextmanager, contextmanager
 from contextvars import ContextVar
 from datetime import datetime, timezone
@@ -20,6 +21,26 @@ def pipeline_run_context(run_id: int):
         yield
     finally:
         _current_run.reset(token)
+
+
+async def run_in_thread(function, *args, **kwargs):
+    """Cancellation waits for thread side effects before releasing run ownership."""
+    worker = asyncio.create_task(asyncio.to_thread(function, *args, **kwargs))
+    try:
+        return await asyncio.shield(worker)
+    except asyncio.CancelledError:
+        # A Python thread cannot be canceled. Keep the owning task alive, even
+        # under repeated cancellation, until its writes/inference have stopped.
+        while not worker.done():
+            try:
+                await asyncio.shield(worker)
+            except asyncio.CancelledError:
+                continue
+            except Exception:
+                break
+        if not worker.cancelled():
+            worker.exception()  # retrieve a worker failure without hiding cancellation
+        raise
 
 
 def create_pipeline_run(photo_id: int, source: str) -> int:
@@ -136,6 +157,9 @@ async def track_task(photo_id: int, phase: str, task_name: str):
             skipped = task is not None and task.status == "skipped"
         if not skipped:
             _update_task_id(task_id, status="done", finished_at=datetime.now(timezone.utc))
+    except asyncio.CancelledError:
+        _update_task_id(task_id, status="interrupted", finished_at=datetime.now(timezone.utc))
+        raise
     except Exception as exc:
         _update_task_id(task_id, status="failed", finished_at=datetime.now(timezone.utc), error=str(exc)[:2000])
         raise

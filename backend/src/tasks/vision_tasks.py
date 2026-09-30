@@ -1,13 +1,11 @@
 """Phase-1, phase-2, and phase-3 vision and OCR tasks — called by incoming_pipeline.py."""
 
-import asyncio
-
 from loguru import logger
 
 from src.db.database import SessionLocal
 from src.db_service import get_photo_by_id
 from src.model_services import call_ocr_model, call_vision_model
-from src.pipeline_tracker import mark_task_skipped, track_task
+from src.pipeline_tracker import mark_task_skipped, run_in_thread, track_task
 
 # ---------------------------------------------------------------------------
 # Sync DB helpers — run via asyncio.to_thread to avoid blocking the event loop
@@ -87,14 +85,14 @@ async def vision_task(photo_id: int) -> None:
     """Generate a natural-language description of the photo."""
     logger.info(f"[vision] Start: photo_id={photo_id}")
     async with track_task(photo_id, "phase_1", "vision_task"):
-        file_path = await asyncio.to_thread(_get_vision_input_sync, photo_id)
+        file_path = await run_in_thread(_get_vision_input_sync, photo_id)
         if not file_path:
             mark_task_skipped(photo_id, "phase_1", "vision_task", "Photo or file path missing")
             return
         desc = await call_vision_model(file_path=file_path, prompt_key="describe_scene")
         if not desc or not desc.strip():
             raise ValueError("Empty vision description")
-        await asyncio.to_thread(_save_description_sync, photo_id, desc)
+        await run_in_thread(_save_description_sync, photo_id, desc)
         logger.info(f"[vision] Photo {photo_id}: description saved ✓")
 
 
@@ -102,7 +100,7 @@ async def is_this_document_task(photo_id: int) -> None:
     """Classify whether the photo is a document (yes/no)."""
     logger.info(f"[vision/doc] Start: photo_id={photo_id}")
     async with track_task(photo_id, "phase_2", "is_this_document_task"):
-        file_path = await asyncio.to_thread(_get_vision_input_sync, photo_id)
+        file_path = await run_in_thread(_get_vision_input_sync, photo_id)
         if not file_path:
             mark_task_skipped(photo_id, "phase_2", "is_this_document_task", "Photo or file path missing")
             return
@@ -110,7 +108,7 @@ async def is_this_document_task(photo_id: int) -> None:
         if not result or not result.strip():
             raise ValueError("Empty document classification")
         is_doc = "yes" in result.lower()
-        await asyncio.to_thread(_save_is_doc_sync, photo_id, is_doc)
+        await run_in_thread(_save_is_doc_sync, photo_id, is_doc)
         logger.info(f"[vision/doc] Photo {photo_id}: is_doc={is_doc} ✓")
 
 
@@ -118,7 +116,7 @@ async def ocr_task(photo_id: int) -> None:
     """Extract text from the photo via OCR (skips non-documents)."""
     logger.info(f"[ocr] Start: photo_id={photo_id}")
     async with track_task(photo_id, "phase_3", "ocr_task"):
-        file_path, is_doc = await asyncio.to_thread(_get_doc_input_sync, photo_id)
+        file_path, is_doc = await run_in_thread(_get_doc_input_sync, photo_id)
         if not file_path:
             mark_task_skipped(photo_id, "phase_3", "ocr_task", "Photo or file path missing")
             return
@@ -129,5 +127,5 @@ async def ocr_task(photo_id: int) -> None:
         text = await call_ocr_model(file_path=file_path)
         if not text or not text.strip():
             raise ValueError("Empty OCR text for document")
-        await asyncio.to_thread(_save_ocr_text_sync, photo_id, text)
+        await run_in_thread(_save_ocr_text_sync, photo_id, text)
         logger.info(f"[ocr] Photo {photo_id}: text extracted ✓")

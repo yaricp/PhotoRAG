@@ -506,7 +506,22 @@ def get_model_config(db: Session, config_type: str):
     return db.query(AIModelConfig).filter_by(type=config_type).first()
 
 
+class ModelConfigurationBusyError(ValueError):
+    """Model settings cannot change while a photo owns an execution lane."""
+
+
 def update_model_config(db: Session, config_type: str, schema: AIModelConfigUpdate):
+    from sqlalchemy import text
+
+    from src.models import PipelineRun
+
+    # Serialize check + save against queue claims in all producer processes.
+    db.execute(text("BEGIN IMMEDIATE"))
+    if db.query(PipelineRun.id).filter(PipelineRun.status == "running").first():
+        db.rollback()
+        raise ModelConfigurationBusyError(
+            "Photo processing is running. Wait for active photos to finish before changing model settings."
+        )
     config = db.query(AIModelConfig).filter_by(type=config_type).first()
     if config:
         config.mode = schema.mode
@@ -517,6 +532,8 @@ def update_model_config(db: Session, config_type: str, schema: AIModelConfigUpda
         config.similarity_limit = schema.similarity_limit
         db.commit()
         db.refresh(config)
+    else:
+        db.rollback()
     return config
 
 
