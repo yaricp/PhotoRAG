@@ -1076,6 +1076,17 @@ async def run_pipeline_for_photo_endpoint(
 # ---------------------------------------------------------------------------
 
 
+@app.get("/api/pipeline/runs/{run_id}/queue", tags=["Pipeline"])
+def get_pipeline_run_queue_status_endpoint(run_id: int):
+    """Expose queue position and elapsed wait for a persisted photo run."""
+    from src.pipeline_queue import get_queue_details
+
+    try:
+        return {"run_id": run_id, **get_queue_details(run_id)}
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
 @app.get("/api/pipeline/active", tags=["Pipeline"], response_model=List[PipelineTaskSchema])
 def get_active_pipeline_tasks_endpoint(db: Session = Depends(get_db)):
     """Return all currently pending or running pipeline tasks (for the Processing Page)."""

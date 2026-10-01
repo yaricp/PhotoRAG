@@ -6,6 +6,7 @@ import sys
 from unittest.mock import MagicMock
 
 import pytest
+from fastapi.testclient import TestClient
 
 from src import models
 from tests.test_pipeline_queue import queue_store  # noqa: F401
@@ -69,6 +70,24 @@ async def test_retry_endpoint_preserves_failed_attempt(routes, queue_store, monk
         assert (failed.status, failed.error) == ("failed", "original")
         assert result["run_id"] != old.id
         assert db.get(models.PipelineQueueEntry, result["run_id"]).retry_task_name == "vision_task"
+
+
+def test_queue_status_endpoint_exposes_position_and_wait_time(routes, queue_store):
+    queue, _ = queue_store
+    first = queue.enqueue_photo_run(1, "watcher")
+    second = queue.enqueue_photo_run(2, "manual")
+    client = TestClient(routes.app)
+
+    response = client.get(f"/api/pipeline/runs/{second}/queue")
+    assert response.status_code == 200
+    assert response.json()["run_id"] == second
+    assert response.json()["position"] == 2
+    assert response.json()["wait_seconds"] >= 0
+
+    queue.claim_next_run()
+    assert client.get(f"/api/pipeline/runs/{second}/queue").json()["position"] == 1
+    assert client.get(f"/api/pipeline/runs/{first}/queue").json()["position"] is None
+    assert client.get("/api/pipeline/runs/99999/queue").status_code == 404
 
 
 def test_agent_rerun_uses_shared_admission_without_clearing(routes, queue_store, monkeypatch):
