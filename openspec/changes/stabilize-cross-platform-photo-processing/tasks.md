@@ -7,7 +7,7 @@
 
 ## 2. Model-agnostic Ollama inference policy
 
-- [ ] 2.1 Query `/api/show` for any user-selected Ollama model, verify image capability for image roles, and read its native context limit with explicit unknown-metadata handling.
+- [x] 2.1 Query `/api/show` for any user-selected Ollama model, verify image capability for image roles, and read its native context limit with explicit unknown-metadata handling.
 - [ ] 2.2 Implement automatic model/role/host-aware context selection and pass `num_ctx` with PhotoRAG Ollama requests; never write Ollama global settings or require a manual token field.
 - [ ] 2.3 Keep effective context stable for one Ollama model across the photo-processing workload; display the chosen value and its reason read-only.
 - [ ] 2.4 Bound local Ollama inference concurrency and duration; propagate runner termination, memory, timeout and context errors without successful empty results or silent image truncation.
