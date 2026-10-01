@@ -18,7 +18,7 @@
 - [x] 3.1 Route watcher, folder scan, manual run, agent-tool run, and retry submissions through one persistent admission queue with transactional claims and duplicate-active-run protection across threads/processes.
 - [x] 3.2 Apply a conservative local-Ollama photo-run limit across all launch paths, without unnecessarily blocking unrelated native/cloud work; expose queue position and waiting time.
 - [x] 3.3 Replace startup auto-rerun/deletion of unfinished task rows with paused/interrupted records and an explicit resume action for selected photos.
-- [ ] 3.4 Test a 24-file watcher burst, simultaneous launch paths, cancellation/restart, user-selected resume, and new watcher events after restart.
+- [x] 3.4 Test a 24-file watcher burst, simultaneous launch paths, cancellation/restart, user-selected resume, and new watcher events after restart.
 
 ## 4. Processing and status UI
 

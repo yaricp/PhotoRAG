@@ -280,6 +280,48 @@ def test_observer_admits_without_executing_on_private_loop(queue_store, monkeypa
         assert run.status == "queued"
 
 
+def test_watcher_burst_admits_all_24_photos(queue_store, monkeypatch, tmp_path):
+    from concurrent.futures import ThreadPoolExecutor
+    from pathlib import Path
+    from types import SimpleNamespace
+
+    queue, factory = queue_store
+    from src import observer
+
+    monkeypatch.setattr(observer, "SessionLocal", factory)
+    monkeypatch.setattr(observer, "wait_until_file_ready", lambda path: True)
+    monkeypatch.setattr(
+        observer,
+        "generate_file_hash",
+        lambda path: str(int(Path(path).stem.removeprefix("photo-"))),
+    )
+    monkeypatch.setattr(observer, "get_photo_capture_date", lambda path: None)
+    monkeypatch.setattr(observer, "move_photo", lambda path, destination: str(path))
+    monkeypatch.setattr(
+        observer, "check_photo_hash_exists", lambda db, file_hash: None
+    )
+    monkeypatch.setattr(
+        observer,
+        "create_photo_record",
+        lambda db, file_hash, path, capture_date: db.get(models.Photo, int(file_hash)),
+    )
+    handler = observer.PhotoEventHandler(str(tmp_path))
+    events = []
+    for photo_id in range(1, 25):
+        path = tmp_path / f"photo-{photo_id}.jpg"
+        path.write_bytes(b"photo")
+        events.append(SimpleNamespace(is_directory=False, src_path=str(path)))
+
+    with ThreadPoolExecutor(max_workers=8) as workers:
+        list(workers.map(handler.on_created, events))
+
+    with factory() as db:
+        admitted = db.query(models.PipelineRun).order_by(models.PipelineRun.photo_id).all()
+        assert [(run.photo_id, run.source, run.status) for run in admitted] == [
+            (photo_id, "watcher", "queued") for photo_id in range(1, 25)
+        ]
+
+
 @pytest.mark.asyncio
 async def test_batch_admits_instead_of_executing(queue_store, monkeypatch):
     queue, factory = queue_store
