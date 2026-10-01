@@ -118,15 +118,40 @@ def _mark_run_running(photo_id, run_id):
 
 async def retry_pipeline_task(photo_id: int, task_name: str, *, run_id: int | None = None) -> None:
     """Append a retry run and refresh dependent outputs without clearing good results."""
+    await retry_pipeline_tasks(photo_id, get_retry_task_names(task_name), run_id=run_id)
+
+
+def get_retry_task_names(task_name: str) -> list[str]:
+    """Return one task and all dependent tasks in pipeline order."""
     if task_name not in _TASK_RUNNERS:
         raise ValueError(f"Unsupported pipeline task: {task_name}")
-    run_id = run_id if run_id is not None else create_pipeline_run(photo_id, f"retry:{task_name}")
-    _mark_run_running(photo_id, run_id)
     selected = {task_name}
-    for phase, names in _PHASES.items():
-        for name in names:
-            if any(dependency in selected for dependency in _DEPENDENCIES.get(name, [])):
-                selected.add(name)
+    changed = True
+    while changed:
+        changed = False
+        for names in _PHASES.values():
+            for name in names:
+                if name not in selected and any(dependency in selected for dependency in _DEPENDENCIES.get(name, [])):
+                    selected.add(name)
+                    changed = True
+    phase_order = {
+        name: (phase_index, task_index)
+        for phase_index, names in enumerate(_PHASES.values())
+        for task_index, name in enumerate(names)
+    }
+    return sorted(selected, key=lambda name: phase_order[name])
+
+
+async def retry_pipeline_tasks(photo_id: int, task_names: list[str], *, run_id: int | None = None) -> None:
+    """Run exactly the selected tasks through one persisted photo attempt."""
+    selected = set(task_names)
+    invalid = selected.difference(_TASK_RUNNERS)
+    if invalid:
+        raise ValueError(f"Unsupported pipeline task: {sorted(invalid)[0]}")
+    if not selected:
+        raise ValueError("At least one pipeline task must be selected")
+    run_id = run_id if run_id is not None else create_pipeline_run(photo_id, "retry")
+    _mark_run_running(photo_id, run_id)
     with pipeline_run_context(run_id):
         for phase, names in _PHASES.items():
             names = [name for name in names if name in selected]

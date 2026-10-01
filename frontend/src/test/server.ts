@@ -137,6 +137,14 @@ export const handlers = [
         HttpResponse.json({ items: [], total: 0, page: 1, size: 20, pages: 1 })
     ),
 
+    http.get(`${BASE}/api/pipeline/retry-eligible/count`, () =>
+        HttpResponse.json({ eligible_photos: 0, eligible_tasks: 0 })
+    ),
+
+    http.post(`${BASE}/api/pipeline/retry-eligible`, () =>
+        HttpResponse.json({ status: 'queued', queued_photos: 0, queued_tasks: 0, run_ids: [] }, { status: 202 })
+    ),
+
     http.get(`${BASE}/api/pipeline/recent`, () =>
         HttpResponse.json([])
     ),

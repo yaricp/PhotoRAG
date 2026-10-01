@@ -5,7 +5,7 @@ import { MemoryRouter } from 'react-router-dom'
 import i18n from '@/i18n'
 import { server } from '@/test/server'
 import { makePipelineTask } from '@/test/factories'
-import type { PipelineRun } from '@/types/api'
+import type { PipelineRun, PipelineRunTask } from '@/types/api'
 import { JobProcessingPage } from '../JobProcessingPage'
 
 vi.mock('@/api/base', () => ({ getBaseUrl: async () => 'http://localhost:8000' }))
@@ -15,9 +15,29 @@ afterEach(() => { i18n.changeLanguage('en') })
 const renderPage = () => render(<MemoryRouter><JobProcessingPage /></MemoryRouter>)
 
 function makeProcessingRun(runId: number, photoId: number, taskId: number, error: string): PipelineRun {
+    const task: PipelineRunTask = {
+        ...makePipelineTask({ id: taskId, photo_id: photoId, status: 'failed', error }),
+        run_id: runId,
+        attempt: 1,
+        skip_reason: null,
+        required: true,
+    }
     return {
         run_id: runId,
         photo_id: photoId,
+        attempt_count: 1,
+        attempts: [{
+            run_id: runId,
+            source: 'manual',
+            status: 'completed-with-errors',
+            summary: error,
+            created_at: '2026-01-01T00:00:00Z',
+            started_at: '2026-01-01T00:00:01Z',
+            finished_at: '2026-01-01T00:00:02Z',
+            tasks: [task],
+        }],
+        is_task_retry: false,
+        retry_tasks: [],
         source: 'manual',
         status: 'completed-with-errors',
         summary: error,
@@ -35,13 +55,7 @@ function makeProcessingRun(runId: number, photoId: number, taskId: number, error
             tags: [],
             categories: [],
         },
-        tasks: [{
-            ...makePipelineTask({ id: taskId, photo_id: photoId, status: 'failed', error }),
-            run_id: runId,
-            attempt: 1,
-            skip_reason: null,
-            required: true,
-        }],
+        tasks: [task],
     }
 }
 
@@ -67,6 +81,136 @@ describe('JobProcessingPage', () => {
         renderPage()
 
         expect(await screen.findByText('Queue position: 3 · Waiting 2m 10s')).toBeInTheDocument()
+    })
+
+    it('keeps both distinct-photo counts visible and collapses completed outputs by default', async () => {
+        const active = makeProcessingRun(71, 21, 81, 'running')
+        active.status = 'running'
+        active.tasks[0].status = 'running'
+        active.photo.description = 'A previous description that must stay hidden'
+        const completed = makeProcessingRun(72, 22, 82, 'tag retry failed')
+        completed.photo.description = 'A completed description'
+        completed.attempt_count = 3
+        completed.attempts = Array.from({ length: 3 }, (_, index) => ({
+            ...completed.attempts[0],
+            run_id: 72 - 2 + index,
+            status: index === 2 ? 'completed-with-errors' : 'completed',
+        }))
+        server.use(
+            http.get('http://localhost:8000/api/pipeline/runs', ({ request }) => {
+                const bucket = new URL(request.url).searchParams.get('bucket')
+                return HttpResponse.json({
+                    items: bucket === 'active' ? [active] : [completed],
+                    total: bucket === 'active' ? 2 : 3,
+                    active_total: 2,
+                    completed_total: 3,
+                    page: 1,
+                    size: 20,
+                    pages: 1,
+                })
+            })
+        )
+
+        renderPage()
+        const activeTab = await screen.findByRole('tab', { name: /In progress/ })
+        const completedTab = screen.getByRole('tab', { name: /Completed/ })
+        expect(activeTab).toHaveTextContent('2')
+        expect(completedTab).toHaveTextContent('3')
+        fireEvent.click(completedTab)
+        expect(await screen.findByText('Photo #22')).toBeInTheDocument()
+        expect(screen.getByText('A completed description')).not.toBeVisible()
+        expect(screen.getByText('Attempts: 3')).toBeInTheDocument()
+        fireEvent.click(screen.getByText('Show results'))
+        expect(await screen.findByText('A completed description')).toBeInTheDocument()
+    })
+
+    it('hides saved outputs while a task retry is queued or running', async () => {
+        const retry = makeProcessingRun(80, 23, 90, 'previous attempt failed')
+        retry.status = 'queued'
+        retry.is_task_retry = true
+        retry.photo.description = 'Description from an earlier attempt'
+        server.use(
+            http.get('http://localhost:8000/api/pipeline/runs', () =>
+                HttpResponse.json({ items: [retry], total: 1, page: 1, size: 20, pages: 1 })
+            )
+        )
+
+        renderPage()
+        expect(await screen.findByText('Photo #23')).toBeInTheDocument()
+        expect(screen.queryByText('Description from an earlier attempt')).not.toBeInTheDocument()
+    })
+
+    it('shows the planned task names by phase while a retry is still queued', async () => {
+        const retry = makeProcessingRun(81, 24, 91, 'previous attempt failed')
+        retry.status = 'queued'
+        retry.is_task_retry = true
+        retry.photo.description = 'Description from an earlier attempt'
+        retry.tasks = []
+        retry.attempts[0].tasks = []
+        Object.assign(retry, { retry_tasks: [
+            { task_name: 'vision_task', phase: 'phase_1' },
+            { task_name: 'translate_description_task', phase: 'phase_2' },
+        ] })
+        server.use(
+            http.get('http://localhost:8000/api/pipeline/runs', () =>
+                HttpResponse.json({ items: [retry], total: 1, page: 1, size: 20, pages: 1 })
+            )
+        )
+
+        renderPage()
+        expect(await screen.findByText('vision')).toBeInTheDocument()
+        expect(screen.getByText('translate description')).toBeInTheDocument()
+        expect(screen.getByText('phase 1')).toBeInTheDocument()
+        expect(screen.getByText('phase 2')).toBeInTheDocument()
+        expect(screen.queryByText('Description from an earlier attempt')).not.toBeInTheDocument()
+    })
+
+    it('loads the startup retry preference as off by default and persists the toggle', async () => {
+        const savedSettings: Array<{ key: string; value: string }> = []
+        server.use(
+            http.get('http://localhost:8000/api/settings/', () => HttpResponse.json({})),
+            http.put('http://localhost:8000/api/settings/:key', async ({ params, request }) => {
+                const body = await request.json() as { value: string }
+                savedSettings.push({ key: String(params.key), value: body.value })
+                return HttpResponse.json({ key: params.key, value: body.value })
+            }),
+            http.get('http://localhost:8000/api/pipeline/retry-eligible/count', () =>
+                HttpResponse.json({ eligible_photos: 0, eligible_tasks: 0 })
+            )
+        )
+
+        renderPage()
+        const toggle = await screen.findByRole('checkbox', { name: /Retry unfinished tasks at startup/ })
+        expect(toggle).not.toBeChecked()
+        fireEvent.click(toggle)
+
+        await waitFor(() => expect(savedSettings).toEqual([
+            { key: 'retry_unfinished_at_startup', value: 'true' },
+        ]))
+        expect(toggle).toBeChecked()
+    })
+
+    it('restarts all eligible tasks with one action and reports queued progress', async () => {
+        let bulkRetryCalls = 0
+        server.use(
+            http.get('http://localhost:8000/api/settings/', () => HttpResponse.json({ retry_unfinished_at_startup: 'false' })),
+            http.get('http://localhost:8000/api/pipeline/retry-eligible/count', () =>
+                HttpResponse.json({ eligible_photos: bulkRetryCalls ? 0 : 2, eligible_tasks: bulkRetryCalls ? 0 : 5 })
+            ),
+            http.post('http://localhost:8000/api/pipeline/retry-eligible', () => {
+                bulkRetryCalls += 1
+                return HttpResponse.json({ status: 'queued', queued_photos: 2, queued_tasks: 5, run_ids: [101, 102] }, { status: 202 })
+            })
+        )
+
+        renderPage()
+        const button = await screen.findByRole('button', { name: 'Restart all failed and unfinished tasks' })
+        expect(button).toBeEnabled()
+        fireEvent.click(button)
+
+        await waitFor(() => expect(bulkRetryCalls).toBe(1))
+        expect(await screen.findByRole('status')).toHaveTextContent('Queued retries for 2 photos (5 tasks).')
+        expect(button).toBeDisabled()
     })
 
     it('shows paginated completed runs with saved photo outputs and task errors', async () => {
@@ -127,13 +271,16 @@ describe('JobProcessingPage', () => {
         )
 
         renderPage()
-        fireEvent.click(await screen.findByRole('tab', { name: 'Completed' }))
+        fireEvent.click(await screen.findByRole('tab', { name: /Completed/ }))
 
+        expect(screen.queryByText('Sunset over the lake')).not.toBeInTheDocument()
+        fireEvent.click(await screen.findByText('Show results'))
         expect(await screen.findByText('Sunset over the lake')).toBeInTheDocument()
         expect(screen.getByText('Закат над озером')).toBeInTheDocument()
         expect(screen.getByText('sunset')).toBeInTheDocument()
         expect(screen.getByText('runner stopped')).toBeInTheDocument()
         fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+        fireEvent.click(await screen.findByText('Show results'))
         expect(await screen.findByText('A forest path')).toBeInTheDocument()
         expect(requestedPages).toContain('2')
     })
@@ -156,6 +303,7 @@ describe('JobProcessingPage', () => {
             skip_reason: null,
             required: true,
         }))
+        history.attempts[0].tasks = history.tasks
         server.use(
             http.get('http://localhost:8000/api/pipeline/runs', ({ request }) => {
                 const bucket = new URL(request.url).searchParams.get('bucket')
@@ -174,7 +322,7 @@ describe('JobProcessingPage', () => {
         )
 
         renderPage()
-        fireEvent.click(await screen.findByRole('tab', { name: 'Completed' }))
+        fireEvent.click(await screen.findByRole('tab', { name: /Completed/ }))
         expect(await screen.findByText('task 54')).toBeInTheDocument()
         expect(screen.getByText('Run #70')).toBeInTheDocument()
         fireEvent.click(screen.getByRole('button', { name: 'Run pipeline again' }))
@@ -206,7 +354,7 @@ describe('JobProcessingPage', () => {
         )
 
         renderPage()
-        fireEvent.click(await screen.findByRole('tab', { name: 'Completed' }))
+        fireEvent.click(await screen.findByRole('tab', { name: /Completed/ }))
         fireEvent.click(await screen.findByRole('button', { name: 'Retry' }))
 
         await waitFor(() => expect(retryTaskId).toBe('42'))
@@ -234,7 +382,7 @@ describe('JobProcessingPage', () => {
         )
 
         renderPage()
-        fireEvent.click(await screen.findByRole('tab', { name: 'Completed' }))
+        fireEvent.click(await screen.findByRole('tab', { name: /Completed/ }))
         fireEvent.click(await screen.findByRole('button', { name: 'Resume this run' }))
 
         await waitFor(() => expect(resumedRunId).toBe('55'))
@@ -260,7 +408,7 @@ describe('JobProcessingPage', () => {
         )
 
         renderPage()
-        fireEvent.click(await screen.findByRole('tab', { name: 'Completed' }))
+        fireEvent.click(await screen.findByRole('tab', { name: /Completed/ }))
         fireEvent.click(await screen.findByRole('button', { name: 'Run pipeline again' }))
         fireEvent.click(await screen.findByRole('button', { name: 'Run again' }))
 

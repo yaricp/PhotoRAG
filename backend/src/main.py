@@ -144,9 +144,18 @@ async def lifespan(app: FastAPI):
     import threading
 
     from src.db.database import engine
-    from src.pipeline_queue import initialize_queue, run_scheduler
+    from src.pipeline_queue import enqueue_startup_retries, initialize_queue, run_scheduler
 
     pipeline_owner = initialize_queue(engine)
+    try:
+        startup_retries = enqueue_startup_retries()
+        if startup_retries["queued_photos"]:
+            logger.info(
+                "[startup] Queued retry work for "
+                f"{startup_retries['queued_photos']} photo(s), {startup_retries['queued_tasks']} task(s)"
+            )
+    except Exception:
+        logger.exception("[startup] Could not enqueue unfinished pipeline tasks")
     scheduler = asyncio.create_task(run_scheduler())
     db = SessionLocal()
     try:
@@ -1087,29 +1096,88 @@ def get_pipeline_runs_endpoint(
 ):
     """Return a page of photo runs with their complete task attempts and saved outputs."""
     import math
+    import json
 
-    from src.models import Category, Photo, PhotoCategory, PhotoTag, PipelineRun, PipelineTask, Tag
+    from sqlalchemy import case, func
 
-    statuses = ("queued", "running") if bucket == "active" else (
+    from src.models import (
+        Category,
+        Photo,
+        PhotoCategory,
+        PhotoTag,
+        PipelineQueueEntry,
+        PipelineRun,
+        PipelineTask,
+        Tag,
+    )
+
+    active_statuses = ("queued", "running")
+    statuses = active_statuses if bucket == "active" else (
         "completed",
         "completed-with-errors",
         "paused",
         "interrupted",
     )
-    query = db.query(PipelineRun).filter(PipelineRun.status.in_(statuses))
-    total = query.count()
-    runs = (
-        query.order_by(PipelineRun.created_at.desc(), PipelineRun.id.desc())
-        .offset((page - 1) * size)
-        .limit(size)
+    active_photos = db.query(PipelineRun.photo_id).filter(PipelineRun.status.in_(active_statuses))
+    completed_statuses = ("completed", "completed-with-errors", "paused", "interrupted")
+    completed_photos = db.query(PipelineRun.photo_id).filter(PipelineRun.status.in_(completed_statuses))
+    active_total = active_photos.distinct().count()
+    completed_total = completed_photos.filter(~PipelineRun.photo_id.in_(active_photos)).distinct().count()
+
+    photo_query = db.query(PipelineRun.photo_id).filter(PipelineRun.status.in_(statuses))
+    if bucket == "completed":
+        photo_query = photo_query.filter(~PipelineRun.photo_id.in_(active_photos))
+
+    total = photo_query.distinct().count()
+    grouped_photos = photo_query.group_by(PipelineRun.photo_id)
+    if bucket == "active":
+        running_rank = func.max(case((PipelineRun.status == "running", 1), else_=0))
+        running_start = func.min(
+            case((PipelineRun.status == "running", PipelineRun.started_at), else_=None)
+        )
+        oldest_queued_id = func.min(
+            case((PipelineRun.status == "queued", PipelineRun.id), else_=None)
+        )
+        grouped_photos = grouped_photos.order_by(
+            running_rank.desc(),
+            running_start.asc(),
+            oldest_queued_id.asc(),
+            func.max(PipelineRun.id).desc(),
+        )
+    else:
+        grouped_photos = grouped_photos.order_by(func.max(PipelineRun.id).desc())
+    photo_ids = [
+        photo_id
+        for (photo_id,) in grouped_photos.offset((page - 1) * size).limit(size).all()
+    ]
+
+    if not photo_ids:
+        return {
+            "items": [],
+            "total": total,
+            "active_total": active_total,
+            "completed_total": completed_total,
+            "page": page,
+            "size": size,
+            "pages": max(1, math.ceil(total / size)),
+        }
+
+    history_runs = (
+        db.query(PipelineRun)
+        .filter(PipelineRun.photo_id.in_(photo_ids))
+        .order_by(PipelineRun.photo_id, PipelineRun.id)
         .all()
     )
+    runs_by_photo = {photo_id: [] for photo_id in photo_ids}
+    for run in history_runs:
+        runs_by_photo[run.photo_id].append(run)
+    current_runs = {}
+    for photo_id, photo_runs in runs_by_photo.items():
+        matching = [run for run in photo_runs if run.status in statuses]
+        running = [run for run in matching if run.status == "running"]
+        current_runs[photo_id] = running[-1] if bucket == "active" and running else matching[-1]
 
-    if not runs:
-        return {"items": [], "total": total, "page": page, "size": size, "pages": max(1, math.ceil(total / size))}
-
-    run_ids = [run.id for run in runs]
-    photo_ids = list({run.photo_id for run in runs})
+    run_ids = [run.id for run in history_runs]
     queued_positions = {}
     if bucket == "active":
         queued_ids = (
@@ -1119,6 +1187,25 @@ def get_pipeline_runs_endpoint(
             .all()
         )
         queued_positions = {run_id: position for position, (run_id,) in enumerate(queued_ids, start=1)}
+    queue_entries = {
+        entry.run_id: entry
+        for entry in db.query(PipelineQueueEntry).filter(PipelineQueueEntry.run_id.in_(run_ids)).all()
+    }
+    from src.incoming_pipeline import _TASK_PHASES, get_retry_task_names
+
+    retry_tasks_by_run = {}
+    for run_id, entry in queue_entries.items():
+        if entry.retry_task_names:
+            retry_task_names = json.loads(entry.retry_task_names)
+        elif entry.retry_task_name:
+            retry_task_names = get_retry_task_names(entry.retry_task_name)
+        else:
+            retry_task_names = []
+        retry_tasks_by_run[run_id] = [
+            {"task_name": task_name, "phase": _TASK_PHASES[task_name]}
+            for task_name in retry_task_names
+            if task_name in _TASK_PHASES
+        ]
     photos = {photo.id: photo for photo in db.query(Photo).filter(Photo.id.in_(photo_ids)).all()}
     task_rows = (
         db.query(PipelineTask)
@@ -1151,14 +1238,30 @@ def get_pipeline_runs_endpoint(
         categories_by_photo[photo_id].append(category_name)
 
     items = []
-    for run in runs:
-        photo = photos.get(run.photo_id)
+    for photo_id in photo_ids:
+        run = current_runs[photo_id]
+        photo = photos.get(photo_id)
         if photo is None:
             continue
+        attempts = [
+            {
+                "run_id": attempt.id,
+                "source": attempt.source,
+                "status": attempt.status,
+                "summary": attempt.summary,
+                "created_at": attempt.created_at,
+                "started_at": attempt.started_at,
+                "finished_at": attempt.finished_at,
+                "tasks": tasks_by_run[attempt.id],
+            }
+            for attempt in runs_by_photo[photo_id]
+        ]
         items.append(
             {
                 "run_id": run.id,
-                "photo_id": run.photo_id,
+                "photo_id": photo_id,
+                "attempt_count": len(attempts),
+                "attempts": attempts,
                 "source": run.source,
                 "status": run.status,
                 "summary": run.summary,
@@ -1169,28 +1272,37 @@ def get_pipeline_runs_endpoint(
                 "wait_seconds": max(
                     0,
                     (
-                        (
-                            run.started_at
-                            or run.finished_at
-                            or datetime.now(timezone.utc).replace(tzinfo=None)
-                        )
+                        (run.started_at or run.finished_at or datetime.now(timezone.utc).replace(tzinfo=None))
                         - run.created_at
                     ).total_seconds(),
                 ),
+                "is_task_retry": bool(
+                    queue_entries.get(run.id)
+                    and (queue_entries[run.id].retry_task_name or queue_entries[run.id].retry_task_names)
+                ),
+                "retry_tasks": retry_tasks_by_run.get(run.id, []),
                 "photo": {
                     "id": photo.id,
                     "file_path": photo.file_path,
                     "description": photo.description,
                     "translated_description": photo.translated_description,
                     "ocr_text": photo.ocr_text,
-                    "tags": tags_by_photo[photo.id],
-                    "categories": categories_by_photo[photo.id],
+                    "tags": tags_by_photo[photo_id],
+                    "categories": categories_by_photo[photo_id],
                 },
                 "tasks": tasks_by_run[run.id],
             }
         )
 
-    return {"items": items, "total": total, "page": page, "size": size, "pages": max(1, math.ceil(total / size))}
+    return {
+        "items": items,
+        "total": total,
+        "active_total": active_total,
+        "completed_total": completed_total,
+        "page": page,
+        "size": size,
+        "pages": max(1, math.ceil(total / size)),
+    }
 
 
 @app.get("/api/pipeline/runs/{run_id}/queue", tags=["Pipeline"])
@@ -1202,6 +1314,22 @@ def get_pipeline_run_queue_status_endpoint(run_id: int):
         return {"run_id": run_id, **get_queue_details(run_id)}
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.post("/api/pipeline/retry-eligible", tags=["Pipeline"], status_code=202)
+def retry_all_eligible_pipeline_tasks_endpoint():
+    """Queue one bounded retry run per photo with unfinished task outcomes."""
+    from src.pipeline_queue import enqueue_retryable_tasks
+
+    return {"status": "queued", **enqueue_retryable_tasks(source="bulk-retry")}
+
+
+@app.get("/api/pipeline/retry-eligible/count", tags=["Pipeline"])
+def get_pipeline_retry_eligibility_endpoint():
+    """Return the latest eligible task totals for the Processing page action."""
+    from src.pipeline_queue import get_retryable_task_counts
+
+    return get_retryable_task_counts()
 
 
 @app.post("/api/pipeline/runs/{run_id}/resume", tags=["Pipeline"])
@@ -1240,7 +1368,7 @@ def get_recent_pipeline_tasks_endpoint(
 @app.post("/api/pipeline/tasks/{task_id}/retry", tags=["Pipeline"])
 async def retry_pipeline_task_endpoint(task_id: int, db: Session = Depends(get_db)):
     """Retry one failed pipeline task without clearing other photo results."""
-    from src.incoming_pipeline import is_retryable_pipeline_task
+    from src.incoming_pipeline import get_retry_task_names, is_retryable_pipeline_task
     from src.models import PipelineTask
     from src.pipeline_queue import enqueue_photo_run
 
@@ -1254,7 +1382,7 @@ async def retry_pipeline_task_endpoint(task_id: int, db: Session = Depends(get_d
 
     photo_id = task.photo_id
     task_name = task.task_name
-    run_id = enqueue_photo_run(photo_id, "retry", retry_task_name=task_name)
+    run_id = enqueue_photo_run(photo_id, "retry", retry_task_names=get_retry_task_names(task_name))
     return {"status": "queued", "task_id": task_id, "photo_id": photo_id, "task_name": task_name, "run_id": run_id}
 
 

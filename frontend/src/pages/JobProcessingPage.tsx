@@ -2,13 +2,23 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
     getPipelineRuns,
+    getRetryableTaskCounts,
+    getSettings,
     resumePipelineRun,
+    retryAllEligiblePipelineTasks,
     retryPipelineTask,
     runPipelineForPhoto,
+    updateSetting,
 } from '@/api/client'
 import { Spinner } from '@/components/ui/Spinner'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
-import type { PipelineRun, PipelineRunBucket, PipelineRunTask } from '@/types/api'
+import type {
+    PaginatedPipelineRuns,
+    PipelineRun,
+    PipelineRunAttempt,
+    PipelineRunBucket,
+    PipelineRunTask,
+} from '@/types/api'
 import './JobProcessingPage.css'
 
 const PAGE_SIZE = 20
@@ -79,12 +89,14 @@ function PhaseBlock({
     tasks,
     now,
     busyTaskId,
+    retryEnabled,
     onRetryTask,
 }: {
     phase: string
     tasks: PipelineRunTask[]
     now: number
     busyTaskId: number | null
+    retryEnabled: boolean
     onRetryTask: (task: PipelineRunTask) => void
 }) {
     const { t } = useTranslation()
@@ -101,7 +113,7 @@ function PhaseBlock({
                             {task.status === 'running' && task.started_at && (
                                 <span className="task-chip__elapsed">{formatElapsed(task.started_at, now)}</span>
                             )}
-                            {task.status === 'failed' && (
+                            {task.status === 'failed' && retryEnabled && (
                                 <button
                                     type="button"
                                     className="task-chip__retry"
@@ -118,6 +130,40 @@ function PhaseBlock({
                 ))}
             </div>
         </div>
+    )
+}
+
+function TaskGroups({
+    attempt,
+    now,
+    busyTaskId,
+    retryEnabled,
+    onRetryTask,
+}: {
+    attempt: PipelineRunAttempt
+    now: number
+    busyTaskId: number | null
+    retryEnabled: boolean
+    onRetryTask: (task: PipelineRunTask) => void
+}) {
+    const { t } = useTranslation()
+    const phases = Array.from(new Set(attempt.tasks.map(task => task.phase))).sort()
+
+    return (
+        <section className="photo-row__phases" aria-label={t('processing.taskHistory')}>
+            {phases.map(phase => (
+                <PhaseBlock
+                    key={`${attempt.run_id}-${phase}`}
+                    phase={phase}
+                    tasks={attempt.tasks.filter(task => task.phase === phase)}
+                    now={now}
+                    busyTaskId={busyTaskId}
+                    retryEnabled={retryEnabled}
+                    onRetryTask={onRetryTask}
+                />
+            ))}
+            {attempt.tasks.length === 0 && <div className="jobs-page__muted">{t('processing.noTasks')}</div>}
+        </section>
     )
 }
 
@@ -143,8 +189,49 @@ function RunCard({
     onResumeRun: (runId: number) => void
 }) {
     const { t } = useTranslation()
-    const phases = Array.from(new Set(run.tasks.map(task => task.phase))).sort()
     const statusKey = RUN_STATUS_KEY[run.status] ?? run.status
+    const isActive = run.status === 'queued' || run.status === 'running'
+    const attempts = run.attempts?.length
+        ? run.attempts
+        : [{
+            run_id: run.run_id,
+            source: run.source,
+            status: run.status,
+            summary: run.summary,
+            created_at: run.created_at,
+            started_at: run.started_at,
+            finished_at: run.finished_at,
+            tasks: run.tasks,
+        }]
+    const currentAttempt: PipelineRunAttempt = attempts.find(attempt => attempt.run_id === run.run_id) ?? {
+        run_id: run.run_id,
+        source: run.source,
+        status: run.status,
+        summary: run.summary,
+        created_at: run.created_at,
+        started_at: run.started_at,
+        finished_at: run.finished_at,
+        tasks: run.tasks,
+    }
+    const previousAttempts = attempts.filter(attempt => attempt.run_id !== run.run_id).slice().reverse()
+    const currentTasksByName = new Map(currentAttempt.tasks.map(task => [task.task_name, task]))
+    const tasksToShowWhileActive = isActive && run.is_task_retry && (run.retry_tasks ?? []).length > 0
+        ? run.retry_tasks.map((plannedTask, index) => currentTasksByName.get(plannedTask.task_name) ?? ({
+            id: -(run.run_id * 100 + index + 1),
+            run_id: run.run_id,
+            photo_id: run.photo_id,
+            attempt: 1,
+            phase: plannedTask.phase,
+            task_name: plannedTask.task_name,
+            status: 'pending' as const,
+            error: null,
+            skip_reason: null,
+            required: true,
+            started_at: null,
+            finished_at: null,
+            created_at: run.created_at,
+        }))
+        : currentAttempt.tasks
     const hasSavedOutputs = Boolean(
         run.photo.description
         || run.photo.translated_description
@@ -160,6 +247,7 @@ function RunCard({
                 <div className="photo-row__identity">
                     <strong className="photo-row__id">Photo #{run.photo_id}</strong>
                     <span>{t('processing.run', { id: run.run_id })}</span>
+                    <span>{t('processing.attemptCount', { count: run.attempt_count ?? attempts.length })}</span>
                     <span>{t('processing.source', { source: run.source })}</span>
                     <time dateTime={run.created_at}>{formatTimestamp(run.created_at, locale)}</time>
                 </div>
@@ -201,52 +289,98 @@ function RunCard({
                 </div>
             )}
 
-            <section className="photo-output" aria-label={t('processing.outputs')}>
-                <h4>{t('processing.outputs')}</h4>
-                <div className="photo-output__field">
-                    <strong>{t('processing.file')}:</strong> <span>{run.photo.file_path}</span>
-                </div>
-                {run.photo.description && (
-                    <div className="photo-output__field">
-                        <strong>{t('processing.description')}:</strong> <span>{run.photo.description}</span>
-                    </div>
-                )}
-                {run.photo.translated_description && (
-                    <div className="photo-output__field">
-                        <strong>{t('processing.translatedDescription')}:</strong> <span>{run.photo.translated_description}</span>
-                    </div>
-                )}
-                {run.photo.ocr_text && (
-                    <div className="photo-output__field">
-                        <strong>{t('processing.ocrText')}:</strong> <span>{run.photo.ocr_text}</span>
-                    </div>
-                )}
-                {run.photo.tags.length > 0 && (
-                    <div className="photo-output__field">
-                        <strong>{t('processing.tags')}:</strong> <span>{run.photo.tags.join(', ')}</span>
-                    </div>
-                )}
-                {run.photo.categories.length > 0 && (
-                    <div className="photo-output__field">
-                        <strong>{t('processing.categories')}:</strong> <span>{run.photo.categories.join(', ')}</span>
-                    </div>
-                )}
-                {!hasSavedOutputs && <p className="photo-output__empty">{t('processing.noSavedOutputs')}</p>}
-            </section>
+            {!isActive && (
+                <details className="photo-row__results">
+                    <summary>{t('processing.showResults')}</summary>
+                    <section className="photo-output" aria-label={t('processing.outputs')}>
+                        <h4>{t('processing.outputs')}</h4>
+                        <div className="photo-output__field">
+                            <strong>{t('processing.file')}:</strong> <span>{run.photo.file_path}</span>
+                        </div>
+                        {run.photo.description && (
+                            <div className="photo-output__field">
+                                <strong>{t('processing.description')}:</strong> <span>{run.photo.description}</span>
+                            </div>
+                        )}
+                        {run.photo.translated_description && (
+                            <div className="photo-output__field">
+                                <strong>{t('processing.translatedDescription')}:</strong> <span>{run.photo.translated_description}</span>
+                            </div>
+                        )}
+                        {run.photo.ocr_text && (
+                            <div className="photo-output__field">
+                                <strong>{t('processing.ocrText')}:</strong> <span>{run.photo.ocr_text}</span>
+                            </div>
+                        )}
+                        {run.photo.tags.length > 0 && (
+                            <div className="photo-output__field">
+                                <strong>{t('processing.tags')}:</strong> <span>{run.photo.tags.join(', ')}</span>
+                            </div>
+                        )}
+                        {run.photo.categories.length > 0 && (
+                            <div className="photo-output__field">
+                                <strong>{t('processing.categories')}:</strong> <span>{run.photo.categories.join(', ')}</span>
+                            </div>
+                        )}
+                        {!hasSavedOutputs && <p className="photo-output__empty">{t('processing.noSavedOutputs')}</p>}
+                    </section>
+                </details>
+            )}
 
-            <section className="photo-row__phases" aria-label={t('processing.taskHistory')}>
-                {phases.map(phase => (
-                    <PhaseBlock
-                        key={phase}
-                        phase={phase}
-                        tasks={run.tasks.filter(task => task.phase === phase)}
+            {isActive ? (
+                <>
+                    <div className="photo-row__attempt-label">
+                        {t('processing.attempt', { count: attempts.findIndex(attempt => attempt.run_id === run.run_id) + 1 })}
+                        {' · '}{t(`processing.status.${RUN_STATUS_KEY[currentAttempt.status] ?? currentAttempt.status}`)}
+                    </div>
+                    <TaskGroups
+                        attempt={{ ...currentAttempt, tasks: tasksToShowWhileActive }}
                         now={now}
                         busyTaskId={busyTaskId}
+                        retryEnabled={false}
                         onRetryTask={onRetryTask}
                     />
-                ))}
-                {run.tasks.length === 0 && <div className="jobs-page__muted">{t('processing.noTasks')}</div>}
-            </section>
+                    {previousAttempts.length > 0 && (
+                        <details className="photo-row__attempt-history">
+                            <summary>{t('processing.previousAttempts', { count: previousAttempts.length })}</summary>
+                            {previousAttempts.map(attempt => (
+                                <div key={attempt.run_id} className="photo-row__attempt-block">
+                                    <div className="photo-row__attempt-label">
+                                        {t('processing.run', { id: attempt.run_id })}
+                                        {' · '}{t(`processing.status.${RUN_STATUS_KEY[attempt.status] ?? attempt.status}`)}
+                                    </div>
+                                    <TaskGroups
+                                        attempt={attempt}
+                                        now={now}
+                                        busyTaskId={busyTaskId}
+                                        retryEnabled={false}
+                                        onRetryTask={onRetryTask}
+                                    />
+                                </div>
+                            ))}
+                        </details>
+                    )}
+                </>
+            ) : (
+                <div className="photo-row__attempt-history">
+                    {attempts.map((attempt, index) => (
+                        <div key={attempt.run_id} className="photo-row__attempt-block">
+                            <div className="photo-row__attempt-label">
+                                {t('processing.attempt', { count: index + 1 })}
+                                {' · '}{t('processing.run', { id: attempt.run_id })}
+                                {' · '}{t(`processing.status.${RUN_STATUS_KEY[attempt.status] ?? attempt.status}`)}
+                            </div>
+                            <TaskGroups
+                                attempt={attempt}
+                                now={now}
+                                busyTaskId={busyTaskId}
+                                retryEnabled={attempt.run_id === run.run_id}
+                                onRetryTask={onRetryTask}
+                            />
+                        </div>
+                    ))}
+                </div>
+            )}
         </article>
     )
 }
@@ -255,7 +389,13 @@ export function JobProcessingPage() {
     const { t, i18n } = useTranslation()
     const [bucket, setBucket] = useState<PipelineRunBucket>('active')
     const [page, setPage] = useState(1)
-    const [data, setData] = useState<{ items: PipelineRun[]; total: number; pages: number } | null>(null)
+    const [data, setData] = useState<PaginatedPipelineRuns | null>(null)
+    const [startupRetryEnabled, setStartupRetryEnabled] = useState(false)
+    const [savingStartupRetry, setSavingStartupRetry] = useState(false)
+    const [retryCounts, setRetryCounts] = useState({ eligible_photos: 0, eligible_tasks: 0 })
+    const [retryCountsLoading, setRetryCountsLoading] = useState(true)
+    const [retryingAll, setRetryingAll] = useState(false)
+    const [bulkRetryMessage, setBulkRetryMessage] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
     const [loadError, setLoadError] = useState(false)
     const [now, setNow] = useState(Date.now())
@@ -276,6 +416,34 @@ export function JobProcessingPage() {
             setLoading(false)
         }
     }, [bucket, page])
+
+    const refreshRetryableCounts = useCallback(async () => {
+        try {
+            setRetryCounts(await getRetryableTaskCounts())
+        } catch {
+            setRetryCounts({ eligible_photos: 0, eligible_tasks: 0 })
+        } finally {
+            setRetryCountsLoading(false)
+        }
+    }, [])
+
+    useEffect(() => {
+        let mounted = true
+        getSettings()
+            .then(settings => {
+                if (mounted) setStartupRetryEnabled(settings.retry_unfinished_at_startup === 'true')
+            })
+            .catch(error => {
+                if (mounted) setActionError(error instanceof Error ? error.message : String(error))
+            })
+        return () => { mounted = false }
+    }, [])
+
+    useEffect(() => {
+        void refreshRetryableCounts()
+        const poll = setInterval(() => void refreshRetryableCounts(), 15000)
+        return () => clearInterval(poll)
+    }, [refreshRetryableCounts])
 
     useEffect(() => {
         setLoading(true)
@@ -327,9 +495,49 @@ export function JobProcessingPage() {
         }
     }
 
+    async function handleStartupRetryChange(enabled: boolean) {
+        const previous = startupRetryEnabled
+        setStartupRetryEnabled(enabled)
+        setSavingStartupRetry(true)
+        setActionError(null)
+        try {
+            await updateSetting('retry_unfinished_at_startup', enabled ? 'true' : 'false')
+        } catch (error) {
+            setStartupRetryEnabled(previous)
+            setActionError(error instanceof Error ? error.message : String(error))
+        } finally {
+            setSavingStartupRetry(false)
+        }
+    }
+
+    async function handleRetryAllEligible() {
+        setRetryingAll(true)
+        setActionError(null)
+        setBulkRetryMessage(null)
+        try {
+            const result = await retryAllEligiblePipelineTasks()
+            setBulkRetryMessage(t('processing.bulkRetryQueued', {
+                photos: result.queued_photos,
+                tasks: result.queued_tasks,
+            }))
+            setBucket('active')
+            setPage(1)
+            const activeData = await getPipelineRuns('active', 1, PAGE_SIZE)
+            setData(activeData)
+            setLoading(false)
+            await refreshRetryableCounts()
+        } catch (error) {
+            setActionError(error instanceof Error ? error.message : String(error))
+        } finally {
+            setRetryingAll(false)
+        }
+    }
+
     const total = data?.total ?? 0
     const pages = data?.pages ?? 1
     const runs = data?.items ?? []
+    const activeTotal = data?.active_total ?? (bucket === 'active' ? total : 0)
+    const completedTotal = data?.completed_total ?? (bucket === 'completed' ? total : 0)
 
     return (
         <div className="jobs-page">
@@ -344,26 +552,57 @@ export function JobProcessingPage() {
                 )}
             </div>
 
+            <section className="jobs-page__controls" aria-label={t('processing.title')}>
+                <label className="jobs-page__startup-retry">
+                    <input
+                        type="checkbox"
+                        checked={startupRetryEnabled}
+                        disabled={savingStartupRetry}
+                        onChange={event => void handleStartupRetryChange(event.currentTarget.checked)}
+                    />
+                    <span>
+                        <strong>{t('processing.startupRetryLabel')}</strong>
+                        <small>{t('processing.startupRetryHint')}</small>
+                    </span>
+                </label>
+                <div className="jobs-page__bulk-retry">
+                    <span>
+                        {t('processing.retryableCount', {
+                            photos: retryCounts.eligible_photos,
+                            tasks: retryCounts.eligible_tasks,
+                        })}
+                    </span>
+                    <button
+                        type="button"
+                        onClick={() => void handleRetryAllEligible()}
+                        disabled={retryingAll || retryCountsLoading || retryCounts.eligible_tasks === 0}
+                    >
+                        {retryingAll ? t('processing.retryingAll') : t('processing.bulkRetry')}
+                    </button>
+                </div>
+            </section>
+            {bulkRetryMessage && <div className="jobs-page__success" role="status">{bulkRetryMessage}</div>}
+
             <div className="jobs-tabs" role="tablist" aria-label={t('processing.title')}>
                 <button
                     type="button"
                     role="tab"
-                    aria-label={t('processing.activeTab')}
+                    aria-label={`${t('processing.activeTab')} ${activeTotal}`}
                     aria-selected={bucket === 'active'}
                     className={bucket === 'active' ? 'jobs-tabs__tab jobs-tabs__tab--selected' : 'jobs-tabs__tab'}
                     onClick={() => { setBucket('active'); setPage(1) }}
                 >
-                    {t('processing.activeTab')} <span aria-hidden="true">{bucket === 'active' ? total : ''}</span>
+                    {t('processing.activeTab')} <span>{activeTotal}</span>
                 </button>
                 <button
                     type="button"
                     role="tab"
-                    aria-label={t('processing.completedTab')}
+                    aria-label={`${t('processing.completedTab')} ${completedTotal}`}
                     aria-selected={bucket === 'completed'}
                     className={bucket === 'completed' ? 'jobs-tabs__tab jobs-tabs__tab--selected' : 'jobs-tabs__tab'}
                     onClick={() => { setBucket('completed'); setPage(1) }}
                 >
-                    {t('processing.completedTab')} <span aria-hidden="true">{bucket === 'completed' ? total : ''}</span>
+                    {t('processing.completedTab')} <span>{completedTotal}</span>
                 </button>
             </div>
 

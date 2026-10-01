@@ -3,6 +3,7 @@
 from time import time
 
 from loguru import logger
+from sqlalchemy import text
 
 from src.db.database import SessionLocal
 from src.db_service import (
@@ -147,8 +148,24 @@ def _get_file_path_sync(photo_id: int) -> str | None:
 def _save_tags_sync(photo_id: int, tags: list) -> None:
     db = SessionLocal()
     try:
+        # Acquire SQLite's writer lock before checking photo/tag links. Without
+        # this, two retries can both observe a missing link and race on the
+        # photo_tags composite primary key.
+        db.execute(text("BEGIN IMMEDIATE"))
+        unique_tags = {}
         for tag_name, score in tags:
-            add_photo_tag_with_score(db, photo_id, tag_name, score)
+            if not isinstance(tag_name, str):
+                continue
+            display_name = tag_name.strip()
+            if not display_name:
+                continue
+            normalized_name = display_name.casefold()
+            previous = unique_tags.get(normalized_name)
+            if previous is None or score > previous[1]:
+                unique_tags[normalized_name] = (display_name, score)
+
+        for tag_name, score in unique_tags.values():
+            add_photo_tag_with_score(db, photo_id, tag_name, score, commit=False)
             logger.debug(f"[clip/tags] Photo {photo_id}: tag '{tag_name}' score={score:.3f}")
         db.commit()
     except Exception:

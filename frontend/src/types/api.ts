@@ -201,9 +201,29 @@ export interface PipelineRunPhoto {
     categories: string[]
 }
 
+export interface PipelineRunAttempt {
+    run_id: number
+    source: string
+    status: 'queued' | 'running' | 'completed' | 'completed-with-errors' | 'paused' | 'interrupted'
+    summary: string | null
+    created_at: string
+    started_at: string | null
+    finished_at: string | null
+    tasks: PipelineRunTask[]
+}
+
+export interface PipelineRunRetryTask {
+    task_name: string
+    phase: string
+}
+
 export interface PipelineRun {
     run_id: number
     photo_id: number
+    attempt_count: number
+    attempts: PipelineRunAttempt[]
+    is_task_retry: boolean
+    retry_tasks: PipelineRunRetryTask[]
     source: string
     status: 'queued' | 'running' | 'completed' | 'completed-with-errors' | 'paused' | 'interrupted'
     summary: string | null
@@ -219,6 +239,8 @@ export interface PipelineRun {
 export interface PaginatedPipelineRuns {
     items: PipelineRun[]
     total: number
+    active_total: number
+    completed_total: number
     page: number
     size: number
     pages: number

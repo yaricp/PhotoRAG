@@ -358,9 +358,29 @@ class PipelineRunPhotoSchema(BaseModel):
     categories: List[str] = Field(default_factory=list)
 
 
+class PipelineRunAttemptResponse(BaseModel):
+    run_id: int
+    source: str
+    status: str
+    summary: Optional[str] = None
+    created_at: datetime
+    started_at: Optional[datetime] = None
+    finished_at: Optional[datetime] = None
+    tasks: List[PipelineRunTaskSchema]
+
+
+class PipelineRunRetryTaskResponse(BaseModel):
+    task_name: str
+    phase: str
+
+
 class PipelineRunResponse(BaseModel):
     run_id: int
     photo_id: int
+    attempt_count: int = 1
+    attempts: List[PipelineRunAttemptResponse] = Field(default_factory=list)
+    is_task_retry: bool = False
+    retry_tasks: List[PipelineRunRetryTaskResponse] = Field(default_factory=list)
     source: str
     status: str
     summary: Optional[str] = None
@@ -376,6 +396,8 @@ class PipelineRunResponse(BaseModel):
 class PipelineRunPageResponse(BaseModel):
     items: List[PipelineRunResponse]
     total: int
+    active_total: int = 0
+    completed_total: int = 0
     page: int
     size: int
     pages: int

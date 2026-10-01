@@ -51,6 +51,23 @@ def test_add_tag_with_confidence(db_session):
     assert pt.confidence_score == 0.92
 
 
+def test_add_photo_tag_with_score_commits_by_default(db_session):
+    photo = Photo(hash="committed_tag_hash", file_path="committed-tag.jpg")
+    tag = Tag(name="existing")
+    db_session.add_all([photo, tag])
+    db_session.commit()
+    photo_id = photo.id
+    tag_id = tag.id
+
+    add_photo_tag_with_score(db_session, photo_id, tag.name, 0.8)
+    db_session.close()
+
+    with TestSessionLocal() as reader:
+        link = reader.query(PhotoTag).filter_by(photo_id=photo_id, tag_id=tag_id).one_or_none()
+        assert link is not None
+        assert link.confidence_score == 0.8
+
+
 def test_tag_threshold_logic(db_session):
     # This is a unit test for the logic we'll use in the task
     scores = [("Nature", 0.8), ("Ghost", 0.1), ("Mountain", 0.51)]

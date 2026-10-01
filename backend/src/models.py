@@ -344,4 +344,5 @@ class PipelineQueueEntry(Base):
     lane = Column(String, nullable=False)
     folder_scanner_id = Column(Integer, nullable=True)
     retry_task_name = Column(String, nullable=True)
+    retry_task_names = Column(Text, nullable=True)
     clear_outputs = Column(Boolean, nullable=False, default=False)

@@ -37,6 +37,55 @@
     gap: 12px;
 }
 
+.jobs-page__controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+    padding: 12px 14px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-surface);
+}
+
+.jobs-page__startup-retry,
+.jobs-page__bulk-retry {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.jobs-page__startup-retry {
+    cursor: pointer;
+}
+
+.jobs-page__startup-retry > span {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.jobs-page__startup-retry small,
+.jobs-page__bulk-retry > span {
+    color: var(--color-text-dim);
+    font-size: 12px;
+}
+
+.jobs-page__bulk-retry {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.jobs-page__bulk-retry button {
+    padding: 7px 10px;
+}
+
+.jobs-page__success {
+    margin-bottom: 12px;
+    color: var(--color-success, #2e9d64);
+}
+
 .jobs-page__muted {
     color: var(--color-text-dim);
     font-size: 13px;
@@ -167,6 +216,48 @@
     background: var(--color-bg);
     border-radius: 8px;
     font-size: 13px;
+}
+
+.photo-row__results > summary,
+.photo-row__attempt-history > summary {
+    width: fit-content;
+    color: var(--color-accent, #4fa3ff);
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.photo-row__results[open] > summary,
+.photo-row__attempt-history[open] > summary {
+    margin-bottom: 8px;
+}
+
+.photo-row__attempt-history {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.photo-row__attempt-block + .photo-row__attempt-block {
+    padding-top: 10px;
+    border-top: 1px solid var(--color-border);
+}
+
+.photo-row__attempt-label {
+    margin-bottom: 6px;
+    color: var(--color-text-dim);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+@media (max-width: 720px) {
+    .jobs-page__controls {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .jobs-page__bulk-retry {
+        justify-content: space-between;
+    }
 }
 
 .photo-output h4 {

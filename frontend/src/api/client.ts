@@ -423,6 +423,26 @@ export async function getPipelineRuns(
     return apiFetch<PaginatedPipelineRuns>(`/api/pipeline/runs?bucket=${bucket}&page=${page}&size=${size}`)
 }
 
+export interface RetryableTaskCounts {
+    eligible_photos: number
+    eligible_tasks: number
+}
+
+export interface RetryEligibleTasksResult {
+    status: string
+    queued_photos: number
+    queued_tasks: number
+    run_ids: number[]
+}
+
+export async function getRetryableTaskCounts(): Promise<RetryableTaskCounts> {
+    return apiFetch<RetryableTaskCounts>('/api/pipeline/retry-eligible/count')
+}
+
+export async function retryAllEligiblePipelineTasks(): Promise<RetryEligibleTasksResult> {
+    return apiFetch<RetryEligibleTasksResult>('/api/pipeline/retry-eligible', { method: 'POST' })
+}
+
 export async function getRecentPipelineTasks(limit: number = 50): Promise<PipelineTask[]> {
     return apiFetch<PipelineTask[]>(`/api/pipeline/recent?limit=${limit}`)
 }

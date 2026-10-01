@@ -195,6 +195,185 @@ def test_upgrade_initialization_recovers_before_accepting_new_work(queue_store):
     assert queue.claim_next_run().id == new
 
 
+def test_collect_retryable_tasks_uses_latest_outcome_and_skips_active_paused_or_canceled(queue_store):
+    queue, factory = queue_store
+    with factory() as db:
+        runs = [
+            models.PipelineRun(photo_id=1, source="manual", status="completed-with-errors"),
+            models.PipelineRun(photo_id=1, source="retry", status="completed"),
+            models.PipelineRun(photo_id=2, source="manual", status="interrupted"),
+            models.PipelineRun(photo_id=3, source="manual", status="queued"),
+            models.PipelineRun(photo_id=4, source="manual", status="completed-with-errors"),
+            models.PipelineRun(photo_id=4, source="retry", status="completed"),
+            models.PipelineRun(photo_id=5, source="manual", status="paused"),
+            models.PipelineRun(photo_id=6, source="manual", status="completed-with-errors"),
+        ]
+        db.add_all(runs)
+        db.flush()
+        tasks = [
+            models.PipelineTask(photo_id=1, run_id=runs[0].id, phase="phase_1", task_name="vision_task", status="failed"),
+            models.PipelineTask(photo_id=1, run_id=runs[0].id, phase="phase_1", task_name="auto_tag_clip_task", status="failed"),
+            models.PipelineTask(photo_id=1, run_id=runs[0].id, phase="phase_2", task_name="translate_description_task", status="skipped", skip_reason="Prerequisite vision_task: failed"),
+            models.PipelineTask(photo_id=1, run_id=runs[1].id, phase="phase_1", task_name="vision_task", status="done"),
+            models.PipelineTask(photo_id=1, run_id=runs[1].id, phase="phase_1", task_name="auto_tag_clip_task", status="failed"),
+            models.PipelineTask(photo_id=1, run_id=runs[1].id, phase="phase_2", task_name="translate_description_task", status="skipped", skip_reason="Prerequisite vision_task: failed"),
+            models.PipelineTask(photo_id=2, run_id=runs[2].id, phase="phase_1", task_name="vision_task", status="interrupted"),
+            models.PipelineTask(photo_id=2, run_id=runs[2].id, phase="phase_3", task_name="ocr_task", status="paused"),
+            models.PipelineTask(photo_id=3, run_id=runs[3].id, phase="phase_1", task_name="vision_task", status="failed"),
+            models.PipelineTask(photo_id=4, run_id=runs[4].id, phase="phase_1", task_name="auto_tag_clip_task", status="failed"),
+            models.PipelineTask(photo_id=4, run_id=runs[5].id, phase="phase_1", task_name="auto_tag_clip_task", status="done"),
+            models.PipelineTask(photo_id=5, run_id=runs[6].id, phase="phase_1", task_name="vision_task", status="failed"),
+            models.PipelineTask(photo_id=6, run_id=runs[7].id, phase="phase_1", task_name="vision_task", status="canceled"),
+        ]
+        db.add_all(tasks)
+        db.add(models.PipelineQueueEntry(run_id=runs[3].id, lane="local-ollama"))
+        db.commit()
+
+        result = queue.collect_retryable_tasks(db)
+
+    assert result == {
+        1: ["auto_tag_clip_task", "translate_description_task"],
+        2: ["vision_task"],
+    }
+
+
+@pytest.mark.asyncio
+async def test_queue_executes_a_selected_task_set_in_one_bounded_photo_run(queue_store, monkeypatch):
+    queue, factory = queue_store
+    import sys
+    from types import SimpleNamespace
+
+    selected = ["vision_task", "translate_description_task"]
+    run_id = queue.enqueue_photo_run(1, "retry", retry_task_names=selected)
+    with factory() as db:
+        entry = db.get(models.PipelineQueueEntry, run_id)
+        assert entry.retry_task_names == '["vision_task", "translate_description_task"]'
+
+    executed = []
+
+    async def retry_tasks(photo_id, task_names, *, run_id):
+        executed.append((photo_id, task_names, run_id))
+        with factory() as db:
+            db.get(models.PipelineRun, run_id).status = "completed"
+            db.commit()
+
+    monkeypatch.setitem(sys.modules, "src.incoming_pipeline", SimpleNamespace(retry_pipeline_tasks=retry_tasks))
+    await queue.execute_claimed_run(queue.claim_next_run())
+
+    assert executed == [(1, selected, run_id)]
+
+
+def test_queue_upgrade_adds_task_set_intent_without_losing_older_entries(queue_store):
+    queue, factory = queue_store
+    engine = factory.kw["bind"]
+    run_id = queue.enqueue_photo_run(1, "retry", retry_task_name="vision_task")
+    with engine.begin() as conn:
+        conn.exec_driver_sql("ALTER TABLE pipeline_queue_entries DROP COLUMN retry_task_names")
+
+    owner = queue.initialize_queue(engine)
+    owner.close()
+
+    from sqlalchemy import inspect
+
+    columns = {column["name"] for column in inspect(engine).get_columns("pipeline_queue_entries")}
+    assert "retry_task_names" in columns
+    with factory() as db:
+        entry = db.get(models.PipelineQueueEntry, run_id)
+        assert entry.retry_task_name == "vision_task"
+        assert entry.retry_task_names is None
+
+
+def test_startup_retry_preference_defaults_off_and_admits_each_photo_once(queue_store):
+    queue, factory = queue_store
+    with factory() as db:
+        old = models.PipelineRun(photo_id=1, source="manual", status="completed-with-errors")
+        db.add(old)
+        db.flush()
+        db.add(
+            models.PipelineTask(
+                photo_id=1,
+                run_id=old.id,
+                phase="phase_1",
+                task_name="auto_tag_clip_task",
+                status="failed",
+                error="tag persistence failed",
+            )
+        )
+        db.commit()
+
+    disabled = queue.enqueue_startup_retries()
+    assert disabled == {"enabled": False, "queued_photos": 0, "queued_tasks": 0, "run_ids": []}
+    with factory() as db:
+        assert db.query(models.PipelineQueueEntry).count() == 0
+        from src.db_service import set_setting
+
+        set_setting(db, "retry_unfinished_at_startup", "true")
+
+    enabled = queue.enqueue_startup_retries()
+    assert enabled == {"enabled": True, "queued_photos": 1, "queued_tasks": 1, "run_ids": [2]}
+    with factory() as db:
+        entry = db.get(models.PipelineQueueEntry, enabled["run_ids"][0])
+        assert entry.retry_task_names == '["auto_tag_clip_task"]'
+
+    again = queue.enqueue_startup_retries()
+    assert again == {"enabled": True, "queued_photos": 0, "queued_tasks": 0, "run_ids": []}
+
+
+def test_bulk_recovery_admits_a_24_photo_backlog_once_and_keeps_it_bounded(queue_store):
+    queue, factory = queue_store
+    with factory() as db:
+        runs = [
+            models.PipelineRun(photo_id=photo_id, source="watcher", status="completed-with-errors")
+            for photo_id in range(1, 25)
+        ]
+        db.add_all(runs)
+        db.flush()
+        for run in runs:
+            db.add_all([
+                models.PipelineTask(
+                    photo_id=run.photo_id,
+                    run_id=run.id,
+                    phase="phase_1",
+                    task_name="vision_task",
+                    status="failed",
+                    error="model stopped",
+                ),
+                models.PipelineTask(
+                    photo_id=run.photo_id,
+                    run_id=run.id,
+                    phase="phase_2",
+                    task_name="translate_description_task",
+                    status="skipped",
+                    skip_reason="Prerequisite vision_task: failed",
+                ),
+            ])
+        db.commit()
+
+    result = queue.enqueue_retryable_tasks(source="bulk-retry")
+
+    assert result["queued_photos"] == 24
+    assert result["queued_tasks"] == 48
+    with factory() as db:
+        admitted = db.query(models.PipelineRun).filter_by(source="bulk-retry").order_by(
+            models.PipelineRun.photo_id
+        ).all()
+        assert [run.photo_id for run in admitted] == list(range(1, 25))
+        assert all(run.status == "queued" for run in admitted)
+        assert all(
+            db.get(models.PipelineQueueEntry, run.id).retry_task_names
+            == '["vision_task", "translate_description_task"]'
+            for run in admitted
+        )
+
+    assert queue.claim_next_run() is not None
+    assert queue.claim_next_run() is None
+    assert queue.enqueue_retryable_tasks(source="bulk-retry") == {
+        "queued_photos": 0,
+        "queued_tasks": 0,
+        "run_ids": [],
+    }
+
+
 @pytest.mark.asyncio
 async def test_scheduler_drains_new_queue_without_replaying_interrupted(queue_store, monkeypatch):
     import asyncio

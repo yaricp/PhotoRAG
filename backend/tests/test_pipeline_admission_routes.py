@@ -71,7 +71,9 @@ async def test_retry_endpoint_preserves_failed_attempt(routes, queue_store, monk
         db.refresh(failed)
         assert (failed.status, failed.error) == ("failed", "original")
         assert result["run_id"] != old.id
-        assert db.get(models.PipelineQueueEntry, result["run_id"]).retry_task_name == "vision_task"
+        assert db.get(models.PipelineQueueEntry, result["run_id"]).retry_task_names == (
+            '["vision_task", "final_embedding_task", "translate_description_task"]'
+        )
 
 
 def test_queue_status_endpoint_exposes_position_and_wait_time(routes, queue_store):
@@ -255,6 +257,166 @@ def test_paginated_run_history_includes_photo_outputs_and_task_errors(routes, qu
     assert client.get("/api/pipeline/runs?bucket=other").status_code == 422
 
 
+def test_run_history_groups_attempts_by_photo_and_active_retry_supersedes_completed(routes, queue_store, monkeypatch):
+    _, factory = queue_store
+    with factory() as db:
+        photo = db.get(models.Photo, 1)
+        photo.description = "Preserved from a completed attempt"
+        completed = models.PipelineRun(
+            photo_id=photo.id,
+            source="watcher",
+            status="completed",
+            created_at=datetime(2026, 1, 1),
+        )
+        failed = models.PipelineRun(
+            photo_id=photo.id,
+            source="retry",
+            status="completed-with-errors",
+            created_at=datetime(2026, 1, 2),
+            summary="tag task failed",
+        )
+        active_retry = models.PipelineRun(
+            photo_id=photo.id,
+            source="retry",
+            status="queued",
+            created_at=datetime(2026, 1, 3),
+        )
+        running = models.PipelineRun(
+            photo_id=2,
+            source="watcher",
+            status="running",
+            created_at=datetime(2026, 1, 4),
+            started_at=datetime(2026, 1, 4),
+        )
+        later_queued = models.PipelineRun(
+            photo_id=3,
+            source="scanner",
+            status="queued",
+            created_at=datetime(2026, 1, 5),
+        )
+        db.add_all([completed, failed, active_retry, running, later_queued])
+        db.flush()
+        db.add_all(
+            [
+                models.PipelineQueueEntry(run_id=active_retry.id, lane="local-ollama", retry_task_name="auto_tag_clip_task"),
+                models.PipelineQueueEntry(run_id=running.id, lane="local-ollama"),
+                models.PipelineQueueEntry(run_id=later_queued.id, lane="local-ollama"),
+                models.PipelineTask(
+                    photo_id=photo.id,
+                    run_id=completed.id,
+                    phase="phase_1",
+                    task_name="vision_task",
+                    status="done",
+                ),
+                models.PipelineTask(
+                    photo_id=photo.id,
+                    run_id=failed.id,
+                    phase="phase_1",
+                    task_name="auto_tag_clip_task",
+                    status="failed",
+                    error="tag save failed",
+                ),
+            ]
+        )
+        run_ids = [completed.id, failed.id, active_retry.id]
+        expected_active_order = [running.id, active_retry.id, later_queued.id]
+        db.commit()
+
+    from src import deps
+
+    monkeypatch.setattr(deps, "SessionLocal", factory)
+    client = TestClient(routes.app)
+    active = client.get("/api/pipeline/runs?bucket=active&page=1&size=10").json()
+    assert active["total"] == 3
+    assert active["active_total"] == 3
+    assert active["completed_total"] == 0
+    assert [item["run_id"] for item in active["items"]] == expected_active_order
+    card = next(item for item in active["items"] if item["photo_id"] == 1)
+    assert card["photo_id"] == 1
+    assert card["run_id"] == run_ids[-1]
+    assert card["attempt_count"] == 3
+    assert [attempt["run_id"] for attempt in card["attempts"]] == run_ids
+    assert [attempt["status"] for attempt in card["attempts"]] == [
+        "completed",
+        "completed-with-errors",
+        "queued",
+    ]
+    completed_page = client.get("/api/pipeline/runs?bucket=completed&page=1&size=1").json()
+    assert completed_page["total"] == 0
+    assert completed_page["items"] == []
+
+
+def test_bulk_retry_admits_only_latest_eligible_tasks_and_preserves_outputs(routes, queue_store, monkeypatch):
+    _, factory = queue_store
+    with factory() as db:
+        photo = db.get(models.Photo, 1)
+        photo.description = "Keep this successful output"
+        failed_run = models.PipelineRun(photo_id=1, source="manual", status="completed-with-errors")
+        active_run = models.PipelineRun(photo_id=2, source="retry", status="queued")
+        db.add_all([failed_run, active_run])
+        db.flush()
+        db.add_all(
+            [
+                models.PipelineTask(
+                    photo_id=1,
+                    run_id=failed_run.id,
+                    phase="phase_1",
+                    task_name="vision_task",
+                    status="failed",
+                    error="model error",
+                ),
+                models.PipelineTask(
+                    photo_id=1,
+                    run_id=failed_run.id,
+                    phase="phase_2",
+                    task_name="translate_description_task",
+                    status="skipped",
+                    skip_reason="Prerequisite vision_task: failed",
+                ),
+                models.PipelineTask(
+                    photo_id=2,
+                    run_id=active_run.id,
+                    phase="phase_1",
+                    task_name="auto_tag_clip_task",
+                    status="failed",
+                ),
+                models.PipelineQueueEntry(run_id=active_run.id, lane="local-ollama"),
+            ]
+        )
+        db.commit()
+
+    client = TestClient(routes.app)
+    eligibility = client.get("/api/pipeline/retry-eligible/count")
+    assert eligibility.status_code == 200
+    assert eligibility.json() == {"eligible_photos": 1, "eligible_tasks": 2}
+    response = client.post("/api/pipeline/retry-eligible")
+    assert response.status_code == 202
+    assert response.json() == {"status": "queued", "queued_photos": 1, "queued_tasks": 2, "run_ids": [3]}
+    with factory() as db:
+        retry_run = db.get(models.PipelineRun, response.json()["run_ids"][0])
+        entry = db.get(models.PipelineQueueEntry, retry_run.id)
+        assert retry_run.photo_id == 1
+        assert retry_run.source == "bulk-retry"
+        assert entry.retry_task_names == '["vision_task", "translate_description_task"]'
+        assert db.get(models.Photo, 1).description == "Keep this successful output"
+
+    from src import deps
+
+    monkeypatch.setattr(deps, "SessionLocal", factory)
+    active = client.get("/api/pipeline/runs?bucket=active&page=1&size=10").json()
+    retry_card = next(item for item in active["items"] if item["photo_id"] == 1)
+    assert retry_card["is_task_retry"] is True
+    assert retry_card["retry_tasks"] == [
+        {"task_name": "vision_task", "phase": "phase_1"},
+        {"task_name": "translate_description_task", "phase": "phase_2"},
+    ]
+
+    repeated = client.post("/api/pipeline/retry-eligible")
+    assert repeated.status_code == 202
+    assert repeated.json()["queued_photos"] == 0
+    assert client.get("/api/pipeline/retry-eligible/count").json() == {"eligible_photos": 0, "eligible_tasks": 0}
+
+
 @pytest.mark.asyncio
 async def test_long_completed_run_remains_visible_after_full_rerun(routes, queue_store, monkeypatch):
     queue, factory = queue_store
@@ -290,15 +452,20 @@ async def test_long_completed_run_remains_visible_after_full_rerun(routes, queue
 
     monkeypatch.setattr(deps, "SessionLocal", factory)
     client = TestClient(routes.app)
-    history = client.get("/api/pipeline/runs?bucket=completed&page=1&size=20").json()
+    history = client.get("/api/pipeline/runs?bucket=active&page=1&size=20").json()
     assert history["total"] == 1
     run = history["items"][0]
-    assert run["run_id"] == old_id
-    assert len(run["tasks"]) == 55
-    assert (run["tasks"][0]["status"], run["tasks"][0]["error"]) == ("failed", "original failure")
+    assert run["run_id"] == result["run_id"]
+    assert run["attempt_count"] == 2
+    assert run["attempts"][0]["run_id"] == old_id
+    assert len(run["attempts"][0]["tasks"]) == 55
+    assert (run["attempts"][0]["tasks"][0]["status"], run["attempts"][0]["tasks"][0]["error"]) == (
+        "failed",
+        "original failure",
+    )
 
-    active = client.get("/api/pipeline/runs?bucket=active&page=1&size=20").json()
-    assert [item["run_id"] for item in active["items"]] == [result["run_id"]]
+    completed = client.get("/api/pipeline/runs?bucket=completed&page=1&size=20").json()
+    assert completed["total"] == 0
     with factory() as db:
         assert db.get(models.PipelineRun, old_id).status == "completed-with-errors"
         assert db.query(models.PipelineTask).filter_by(run_id=old_id).count() == 55
@@ -351,6 +518,46 @@ async def test_startup_migrates_and_recovers_before_watchers(routes, queue_store
         await lifetime.aclose()
     owner = queue.initialize_queue(factory.kw["bind"])
     owner.close()
+
+
+@pytest.mark.asyncio
+async def test_startup_retry_preference_enqueues_incomplete_tasks_before_watchers(routes, queue_store, monkeypatch):
+    queue, factory = queue_store
+    from src.db import database
+    from src.db_service import set_setting
+
+    old = queue.enqueue_photo_run(1, "watcher")
+    with factory() as db:
+        db.add(
+            models.PipelineTask(
+                photo_id=1,
+                run_id=old,
+                phase="phase_1",
+                task_name="vision_task",
+                status="interrupted",
+                error="application closed",
+            )
+        )
+        set_setting(db, "retry_unfinished_at_startup", "true")
+
+    monkeypatch.setattr(database, "engine", factory.kw["bind"])
+    monkeypatch.setattr(routes, "_eager_load_chat_model", lambda: None)
+    observed = []
+
+    def start_watchers(db):
+        with factory() as reader:
+            old_run = reader.get(models.PipelineRun, old)
+            queued = reader.query(models.PipelineRun).filter_by(photo_id=1, status="queued").one()
+            entry = reader.get(models.PipelineQueueEntry, queued.id)
+            observed.extend([old_run.status, entry.retry_task_names])
+
+    monkeypatch.setattr(routes.watcher_service, "start_all", start_watchers)
+    lifetime = routes.lifespan(routes.app)
+    try:
+        await anext(lifetime)
+        assert observed == ["interrupted", '["vision_task"]']
+    finally:
+        await lifetime.aclose()
 
 
 def test_model_save_conflicts_with_running_photo_without_mutation(routes, queue_store):

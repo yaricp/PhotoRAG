@@ -263,13 +263,15 @@ def update_photo_geoposition(db: Session, photo_id: int, lat: float, lon: float,
 
 
 # Quantitative Tagging & Categorization
-def get_or_create_tag(db: Session, name: str):
+def get_or_create_tag(db: Session, name: str, *, commit: bool = True):
     tag = db.query(Tag).filter_by(name=name).first()
     if not tag:
         try:
             tag = Tag(name=name)
             db.add(tag)
-            db.commit()
+            db.flush()
+            if commit:
+                db.commit()
             db.refresh(tag)
         except Exception:
             db.rollback()
@@ -277,8 +279,8 @@ def get_or_create_tag(db: Session, name: str):
     return tag
 
 
-def add_photo_tag_with_score(db: Session, photo_id: int, tag_name: str, score: float):
-    tag = get_or_create_tag(db, tag_name)
+def add_photo_tag_with_score(db: Session, photo_id: int, tag_name: str, score: float, *, commit: bool = True):
+    tag = get_or_create_tag(db, tag_name, commit=commit)
     photo = get_photo_by_id(db, photo_id)
     photo_tag = db.query(PhotoTag).filter_by(photo_id=photo_id, tag_id=tag.id).first()
     if not photo_tag:
@@ -286,6 +288,8 @@ def add_photo_tag_with_score(db: Session, photo_id: int, tag_name: str, score: f
         db.add(photo_tag)
     else:
         photo_tag.confidence_score = score
+    if commit:
+        db.commit()
     return photo_tag
 
 

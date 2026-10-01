@@ -1,5 +1,6 @@
 """SQLite-backed admission shared by watcher, API and scanner processes."""
 
+import json
 from datetime import datetime
 from urllib.parse import urlparse
 
@@ -30,8 +31,67 @@ def _lane(db):
     return "other"
 
 
-def enqueue_photo_run(photo_id, source, folder_scanner_id=None, *, retry_task_name=None, clear_outputs=False):
+def collect_retryable_tasks(db):
+    """Return the latest unfinished task names per inactive photo.
+
+    Successful outcomes supersede older failures. A skipped task is eligible
+    only when it was skipped because a prerequisite failed or stopped; other
+    inapplicable skips, paused/canceled work, and currently active photos are
+    left alone.
+    """
+    from src.incoming_pipeline import _PHASES, is_retryable_pipeline_task
+
+    active_photos = {
+        photo_id
+        for (photo_id,) in db.query(PipelineRun.photo_id).filter(PipelineRun.status.in_(ACTIVE)).distinct().all()
+    }
+    rows = (
+        db.query(PipelineTask, PipelineRun)
+        .join(PipelineRun, PipelineRun.id == PipelineTask.run_id)
+        .order_by(PipelineTask.id)
+        .all()
+    )
+    latest_by_task = {}
+    for task, run in rows:
+        latest_by_task[(task.photo_id, task.task_name)] = (task, run)
+
+    names_by_photo = {}
+    retryable_statuses = {"failed", "interrupted", "pending", "running"}
+    for (photo_id, task_name), (task, run) in latest_by_task.items():
+        if photo_id in active_photos or run.status in ("paused", "canceled", "cancelled"):
+            continue
+        if not is_retryable_pipeline_task(task_name):
+            continue
+        status = (task.status or "").lower()
+        is_prerequisite_skip = status == "skipped" and (task.skip_reason or "").startswith("Prerequisite ")
+        if status not in retryable_statuses and not is_prerequisite_skip:
+            continue
+        names_by_photo.setdefault(photo_id, set()).add(task_name)
+
+    phase_order = {
+        task_name: (phase_index, task_index)
+        for phase_index, (phase, task_names) in enumerate(_PHASES.items())
+        for task_index, task_name in enumerate(task_names)
+    }
+    return {
+        photo_id: sorted(task_names, key=lambda task_name: phase_order[task_name])
+        for photo_id, task_names in sorted(names_by_photo.items())
+    }
+
+
+def enqueue_photo_run(
+    photo_id,
+    source,
+    folder_scanner_id=None,
+    *,
+    retry_task_name=None,
+    retry_task_names=None,
+    clear_outputs=False,
+    return_created=False,
+):
     """Return the admitted run ID, or the existing active run for duplicate input."""
+    if retry_task_name and retry_task_names:
+        raise ValueError("Specify one retry task or a retry task set, not both")
     with SessionLocal() as db:
         db.execute(text("BEGIN IMMEDIATE"))
         if db.get(Photo, photo_id) is None:
@@ -40,7 +100,7 @@ def enqueue_photo_run(photo_id, source, folder_scanner_id=None, *, retry_task_na
             db.query(PipelineRun).filter(PipelineRun.photo_id == photo_id, PipelineRun.status.in_(ACTIVE)).first()
         )
         if existing:
-            return existing.id
+            return (existing.id, False) if return_created else existing.id
         run = PipelineRun(photo_id=photo_id, source=source, status="queued")
         db.add(run)
         db.flush()
@@ -50,12 +110,58 @@ def enqueue_photo_run(photo_id, source, folder_scanner_id=None, *, retry_task_na
                 lane=_lane(db),
                 folder_scanner_id=folder_scanner_id,
                 retry_task_name=retry_task_name,
+                retry_task_names=json.dumps(retry_task_names) if retry_task_names else None,
                 clear_outputs=clear_outputs,
             )
         )
         run_id = run.id
         db.commit()
-        return run_id
+        return (run_id, True) if return_created else run_id
+
+
+def enqueue_retryable_tasks(source="retry"):
+    """Admit one bounded retry run per photo for its latest eligible tasks."""
+    with SessionLocal() as db:
+        retryable_by_photo = collect_retryable_tasks(db)
+
+    run_ids = []
+    queued_tasks = 0
+    for photo_id, task_names in retryable_by_photo.items():
+        run_id, created = enqueue_photo_run(
+            photo_id,
+            source,
+            retry_task_names=task_names,
+            return_created=True,
+        )
+        if created:
+            run_ids.append(run_id)
+            queued_tasks += len(task_names)
+    return {
+        "queued_photos": len(run_ids),
+        "queued_tasks": queued_tasks,
+        "run_ids": run_ids,
+    }
+
+
+def get_retryable_task_counts():
+    with SessionLocal() as db:
+        retryable_by_photo = collect_retryable_tasks(db)
+    return {
+        "eligible_photos": len(retryable_by_photo),
+        "eligible_tasks": sum(len(task_names) for task_names in retryable_by_photo.values()),
+    }
+
+
+def enqueue_startup_retries():
+    """Honor the persisted startup retry preference once per backend launch."""
+    from src.db_service import get_setting
+
+    with SessionLocal() as db:
+        value = get_setting(db, "retry_unfinished_at_startup")
+    enabled = (value or "").strip().lower() in {"1", "true", "yes", "on"}
+    if not enabled:
+        return {"enabled": False, "queued_photos": 0, "queued_tasks": 0, "run_ids": []}
+    return {"enabled": True, **enqueue_retryable_tasks(source="startup-retry")}
 
 
 def claim_next_run():
@@ -101,6 +207,7 @@ def resume_run(run_id):
             "resume",
             entry.folder_scanner_id if entry else None,
             retry_task_name=entry.retry_task_name if entry else None,
+            retry_task_names=(json.loads(entry.retry_task_names) if entry and entry.retry_task_names else None),
             clear_outputs=entry.clear_outputs if entry else False,
         )
 
@@ -135,12 +242,25 @@ def initialize_queue(bind):
     try:
         migrate_pipeline_runs(bind)
         PipelineQueueEntry.__table__.create(bind, checkfirst=True)
+        _migrate_queue_entry_columns(bind)
         with Session(bind) as db:
             recover_interrupted_pipelines(db)
     except BaseException:
         owner.close()
         raise
     return owner
+
+
+def _migrate_queue_entry_columns(bind):
+    """Add new retry intent fields to queue tables from earlier releases."""
+    from sqlalchemy import inspect
+
+    if "pipeline_queue_entries" not in inspect(bind).get_table_names():
+        return
+    columns = {column["name"] for column in inspect(bind).get_columns("pipeline_queue_entries")}
+    if "retry_task_names" not in columns:
+        with bind.begin() as conn:
+            conn.exec_driver_sql("ALTER TABLE pipeline_queue_entries ADD COLUMN retry_task_names TEXT")
 
 
 async def execute_claimed_run(run):
@@ -153,12 +273,17 @@ async def execute_claimed_run(run):
         with SessionLocal() as db:
             entry = db.get(PipelineQueueEntry, run.id)
             retry_task_name = entry.retry_task_name
+            retry_task_names = entry.retry_task_names
             scanner_id = entry.folder_scanner_id
             if entry.clear_outputs:
                 db.query(PhotoTag).filter_by(photo_id=run.photo_id).delete()
                 db.query(PhotoCategory).filter_by(photo_id=run.photo_id).delete()
                 db.commit()
-        if retry_task_name:
+        if retry_task_names:
+            from src.incoming_pipeline import retry_pipeline_tasks
+
+            await retry_pipeline_tasks(run.photo_id, json.loads(retry_task_names), run_id=run.id)
+        elif retry_task_name:
             from src.incoming_pipeline import retry_pipeline_task
 
             await retry_pipeline_task(run.photo_id, retry_task_name, run_id=run.id)
