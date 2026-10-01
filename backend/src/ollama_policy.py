@@ -244,6 +244,8 @@ class OllamaClient:
                         if not image_url.startswith('data:') or ';base64,' not in image_url:
                             raise ValueError('Ollama requires an inline base64 image')
                         images.append(image_url.split(';base64,', 1)[1])
+                    else:
+                        raise ValueError('Unsupported message content block; Ollama image content must use inline base64.')
                 content = '\n'.join(texts)
             converted.append({'role':role, 'content':content, **({'images':images} if images else {})})
         def validate(result):

@@ -152,6 +152,48 @@ def test_request_carries_context_and_embedding_disables_truncation(role):
         assert observed[0]['truncate'] is False
 
 
+def test_inline_image_is_forwarded_to_ollama_without_loss():
+    p = policy_module()
+    from langchain_core.messages import HumanMessage
+
+    observed = []
+    def request(url, payload, timeout):
+        observed.append(payload)
+        return {'message':{'content':'A red car.'}}
+
+    image_b64 = 'AAECAwQ='
+    message = HumanMessage(content=[
+        {'type':'image_url', 'image_url':{'url':f'data:image/jpeg;base64,{image_b64}'}},
+        {'type':'text', 'text':'Describe this photo.'},
+    ])
+    with patch.object(p, 'configured_model_roles', return_value=['vision']), patch.object(p, 'resolve_ollama_policy', return_value=p.OllamaPolicy(8192,'test',True,True)), patch.object(p, '_request', side_effect=request):
+        assert p.OllamaClient('http://remote.example', 'vision-model', 'vision').invoke([message]).content == 'A red car.'
+
+    assert observed[0]['messages'][0]['images'] == [image_b64]
+    assert observed[0]['messages'][0]['content'] == 'Describe this photo.'
+    assert observed[0]['options']['num_ctx'] == 8192
+
+
+def test_non_inline_image_url_is_rejected_instead_of_silently_omitted():
+    p = policy_module()
+    from langchain_core.messages import HumanMessage
+
+    message = HumanMessage(content=[{'type':'image_url', 'image_url':{'url':'https://example.test/photo.jpg'}}])
+    with patch.object(p, 'configured_model_roles', return_value=['vision']), patch.object(p, 'resolve_ollama_policy', return_value=p.OllamaPolicy(8192,'test',True,True)):
+        with pytest.raises(ValueError, match='inline base64 image'):
+            p.OllamaClient('http://remote.example', 'vision-model', 'vision').invoke([message])
+
+
+def test_unsupported_image_content_block_is_not_silently_dropped():
+    p = policy_module()
+    from langchain_core.messages import HumanMessage
+
+    message = HumanMessage(content=[{'type':'image', 'data':'AAECAwQ='}])
+    with patch.object(p, 'configured_model_roles', return_value=['vision']), patch.object(p, 'resolve_ollama_policy', return_value=p.OllamaPolicy(8192,'test',True,True)), patch.object(p, '_request', return_value={'message':{'content':'answer'}}):
+        with pytest.raises(ValueError, match='Unsupported message content'):
+            p.OllamaClient('http://remote.example', 'vision-model', 'vision').invoke([message])
+
+
 @pytest.mark.parametrize('error', [TimeoutError('timeout'), RuntimeError('runner terminated'), RuntimeError('context exceeded'), RuntimeError('out of memory')])
 def test_errors_propagate(error):
     p = policy_module()
