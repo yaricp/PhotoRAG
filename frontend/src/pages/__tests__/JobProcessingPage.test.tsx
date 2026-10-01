@@ -138,6 +138,54 @@ describe('JobProcessingPage', () => {
         expect(requestedPages).toContain('2')
     })
 
+    it('keeps an old failed attempt visible when a photo has more than 50 tasks and is rerun', async () => {
+        let rerunPhotoId: string | undefined
+        const history = makeProcessingRun(70, 14, 100, 'original task failure')
+        history.summary = 'task 0: original task failure'
+        history.tasks = Array.from({ length: 55 }, (_, index) => ({
+            ...makePipelineTask({
+                id: 100 + index,
+                photo_id: 14,
+                phase: `phase_${Math.floor(index / 10)}`,
+                task_name: `task_${index}_task`,
+                status: index === 0 ? 'failed' : 'done',
+                error: index === 0 ? 'original task failure' : null,
+            }),
+            run_id: 70,
+            attempt: 1,
+            skip_reason: null,
+            required: true,
+        }))
+        server.use(
+            http.get('http://localhost:8000/api/pipeline/runs', ({ request }) => {
+                const bucket = new URL(request.url).searchParams.get('bucket')
+                return HttpResponse.json({
+                    items: bucket === 'active' ? [] : [history],
+                    total: bucket === 'active' ? 0 : 1,
+                    page: 1,
+                    size: 20,
+                    pages: 1,
+                })
+            }),
+            http.post('http://localhost:8000/api/photos/:photoId/run-pipeline', ({ params }) => {
+                rerunPhotoId = String(params.photoId)
+                return HttpResponse.json({ status: 'queued', photo_id: 14, run_id: 71 })
+            })
+        )
+
+        renderPage()
+        fireEvent.click(await screen.findByRole('tab', { name: 'Completed' }))
+        expect(await screen.findByText('task 54')).toBeInTheDocument()
+        expect(screen.getByText('Run #70')).toBeInTheDocument()
+        fireEvent.click(screen.getByRole('button', { name: 'Run pipeline again' }))
+        fireEvent.click(await screen.findByRole('button', { name: 'Run again' }))
+
+        await waitFor(() => expect(rerunPhotoId).toBe('14'))
+        expect(screen.getByText('Run #70')).toBeInTheDocument()
+        expect(screen.getByText(/task 0: original task failure/)).toBeInTheDocument()
+        expect(screen.getByText('original task failure')).toBeInTheDocument()
+    })
+
     it('retries a failed pipeline task', async () => {
         let retryTaskId: string | undefined
         server.use(

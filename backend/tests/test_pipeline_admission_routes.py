@@ -215,6 +215,55 @@ def test_paginated_run_history_includes_photo_outputs_and_task_errors(routes, qu
     assert client.get("/api/pipeline/runs?bucket=other").status_code == 422
 
 
+@pytest.mark.asyncio
+async def test_long_completed_run_remains_visible_after_full_rerun(routes, queue_store, monkeypatch):
+    queue, factory = queue_store
+    with factory() as db:
+        old = models.PipelineRun(
+            photo_id=4,
+            source="watcher",
+            status="completed-with-errors",
+            summary="task_0: original failure",
+        )
+        db.add(old)
+        db.flush()
+        old_id = old.id
+        db.add_all(
+            [
+                models.PipelineTask(
+                    photo_id=4,
+                    run_id=old_id,
+                    attempt=1,
+                    phase=f"phase_{index // 10}",
+                    task_name=f"task_{index}_task",
+                    status="failed" if index == 0 else "done",
+                    error="original failure" if index == 0 else None,
+                )
+                for index in range(55)
+            ]
+        )
+        db.commit()
+        result = await routes.run_pipeline_for_photo_endpoint(4, None, db)
+
+    assert result["run_id"] != old_id
+    from src import deps
+
+    monkeypatch.setattr(deps, "SessionLocal", factory)
+    client = TestClient(routes.app)
+    history = client.get("/api/pipeline/runs?bucket=completed&page=1&size=20").json()
+    assert history["total"] == 1
+    run = history["items"][0]
+    assert run["run_id"] == old_id
+    assert len(run["tasks"]) == 55
+    assert (run["tasks"][0]["status"], run["tasks"][0]["error"]) == ("failed", "original failure")
+
+    active = client.get("/api/pipeline/runs?bucket=active&page=1&size=20").json()
+    assert [item["run_id"] for item in active["items"]] == [result["run_id"]]
+    with factory() as db:
+        assert db.get(models.PipelineRun, old_id).status == "completed-with-errors"
+        assert db.query(models.PipelineTask).filter_by(run_id=old_id).count() == 55
+
+
 def test_agent_rerun_uses_shared_admission_without_clearing(routes, queue_store, monkeypatch):
     queue, factory = queue_store
     tools = importlib.import_module("src.graphs.tools")
