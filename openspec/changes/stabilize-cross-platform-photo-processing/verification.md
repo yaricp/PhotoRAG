@@ -49,9 +49,18 @@ The installed `0.1.5-pre.6` run log (`photorag.log`, last modified 2026-10-02 00
 - For photo 7, the initial tag attempt and a retry both reached Ollama with `qwen3-vl:2b-instruct` and a 16,384-token effective context, but phase 1 failed while saving with `UNIQUE constraint failed: photo_tags.photo_id, photo_tags.tag_id`. A later retry ended with `TimeoutError: Ollama request deadline exceeded` after about 115 seconds. No successful tag-save event for photo 7 appears later in this log.
 - For photo 8, the initial attempt and its first retry failed on the same `photo_tags` unique constraint. A subsequent retry saved 29 tags successfully.
 - The log records successful Ollama call results before the unique-constraint errors. This points to duplicate tag labels or a repeated photo/tag association in persistence, rather than a model that never received or answered the request. The timeout for photo 7 is a separate failure mode and still needs to remain visible and retryable.
-- These are log-based findings, not a claim that every retry failed: photo 8 eventually succeeded. The regression test must cover both duplicate labels within one response and tags already persisted by an earlier attempt. No image contents or credentials are included here.
+- These are log-based findings, not a claim that every retry failed: photo 8 eventually succeeded. New regression tests cover duplicate labels within one response, prior photo/tag associations, and concurrent same-photo writes. No image contents or credentials are included here.
 
 The requested Processing refinements are now part of the acceptance scope: stable counts on both tabs, one photo card with an attempt count, active-before-queued sorting, collapsed completed outputs with phase markers still visible, and no previous outputs shown as current while a retry is active. Startup recovery is opt-in: the setting defaults off, and both startup retry and the one-click bulk action use the shared bounded queue.
+
+## Implementation verification — 2026-10-02
+
+- The focused backend recovery/history/tag command passed 84 tests across `test_pipeline_queue.py`, `test_pipeline_admission_routes.py`, `test_pipeline_runs.py`, `test_pipeline_retry.py`, `test_clip_tag_persistence.py`, and `test_tag_confidence.py`. It includes the 24-photo bulk-recovery case and verifies that duplicate normalized labels no longer lose an otherwise valid CLIP result.
+- The focused Ollama policy/model-service command passed 69 tests across `test_ollama_policy.py` and `test_model_services.py`.
+- The full frontend suite passed 325 tests in 45 files. `npm run type-check` passed. ESLint reported 12 existing warnings in unrelated files and no errors. The Processing/Folders/pipeline-warning subset passed 20 tests.
+- `openspec validate stabilize-cross-platform-photo-processing --strict` and `git diff --check` passed.
+- A full backend `pytest -q` run was interrupted after about 174 seconds: 262 passed, 15 failed, and 4 errored before interruption. The vector-table fixtures report `no such module: vec0`; the combined suite also leaks `MagicMock` modules into route/queue tests. The focused affected suites pass in isolation, so task 5.1 remains open until the project-wide test-order/environment failures are resolved.
+- No post-change packaged build or real 24-photo inference was run yet. The next candidate is `0.1.5-pre.7`; tasks 2.5, 5.2, 5.3, 5.5, and 5.6 remain open pending hardware, package, and upgrade evidence.
 
 ## Cross-platform package candidates — 2026-10-01
 
