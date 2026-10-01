@@ -705,6 +705,14 @@ def get_all_models_endpoint(db: Session = Depends(get_db)):
     return get_all_model_configs(db)
 
 
+@app.get("/api/models/ollama-policy", tags=["Models"])
+def get_ollama_policy_endpoint(db: Session = Depends(get_db)):
+    """Automatic per-model context and compatibility, informational only."""
+    from src.ollama_policy import policy_status
+
+    return policy_status(get_all_model_configs(db))
+
+
 @app.put("/api/models/{config_type}", tags=["Models"], response_model=AIModelConfigResponse)
 def update_model_endpoint(config_type: str, request: AIModelConfigUpdate, db: Session = Depends(get_db)):
     """Update AI model configuration and reload it in the registry"""
@@ -720,6 +728,13 @@ def update_model_endpoint(config_type: str, request: AIModelConfigUpdate, db: Se
         message = unsupported_provider_message(config_type, request.model_provider)
         if message:
             raise HTTPException(status_code=400, detail=message)
+
+    from src.ollama_policy import validate_configuration
+
+    try:
+        validate_configuration(config_type, request.mode, request.model_provider, request.model_name, request.url)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     from src.db_service import ModelConfigurationBusyError
 

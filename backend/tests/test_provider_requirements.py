@@ -27,3 +27,14 @@ def test_frontend_provider_options_exist_in_backend_provider_matrix():
     frontend_providers = set(re.findall(r"value: '([a-z0-9_]+)'", frontend_source))
 
     assert frontend_providers == set(PACKAGED_PROVIDER_CAPABILITIES)
+
+
+def test_ollama_transport_is_declared_in_all_backend_dependency_manifests():
+    repo_root = Path(__file__).resolve().parents[2]
+    runtime_requirements = (repo_root / "backend" / "requirements.txt").read_text().lower()
+    pyproject = (repo_root / "backend" / "pyproject.toml").read_text().lower()
+    lockfile = (repo_root / "backend" / "uv.lock").read_text().lower()
+
+    assert "httpx" in runtime_requirements
+    assert '"httpx' in pyproject
+    assert 'name = "httpx"' in lockfile

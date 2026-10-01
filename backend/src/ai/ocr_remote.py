@@ -33,5 +33,5 @@ class RemoteOCR:
             response = self.llm.invoke([msg])
             return response.content.strip()
         except Exception as exc:
-            logger.error(f"[RemoteOCR] LLM call failed: {exc}")
-            return ""
+            logger.error("[RemoteOCR] LLM call failed: {}", type(exc).__name__)
+            raise

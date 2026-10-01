@@ -11,6 +11,7 @@ from src.db.database import SessionLocal
 from src.models import PipelineRun, PipelineTask
 
 _current_run = ContextVar("pipeline_run_id", default=None)
+_inference_ids = ContextVar("pipeline_inference_ids", default={})
 
 
 @contextmanager
@@ -150,6 +151,7 @@ def get_task_outcome(photo_id: int, phase: str, task_name: str):
 async def track_task(photo_id: int, phase: str, task_name: str):
     task_id = _task_id(photo_id, phase, task_name)
     _update_task_id(task_id, status="running", started_at=datetime.now(timezone.utc))
+    token = _inference_ids.set({"photo_id": photo_id, "run_id": _current_run.get(), "task_id": task_id})
     try:
         yield
         with SessionLocal() as db:
@@ -163,6 +165,8 @@ async def track_task(photo_id: int, phase: str, task_name: str):
     except Exception as exc:
         _update_task_id(task_id, status="failed", finished_at=datetime.now(timezone.utc), error=str(exc)[:2000])
         raise
+    finally:
+        _inference_ids.reset(token)
 
 
 def get_active_pipeline_tasks(db: Session) -> list[PipelineTask]:

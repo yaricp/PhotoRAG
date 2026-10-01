@@ -202,7 +202,7 @@ class TestRemoteClipTaggerPrompt:
         assert "sunset" in full_text
         assert "beach" in full_text
 
-    def test_sends_at_most_200_tags(self, tmp_path):
+    def test_batches_all_tags_in_groups_of_at_most_200(self, tmp_path):
         from src.ai.clip_remote import RemoteClipTagger
 
         f = tmp_path / "img.jpg"
@@ -214,11 +214,12 @@ class TestRemoteClipTaggerPrompt:
         tagger = RemoteClipTagger(mock_llm, many_tags, [], threshold=0.3)
         tagger.get_tags(str(f))
 
-        invoke_call = mock_llm.invoke.call_args[0][0]
-        full_text = str(invoke_call)
-        # Only first 200 tags should appear in the prompt
-        assert "tag_199" in full_text
-        assert "tag_200" not in full_text
+        calls = mock_llm.invoke.call_args_list
+        assert len(calls) == 3
+        first_text = str(calls[0].args[0])
+        assert "tag_199" in first_text
+        assert "tag_200" not in first_text
+        assert "tag_599" in str(calls[-1].args[0])
 
 
 # ---------------------------------------------------------------------------

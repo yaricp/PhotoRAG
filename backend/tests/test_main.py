@@ -160,6 +160,31 @@ def test_models_endpoints():
     assert result["url"] == "http://test"
 
 
+def test_ollama_policy_endpoint_returns_read_only_status():
+    expected = [{"type": "vision", "model_name": "selected-model", "effective_num_ctx": 8192}]
+    with patch("src.ollama_policy.policy_status", return_value=expected) as status:
+        response = client.get("/api/models/ollama-policy")
+
+    assert response.status_code == 200
+    assert response.json() == expected
+    status.assert_called_once()
+
+
+def test_save_rejects_known_text_only_ollama_for_image_role():
+    update_data = {
+        "mode": "remote",
+        "model_name": "text-only-model",
+        "url": "http://localhost:11434",
+        "api_key": None,
+        "model_provider": "ollama",
+    }
+    with patch("src.ollama_policy.validate_configuration", side_effect=ValueError("Selected Ollama model does not support vision")):
+        response = client.put("/api/models/vision", json=update_data)
+
+    assert response.status_code == 400
+    assert "does not support vision" in response.json()["detail"]
+
+
 def test_get_photo_by_id():
     db = TestingSessionLocal()
     photo = db.query(Photo).first()

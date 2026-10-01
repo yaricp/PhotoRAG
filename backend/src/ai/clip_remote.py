@@ -56,8 +56,10 @@ class RemoteClipTagger:
     # ------------------------------------------------------------------
 
     def get_tags(self, file_path: str) -> list[tuple[str, float]]:
-        candidates = self.all_tags[:MAX_TAGS_PER_CALL]
-        return self._classify(file_path, candidates, self.all_tags)
+        results = []
+        for start in range(0, len(self.all_tags), MAX_TAGS_PER_CALL):
+            results.extend(self._classify(file_path, self.all_tags[start:start + MAX_TAGS_PER_CALL], self.all_tags))
+        return results
 
     def get_categories(self, file_path: str) -> list[tuple[str, float]]:
         return self._classify(file_path, self.all_categories, self.all_categories)
@@ -112,7 +114,7 @@ class RemoteClipTagger:
                 return self._classify(file_path, candidates[:middle], valid_vocab) + self._classify(
                     file_path, candidates[middle:], valid_vocab
                 )
-            logger.error(f"[RemoteClipTagger] LLM call failed: {exc}")
+            logger.error("[RemoteClipTagger] LLM call failed: {}", type(exc).__name__)
             raise
 
         if not isinstance(items, list):

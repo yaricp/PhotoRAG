@@ -59,8 +59,8 @@ class RemoteTranslator:
             response = self.llm.invoke(messages)
             return response.content.strip()
         except Exception as exc:
-            logger.error(f"[RemoteTranslator] LLM call failed: {exc}")
-            return text
+            logger.error("[RemoteTranslator] LLM call failed: {}", type(exc).__name__)
+            raise
 
     # ------------------------------------------------------------------
     # DeepL path

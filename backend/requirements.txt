@@ -29,3 +29,6 @@ sentence_transformers
 sqlite-vec
 langchain-openai
 imagehash
+
+# Bounded async transport for per-request Ollama inference
+httpx>=0.27,<1

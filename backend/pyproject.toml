@@ -12,6 +12,7 @@ dependencies = [
     "fastapi>=0.136.1",
     "geopy>=2.4.1",
     "huey==2.5.0",
+    "httpx>=0.27,<1",
     "imagehash>=4.3.2",
     "langchain>=1.2.15",
     "langchain-core>=1.0.0",

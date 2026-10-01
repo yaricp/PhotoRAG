@@ -81,13 +81,15 @@ class TestBuildLangchainVisionModel:
             _build_langchain_vision_model("google_genai", "gemini-1.5-flash", "key", None)
             mock_cls.assert_called_once()
 
-    def test_ollama_provider_returns_chat_ollama(self):
+    def test_ollama_provider_returns_bounded_client(self):
         from src.model_services import _build_langchain_vision_model
+        from src.ollama_policy import OllamaClient
 
-        mock_cls = MagicMock()
-        with patch.dict("sys.modules", {"langchain_ollama": MagicMock(ChatOllama=mock_cls)}):
-            _build_langchain_vision_model("ollama", "llava", None, "http://localhost:11434")
-            mock_cls.assert_called_once()
+        with patch("src.ollama_policy._show", return_value={}):
+            model = _build_langchain_vision_model("ollama", "llava", None, "http://localhost:11434")
+        assert isinstance(model, OllamaClient)
+        assert model.policy.effective_num_ctx <= 4096
+
 
     def test_default_unknown_provider_uses_openai(self):
         from src.model_services import _build_langchain_vision_model

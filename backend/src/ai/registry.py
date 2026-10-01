@@ -316,6 +316,11 @@ class AIModelRegistry:
                         if api_url:
                             kwargs["base_url"] = api_url
 
+                        if model_provider == "ollama":
+                            from src.ollama_policy import langchain_options
+
+                            kwargs.update(langchain_options(api_url, model_name, "chat"))
+
                         _PROVIDER_INSTALL = {
                             "openai": "langchain-openai",
                             "anthropic": "langchain-anthropic",

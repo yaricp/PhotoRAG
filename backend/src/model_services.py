@@ -74,17 +74,15 @@ def _build_langchain_vision_model(
     model_name: str,
     api_key: str | None,
     api_url: str | None,
+    role: str = "vision",
 ):
     """Return a LangChain chat model that accepts multimodal (image) messages."""
     p = (provider or "").lower()
 
     if p == "ollama":
-        from langchain_ollama import ChatOllama
+        from src.ollama_policy import OllamaClient
 
-        kwargs: dict = {"model": model_name}
-        if api_url:
-            kwargs["base_url"] = api_url
-        return ChatOllama(**kwargs)
+        return OllamaClient(api_url, model_name, role)
 
     if p == "anthropic":
         from langchain_anthropic import ChatAnthropic
@@ -123,16 +121,16 @@ async def _call_remote_vision(cfg: dict, file_path: str, prompt_text: str) -> st
     api_url = cfg.get("url")
 
     image_b64 = _encode_image_base64(file_path)
-    llm = _build_langchain_vision_model(provider, model_name, api_key, api_url)
+    llm = await run_in_thread(_build_langchain_vision_model, provider, model_name, api_key, api_url)
     msg = HumanMessage(
         content=[
             {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_b64}"}},
             {"type": "text", "text": prompt_text},
         ]
     )
-    logger.debug(f"[vision/remote] Sending image to remote model {model_name} at {api_url or 'default endpoint'}")
+    logger.debug("[vision/remote] Sending request to model {}", model_name)
     response = await run_in_thread(llm.invoke, [msg])
-    logger.debug(f"[vision/remote] Received response from remote model: {response}")
+    logger.debug("[vision/remote] Received response")
     return response.content
 
 
@@ -203,7 +201,7 @@ async def _call_remote_clip(cfg: dict, file_path: str, task: str) -> list:
     api_key = cfg.get("api_key")
     api_url = cfg.get("url")
 
-    llm = _build_langchain_vision_model(provider, model_name, api_key, api_url)
+    llm = await run_in_thread(_build_langchain_vision_model, provider, model_name, api_key, api_url, **({"role": "clip"} if provider == "ollama" else {}))
 
     clip_cfg = CLIP_Settings()
     all_tags = _load_clip_names(clip_cfg.TAGS_NAMES_PATH, "tags")
@@ -218,7 +216,7 @@ async def _call_remote_clip(cfg: dict, file_path: str, task: str) -> list:
     tagger = RemoteClipTagger(llm=llm, all_tags=all_tags, all_categories=all_categories)
 
     logger.debug(
-        f"[clip/remote] Running remote CLIP tagger for task '{task}' on model '{model_name}' at {api_url or 'default endpoint'}"
+        f"[clip/remote] Running task {task} on model {model_name}"
     )
     if task == "tags":
         result = await run_in_thread(tagger.get_tags, file_path)
@@ -350,7 +348,7 @@ async def _call_remote_embedding(text: str, purpose: str, cfg: dict | None, emb_
     api_url = (cfg and cfg.get("url")) or getattr(emb_settings, "EMBEDDING_API_URL", None)
     provider = (cfg and cfg.get("model_provider")) or None
 
-    embedder = _build_langchain_embedder(provider, model_name, api_key, api_url)
+    embedder = await run_in_thread(_build_langchain_embedder, provider, model_name, api_key, api_url)
     vector = await run_in_thread(embedder.embed_query, text)
     logger.debug(f"[embedding/{purpose}] remote vector dim={len(vector)}")
     return vector
@@ -361,12 +359,9 @@ def _build_langchain_embedder(provider: str | None, model_name: str, api_key: st
     p = (provider or "").lower()
 
     if p == "ollama":
-        from langchain_ollama import OllamaEmbeddings
+        from src.ollama_policy import OllamaClient
 
-        kwargs = {"model": model_name}
-        if api_url:
-            kwargs["base_url"] = api_url
-        return OllamaEmbeddings(**kwargs)
+        return OllamaClient(api_url, model_name, "embedding")
 
     if p in ("google_genai", "google"):
         from langchain_google_genai import GoogleGenerativeAIEmbeddings
@@ -442,13 +437,13 @@ async def _call_remote_translation(
             tgt_lang=tgt_name,
         )
     else:
-        llm = _build_langchain_vision_model(provider, model_name or "gpt-4o-mini", api_key, api_url)
+        llm = await run_in_thread(_build_langchain_vision_model, provider, model_name or "gpt-4o-mini", api_key, api_url, **({"role": "translator"} if p == "ollama" else {}))
         translator = RemoteTranslator(llm=llm, tgt_lang=tgt_name)
 
     logger.debug(f"[translation/remote] '{provider or 'LLM'}' → {tgt_name} | model='{model_name or 'default'}'")
     # Always pass backward=False: direction is already encoded in tgt_name
     result = await run_in_thread(translator.translate, text, False)
-    logger.debug(f"[translation/remote] result: {result[:60]}{'...' if len(result) > 60 else ''}")
+    logger.debug("[translation/remote] Received {} characters", len(result))
     return result
 
 
@@ -493,7 +488,7 @@ async def _call_remote_ocr(cfg: dict, file_path: str) -> str:
     api_key = cfg.get("api_key")
     api_url = cfg.get("url")
 
-    llm = _build_langchain_vision_model(provider, model_name, api_key, api_url)
+    llm = await run_in_thread(_build_langchain_vision_model, provider, model_name, api_key, api_url, **({"role": "ocr"} if provider == "ollama" else {}))
     ocr = RemoteOCR(llm)
     return await run_in_thread(ocr.extract_text, file_path)
 
