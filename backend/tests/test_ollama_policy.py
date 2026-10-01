@@ -152,6 +152,34 @@ def test_text_only_model_rejected_for_image():
         with pytest.raises(ValueError, match='vision'):
             p.resolve_ollama_policy(None,'text-model','vision').require_vision()
 
+
+def test_custom_ollama_url_is_used_for_metadata_and_inference():
+    p = policy_module()
+    from langchain_core.messages import HumanMessage
+
+    base_url = 'https://ollama.example:11435/'
+    request_urls = []
+
+    def request(url, payload, timeout):
+        request_urls.append(url)
+        if url.endswith('/api/show'):
+            assert payload == {'model': 'custom-vision-model'}
+            return {'capabilities':['vision'], 'model_info':{'x.context_length':8192}}
+        return {'message':{'content':'Processed by the custom Ollama server.'}}
+
+    with (
+        patch.object(p, 'configured_model_roles', return_value=['vision']),
+        patch.object(p, '_request', side_effect=request),
+    ):
+        client = p.OllamaClient(base_url, 'custom-vision-model', 'vision')
+        response = client.invoke([HumanMessage(content='Describe this photo.')])
+
+    assert response.content == 'Processed by the custom Ollama server.'
+    assert request_urls == [
+        'https://ollama.example:11435/api/show',
+        'https://ollama.example:11435/api/chat',
+    ]
+
 @pytest.mark.parametrize('role', ['vision','clip','ocr','translator','embedding'])
 def test_request_carries_context_and_embedding_disables_truncation(role):
     p = policy_module()

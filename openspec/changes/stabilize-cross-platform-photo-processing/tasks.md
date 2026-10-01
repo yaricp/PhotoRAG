@@ -33,6 +33,6 @@
 - [ ] 5.1 Run focused backend migration/queue/inference/retry tests and frontend pagination/date/banner tests; run existing project checks and `openspec validate`.
 - [ ] 5.2 Exercise the `verification.md` 24-photo scenario on the 16 GiB macOS test host, checking database outputs, Ollama runner stability, effective context, queue limits and complete UI history.
 - [ ] 5.3 Exercise the same model/configuration and failure/retry paths on Windows x64 with 8 GiB RAM and a Linux host; record limitations as explicit errors rather than hangs or false success.
-- [ ] 5.4 Verify a lower-context Ollama model, a text-only model selected for an image role, the same model assigned to several functions, an unavailable Ollama server, and a custom Ollama URL.
+- [x] 5.4 Verify a lower-context Ollama model, a text-only model selected for an image role, the same model assigned to several functions, an unavailable Ollama server, and a custom Ollama URL.
 - [ ] 5.5 Build macOS universal, Windows x64/ARM64 and Linux x64/ARM64 candidates from the same source revision; inspect bundled backend/frontend and smoke-test real packaged installs where hardware is available.
 - [ ] 5.6 Confirm upgrading a previous test install does not repull models, reinstall the Python environment, erase photos, or silently resume interrupted work; record candidate versions and checksums before release decisions.
