@@ -181,10 +181,17 @@ export function FoldersPage() {
 }
 
 function WatcherCard({ watcher: w, onDelete }: { watcher: Watcher; onDelete: () => void }) {
-    const { t } = useTranslation()
+    const { t, i18n } = useTranslation()
     const statusVariant = w.status === 'active' ? 'success'
         : w.status === 'error' ? 'error'
             : 'processing'
+    const statusLabels: Record<string, string> = {
+        active: t('folders.watcherStatusActive'),
+        inactive: t('folders.watcherStatusInactive'),
+        error: t('folders.watcherStatusError'),
+    }
+    const statusLabel = statusLabels[w.status] ?? t('folders.watcherStatusUnknown')
+    const updatedAt = formatWatcherUpdatedAt(w.updated_at, i18n.resolvedLanguage ?? i18n.language)
 
     return (
         <div className="folder-card">
@@ -201,15 +208,26 @@ function WatcherCard({ watcher: w, onDelete }: { watcher: Watcher; onDelete: () 
                     </div>
                 </div>
                 <div className="folder-card__meta">
-                    <Badge variant={statusVariant}>{w.status}</Badge>
+                    <Badge variant={statusVariant}>{statusLabel}</Badge>
                     <span className="folder-card__time">
-                        {t('folders.updatedAt')} {new Date(w.updated_at).toLocaleString()}
+                        {t('folders.updatedAt')} {updatedAt ?? t('folders.updatedAtUnknown')}
                     </span>
                 </div>
             </div>
             <Button variant="danger" onClick={onDelete}>{t('folders.delete')}</Button>
         </div>
     )
+}
+
+function formatWatcherUpdatedAt(value: string | null, language: string): string | null {
+    if (typeof value !== 'string' || value.trim() === '') return null
+
+    const trimmed = value.trim()
+    const isoWithTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(trimmed)
+    const date = new Date(isoWithTimezone ? trimmed : `${trimmed}Z`)
+    if (Number.isNaN(date.getTime())) return null
+
+    return date.toLocaleString(language)
 }
 
 function ScannerCard({ scanner: s, onDelete }: { scanner: FolderScanner; onDelete: () => void }) {

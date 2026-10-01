@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Generic, List, Optional, TypeVar
 
 if TYPE_CHECKING:
     from src.models import HistoryAction
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
 T = TypeVar("T")
 
@@ -16,8 +16,17 @@ class Watcher(BaseModel):
     path: str
     status: str
     destination_path: str
+    updated_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+    @field_serializer("updated_at")
+    def serialize_updated_at(self, value: Optional[datetime]) -> Optional[str]:
+        if value is None:
+            return None
+        # Watcher timestamps are stored as naive UTC values by the existing schema.
+        value = value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value.astimezone(timezone.utc)
+        return value.isoformat()
 
 
 class WatchRequest(BaseModel):

@@ -3,7 +3,8 @@
 
 import importlib
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
@@ -89,6 +90,45 @@ def test_queue_status_endpoint_exposes_position_and_wait_time(routes, queue_stor
     assert client.get(f"/api/pipeline/runs/{second}/queue").json()["position"] == 1
     assert client.get(f"/api/pipeline/runs/{first}/queue").json()["position"] is None
     assert client.get("/api/pipeline/runs/99999/queue").status_code == 404
+
+
+def test_watchers_api_includes_updated_at_as_utc(routes, queue_store, monkeypatch):
+    _, factory = queue_store
+    updated_at = datetime(2026, 9, 30, 18, 42, 15)
+    with factory() as db:
+        watcher = models.Watcher(
+            path="/photos/inbox",
+            destination_path="/photos/organized",
+            status="active",
+            updated_at=updated_at,
+        )
+        db.add(watcher)
+        db.commit()
+        watcher_id = watcher.id
+
+    from src import deps
+
+    monkeypatch.setattr(deps, "SessionLocal", factory)
+    response = TestClient(routes.app).get("/api/watchers/")
+
+    assert response.status_code == 200
+    watcher = next(item for item in response.json() if item["id"] == watcher_id)
+    assert watcher["updated_at"] == "2026-09-30T18:42:15+00:00"
+
+    created_watcher = SimpleNamespace(
+        id=12,
+        path="/photos/new-inbox",
+        destination_path="/photos/new-organized",
+        status="active",
+        updated_at=datetime(2026, 9, 30, 19, 42, 15, tzinfo=timezone(timedelta(hours=3))),
+    )
+    monkeypatch.setattr(routes.watcher_service, "start_watcher", lambda *_args: created_watcher)
+    created = TestClient(routes.app).post(
+        "/api/watchers/",
+        json={"path": created_watcher.path, "destination_path": created_watcher.destination_path},
+    )
+    assert created.status_code == 200
+    assert created.json()["updated_at"] == "2026-09-30T16:42:15+00:00"
 
 
 def test_resume_endpoint_requeues_only_the_selected_interrupted_run(routes, queue_store):

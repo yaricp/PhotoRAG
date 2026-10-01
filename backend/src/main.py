@@ -317,7 +317,7 @@ def get_tesseract_status():
     }
 
 
-@app.post("/api/watchers/", tags=["Watchers"])
+@app.post("/api/watchers/", tags=["Watchers"], response_model=Watcher)
 def trigger_directory_watch_endpoint(request: WatchRequest, db: Session = Depends(get_db)):
     logger.info(f"Received watch request for path: {request.path}")
     watcher = watcher_service.start_watcher(db, request.path, request.destination_path)

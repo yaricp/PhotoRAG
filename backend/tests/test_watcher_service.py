@@ -33,7 +33,7 @@ def test_start_watcher_starts_observer_when_db_status_is_active_but_not_running(
 
     start_observer.assert_called_once_with(watcher.path, watcher.destination_path)
     update_status.assert_called_once_with(ANY, watcher.id, "active")
-    assert result == {"status": "watching", "target": watcher.path, "id": watcher.id}
+    assert result is watcher
     assert service.active == [
         {"id": watcher.id, "path": watcher.path, "observer": observer},
     ]

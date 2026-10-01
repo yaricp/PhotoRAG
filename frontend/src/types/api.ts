@@ -67,7 +67,7 @@ export interface Watcher {
     id: number
     path: string
     status: string
-    updated_at: string
+    updated_at: string | null
     destination_path: string
 }
 

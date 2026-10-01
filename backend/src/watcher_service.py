@@ -38,7 +38,7 @@ class WatcherService:
         logger.info("All watchers started")
         return {"message": "watchers started"}
 
-    def start_watcher(self, db, path: str, destination_path: str) -> dict:
+    def start_watcher(self, db, path: str, destination_path: str):
         logger.info(f"Starting watcher for path: {path}")
         watcher_db = get_or_create_watcher(db, path, destination_path)
         if self._get_active_watcher(watcher_db.id):
@@ -52,7 +52,7 @@ class WatcherService:
         self.active.append(new_watcher)
         watcher_db = update_watcher_status(db, watcher_db.id, "active")
         logger.info(f"Watcher started for path: {path}")
-        return {"status": "watching", "target": path, "id": watcher_db.id}
+        return watcher_db
 
     def _start_observer(self, path: str, destination_path: str):
         logger.info(f"Starting observer for path: {path}")
