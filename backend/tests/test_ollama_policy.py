@@ -21,6 +21,27 @@ def test_model_limit_bounds_context(limit, expected):
     assert policy.capacity_known is True
 
 
+def test_context_override_ignores_262k_server_default_without_changing_it():
+    import os
+
+    p = policy_module()
+    from langchain_core.messages import HumanMessage
+
+    requests = []
+    def request(url, payload, timeout):
+        requests.append((url, payload))
+        return {'message':{'content':'Description'}}
+
+    metadata = {'capabilities':['vision'], 'model_info':{'x.context_length':262144}}
+    with patch.dict(os.environ, {'OLLAMA_CONTEXT_LENGTH':'262144'}), patch.object(p, 'configured_model_roles', return_value=['vision']), patch.object(p, '_show', return_value=metadata), patch.object(p, '_host_memory_gib', return_value=16), patch.object(p, '_request', side_effect=request):
+        response = p.OllamaClient('http://localhost:11434', 'vision-model', 'vision').invoke([HumanMessage(content='Describe.')])
+        assert os.environ['OLLAMA_CONTEXT_LENGTH'] == '262144'
+
+    assert response.content == 'Description'
+    assert requests[0][1]['options']['num_ctx'] == 16384
+    assert requests[0][0].endswith('/api/chat')
+
+
 def test_same_model_has_stable_context_across_roles():
     p = policy_module()
     roles = ['vision', 'clip', 'ocr', 'translator', 'embedding']
