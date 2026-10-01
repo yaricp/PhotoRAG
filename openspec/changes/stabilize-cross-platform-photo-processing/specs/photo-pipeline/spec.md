@@ -72,22 +72,112 @@ PhotoRAG SHALL let a user retry a failed task or explicitly rerun a whole photo.
 - **WHEN** a retry still fails
 - **THEN** its new error remains visible and the previous attempt remains inspectable
 
-### Requirement: Interrupted work resumes only by user action
+### Requirement: Startup retry is opt-in and bounded
 
-PhotoRAG SHALL preserve queued/running work as paused or interrupted when an application session ends and SHALL NOT automatically restart those photos on the next application launch. The user SHALL be able to resume selected work explicitly.
+PhotoRAG SHALL provide a persisted Processing setting labeled `Retry unfinished tasks at startup`. It SHALL default to off for a new installation and remain off on upgrade unless the user explicitly enables it; an existing saved preference SHALL survive upgrades. When off, prior failed/interrupted tasks SHALL remain visible without automatic retry. When on, each application startup SHALL enqueue at most one new attempt for each eligible failed task and task interrupted while queued/running in a previous session, using the shared bounded queue. Successful tasks, explicitly paused work, and canceled work SHALL NOT be rerun. If an automatic attempt fails, it SHALL remain visible as failed and SHALL NOT retry again during the same application session. A later startup may retry it if the setting is still enabled.
 
-#### Scenario: App restarts after Ollama failure
+#### Scenario: Startup retry is disabled
 
-- **WHEN** PhotoRAG restarts with unfinished photo runs from the previous session
-- **THEN** those runs are visible as paused or interrupted
-- **AND** no old photo is automatically reprocessed
+- **WHEN** PhotoRAG starts with the setting off and prior failed or interrupted work exists
+- **THEN** the work remains visible and unchanged
+- **AND** no prior task is automatically enqueued
 
-#### Scenario: User chooses to resume
+#### Scenario: Startup retry is enabled
 
-- **WHEN** a user selects interrupted photos and requests resume
-- **THEN** they enter the same bounded queue as new work without losing prior task evidence
+- **WHEN** PhotoRAG starts with the setting on and prior failed/interrupted tasks exist
+- **THEN** one new attempt for each eligible task enters the shared bounded queue
+- **AND** successful tasks, explicitly paused work, and canceled work are not rerun
+- **AND** a task that fails again remains failed without an immediate retry loop
+
+#### Scenario: The app restarts after a task failed
+
+- **WHEN** an automatic attempt fails and the app later starts again with the setting still on
+- **THEN** the failed task may receive one new attempt in that new session
+- **AND** earlier attempts and successful independent outputs remain inspectable
 
 #### Scenario: A new photo arrives after restart
 
 - **WHEN** a watcher detects a new photo after the application has restarted
-- **THEN** that new photo may be queued normally without automatically resuming unrelated old photos
+- **THEN** that photo enters the normal shared queue independently of any opted-in recovery work
+
+### Requirement: Users can bulk-retry failed and incomplete tasks
+
+The Processing page SHALL provide a one-click `Restart all failed and unfinished tasks` action. It SHALL enqueue currently eligible failed/interrupted tasks through the shared bounded queue, exclude tasks already queued/running, preserve attempt history and successful task outputs, and use dependency-aware retry behavior. It SHALL show queue progress and SHALL be unavailable when there are no eligible tasks.
+
+#### Scenario: The user restarts all eligible work
+
+- **WHEN** the user clicks `Restart all failed and unfinished tasks`
+- **THEN** each eligible task is enqueued once through the shared queue
+- **AND** no successful task or already active attempt is duplicated
+- **AND** the Processing page shows the queued work and updated attempt counts
+
+#### Scenario: A bulk retry recovers a prerequisite
+
+- **WHEN** a failed prerequisite succeeds during a bulk retry
+- **THEN** dependent skipped tasks that become runnable are scheduled according to the dependency policy
+- **AND** independent successful outputs remain unchanged
+
+### Requirement: Processing tabs count and group unique photos
+
+PhotoRAG SHALL keep the in-progress and completed tab counts visible whether or not a tab is selected. Counts SHALL represent distinct photos, not pipeline runs or task attempts. A photo SHALL have at most one top-level card in the Processing view: while it has an active run it belongs to the in-progress tab; otherwise its latest settled outcome determines whether it belongs to the completed tab. The card SHALL show the number of attempts and provide access to their history.
+
+#### Scenario: A task is retried several times
+
+- **WHEN** the same photo has multiple completed or failed attempts
+- **THEN** the Processing page shows one photo card and increments its attempt count
+- **AND** its history still exposes every run, task state, and error
+- **AND** the completed-tab count increases by one photo, not by the number of attempts
+
+#### Scenario: A completed photo is being retried
+
+- **WHEN** a new attempt for a photo is queued or running
+- **THEN** that photo appears once in the in-progress tab
+- **AND** it does not also appear as a second card in the completed tab
+- **AND** prior attempts remain available from its history
+
+### Requirement: Processing shows active work before queued work
+
+The in-progress tab SHALL sort photos with currently executing work before photos waiting in the queue. Queued photos SHALL retain their queue order.
+
+#### Scenario: A watcher submits a large batch
+
+- **WHEN** one photo is being processed and other photos are queued
+- **THEN** the currently executing photo appears at the top of the in-progress list
+- **AND** queued photos appear after it in their expected queue order
+
+### Requirement: Completed outputs are collapsed while phase status remains visible
+
+Completed photo cards SHALL show phase/task states without hiding them behind the output disclosure. Detailed task results, including descriptions, tags, categories, and translations, SHALL be collapsed by default and expandable per photo.
+
+#### Scenario: A user scans completed photos
+
+- **WHEN** the completed tab is opened
+- **THEN** each photo's green/red phase and task markers remain visible
+- **AND** detailed generated results are initially collapsed
+- **AND** the user can expand a photo to inspect its outputs
+
+### Requirement: An active retry displays only its current attempt results
+
+While a retry is queued or running, its photo card SHALL display the phase/task names and states for the active attempt only. Prior outputs SHALL NOT be presented as if they were produced by the active retry; prior attempts and outputs remain available in history.
+
+#### Scenario: A failed tag task is retried
+
+- **WHEN** tag retry starts for a photo that already has outputs from an earlier attempt
+- **THEN** the in-progress card shows the retry's task names and live states without the prior tag results
+- **AND** the earlier attempt and output remain inspectable in history
+
+### Requirement: Model-generated tag writes are idempotent
+
+PhotoRAG SHALL deduplicate normalized tag labels from a single model response before persisting them and SHALL save photo/tag associations idempotently across retries. Duplicate labels or already existing associations SHALL NOT cause the entire tag task to fail with a uniqueness error.
+
+#### Scenario: The model returns the same tag more than once
+
+- **WHEN** Ollama returns duplicate normalized labels for one photo
+- **THEN** PhotoRAG persists one association per distinct tag using a deterministic confidence value
+- **AND** the task completes without a unique-constraint error
+
+#### Scenario: A retry returns a previously saved tag
+
+- **WHEN** a retried tag task returns a tag already associated with the photo
+- **THEN** PhotoRAG applies the documented idempotent update policy
+- **AND** other valid tags from that response are still saved

@@ -18,10 +18,12 @@ The acceptance checks below remain the future manual/platform acceptance plan. T
 | Limited Windows hardware | Repeat with the 8 GiB Windows test machine and the model chosen by the tester. | Work stays bounded. If the model cannot fit, tasks finish with actionable resource errors and remain retryable; the application does not hang indefinitely or claim success. |
 | Linux | Repeat normal import and one induced Ollama failure on a real Linux install. | The same context, queue, status, and retry contract holds without OS-specific code paths. |
 | Retry dependencies | Cause description to fail, then retry only that task after Ollama recovers. | Description, dependent translation/embedding, independent tags/categories, and prior attempt history have correct outcomes; no successful independent data disappears. |
-| Restart | Stop PhotoRAG while queued/running photos remain, then relaunch without user resume. | Old work is paused/interrupted and does not start. A selected manual resume uses the bounded queue; a new watched photo can still queue independently. |
-| Processing page | Complete more than 50 task records, inspect both tabs, then rerun one photo. | Every photo remains discoverable; each run exposes all applicable phases and old errors; new and old attempts are distinct. |
+| Startup retry | Stop PhotoRAG with queued/running work and leave failed tasks, then relaunch with the setting off and again with it on. | Off leaves old work visible and idle. On enqueues at most one attempt per eligible failed/interrupted task through the bounded queue; successful, explicitly paused, canceled, and already active work is not replayed; a second failure does not loop during that session. |
+| Bulk retry | Make several photos contain failed/interrupted tasks and click `Restart all failed and unfinished tasks`. | Every eligible task is enqueued once through the shared queue; completed outputs and attempt history remain; active work is not duplicated; queue progress and attempt counts update. |
+| Processing page | Complete more than 50 task records, inspect both tabs, then retry one photo several times. | Both tab counts remain visible and count distinct photos; a photo has one card and shows its attempt count; active photos sort before queued photos; completed outputs are collapsed while phase statuses remain visible; an active retry does not show previous outputs as current results. |
+| Duplicate tag output | Use or mock an Ollama tag response containing repeated normalized labels, then retry after some tags are already attached. | Each distinct tag association is saved once with deterministic confidence handling; valid results are not lost to a unique-constraint failure; retry history remains inspectable. |
 | Folder/status UI | Add an active watcher; load a legacy watcher without `updated_at`; save vision and translation model configurations after the banner appears. Repeat in English, Russian and Spanish. | No `Invalid Date`; active status has correct meaning; warning refreshes and uses the selected language; configured but unavailable is distinct from unconfigured. |
-| Upgrade/installers | Upgrade existing packaged installs and inspect one real runtime per OS, plus all target installer contents. | No model repull, venv reinstall, photo deletion, or silent recovery. Candidate binaries contain the same backend revision and pass packaging checks. |
+| Upgrade/installers | Upgrade existing packaged installs and inspect one real runtime per OS, plus all target installer contents. | No model repull, venv reinstall, or photo deletion. A missing retry preference defaults off; an existing preference survives the upgrade. Candidate binaries contain the same backend revision and pass packaging checks. |
 
 ## Evidence to capture
 
@@ -39,6 +41,17 @@ The acceptance checks below remain the future manual/platform acceptance plan. T
 - Repeating the full backend command on 2026-10-01 produced the same order-sensitive result and stalled after 92.93 seconds: 261 passed, 6 failed, and 4 errors before interruption. Running `tests/test_pipeline_admission_routes.py` by itself passed all 16 tests (including all `vec0` fixtures), and `tests/test_pipeline_queue.py` passed all 22 tests. This confirms the affected feature groups pass in isolation; the combined collection still leaks module-level dependency mocks. Task 5.1 remains open.
 - `/opt/anaconda3/bin/ruff check .` passed. `ruff format --check .` reported 10 files requiring formatting, including broad pre-existing files; no repository-wide reformat was applied. Frontend validation passed with 45 Vitest files / 320 tests, `npm run type-check`, ESLint with 12 warnings and no errors, and `npm run build`.
 - `openspec validate stabilize-cross-platform-photo-processing --strict` passed. The sandbox also denied access to Ollama at `127.0.0.1:11434`.
+
+## Latest packaged-Mac test feedback — 2026-10-02
+
+The installed `0.1.5-pre.6` run log (`photorag.log`, last modified 2026-10-02 00:11 local time) shows that the reported tag retries had more than one outcome:
+
+- For photo 7, the initial tag attempt and a retry both reached Ollama with `qwen3-vl:2b-instruct` and a 16,384-token effective context, but phase 1 failed while saving with `UNIQUE constraint failed: photo_tags.photo_id, photo_tags.tag_id`. A later retry ended with `TimeoutError: Ollama request deadline exceeded` after about 115 seconds. No successful tag-save event for photo 7 appears later in this log.
+- For photo 8, the initial attempt and its first retry failed on the same `photo_tags` unique constraint. A subsequent retry saved 29 tags successfully.
+- The log records successful Ollama call results before the unique-constraint errors. This points to duplicate tag labels or a repeated photo/tag association in persistence, rather than a model that never received or answered the request. The timeout for photo 7 is a separate failure mode and still needs to remain visible and retryable.
+- These are log-based findings, not a claim that every retry failed: photo 8 eventually succeeded. The regression test must cover both duplicate labels within one response and tags already persisted by an earlier attempt. No image contents or credentials are included here.
+
+The requested Processing refinements are now part of the acceptance scope: stable counts on both tabs, one photo card with an attempt count, active-before-queued sorting, collapsed completed outputs with phase markers still visible, and no previous outputs shown as current while a retry is active. Startup recovery is opt-in: the setting defaults off, and both startup retry and the one-click bulk action use the shared bounded queue.
 
 ## Cross-platform package candidates — 2026-10-01
 
