@@ -65,10 +65,11 @@ This step is not required for a clean **PhotoRAG** installation. Ollama is a sep
 
 ## 5. Verify the installer
 
-For the `0.1.5-pre.5` test build, run this command with the actual path to the DMG:
+For the `0.1.5-pre.6` test build, run this command with the actual path to the DMG:
 
 ```bash
-shasum -a 256 "$HOME/Downloads/PhotoRAG-0.1.5-pre.5-universal.dmg"
+shasum -a 256 "$HOME/Downloads/PhotoRAG-0.1.5-pre.6-universal.dmg"
+# Expected SHA-256: 3b6a2b7d70ca2d350905f377612fb6bd294808a62800987d96ce93c838699d4e
 ```
 
 Expected SHA-256 for this test build: `3cb8017e1ca8d56fa9ad4bee22a658c962c9f19fc89a8f5e527bd030c88e9ebb`. For another version, use its `SHA256SUMS` file or build notes.
