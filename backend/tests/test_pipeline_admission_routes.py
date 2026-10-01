@@ -375,6 +375,30 @@ def test_model_save_conflicts_with_running_photo_without_mutation(routes, queue_
         assert db.query(models.AIModelConfig).one().model_provider == "ollama"
 
 
+def test_model_save_remains_available_while_photo_is_queued(routes, queue_store, monkeypatch):
+    from src.schemas import AIModelConfigUpdate
+
+    queue, factory = queue_store
+    queued_run_id = queue.enqueue_photo_run(2, "manual")
+    monkeypatch.setattr("src.ollama_policy.validate_configuration", lambda *_args: None)
+
+    with factory() as db:
+        saved = routes.update_model_endpoint(
+            "vision",
+            AIModelConfigUpdate(
+                mode="remote",
+                model_provider="ollama",
+                model_name="qwen3-vl:2b-instruct",
+                url="http://localhost:11434",
+            ),
+            db,
+        )
+        assert (saved.mode, saved.model_provider, saved.model_name) == (
+            "remote", "ollama", "qwen3-vl:2b-instruct"
+        )
+        assert db.get(models.PipelineRun, queued_run_id).status == "queued"
+
+
 @pytest.mark.asyncio
 async def test_startup_failure_releases_lifecycle_owner(routes, queue_store, monkeypatch):
     from src.db import database
