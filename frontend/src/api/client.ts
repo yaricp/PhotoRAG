@@ -5,6 +5,8 @@ import type {
     AIModelConfig, AIModelConfigUpdate, OllamaPolicyStatus, PaginatedPipelineRuns, PipelineRunBucket, PipelineTask, Prompt
 } from '@/types/api'
 
+export const MODEL_CONFIGS_CHANGED_EVENT = 'photorag:model-configs-changed'
+
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
     const base = await getBaseUrl()
     const res = await fetch(`${base}${path}`, {
@@ -201,10 +203,12 @@ export async function getOllamaPolicyStatus(): Promise<OllamaPolicyStatus[]> {
 }
 
 export async function updateModelConfig(type: string, config: AIModelConfigUpdate): Promise<AIModelConfig> {
-    return apiFetch<AIModelConfig>(`/api/models/${type}`, {
+    const updated = await apiFetch<AIModelConfig>(`/api/models/${type}`, {
         method: 'PUT',
         body: JSON.stringify(config),
     })
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event(MODEL_CONFIGS_CHANGED_EVENT))
+    return updated
 }
 
 export interface ExactDuplicateEntry {

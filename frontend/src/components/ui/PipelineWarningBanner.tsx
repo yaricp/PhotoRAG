@@ -1,71 +1,128 @@
-import React, { useState, useEffect } from 'react'
-import { getModelConfigs, getSystemStatus } from '../../api/client'
-import { AIModelConfig, ModelStatus } from '../../types/api'
+import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { getModelConfigs, getSystemStatus, MODEL_CONFIGS_CHANGED_EVENT } from '../../api/client'
+import type { AIModelConfig, ModelStatus } from '../../types/api'
 import './PipelineWarningBanner.css'
 
-// Models used in the photo ingestion pipeline (chat is not included)
 const PIPELINE_MODELS = ['vision', 'clip', 'ocr', 'embedding', 'translator'] as const
 type PipelineModel = typeof PIPELINE_MODELS[number]
 
-const MODEL_LABELS: Record<PipelineModel, string> = {
-    vision:     'Vision (image description)',
-    clip:       'CLIP (tagging)',
-    ocr:        'OCR (text extraction)',
-    embedding:  'Embedding (semantic search)',
-    translator: 'Translation',
+const MODEL_LABEL_KEYS: Record<PipelineModel, string> = {
+    vision: 'pipelineWarning.models.vision',
+    clip: 'pipelineWarning.models.clip',
+    ocr: 'pipelineWarning.models.ocr',
+    embedding: 'pipelineWarning.models.embedding',
+    translator: 'pipelineWarning.models.translator',
 }
 
-// Providers that work without an API key (self-hosted)
 const KEYLESS_PROVIDERS = new Set(['ollama'])
+const REFRESH_INTERVAL_MS = 5000
 
-function isConfigured(config: AIModelConfig, status: ModelStatus | undefined): boolean {
-    if (config.mode === 'local') {
-        // Local model is configured as long as it hasn't hard-failed.
-        // 'loading' / 'pending' are transient startup states, not a problem.
-        return status?.status !== 'error'
+interface PipelineWarnings {
+    unconfigured: PipelineModel[]
+    unavailable: PipelineModel[]
+}
+
+function evaluatePipelineWarnings(
+    configs: AIModelConfig[],
+    statuses: ModelStatus[],
+): PipelineWarnings {
+    const configByType = new Map(configs.map(config => [config.type, config]))
+    const statusByName = new Map(statuses.map(status => [status.name, status]))
+    const unconfigured: PipelineModel[] = []
+    const unavailable: PipelineModel[] = []
+
+    for (const type of PIPELINE_MODELS) {
+        const config = configByType.get(type)
+        if (!config || !config.model_name.trim() || (
+            config.mode === 'remote'
+            && !KEYLESS_PROVIDERS.has(config.model_provider ?? '')
+            && !config.api_key?.trim()
+        )) {
+            unconfigured.push(type)
+            continue
+        }
+
+        // ModelState reports local worker/runtime failures. Remote provider health
+        // is not represented there, so do not treat stale local states as remote errors.
+        if (config.mode === 'local' && statusByName.get(type)?.status === 'error') {
+            unavailable.push(type)
+        }
     }
-    // Remote: needs an api_key unless it's a keyless provider like Ollama
-    if (KEYLESS_PROVIDERS.has(config.model_provider ?? '')) return true
-    return !!(config.api_key?.trim())
+
+    return { unconfigured, unavailable }
 }
 
 export function PipelineWarningBanner() {
-    const [unconfigured, setUnconfigured] = useState<string[]>([])
-    const [dismissed, setDismissed] = useState(false)
+    const { t } = useTranslation()
+    const [warnings, setWarnings] = useState<PipelineWarnings>({ unconfigured: [], unavailable: [] })
+    const [dismissedKey, setDismissedKey] = useState<string | null>(null)
+    const warningKey = JSON.stringify(warnings)
 
     useEffect(() => {
-        Promise.all([getModelConfigs(), getSystemStatus()])
-            .then(([configs, statusResp]) => {
-                const statusMap = new Map<string, ModelStatus>(
-                    statusResp.models.map(m => [m.name, m])
-                )
-                const missing = configs
-                    .filter((c): c is AIModelConfig & { type: PipelineModel } =>
-                        (PIPELINE_MODELS as readonly string[]).includes(c.type)
-                    )
-                    .filter(c => !isConfigured(c, statusMap.get(c.type)))
-                    .map(c => MODEL_LABELS[c.type])
-                setUnconfigured(missing)
-            })
-            .catch(() => { /* backend not yet ready, ignore */ })
+        let active = true
+        let refreshing = false
+
+        const refresh = async () => {
+            if (refreshing) return
+            refreshing = true
+            try {
+                const [configs, systemStatus] = await Promise.all([getModelConfigs(), getSystemStatus()])
+                if (active) setWarnings(evaluatePipelineWarnings(configs, systemStatus.models))
+            } catch {
+                // Keep the last known warning when the backend is briefly unreachable.
+            } finally {
+                refreshing = false
+            }
+        }
+
+        const handleConfigChange = () => { void refresh() }
+        void refresh()
+        const interval = window.setInterval(() => { void refresh() }, REFRESH_INTERVAL_MS)
+        window.addEventListener(MODEL_CONFIGS_CHANGED_EVENT, handleConfigChange)
+
+        return () => {
+            active = false
+            window.clearInterval(interval)
+            window.removeEventListener(MODEL_CONFIGS_CHANGED_EVENT, handleConfigChange)
+        }
     }, [])
 
-    if (!unconfigured.length || dismissed) return null
+    useEffect(() => {
+        if (warnings.unconfigured.length === 0 && warnings.unavailable.length === 0) {
+            setDismissedKey(null)
+        }
+    }, [warningKey, warnings.unconfigured.length, warnings.unavailable.length])
+
+    if ((warnings.unconfigured.length === 0 && warnings.unavailable.length === 0) || dismissedKey === warningKey) {
+        return null
+    }
+
+    const formatModels = (models: PipelineModel[]) => models.map(type => t(MODEL_LABEL_KEYS[type])).join(', ')
 
     return (
         <div className="pipeline-warning-banner" role="alert">
             <span className="pipeline-warning-banner__icon">⚠</span>
-            <span className="pipeline-warning-banner__text">
-                <strong>Some pipeline steps will be skipped:</strong>
-                {' '}
-                {unconfigured.join(', ')}.
-                {' '}
-                Configure them in <strong>Settings → Models</strong>.
-            </span>
+            <div className="pipeline-warning-banner__text">
+                {warnings.unconfigured.length > 0 && (
+                    <p>
+                        <strong>{t('pipelineWarning.missingTitle')}</strong>{' '}
+                        {formatModels(warnings.unconfigured)}.{' '}
+                        {t('pipelineWarning.missingAction')}
+                    </p>
+                )}
+                {warnings.unavailable.length > 0 && (
+                    <p>
+                        <strong>{t('pipelineWarning.unavailableTitle')}</strong>{' '}
+                        {formatModels(warnings.unavailable)}.{' '}
+                        {t('pipelineWarning.unavailableAction')}
+                    </p>
+                )}
+            </div>
             <button
                 className="pipeline-warning-banner__dismiss"
-                onClick={() => setDismissed(true)}
-                aria-label="Dismiss warning"
+                onClick={() => setDismissedKey(warningKey)}
+                aria-label={t('pipelineWarning.dismiss')}
             >
                 ✕
             </button>

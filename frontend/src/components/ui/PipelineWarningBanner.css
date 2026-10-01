@@ -20,6 +20,14 @@
     min-width: 0;
 }
 
+.pipeline-warning-banner__text p {
+    margin: 0;
+}
+
+.pipeline-warning-banner__text p + p {
+    margin-top: 4px;
+}
+
 .pipeline-warning-banner__dismiss {
     flex-shrink: 0;
     background: transparent;

@@ -313,6 +313,20 @@
       "launching": "Launching…"
     }
   },
+  "pipelineWarning": {
+    "missingTitle": "Some pipeline steps are not configured:",
+    "missingAction": "Configure them in Settings → Models.",
+    "unavailableTitle": "Configured models are temporarily unavailable:",
+    "unavailableAction": "Check the model or server in Settings → Models.",
+    "dismiss": "Dismiss warning",
+    "models": {
+      "vision": "Vision (image description)",
+      "clip": "CLIP (tagging)",
+      "ocr": "OCR (text extraction)",
+      "embedding": "Embedding (semantic search)",
+      "translator": "Translation"
+    }
+  },
   "common": {
     "openInMaps": "Open in Google Maps ↗",
     "chooseFolder": "Choose folder",

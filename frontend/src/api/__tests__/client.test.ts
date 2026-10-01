@@ -7,6 +7,24 @@ vi.mock('../base', () => ({
 }))
 
 describe('api client', () => {
+    it('notifies the pipeline warning when a model configuration is saved', async () => {
+        server.use(
+            http.put('http://localhost:8000/api/models/:type', async ({ params, request }) =>
+                HttpResponse.json({ ...await request.json() as object, id: 1, type: params.type })),
+        )
+        const { MODEL_CONFIGS_CHANGED_EVENT, updateModelConfig } = await import('../client')
+        const changed = vi.fn()
+        window.addEventListener(MODEL_CONFIGS_CHANGED_EVENT, changed)
+
+        try {
+            await updateModelConfig('vision', { mode: 'local', model_name: 'qwen3-vl:2b-instruct' })
+        } finally {
+            window.removeEventListener(MODEL_CONFIGS_CHANGED_EVENT, changed)
+        }
+
+        expect(changed).toHaveBeenCalledOnce()
+    })
+
     describe('photos', () => {
         it('getPhotos returns paginated result', async () => {
             const { getPhotos } = await import('../client')

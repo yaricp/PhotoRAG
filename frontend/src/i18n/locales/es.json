@@ -313,6 +313,20 @@
       "launching": "Lanzando…"
     }
   },
+  "pipelineWarning": {
+    "missingTitle": "Faltan configuraciones para algunos pasos del flujo:",
+    "missingAction": "Configúralas en Configuración → Modelos.",
+    "unavailableTitle": "Algunos modelos configurados no están disponibles temporalmente:",
+    "unavailableAction": "Comprueba el modelo o el servidor en Configuración → Modelos.",
+    "dismiss": "Ocultar aviso",
+    "models": {
+      "vision": "Visión (descripción de imágenes)",
+      "clip": "CLIP (etiquetado)",
+      "ocr": "OCR (extracción de texto)",
+      "embedding": "Embeddings (búsqueda semántica)",
+      "translator": "Traducción"
+    }
+  },
   "common": {
     "openInMaps": "Abrir en Google Maps ↗",
     "chooseFolder": "Elegir carpeta",
