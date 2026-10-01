@@ -314,7 +314,7 @@ class PipelineTask(Base):
     required = Column(Boolean, nullable=False, default=True)
     phase = Column(String, nullable=False)
     task_name = Column(String, nullable=False)
-    status = Column(String, nullable=False, default="pending")  # pending|running|done|failed
+    status = Column(String, nullable=False, default="pending")  # pending|running|done|failed|skipped|paused|interrupted
     error = Column(String, nullable=True)
     started_at = Column(DateTime, nullable=True)
     finished_at = Column(DateTime, nullable=True)

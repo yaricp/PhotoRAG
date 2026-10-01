@@ -121,10 +121,38 @@ def finalize_pipeline_run(run_id: int) -> str:
             raise ValueError("Unknown pipeline run")
         tasks = db.query(PipelineTask).filter_by(run_id=run_id).order_by(PipelineTask.id).all()
         latest = {(t.phase, t.task_name): t for t in tasks}
-        errors = [t for t in latest.values() if t.status != "done" and not (t.status == "skipped" and not t.required)]
-        run.status = "completed-with-errors" if errors or not tasks else "completed"
-        run.finished_at = datetime.now(timezone.utc)
-        run.summary = "; ".join(f"{t.task_name}: {t.error or t.skip_reason or t.status}" for t in errors)[:2000]
+        outcomes = list(latest.values())
+        statuses = {task.status for task in outcomes}
+
+        if run.status == "interrupted" or "interrupted" in statuses:
+            run.status = "interrupted"
+            run.finished_at = run.finished_at or datetime.now(timezone.utc)
+            interrupted = [task for task in outcomes if task.status == "interrupted"]
+            run.summary = "; ".join(
+                f"{task.task_name}: {task.error or task.skip_reason or 'interrupted'}" for task in interrupted
+            )[:2000] or run.summary
+        elif run.status == "paused" or "paused" in statuses:
+            run.status = "paused"
+            run.finished_at = None
+        elif run.status == "queued" and (not outcomes or statuses == {"pending"}):
+            run.status = "queued"
+            run.finished_at = None
+            run.summary = None
+        elif statuses.intersection({"pending", "running"}):
+            run.status = "running"
+            run.finished_at = None
+            run.summary = None
+        else:
+            errors = [
+                task
+                for task in outcomes
+                if task.status != "done" and not (task.status == "skipped" and not task.required)
+            ]
+            run.status = "completed-with-errors" if errors or not outcomes else "completed"
+            run.finished_at = datetime.now(timezone.utc)
+            run.summary = "; ".join(
+                f"{task.task_name}: {task.error or task.skip_reason or task.status}" for task in errors
+            )[:2000]
         db.commit()
         return run.status
 

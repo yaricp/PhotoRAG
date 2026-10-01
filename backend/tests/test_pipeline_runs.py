@@ -49,6 +49,41 @@ async def test_failed_run_survives_later_success(store):
         assert db.get(models.Photo, photo_id).description == "preserved"
 
 
+@pytest.mark.parametrize(
+    "initial_run_status,task_status,expected_run_status,finished",
+    [
+        ("queued", "pending", "queued", False),
+        ("running", "pending", "running", False),
+        ("running", "interrupted", "interrupted", True),
+        ("running", "paused", "paused", False),
+        ("paused", "pending", "paused", False),
+        ("interrupted", "pending", "interrupted", True),
+    ],
+)
+def test_finalization_preserves_lifecycle_states(store, initial_run_status, task_status, expected_run_status, finished):
+    _, factory, photo_id = store
+    run_id = tracker.create_pipeline_run(photo_id, "manual")
+    with factory() as db:
+        run = db.get(models.PipelineRun, run_id)
+        run.status = initial_run_status
+        db.add(
+            models.PipelineTask(
+                photo_id=photo_id,
+                run_id=run_id,
+                phase="phase_1",
+                task_name="vision_task",
+                status=task_status,
+            )
+        )
+        db.commit()
+
+    assert tracker.finalize_pipeline_run(run_id) == expected_run_status
+    with factory() as db:
+        run = db.get(models.PipelineRun, run_id)
+        assert run.status == expected_run_status
+        assert (run.finished_at is not None) is finished
+
+
 def test_legacy_migration_preserves_rows_and_interrupts_unfinished_work(tmp_path):
     from src.db import database
 
