@@ -19,6 +19,27 @@ beforeEach(() => {
 afterEach(() => { i18n.changeLanguage('en') })
 
 describe('ModelsPage i18n', () => {
+    it('shows the read-only shared Ollama context and selection reason', async () => {
+        i18n.changeLanguage('ru')
+        server.use(
+            http.get('http://localhost:8000/api/models/', () => HttpResponse.json([
+                { id: 1, type: 'vision', mode: 'remote', model_name: 'qwen3-vl:2b-instruct', model_provider: 'ollama' },
+                { id: 2, type: 'chat', mode: 'remote', model_name: 'qwen3-vl:2b-instruct', model_provider: 'ollama' },
+            ])),
+            http.get('http://localhost:8000/api/models/ollama-policy', () => HttpResponse.json([
+                { type: 'vision', model_name: 'qwen3-vl:2b-instruct', workload_roles: ['chat', 'vision'], effective_num_ctx: 8192, reason: 'English fallback', reason_code: 'capacity_bounded', vision_capable: true, capacity_known: true, native_num_ctx: 262144, local: true, host_memory_gib: 8 },
+                { type: 'chat', model_name: 'qwen3-vl:2b-instruct', workload_roles: ['chat', 'vision'], effective_num_ctx: 8192, reason: 'English fallback', reason_code: 'capacity_bounded', vision_capable: true, capacity_known: true, native_num_ctx: 262144, local: true, host_memory_gib: 8 },
+            ])),
+        )
+
+        render(<MemoryRouter><ModelsPage /></MemoryRouter>)
+        const vision = (await screen.findByText('Зрение (описание фото)')).closest('.model-card') as HTMLElement
+        const chat = screen.getByText('Чат (ИИ-агент)').closest('.model-card') as HTMLElement
+        expect(await within(vision).findByText('Контекстное окно: 8192 токенов')).toBeInTheDocument()
+        expect(within(vision).getByText('Автоматически выбрано для задачи «обработка изображений» с учётом 8.0 ГиБ ОЗУ и встроенного лимита модели (262144 токенов). Это не гарантирует, что модель поместится в память.')).toBeInTheDocument()
+        expect(within(chat).getByText('Контекстное окно: 8192 токенов')).toBeInTheDocument()
+    })
+
     it('reuses an installed Ollama model without opening a download dialog', async () => {
         const list = vi.fn().mockResolvedValue(['qwen3-vl:2b-instruct'])
         const pull = vi.fn()

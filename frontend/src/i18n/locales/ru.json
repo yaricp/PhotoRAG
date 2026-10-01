@@ -385,6 +385,15 @@
     "baseUrl": "Базовый URL",
     "modelName": "Название модели",
     "configSaved": "Конфигурация сохранена",
+    "contextWindow": "Контекстное окно: {{tokens}} токенов",
+    "contextImageWorkload": "обработка изображений",
+    "contextTextWorkload": "текстовая обработка",
+    "contextReasons": {
+      "capacity_bounded": "Автоматически выбрано для задачи «{{workload}}» с учётом {{memory}} ГиБ ОЗУ и встроенного лимита модели ({{limit}} токенов). Это не гарантирует, что модель поместится в память.",
+      "remote_capacity_unverified": "Не удалось измерить объём ОЗУ удалённого сервера, поэтому PhotoRAG использует консервативный контекст {{tokens}} токенов.",
+      "host_memory_unavailable": "Не удалось определить объём ОЗУ компьютера, поэтому PhotoRAG использует консервативный контекст {{tokens}} токенов.",
+      "model_context_unavailable": "Не удалось определить встроенный лимит контекста модели, поэтому PhotoRAG использует консервативный контекст {{tokens}} токенов."
+    },
     "ollamaPreparing": "Проверка модели…",
     "ollamaChecking": "Проверяем наличие {{model}} в Ollama…",
     "ollamaDownloading": "Скачиваем {{model}} в фоновом режиме…",

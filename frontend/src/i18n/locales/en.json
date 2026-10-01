@@ -385,6 +385,15 @@
     "baseUrl": "Base URL",
     "modelName": "Model name",
     "configSaved": "Configuration saved",
+    "contextWindow": "Context window: {{tokens}} tokens",
+    "contextImageWorkload": "image processing",
+    "contextTextWorkload": "text processing",
+    "contextReasons": {
+      "capacity_bounded": "Automatically selected for {{workload}} using {{memory}} GiB RAM and the model's native context limit ({{limit}} tokens). Model fit is not guaranteed.",
+      "remote_capacity_unverified": "The remote server's RAM cannot be measured, so PhotoRAG uses a conservative {{tokens}}-token context.",
+      "host_memory_unavailable": "Computer RAM could not be read, so PhotoRAG uses a conservative {{tokens}}-token context.",
+      "model_context_unavailable": "The model's native context limit is unavailable, so PhotoRAG uses a conservative {{tokens}}-token context."
+    },
     "ollamaPreparing": "Checking model…",
     "ollamaChecking": "Checking {{model}} in Ollama…",
     "ollamaDownloading": "Downloading {{model}} in the background…",

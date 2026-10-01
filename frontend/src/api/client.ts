@@ -2,7 +2,7 @@ import { getBaseUrl } from './base'
 import type {
     Photo, PaginatedPhotos, Watcher, Job,
     SystemStatus, SearchResult, ChatResponse, FolderScanner,
-    AIModelConfig, AIModelConfigUpdate, PipelineTask, Prompt
+    AIModelConfig, AIModelConfigUpdate, OllamaPolicyStatus, PipelineTask, Prompt
 } from '@/types/api'
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -194,6 +194,10 @@ export async function getGeopositions() {
 
 export async function getModelConfigs(): Promise<AIModelConfig[]> {
     return apiFetch<AIModelConfig[]>('/api/models/')
+}
+
+export async function getOllamaPolicyStatus(): Promise<OllamaPolicyStatus[]> {
+    return apiFetch<OllamaPolicyStatus[]>('/api/models/ollama-policy')
 }
 
 export async function updateModelConfig(type: string, config: AIModelConfigUpdate): Promise<AIModelConfig> {
@@ -439,4 +443,3 @@ export async function updatePrompt(key: string, text: string): Promise<Prompt> {
         body: JSON.stringify({ text }),
     })
 }
-

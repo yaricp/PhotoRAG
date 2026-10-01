@@ -23,9 +23,79 @@ def test_model_limit_bounds_context(limit, expected):
 
 def test_same_model_has_stable_context_across_roles():
     p = policy_module()
+    roles = ['vision', 'clip', 'ocr', 'translator', 'embedding']
     with patch.object(p, '_show', return_value={'capabilities':['vision'], 'model_info':{'x.context_length':262144}}), patch.object(p, '_host_memory_gib', return_value=16):
-        contexts = [p.resolve_ollama_policy(None,'anything',role).effective_num_ctx for role in ['vision','clip','ocr','translator']]
-    assert len(set(contexts)) == 1
+        contexts = [p.resolve_ollama_policy(None, 'shared', role, workload_roles=roles).effective_num_ctx for role in roles]
+    assert contexts == [16384] * len(roles)
+
+
+@pytest.mark.parametrize(
+    'role,memory,expected',
+    [('vision',16,16384), ('clip',8,8192), ('translator',16,8192), ('embedding',16,4096), ('translator',8,4096)],
+)
+def test_context_budget_uses_role_and_host_capacity(role, memory, expected):
+    p = policy_module()
+    with patch.object(p, '_show', return_value={'capabilities':['vision'], 'model_info':{'x.context_length':262144}}), patch.object(p, '_host_memory_gib', return_value=memory):
+        policy = p.resolve_ollama_policy('http://localhost:11434', 'model', role)
+    assert policy.effective_num_ctx == expected
+
+
+def test_context_budget_caps_to_largest_configured_role_for_shared_model():
+    p = policy_module()
+    roles = ['vision', 'translator', 'embedding']
+    with patch.object(p, '_show', return_value={'capabilities':['vision'], 'model_info':{'x.context_length':8192}}), patch.object(p, '_host_memory_gib', return_value=16):
+        contexts = [p.resolve_ollama_policy(None, 'shared', role, workload_roles=roles).effective_num_ctx for role in roles]
+    assert contexts == [8192, 8192, 8192]
+
+
+def test_pipeline_and_chat_client_use_the_same_configured_role_context():
+    p = policy_module()
+    roles = ['chat', 'translator', 'vision']
+    metadata = {'capabilities':['vision'], 'model_info':{'x.context_length':262144}}
+    with patch.object(p, 'configured_model_roles', return_value=roles), patch.object(p, '_show', return_value=metadata), patch.object(p, '_host_memory_gib', return_value=16):
+        pipeline_client = p.OllamaClient('http://localhost:11434', 'shared-model', 'translator')
+        chat_options = p.langchain_options('http://localhost:11434', 'shared-model', 'chat')
+    assert pipeline_client.policy.effective_num_ctx == 16384
+    assert chat_options['num_ctx'] == pipeline_client.policy.effective_num_ctx
+
+
+def test_configured_model_roles_match_server_and_model(monkeypatch, tmp_path):
+    p = policy_module()
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import Session
+
+    from src.db import database
+    from src.models import AIModelConfig
+
+    engine = create_engine(f"sqlite:///{tmp_path / 'model-config.db'}")
+    AIModelConfig.__table__.create(engine)
+    with Session(engine) as db:
+        db.add_all([
+            AIModelConfig(type='vision', mode='remote', model_provider='ollama', model_name='same', url=None),
+            AIModelConfig(type='clip', mode='remote', model_provider='ollama', model_name='same', url='http://localhost:11434/'),
+            AIModelConfig(type='ocr', mode='remote', model_provider='ollama', model_name='other', url='http://localhost:11434'),
+            AIModelConfig(type='translator', mode='remote', model_provider='ollama', model_name='same', url='https://ollama.example:11434'),
+        ])
+        db.commit()
+    monkeypatch.setattr(database, 'SessionLocal', lambda: Session(engine))
+    try:
+        assert p.configured_model_roles('http://localhost:11434', 'same', 'translator') == ['clip', 'translator', 'vision']
+    finally:
+        engine.dispose()
+
+
+def test_policy_status_uses_union_of_roles_for_shared_model():
+    p = policy_module()
+    from types import SimpleNamespace
+    configs = [
+        SimpleNamespace(type='vision',model_provider='ollama',mode='remote',model_name='v',url='http://localhost:11434'),
+        SimpleNamespace(type='translator',model_provider='ollama',mode='remote',model_name='v',url='http://localhost:11434'),
+    ]
+    policy = p.OllamaPolicy(16384, 'image role budget', True, True)
+    with patch.object(p, 'resolve_ollama_policy', return_value=policy) as resolve:
+        results = p.policy_status(configs)
+    assert len(results) == 2
+    resolve.assert_called_once_with('http://localhost:11434', 'v', 'translator', workload_roles=['translator', 'vision'])
 
 
 @pytest.mark.parametrize('metadata', [{}, {'model_info':{'bad.context_length':'invalid'}}])

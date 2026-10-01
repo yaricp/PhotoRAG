@@ -68,17 +68,19 @@ class OllamaPolicy:
     capacity_known: bool
     native_num_ctx: int | None = None
     local: bool = False
+    reason_code: str = 'remote_capacity_unverified'
+    host_memory_gib: float | None = None
 
     def require_vision(self):
         if self.vision_capable is False:
             raise ValueError('Selected Ollama model does not support vision; choose an image-capable model.')
 
 
-def resolve_ollama_policy(base_url, model_name, role):
-    """Use model capabilities rather than names; unknown capacity is never a fit claim.
+def resolve_ollama_policy(base_url, model_name, role, workload_roles=None):
+    """Choose one bounded context for all configured roles using this model.
 
-    A vision model receives the same budget in every role. Total physical memory
-    selects a conservative ceiling, not a prediction that model weights fit.
+    Role budgets describe request shape, host RAM and native model metadata cap
+    that budget. They do not claim that model weights will fit in available RAM.
     """
     local = is_local_ollama(base_url)
     try:
@@ -94,14 +96,68 @@ def resolve_ollama_policy(base_url, model_name, role):
     limit = min(limits) if limits else None
     memory = _host_memory_gib() if local else None
     known = memory is not None and limit is not None
-    # Unknown remote machines and small local hosts get a bounded attempt.
-    ceiling = 16384 if known and memory >= 16 else 8192 if known and memory >= 12 else 4096
-    budget = 16384 if vision else 4096
+    roles = set(workload_roles or ())
+    roles.add(role)
+    image_workload = bool(roles & IMAGE_ROLES)
+    if image_workload:
+        budget = 16384
+        budget_name = 'image-processing'
+    else:
+        role_budgets = {'chat': 8192, 'translator': 8192, 'embedding': 4096}
+        budget = max((role_budgets.get(item, 4096) for item in roles), default=4096)
+        budget_name = 'text-processing'
+
+    # Image workloads can use 8k on 8 GiB and 16k on 16 GiB hosts. Text
+    # workloads stay at 4k below 16 GiB. Remote RAM is not measurable locally.
+    if image_workload:
+        ceiling = 16384 if local and memory is not None and memory >= 16 else 8192 if local and memory is not None and memory >= 8 else 4096
+    else:
+        ceiling = 8192 if local and memory is not None and memory >= 16 else 4096
     effective = min(budget, ceiling, limit or 4096)
-    reason = ('Conservative local memory ceiling; model fit is not guaranteed.' if known else 'Capacity unverified; conservative bounded attempt.')
+    if not local:
+        reason_code = 'remote_capacity_unverified'
+        reason = f'Remote host capacity is not measurable; {effective} tokens is the conservative {budget_name} context.'
+    elif memory is None:
+        reason_code = 'host_memory_unavailable'
+        reason = f'Host memory is unavailable; {effective} tokens is the conservative {budget_name} context.'
+    elif limit is None:
+        reason_code = 'model_context_unavailable'
+        reason = f'Model native context is unavailable; {effective} tokens is the conservative {budget_name} context.'
+    else:
+        reason_code = 'capacity_bounded'
+        reason = f'{effective} tokens selected for {budget_name}; host RAM {memory:.1f} GiB, model native limit {limit}. Model fit is not guaranteed.'
     if vision is None:
         reason += ' Vision compatibility unverified.'
-    return OllamaPolicy(effective, reason, vision, known, limit, local)
+    return OllamaPolicy(effective, reason, vision, known, limit, local, reason_code, memory)
+
+
+def _normalized_endpoint(url):
+    return (url or DEFAULT_URL).rstrip('/')
+
+
+def configured_model_roles(base_url, model_name, fallback_role):
+    """Read roles sharing this Ollama model/server; fall back safely without DB access."""
+    roles = {fallback_role}
+    endpoint = _normalized_endpoint(base_url)
+    try:
+        from src.db.database import SessionLocal
+        from src.models import AIModelConfig
+
+        with SessionLocal() as db:
+            configs = db.query(
+                AIModelConfig.type,
+                AIModelConfig.mode,
+                AIModelConfig.model_provider,
+                AIModelConfig.model_name,
+                AIModelConfig.url,
+            ).filter_by(mode='remote', model_provider='ollama', model_name=model_name).all()
+        for cfg in configs:
+            if cfg.mode == 'remote' and cfg.model_provider == 'ollama' and cfg.model_name == model_name and _normalized_endpoint(cfg.url) == endpoint:
+                roles.add(cfg.type)
+    except Exception:
+        # Keep inference bounded if the database is unavailable during startup or migration.
+        pass
+    return sorted(roles)
 
 
 # Each synchronous caller owns an event loop only inside its inference thread.
@@ -140,7 +196,8 @@ class OllamaClient:
         self.model_name = model_name
         self.role = role
         self._started = None
-        self.policy = resolve_ollama_policy(base_url, model_name, role)
+        roles = configured_model_roles(base_url, model_name, role)
+        self.policy = resolve_ollama_policy(base_url, model_name, role, workload_roles=roles)
         if role in IMAGE_ROLES:
             self.policy.require_vision()
 
@@ -263,24 +320,31 @@ def policy_status(configs):
     """Read-only serializable information; omit endpoint URLs and credentials."""
     from dataclasses import asdict
     result = []
-    policies = {}
+    grouped = {}
     for cfg in configs:
         if cfg.mode == 'remote' and cfg.model_provider == 'ollama':
-            endpoint = (cfg.url or DEFAULT_URL).rstrip('/')
+            endpoint = _normalized_endpoint(cfg.url)
             key = (endpoint, cfg.model_name)
-            if key not in policies:
-                policies[key] = resolve_ollama_policy(endpoint, cfg.model_name, cfg.type)
-            policy = policies[key]
-            result.append({'type':cfg.type, 'model_name':cfg.model_name, **asdict(policy)})
+            grouped.setdefault(key, set()).add(cfg.type)
+    policies = {
+        key: resolve_ollama_policy(key[0], key[1], min(roles), workload_roles=sorted(roles))
+        for key, roles in grouped.items()
+    }
+    for cfg in configs:
+        if cfg.mode == 'remote' and cfg.model_provider == 'ollama':
+            key = (_normalized_endpoint(cfg.url), cfg.model_name)
+            result.append({'type':cfg.type, 'model_name':cfg.model_name, 'workload_roles':sorted(grouped[key]), **asdict(policies[key])})
     return result
 
 
 def validate_configuration(role, mode, provider, model_name, base_url):
     if mode == 'remote' and provider == 'ollama' and role in IMAGE_ROLES:
-        resolve_ollama_policy(base_url, model_name, role).require_vision()
+        roles = configured_model_roles(base_url, model_name, role)
+        resolve_ollama_policy(base_url, model_name, role, workload_roles=roles).require_vision()
 
 
 def langchain_options(base_url, model_name, role):
     """Keep interactive tool-chat context aligned with pipeline model policy."""
-    policy = resolve_ollama_policy(base_url, model_name, role)
+    roles = configured_model_roles(base_url, model_name, role)
+    policy = resolve_ollama_policy(base_url, model_name, role, workload_roles=roles)
     return {'num_ctx':policy.effective_num_ctx, 'client_kwargs':{'timeout':INFERENCE_TIMEOUT}}

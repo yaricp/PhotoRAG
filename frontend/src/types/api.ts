@@ -136,6 +136,20 @@ export interface AIModelConfigUpdate {
     similarity_limit?: number
 }
 
+export interface OllamaPolicyStatus {
+    type: string
+    model_name: string
+    workload_roles: string[]
+    effective_num_ctx: number
+    reason: string
+    reason_code: 'remote_capacity_unverified' | 'host_memory_unavailable' | 'model_context_unavailable' | 'capacity_bounded'
+    vision_capable: boolean | null
+    capacity_known: boolean
+    native_num_ctx: number | null
+    local: boolean
+    host_memory_gib: number | null
+}
+
 export interface Prompt {
     id: number
     key: string

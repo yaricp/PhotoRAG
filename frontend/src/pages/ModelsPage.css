@@ -242,6 +242,21 @@
     font-size: 12px;
 }
 
+.model-card__ollama-policy {
+    background: rgba(96, 165, 250, 0.08);
+    border: 1px solid rgba(96, 165, 250, 0.2);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--color-text);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.model-card__ollama-policy p {
+    color: var(--color-text-dim);
+    margin: 4px 0 0;
+}
+
 .model-card__progress {
     height: 7px;
     overflow: hidden;

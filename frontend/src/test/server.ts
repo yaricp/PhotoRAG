@@ -117,6 +117,10 @@ export const handlers = [
         HttpResponse.json([])
     ),
 
+    http.get(`${BASE}/api/models/ollama-policy`, () =>
+        HttpResponse.json([])
+    ),
+
     http.put(`${BASE}/api/models/:type`, ({ params }) =>
         HttpResponse.json({ id: 1, type: params.type, mode: 'remote', model_name: '' })
     ),

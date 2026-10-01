@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useCallback, useSyncExternalStore } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import { getModelConfigs, updateModelConfig, getSystemStatus } from '@/api/client'
-import type { AIModelConfig } from '@/types/api'
+import { getModelConfigs, getOllamaPolicyStatus, updateModelConfig, getSystemStatus } from '@/api/client'
+import type { AIModelConfig, OllamaPolicyStatus } from '@/types/api'
 import { ServerIcon, CloudIcon } from '@heroicons/react/24/outline'
 import { Spinner } from '@/components/ui/Spinner'
 import { PrivacyWarning } from '@/components/ui/PrivacyWarning'
@@ -55,6 +55,7 @@ export function ModelsPage() {
     const pendingTypes = useRef(new Set<string>())
     const ollamaDownloads = useSyncExternalStore(subscribeOllamaDownloads, getOllamaDownloadStates)
     const [modelStatuses, setModelStatuses] = useState<ModelStatusMap>({})
+    const [ollamaPolicies, setOllamaPolicies] = useState<OllamaPolicyStatus[]>([])
     const isWindowsApp = isWindowsAppPlatform()
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -78,17 +79,24 @@ export function ModelsPage() {
         pollRef.current = setInterval(fetchStatuses, 3000)
     }, [fetchStatuses])
 
+    const refreshOllamaPolicies = useCallback(() => {
+        getOllamaPolicyStatus()
+            .then(setOllamaPolicies)
+            .catch(() => setOllamaPolicies([]))
+    }, [])
+
     useEffect(() => {
         getModelConfigs()
             .then(data => {
                 setConfigs(isWindowsApp ? applyWindowsRemoteModelDefaults(data) : data)
+                refreshOllamaPolicies()
                 setError(null)
             })
-            .catch(err => setError(err.message || t('models.error')))
+            .catch(err => setError(err instanceof Error ? err.message : t('models.error')))
             .finally(() => setLoading(false))
         startPolling()
         return () => { if (pollRef.current) clearInterval(pollRef.current) }
-    }, [startPolling, isWindowsApp])
+    }, [startPolling, isWindowsApp, refreshOllamaPolicies, t])
 
     const persistConfig = async (config: AIModelConfig, showModal = true) => {
         setSaving(prev => new Set(prev).add(config.type))
@@ -102,10 +110,11 @@ export function ModelsPage() {
                 similarity_limit: config.similarity_limit ?? undefined,
             })
             setConfigs(prev => prev.map(c => c.type === updated.type ? updated : c))
+            refreshOllamaPolicies()
             if (showModal) setSavedType(config.type)
             if (config.mode === 'local') startPolling()
-        } catch (err: any) {
-            if (showModal) setError(err.message || t('models.errorSaving'))
+        } catch (err: unknown) {
+            if (showModal) setError(err instanceof Error ? err.message : t('models.errorSaving'))
             throw err
         } finally {
             setSaving(prev => {
@@ -158,6 +167,7 @@ export function ModelsPage() {
     }
 
     const handleChange = (type: string, field: keyof AIModelConfig, value: string) => {
+        setOllamaPolicies([])
         setOllamaSaved(prev => {
             const next = new Set(prev)
             next.delete(type)
@@ -240,6 +250,19 @@ export function ModelsPage() {
                     const percent = download?.total
                         ? Math.min(99, Math.round(download.completed / download.total * 100))
                         : download?.phase === 'ready' ? 100 : 0
+                    const ollamaPolicy = config.mode === 'remote' && config.model_provider === 'ollama'
+                        ? ollamaPolicies.find(policy => policy.type === config.type && policy.model_name === config.model_name)
+                        : undefined
+                    const imageWorkload = ollamaPolicy?.workload_roles.some(role => ['vision', 'ocr', 'clip'].includes(role)) ?? false
+                    const ollamaReason = ollamaPolicy
+                        ? t(`models.contextReasons.${ollamaPolicy.reason_code}`, {
+                            tokens: ollamaPolicy.effective_num_ctx,
+                            workload: t(imageWorkload ? 'models.contextImageWorkload' : 'models.contextTextWorkload'),
+                            memory: ollamaPolicy.host_memory_gib?.toFixed(1) ?? '?',
+                            limit: ollamaPolicy.native_num_ctx ?? '?',
+                            defaultValue: ollamaPolicy.reason,
+                        })
+                        : null
                     return <div key={config.id} className="model-card">
                         <div className="model-card__header">
                             <h2 className="model-card__title">
@@ -406,6 +429,11 @@ export function ModelsPage() {
                                 <p className="model-field__hint">{t('wizard.stepModelConfig.similarityHint')}</p>
                             </div>
                         )}
+
+                        {ollamaPolicy && ollamaReason && <div className="model-card__ollama-policy" role="note">
+                            <strong>{t('models.contextWindow', { tokens: ollamaPolicy.effective_num_ctx })}</strong>
+                            <p>{ollamaReason}</p>
+                        </div>}
 
                         {pendingKey && <div className="model-card__download" role="status" aria-live="polite">
                             <span>{saving.has(config.type) ? t('models.saving')
