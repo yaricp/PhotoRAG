@@ -13,7 +13,7 @@ from unittest.mock import MagicMock, patch
 
 import sqlalchemy.types
 
-for _mod in [
+_MOCKED_MODULES = [
     "sqlite_vec",
     "langgraph",
     "langgraph.graph",
@@ -41,8 +41,11 @@ for _mod in [
     "src.watcher_service",
     "src.task_notifier",
     "src.deps",
-]:
-    sys.modules.setdefault(_mod, MagicMock())
+    # This test exercises duplicate endpoints, not graph execution. Isolate the
+    # agent graph import instead of leaving a fake top-level `langgraph` in
+    # sys.modules for the rest of the suite.
+    "src.graphs.ai_agent",
+]
 
 import os
 
@@ -80,8 +83,13 @@ def db():
 
 
 @pytest.fixture
-def client(db):
-    # Import app fresh (all heavy deps already mocked at module level)
+def client(db, monkeypatch):
+    # Scope optional service stubs to this client so tests do not contaminate
+    # later imports with fake packages in sys.modules.
+    for module_name in _MOCKED_MODULES:
+        monkeypatch.setitem(sys.modules, module_name, MagicMock())
+
+    # Import app fresh with only the integrations this endpoint test does not use mocked.
     sys.modules.pop("src.main", None)
     import src.main as main_mod
 
@@ -90,7 +98,13 @@ def client(db):
         yield db
 
     main_mod.app.dependency_overrides[sys.modules["src.deps"].get_db] = override_get_db
-    return TestClient(main_mod.app)
+    test_client = TestClient(main_mod.app)
+    try:
+        yield test_client
+    finally:
+        test_client.close()
+        main_mod.app.dependency_overrides.clear()
+        sys.modules.pop("src.main", None)
 
 
 # ── GET /api/duplicates/ ──────────────────────────────────────────────────────

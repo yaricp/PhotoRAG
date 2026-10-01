@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import sqlalchemy.types
 
-for _mod in [
+_MOCKED_MODULES = [
     "sqlite_vec",
     "langgraph",
     "langgraph.graph",
@@ -32,15 +32,17 @@ for _mod in [
     "src.watcher_service",
     "src.task_notifier",
     "src.deps",
-]:
-    sys.modules.setdefault(_mod, MagicMock())
+    "src.graphs.ai_agent",
+]
 
 import pytest
 from fastapi.testclient import TestClient
 
 
 @pytest.fixture
-def client():
+def client(monkeypatch):
+    for module_name in _MOCKED_MODULES:
+        monkeypatch.setitem(sys.modules, module_name, MagicMock())
     sys.modules.pop("src.main", None)
     import src.main as main_mod
 
@@ -49,7 +51,13 @@ def client():
         yield MagicMock()
 
     main_mod.app.dependency_overrides[sys.modules["src.deps"].get_db] = override_get_db
-    return TestClient(main_mod.app)
+    test_client = TestClient(main_mod.app)
+    try:
+        yield test_client
+    finally:
+        test_client.close()
+        main_mod.app.dependency_overrides.clear()
+        sys.modules.pop("src.main", None)
 
 
 def test_get_garbage_summary_empty(client):
