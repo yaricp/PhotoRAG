@@ -12,6 +12,14 @@ from src.models import AIModelConfig, Photo, PipelineQueueEntry, PipelineRun, Pi
 ACTIVE = ("queued", "running")
 
 
+class PipelineRunNotFound(ValueError):
+    """Raised when a pipeline run ID does not exist."""
+
+
+class PipelineRunNotResumable(ValueError):
+    """Raised when a run is not paused or interrupted."""
+
+
 def _lane(db):
     configs = db.query(AIModelConfig).filter(AIModelConfig.type != "chat").all()
     for config in configs:
@@ -84,9 +92,9 @@ def resume_run(run_id):
     with SessionLocal() as db:
         old = db.get(PipelineRun, run_id)
         if old is None:
-            raise ValueError(f"Run {run_id} not found")
+            raise PipelineRunNotFound(f"Run {run_id} not found")
         if old.status not in ("interrupted", "paused"):
-            raise ValueError("Only interrupted or paused runs can be resumed")
+            raise PipelineRunNotResumable("Only interrupted or paused runs can be resumed")
         entry = db.get(PipelineQueueEntry, run_id)
         return enqueue_photo_run(
             old.photo_id,

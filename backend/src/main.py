@@ -1087,6 +1087,20 @@ def get_pipeline_run_queue_status_endpoint(run_id: int):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
+@app.post("/api/pipeline/runs/{run_id}/resume", tags=["Pipeline"])
+def resume_pipeline_run_endpoint(run_id: int):
+    """Explicitly enqueue a replacement for the selected paused/interrupted run."""
+    from src.pipeline_queue import PipelineRunNotFound, PipelineRunNotResumable, resume_run
+
+    try:
+        resumed_run_id = resume_run(run_id)
+    except PipelineRunNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except PipelineRunNotResumable as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {"status": "queued", "run_id": resumed_run_id, "resumed_from_run_id": run_id}
+
+
 @app.get("/api/pipeline/active", tags=["Pipeline"], response_model=List[PipelineTaskSchema])
 def get_active_pipeline_tasks_endpoint(db: Session = Depends(get_db)):
     """Return all currently pending or running pipeline tasks (for the Processing Page)."""

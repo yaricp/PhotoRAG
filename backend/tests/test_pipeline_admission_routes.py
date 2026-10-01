@@ -90,6 +90,42 @@ def test_queue_status_endpoint_exposes_position_and_wait_time(routes, queue_stor
     assert client.get("/api/pipeline/runs/99999/queue").status_code == 404
 
 
+def test_resume_endpoint_requeues_only_the_selected_interrupted_run(routes, queue_store):
+    queue, factory = queue_store
+    with factory() as db:
+        old = models.PipelineRun(photo_id=1, source="watcher", status="interrupted")
+        other = models.PipelineRun(photo_id=2, source="scanner", status="interrupted")
+        db.add_all([old, other])
+        db.flush()
+        db.add(models.PipelineQueueEntry(run_id=old.id, lane="local-ollama", retry_task_name="vision_task"))
+        original_task = models.PipelineTask(
+            photo_id=1, run_id=old.id, phase="phase_1", task_name="vision_task", status="interrupted", error="runner stopped"
+        )
+        db.add(original_task)
+        db.flush()
+        old_id, other_id, task_id = old.id, other.id, original_task.id
+        db.commit()
+
+    client = TestClient(routes.app)
+    response = client.post(f"/api/pipeline/runs/{old_id}/resume")
+    assert response.status_code == 200
+    resumed_id = response.json()["run_id"]
+    assert response.json()["resumed_from_run_id"] == old_id
+    with factory() as db:
+        assert db.get(models.PipelineRun, old_id).status == "interrupted"
+        assert db.get(models.PipelineRun, other_id).status == "interrupted"
+        assert (db.get(models.PipelineTask, task_id).status, db.get(models.PipelineTask, task_id).error) == (
+            "interrupted", "runner stopped"
+        )
+        resumed = db.get(models.PipelineRun, resumed_id)
+        assert (resumed.photo_id, resumed.status, resumed.source) == (1, "queued", "resume")
+        assert db.get(models.PipelineQueueEntry, resumed_id).retry_task_name == "vision_task"
+
+    assert client.post("/api/pipeline/runs/99999/resume").status_code == 404
+    running_id = queue.enqueue_photo_run(3, "manual")
+    assert client.post(f"/api/pipeline/runs/{running_id}/resume").status_code == 409
+
+
 def test_agent_rerun_uses_shared_admission_without_clearing(routes, queue_store, monkeypatch):
     queue, factory = queue_store
     tools = importlib.import_module("src.graphs.tools")
