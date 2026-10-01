@@ -3,6 +3,7 @@
 
 import importlib
 import sys
+from datetime import datetime
 from unittest.mock import MagicMock
 
 import pytest
@@ -124,6 +125,94 @@ def test_resume_endpoint_requeues_only_the_selected_interrupted_run(routes, queu
     assert client.post("/api/pipeline/runs/99999/resume").status_code == 404
     running_id = queue.enqueue_photo_run(3, "manual")
     assert client.post(f"/api/pipeline/runs/{running_id}/resume").status_code == 409
+
+
+def test_paginated_run_history_includes_photo_outputs_and_task_errors(routes, queue_store, monkeypatch):
+    queue, factory = queue_store
+    with factory() as db:
+        first_photo = db.get(models.Photo, 1)
+        first_photo.description = "A mountain at sunrise"
+        first_photo.translated_description = "Гора на рассвете"
+        first_photo.ocr_text = "Trail marker"
+        second_photo = db.get(models.Photo, 2)
+        second_photo.description = "A red bicycle"
+        db.add_all([models.Tag(id=1, name="mountain"), models.Category(id=1, name="landscape")])
+        db.add(models.PhotoTag(photo_id=1, tag_id=1, confidence_score=0.91))
+        db.add(models.PhotoCategory(photo_id=1, category_id=1, confidence_score=0.87))
+        first = models.PipelineRun(
+            photo_id=1,
+            source="watcher",
+            status="completed-with-errors",
+            created_at=datetime(2026, 1, 1),
+            summary="vision_task: runner stopped",
+        )
+        second = models.PipelineRun(
+            photo_id=2,
+            source="manual",
+            status="completed",
+            created_at=datetime(2026, 1, 2),
+        )
+        db.add_all([first, second])
+        db.flush()
+        db.add_all(
+            [
+                models.PipelineTask(
+                    photo_id=1,
+                    run_id=first.id,
+                    attempt=2,
+                    phase="phase_1",
+                    task_name="vision_task",
+                    status="failed",
+                    error="runner stopped",
+                ),
+                models.PipelineTask(
+                    photo_id=1,
+                    run_id=first.id,
+                    attempt=2,
+                    phase="phase_1",
+                    task_name="ocr_task",
+                    status="done",
+                ),
+            ]
+        )
+        first_id, second_id = first.id, second.id
+        db.commit()
+
+    from src import deps
+
+    monkeypatch.setattr(deps, "SessionLocal", factory)
+    client = TestClient(routes.app)
+    page_one = client.get("/api/pipeline/runs?bucket=completed&page=1&size=1")
+    assert page_one.status_code == 200
+    assert (page_one.json()["total"], page_one.json()["page"], page_one.json()["pages"]) == (2, 1, 2)
+    assert page_one.json()["items"][0]["run_id"] == second_id
+    assert page_one.json()["items"][0]["photo"]["description"] == "A red bicycle"
+
+    page_two = client.get("/api/pipeline/runs?bucket=completed&page=2&size=1").json()
+    run = page_two["items"][0]
+    assert run["run_id"] == first_id
+    assert run["status"] == "completed-with-errors"
+    assert run["summary"] == "vision_task: runner stopped"
+    assert run["photo"] == {
+        "id": 1,
+        "file_path": "/1.jpg",
+        "description": "A mountain at sunrise",
+        "translated_description": "Гора на рассвете",
+        "ocr_text": "Trail marker",
+        "tags": ["mountain"],
+        "categories": ["landscape"],
+    }
+    assert [(task["task_name"], task["status"], task["error"], task["attempt"]) for task in run["tasks"]] == [
+        ("vision_task", "failed", "runner stopped", 2),
+        ("ocr_task", "done", None, 2),
+    ]
+
+    active_id = queue.enqueue_photo_run(3, "watcher")
+    active_page = client.get("/api/pipeline/runs?bucket=active&page=1&size=20").json()
+    assert [item["run_id"] for item in active_page["items"]] == [active_id]
+    assert active_page["items"][0]["queue_position"] == 1
+    assert active_page["items"][0]["wait_seconds"] >= 0
+    assert client.get("/api/pipeline/runs?bucket=other").status_code == 422
 
 
 def test_agent_rerun_uses_shared_admission_without_clearing(routes, queue_store, monkeypatch):

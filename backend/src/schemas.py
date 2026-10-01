@@ -321,6 +321,57 @@ class PipelineTaskSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class PipelineRunTaskSchema(BaseModel):
+    id: int
+    run_id: int
+    photo_id: int
+    attempt: int
+    phase: str
+    task_name: str
+    status: str
+    error: Optional[str] = None
+    skip_reason: Optional[str] = None
+    required: bool
+    started_at: Optional[datetime] = None
+    finished_at: Optional[datetime] = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PipelineRunPhotoSchema(BaseModel):
+    id: int
+    file_path: str
+    description: Optional[str] = None
+    translated_description: Optional[str] = None
+    ocr_text: Optional[str] = None
+    tags: List[str] = Field(default_factory=list)
+    categories: List[str] = Field(default_factory=list)
+
+
+class PipelineRunResponse(BaseModel):
+    run_id: int
+    photo_id: int
+    source: str
+    status: str
+    summary: Optional[str] = None
+    created_at: datetime
+    started_at: Optional[datetime] = None
+    finished_at: Optional[datetime] = None
+    queue_position: Optional[int] = None
+    wait_seconds: float = 0
+    photo: PipelineRunPhotoSchema
+    tasks: List[PipelineRunTaskSchema]
+
+
+class PipelineRunPageResponse(BaseModel):
+    items: List[PipelineRunResponse]
+    total: int
+    page: int
+    size: int
+    pages: int
+
+
 class PromptResponse(BaseModel):
     id: int
     key: str

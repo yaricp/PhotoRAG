@@ -172,3 +172,54 @@ export interface PipelineTask {
     finished_at: string | null
     created_at: string
 }
+
+export type PipelineRunBucket = 'active' | 'completed'
+
+export interface PipelineRunTask {
+    id: number
+    run_id: number
+    photo_id: number
+    attempt: number
+    phase: string
+    task_name: string
+    status: 'pending' | 'running' | 'done' | 'failed' | 'skipped' | 'paused' | 'interrupted'
+    error: string | null
+    skip_reason: string | null
+    required: boolean
+    started_at: string | null
+    finished_at: string | null
+    created_at: string
+}
+
+export interface PipelineRunPhoto {
+    id: number
+    file_path: string
+    description: string | null
+    translated_description: string | null
+    ocr_text: string | null
+    tags: string[]
+    categories: string[]
+}
+
+export interface PipelineRun {
+    run_id: number
+    photo_id: number
+    source: string
+    status: 'queued' | 'running' | 'completed' | 'completed-with-errors' | 'paused' | 'interrupted'
+    summary: string | null
+    created_at: string
+    started_at: string | null
+    finished_at: string | null
+    queue_position: number | null
+    wait_seconds: number
+    photo: PipelineRunPhoto
+    tasks: PipelineRunTask[]
+}
+
+export interface PaginatedPipelineRuns {
+    items: PipelineRun[]
+    total: number
+    page: number
+    size: number
+    pages: number
+}

@@ -133,6 +133,10 @@ export const handlers = [
         HttpResponse.json([])
     ),
 
+    http.get(`${BASE}/api/pipeline/runs`, () =>
+        HttpResponse.json({ items: [], total: 0, page: 1, size: 20, pages: 1 })
+    ),
+
     http.get(`${BASE}/api/pipeline/recent`, () =>
         HttpResponse.json([])
     ),

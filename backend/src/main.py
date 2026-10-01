@@ -1,6 +1,7 @@
 import os
 import shutil
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query
@@ -81,6 +82,7 @@ from src.schemas import (
     PhotoTagLink,
     PhotoTagResponse,
     PhotoUpdate,
+    PipelineRunPageResponse,
     PipelineTaskSchema,
     PromptResponse,
     PromptUpdate,
@@ -1074,6 +1076,121 @@ async def run_pipeline_for_photo_endpoint(
 # ---------------------------------------------------------------------------
 # Processing Page endpoints
 # ---------------------------------------------------------------------------
+
+
+@app.get("/api/pipeline/runs", tags=["Pipeline"], response_model=PipelineRunPageResponse)
+def get_pipeline_runs_endpoint(
+    bucket: str = Query("active", pattern="^(active|completed)$"),
+    page: int = Query(1, ge=1),
+    size: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db),
+):
+    """Return a page of photo runs with their complete task attempts and saved outputs."""
+    import math
+
+    from src.models import Category, Photo, PhotoCategory, PhotoTag, PipelineRun, PipelineTask, Tag
+
+    statuses = ("queued", "running") if bucket == "active" else (
+        "completed",
+        "completed-with-errors",
+        "paused",
+        "interrupted",
+    )
+    query = db.query(PipelineRun).filter(PipelineRun.status.in_(statuses))
+    total = query.count()
+    runs = (
+        query.order_by(PipelineRun.created_at.desc(), PipelineRun.id.desc())
+        .offset((page - 1) * size)
+        .limit(size)
+        .all()
+    )
+
+    if not runs:
+        return {"items": [], "total": total, "page": page, "size": size, "pages": max(1, math.ceil(total / size))}
+
+    run_ids = [run.id for run in runs]
+    photo_ids = list({run.photo_id for run in runs})
+    queued_positions = {}
+    if bucket == "active":
+        queued_ids = (
+            db.query(PipelineRun.id)
+            .filter(PipelineRun.status == "queued")
+            .order_by(PipelineRun.id)
+            .all()
+        )
+        queued_positions = {run_id: position for position, (run_id,) in enumerate(queued_ids, start=1)}
+    photos = {photo.id: photo for photo in db.query(Photo).filter(Photo.id.in_(photo_ids)).all()}
+    task_rows = (
+        db.query(PipelineTask)
+        .filter(PipelineTask.run_id.in_(run_ids))
+        .order_by(PipelineTask.run_id, PipelineTask.id)
+        .all()
+    )
+    tasks_by_run = {run_id: [] for run_id in run_ids}
+    for task in task_rows:
+        tasks_by_run[task.run_id].append(task)
+
+    tags_by_photo = {photo_id: [] for photo_id in photo_ids}
+    for photo_id, tag_name in (
+        db.query(PhotoTag.photo_id, Tag.name)
+        .join(Tag, Tag.id == PhotoTag.tag_id)
+        .filter(PhotoTag.photo_id.in_(photo_ids))
+        .order_by(Tag.name)
+        .all()
+    ):
+        tags_by_photo[photo_id].append(tag_name)
+
+    categories_by_photo = {photo_id: [] for photo_id in photo_ids}
+    for photo_id, category_name in (
+        db.query(PhotoCategory.photo_id, Category.name)
+        .join(Category, Category.id == PhotoCategory.category_id)
+        .filter(PhotoCategory.photo_id.in_(photo_ids))
+        .order_by(Category.name)
+        .all()
+    ):
+        categories_by_photo[photo_id].append(category_name)
+
+    items = []
+    for run in runs:
+        photo = photos.get(run.photo_id)
+        if photo is None:
+            continue
+        items.append(
+            {
+                "run_id": run.id,
+                "photo_id": run.photo_id,
+                "source": run.source,
+                "status": run.status,
+                "summary": run.summary,
+                "created_at": run.created_at,
+                "started_at": run.started_at,
+                "finished_at": run.finished_at,
+                "queue_position": queued_positions.get(run.id),
+                "wait_seconds": max(
+                    0,
+                    (
+                        (
+                            run.started_at
+                            or run.finished_at
+                            or datetime.now(timezone.utc).replace(tzinfo=None)
+                        )
+                        - run.created_at
+                    ).total_seconds(),
+                ),
+                "photo": {
+                    "id": photo.id,
+                    "file_path": photo.file_path,
+                    "description": photo.description,
+                    "translated_description": photo.translated_description,
+                    "ocr_text": photo.ocr_text,
+                    "tags": tags_by_photo[photo.id],
+                    "categories": categories_by_photo[photo.id],
+                },
+                "tasks": tasks_by_run[run.id],
+            }
+        )
+
+    return {"items": items, "total": total, "page": page, "size": size, "pages": max(1, math.ceil(total / size))}
 
 
 @app.get("/api/pipeline/runs/{run_id}/queue", tags=["Pipeline"])

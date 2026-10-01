@@ -22,7 +22,7 @@
 
 ## 4. Processing and status UI
 
-- [ ] 4.1 Add paginated photo-run APIs and Processing tabs for queued/in-progress and completed work; show all phases, actual outputs, attempts, errors, and retry/full-rerun actions.
+- [x] 4.1 Add paginated photo-run APIs and Processing tabs for queued/in-progress and completed work; show all phases, actual outputs, attempts, errors, and retry/full-rerun actions.
 - [ ] 4.2 Confirm a completed photo remains discoverable after more than 50 task rows and that a rerun does not hide the earlier failed attempt.
 - [ ] 4.3 Add `updated_at` to the watcher API with defined timezone semantics; format it safely and localize the unknown value and status label.
 - [ ] 4.4 Refresh the pipeline-warning banner after model saves and availability changes; distinguish missing configuration from temporary unavailability and localize English/Russian/Spanish copy.

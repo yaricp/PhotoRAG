@@ -2,7 +2,7 @@ import { getBaseUrl } from './base'
 import type {
     Photo, PaginatedPhotos, Watcher, Job,
     SystemStatus, SearchResult, ChatResponse, FolderScanner,
-    AIModelConfig, AIModelConfigUpdate, OllamaPolicyStatus, PipelineTask, Prompt
+    AIModelConfig, AIModelConfigUpdate, OllamaPolicyStatus, PaginatedPipelineRuns, PipelineRunBucket, PipelineTask, Prompt
 } from '@/types/api'
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -411,6 +411,14 @@ export async function getActivePipelineTasks(): Promise<PipelineTask[]> {
     return apiFetch<PipelineTask[]>('/api/pipeline/active')
 }
 
+export async function getPipelineRuns(
+    bucket: PipelineRunBucket,
+    page: number = 1,
+    size: number = 20,
+): Promise<PaginatedPipelineRuns> {
+    return apiFetch<PaginatedPipelineRuns>(`/api/pipeline/runs?bucket=${bucket}&page=${page}&size=${size}`)
+}
+
 export async function getRecentPipelineTasks(limit: number = 50): Promise<PipelineTask[]> {
     return apiFetch<PipelineTask[]>(`/api/pipeline/recent?limit=${limit}`)
 }
@@ -423,13 +431,17 @@ export async function retryPipelineTask(taskId: number): Promise<{ status: strin
     return apiFetch(`/api/pipeline/tasks/${taskId}/retry`, { method: 'POST' })
 }
 
+export async function resumePipelineRun(runId: number): Promise<{ status: string; run_id: number; resumed_from_run_id: number }> {
+    return apiFetch(`/api/pipeline/runs/${runId}/resume`, { method: 'POST' })
+}
+
 // ── Prompts ───────────────────────────────────────────────────────────────────
 
 export async function reindexPhoto(id: number): Promise<{ status: string; photo_id: number }> {
     return apiFetch(`/api/photos/${id}/reindex`, { method: 'POST' })
 }
 
-export async function runPipelineForPhoto(id: number): Promise<{ status: string; photo_id: number }> {
+export async function runPipelineForPhoto(id: number): Promise<{ status: string; photo_id: number; run_id: number }> {
     return apiFetch(`/api/photos/${id}/run-pipeline`, { method: 'POST' })
 }
 
