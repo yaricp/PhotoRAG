@@ -52,8 +52,10 @@ def collect_retryable_tasks(db):
         .all()
     )
     latest_by_task = {}
+    tasks_by_run_and_name = {}
     for task, run in rows:
         latest_by_task[(task.photo_id, task.task_name)] = (task, run)
+        tasks_by_run_and_name[(run.id, task.task_name)] = task
 
     names_by_photo = {}
     retryable_statuses = {"failed", "interrupted", "pending", "running"}
@@ -63,7 +65,12 @@ def collect_retryable_tasks(db):
         if not is_retryable_pipeline_task(task_name):
             continue
         status = (task.status or "").lower()
-        is_prerequisite_skip = status == "skipped" and (task.skip_reason or "").startswith("Prerequisite ")
+        is_prerequisite_skip = status == "skipped" and _skip_has_retryable_root(
+            task,
+            run.id,
+            tasks_by_run_and_name,
+            retryable_statuses,
+        )
         if status not in retryable_statuses and not is_prerequisite_skip:
             continue
         names_by_photo.setdefault(photo_id, set()).add(task_name)
@@ -77,6 +84,44 @@ def collect_retryable_tasks(db):
         photo_id: sorted(task_names, key=lambda task_name: phase_order[task_name])
         for photo_id, task_names in sorted(names_by_photo.items())
     }
+
+
+def _skip_has_retryable_root(task, run_id, tasks_by_run_and_name, retryable_statuses, visited=None):
+    """Follow prerequisite skips to the actual task outcome that caused them."""
+    reason = task.skip_reason or ""
+    if not reason.startswith("Prerequisite "):
+        return False
+
+    dependency_name, separator, reported_status = reason.removeprefix("Prerequisite ").partition(": ")
+    if not separator or not dependency_name:
+        return False
+    reported_status = reported_status.lower()
+    if reported_status in retryable_statuses:
+        return True
+    if reported_status != "skipped":
+        return False
+
+    dependency = tasks_by_run_and_name.get((run_id, dependency_name))
+    if dependency is None:
+        return False
+
+    visited = visited or set()
+    if dependency_name in visited:
+        return False
+    visited.add(dependency_name)
+
+    dependency_status = (dependency.status or "").lower()
+    if dependency_status in retryable_statuses:
+        return True
+    if dependency_status == "skipped":
+        return _skip_has_retryable_root(
+            dependency,
+            run_id,
+            tasks_by_run_and_name,
+            retryable_statuses,
+            visited,
+        )
+    return False
 
 
 def enqueue_photo_run(

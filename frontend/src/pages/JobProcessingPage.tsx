@@ -262,14 +262,16 @@ function RunCard({
                             {busyRunId === run.run_id ? t('processing.resuming') : t('processing.resumeRun')}
                         </button>
                     )}
-                    <button
-                        type="button"
-                        className="photo-row__rerun-btn"
-                        onClick={() => onRunPipeline(run.photo_id)}
-                        disabled={busyPhotoId === run.photo_id}
-                    >
-                        {busyPhotoId === run.photo_id ? t('processing.starting') : t('processing.rerunPipeline')}
-                    </button>
+                    {!isActive && (
+                        <button
+                            type="button"
+                            className="photo-row__rerun-btn"
+                            onClick={() => onRunPipeline(run.photo_id)}
+                            disabled={busyPhotoId === run.photo_id}
+                        >
+                            {busyPhotoId === run.photo_id ? t('processing.starting') : t('processing.rerunPipeline')}
+                        </button>
+                    )}
                     <span className={`photo-row__status photo-row__status--${run.status}`}>
                         {RUN_STATUS_ICON[run.status] ?? '?'} {t(`processing.status.${statusKey}`)}
                     </span>
@@ -374,7 +376,7 @@ function RunCard({
                                 attempt={attempt}
                                 now={now}
                                 busyTaskId={busyTaskId}
-                                retryEnabled={attempt.run_id === run.run_id}
+                                retryEnabled
                                 onRetryTask={onRetryTask}
                             />
                         </div>
@@ -574,6 +576,7 @@ export function JobProcessingPage() {
                     </span>
                     <button
                         type="button"
+                        className="jobs-page__bulk-retry-btn"
                         onClick={() => void handleRetryAllEligible()}
                         disabled={retryingAll || retryCountsLoading || retryCounts.eligible_tasks === 0}
                     >

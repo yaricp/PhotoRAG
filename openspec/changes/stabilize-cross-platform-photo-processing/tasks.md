@@ -21,7 +21,7 @@
 - [x] 3.3 Add a persisted `Retry unfinished tasks at startup` preference, default off; when enabled, enqueue one attempt for eligible failed/interrupted tasks through the shared bounded queue without rerunning successful, explicitly paused, or canceled tasks.
 - [x] 3.4 Test 24-file bursts, concurrent launch paths, restart with the preference both off and on, dependency-aware recovery, no same-session retry loop, and new watcher events after restart.
 - [x] 3.5 Add a Processing action that enqueues all eligible failed and incomplete tasks once, preserves previous task evidence and successful outputs, and uses the shared bounded queue.
-- [ ] 3.6 Trace skipped-task prerequisite chains to the root outcome when computing retry eligibility; exclude legitimate inapplicable skips such as OCR “Not a document” and test both ineligible and recoverable chains.
+- [x] 3.6 Trace skipped-task prerequisite chains to the root outcome when computing retry eligibility; exclude legitimate inapplicable skips such as OCR “Not a document” and test both ineligible and recoverable chains.
 
 ## 4. Processing and status UI
 
@@ -36,10 +36,10 @@
 - [x] 4.9 While a task retry is active, show only that attempt's phase/task names and live states; do not present previous outputs as results of the active retry.
 - [x] 4.10 Group runs and task attempts under one photo card; show the attempt count and complete history without duplicate cards or inflated photo counts.
 - [x] 4.11 Add and localize the default-off startup retry toggle and the one-click `Restart all failed and unfinished tasks` action; show queued progress and disable the action when there are no eligible tasks.
-- [ ] 4.12 Keep an individual retry action on each unresolved failed task in completed attempt history and verify it targets that task/photo.
-- [ ] 4.13 Hide the full-pipeline rerun action while a photo run is queued or running; retain it on settled photo cards.
-- [ ] 4.14 Style the bulk retry action with the application's existing button treatment and verify normal, hover, and disabled states.
-- [ ] 4.15 Verify a bulk retry switches to the active tab and shows queued/running photo cards with queue position while real work remains; ensure no-op/inapplicable skips are not counted or submitted.
+- [x] 4.12 Keep an individual retry action on each unresolved failed task in completed attempt history and verify it targets that task/photo.
+- [x] 4.13 Hide the full-pipeline rerun action while a photo run is queued or running; retain it on settled photo cards.
+- [x] 4.14 Style the bulk retry action with the application's existing button treatment and verify normal, hover, and disabled states.
+- [x] 4.15 Verify a bulk retry switches to the active tab and shows queued/running photo cards with queue position while real work remains; ensure no-op/inapplicable skips are not counted or submitted.
 
 ## 5. Cross-platform validation and release candidates
 

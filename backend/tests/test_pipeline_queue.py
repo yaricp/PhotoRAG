@@ -237,6 +237,68 @@ def test_collect_retryable_tasks_uses_latest_outcome_and_skips_active_paused_or_
     }
 
 
+def test_bulk_retry_excludes_skips_rooted_in_inapplicable_ocr(queue_store):
+    queue, factory = queue_store
+    with factory() as db:
+        inapplicable = models.PipelineRun(photo_id=1, source="manual", status="completed")
+        recoverable = models.PipelineRun(photo_id=2, source="manual", status="completed-with-errors")
+        db.add_all([inapplicable, recoverable])
+        db.flush()
+        db.add_all(
+            [
+                models.PipelineTask(
+                    photo_id=1,
+                    run_id=inapplicable.id,
+                    phase="phase_3",
+                    task_name="ocr_task",
+                    status="skipped",
+                    skip_reason="Not a document",
+                ),
+                models.PipelineTask(
+                    photo_id=1,
+                    run_id=inapplicable.id,
+                    phase="phase_4",
+                    task_name="embedding_document_text_task",
+                    status="skipped",
+                    skip_reason="Prerequisite ocr_task: skipped",
+                ),
+                models.PipelineTask(
+                    photo_id=2,
+                    run_id=recoverable.id,
+                    phase="phase_2",
+                    task_name="is_this_document_task",
+                    status="failed",
+                    error="model unavailable",
+                ),
+                models.PipelineTask(
+                    photo_id=2,
+                    run_id=recoverable.id,
+                    phase="phase_3",
+                    task_name="ocr_task",
+                    status="skipped",
+                    skip_reason="Prerequisite is_this_document_task: failed",
+                ),
+                models.PipelineTask(
+                    photo_id=2,
+                    run_id=recoverable.id,
+                    phase="phase_4",
+                    task_name="embedding_document_text_task",
+                    status="skipped",
+                    skip_reason="Prerequisite ocr_task: skipped",
+                ),
+            ]
+        )
+        db.commit()
+
+    assert queue.get_retryable_task_counts() == {"eligible_photos": 1, "eligible_tasks": 3}
+    result = queue.enqueue_retryable_tasks(source="bulk-retry")
+    assert result["queued_photos"] == 1
+    assert result["queued_tasks"] == 3
+    with factory() as db:
+        entry = db.get(models.PipelineQueueEntry, result["run_ids"][0])
+        assert entry.retry_task_names == '["is_this_document_task", "ocr_task", "embedding_document_text_task"]'
+
+
 @pytest.mark.asyncio
 async def test_queue_executes_a_selected_task_set_in_one_bounded_photo_run(queue_store, monkeypatch):
     queue, factory = queue_store

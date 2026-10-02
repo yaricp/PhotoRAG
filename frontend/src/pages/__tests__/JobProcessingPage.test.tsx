@@ -192,8 +192,26 @@ describe('JobProcessingPage', () => {
 
     it('restarts all eligible tasks with one action and reports queued progress', async () => {
         let bulkRetryCalls = 0
+        const queued = makeProcessingRun(101, 33, 102, 'queued')
+        queued.status = 'queued'
+        queued.tasks = []
+        queued.attempts[0].tasks = []
+        queued.queue_position = 2
         server.use(
             http.get('http://localhost:8000/api/settings/', () => HttpResponse.json({ retry_unfinished_at_startup: 'false' })),
+            http.get('http://localhost:8000/api/pipeline/runs', ({ request }) => {
+                const bucket = new URL(request.url).searchParams.get('bucket')
+                const items = bucket === 'active' && bulkRetryCalls ? [queued] : []
+                return HttpResponse.json({
+                    items,
+                    total: items.length,
+                    active_total: items.length,
+                    completed_total: 0,
+                    page: 1,
+                    size: 20,
+                    pages: 1,
+                })
+            }),
             http.get('http://localhost:8000/api/pipeline/retry-eligible/count', () =>
                 HttpResponse.json({ eligible_photos: bulkRetryCalls ? 0 : 2, eligible_tasks: bulkRetryCalls ? 0 : 5 })
             ),
@@ -205,11 +223,14 @@ describe('JobProcessingPage', () => {
 
         renderPage()
         const button = await screen.findByRole('button', { name: 'Restart all failed and unfinished tasks' })
+        expect(button).toHaveClass('jobs-page__bulk-retry-btn')
         expect(button).toBeEnabled()
         fireEvent.click(button)
 
         await waitFor(() => expect(bulkRetryCalls).toBe(1))
-        expect(await screen.findByRole('status')).toHaveTextContent('Queued retries for 2 photos (5 tasks).')
+        expect(await screen.findByText('Queued retries for 2 photos (5 tasks).')).toBeInTheDocument()
+        expect(await screen.findByText('Photo #33')).toBeInTheDocument()
+        expect(screen.getByText('Queue position: 2 · Waiting 2s')).toBeInTheDocument()
         expect(button).toBeDisabled()
     })
 
@@ -358,6 +379,77 @@ describe('JobProcessingPage', () => {
         fireEvent.click(await screen.findByRole('button', { name: 'Retry' }))
 
         await waitFor(() => expect(retryTaskId).toBe('42'))
+    })
+
+    it('keeps failed-task retry available on an older failed attempt', async () => {
+        let retryTaskId: string | undefined
+        const history = makeProcessingRun(92, 7, 93, 'tag persistence failed')
+        const oldAttempt = { ...history.attempts[0], run_id: 91, status: 'completed-with-errors' as const }
+        oldAttempt.tasks[0].run_id = 91
+        oldAttempt.tasks[0].id = 91
+        const succeeded = { ...history.tasks[0], id: 94, run_id: 92, status: 'done' as const, error: null }
+        const currentAttempt = {
+            ...history.attempts[0],
+            run_id: 92,
+            status: 'completed' as const,
+            summary: '',
+            tasks: [succeeded],
+        }
+        history.run_id = 92
+        history.status = 'completed'
+        history.summary = ''
+        history.attempt_count = 2
+        history.attempts = [oldAttempt, currentAttempt]
+        history.tasks = [succeeded]
+        server.use(
+            http.get('http://localhost:8000/api/pipeline/runs', ({ request }) => {
+                const bucket = new URL(request.url).searchParams.get('bucket')
+                return HttpResponse.json({
+                    items: bucket === 'active' ? [] : [history],
+                    total: bucket === 'active' ? 0 : 1,
+                    page: 1,
+                    size: 20,
+                    pages: 1,
+                })
+            }),
+            http.post('http://localhost:8000/api/pipeline/tasks/:taskId/retry', ({ params }) => {
+                retryTaskId = String(params.taskId)
+                return HttpResponse.json({ status: 'queued', task_id: 91, photo_id: 7, task_name: 'auto_tag_clip_task' })
+            })
+        )
+
+        renderPage()
+        fireEvent.click(await screen.findByRole('tab', { name: /Completed/ }))
+        fireEvent.click(await screen.findByRole('button', { name: 'Retry' }))
+
+        await waitFor(() => expect(retryTaskId).toBe('91'))
+    })
+
+    it('does not show a full-pipeline rerun button on an active photo card', async () => {
+        const active = makeProcessingRun(93, 8, 95, 'processing')
+        active.status = 'running'
+        active.attempts[0].status = 'running'
+        active.tasks[0].status = 'running'
+        active.attempts[0].tasks = active.tasks
+        server.use(
+            http.get('http://localhost:8000/api/pipeline/runs', ({ request }) => {
+                const bucket = new URL(request.url).searchParams.get('bucket')
+                return HttpResponse.json({
+                    items: bucket === 'active' ? [active] : [],
+                    total: bucket === 'active' ? 1 : 0,
+                    active_total: bucket === 'active' ? 1 : 0,
+                    completed_total: 0,
+                    page: 1,
+                    size: 20,
+                    pages: 1,
+                })
+            })
+        )
+
+        renderPage()
+
+        expect(await screen.findByText('Photo #8')).toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: 'Run pipeline again' })).not.toBeInTheDocument()
     })
 
     it('resumes only the selected interrupted run', async () => {
