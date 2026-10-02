@@ -10,6 +10,8 @@ The Folders page expects `Watcher.updated_at`, but the API's `Watcher` schema om
 
 **Goals:** One cross-process entry path for photo runs; predictable Ollama memory pressure; truthful, persistent run/task outcomes; visible queue and complete photo-level history; a clear photo-level Processing view that distinguishes attempts; safe repeated writes from model output; opt-in startup recovery and one-click bulk retry through the bounded queue; correct watcher timestamps and current localized model warnings. A normal user chooses a model, not a context token count.
 
+The pre.7 Mac test revealed that the bulk retry classifier treats any task skipped with a `Prerequisite …: skipped` reason as recoverable. It must follow that dependency to its root outcome: a chain ending in a failed/interrupted prerequisite is retryable, while a chain ending in a legitimate inapplicable skip (for example OCR's “Not a document”) is not. In the Processing UI, failed task rows in attempt history need their own retry action, full-pipeline rerun belongs only on settled cards, and bulk retry should use the same styled control language as the rest of the app.
+
 **Non-Goals:** Bundling or changing Ollama's installation, changing its global context preference, changing the existing user-initiated model-pull workflow, automatically selecting/replacing a model for the user, guaranteeing that every model fits every computer, redesigning cloud-provider inference, or silently altering original photos to make an image fit a context window.
 
 ## Decisions

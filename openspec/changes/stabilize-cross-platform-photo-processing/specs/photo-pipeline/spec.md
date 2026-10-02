@@ -61,6 +61,8 @@ PhotoRAG SHALL offer separate queued/in-progress and completed views. It SHALL p
 
 PhotoRAG SHALL let a user retry a failed task or explicitly rerun a whole photo. A task retry SHALL preserve independent successful outputs and schedule dependent skipped or stale tasks when the retried result makes them runnable.
 
+Every unresolved failed task displayed in a completed photo's attempt history SHALL have an individual retry action that targets that task. A later active run for the same photo SHALL suppress retry controls until that run settles.
+
 #### Scenario: Description retry succeeds
 
 - **WHEN** a user retries a failed description and it succeeds
@@ -71,6 +73,12 @@ PhotoRAG SHALL let a user retry a failed task or explicitly rerun a whole photo.
 
 - **WHEN** a retry still fails
 - **THEN** its new error remains visible and the previous attempt remains inspectable
+
+#### Scenario: A failed task remains retryable in attempt history
+
+- **WHEN** a completed photo card shows a failed task in one of its attempts and no run for that photo is active
+- **THEN** that failed task row provides an individual retry action
+- **AND** the action creates a bounded retry for that task while preserving other task results and attempt history
 
 ### Requirement: Startup retry is opt-in and bounded
 
@@ -102,7 +110,7 @@ PhotoRAG SHALL provide a persisted Processing setting labeled `Retry unfinished 
 
 ### Requirement: Users can bulk-retry failed and incomplete tasks
 
-The Processing page SHALL provide a one-click `Restart all failed and unfinished tasks` action. It SHALL enqueue currently eligible failed/interrupted tasks through the shared bounded queue, exclude tasks already queued/running, preserve attempt history and successful task outputs, and use dependency-aware retry behavior. It SHALL show queue progress and SHALL be unavailable when there are no eligible tasks.
+The Processing page SHALL provide a one-click `Restart all failed and unfinished tasks` action. It SHALL enqueue currently eligible failed/interrupted tasks through the shared bounded queue, exclude tasks already queued/running and skips rooted in legitimate inapplicability, preserve attempt history and successful task outputs, and use dependency-aware retry behavior. A skipped task SHALL be eligible only when its prerequisite chain reaches a failed or interrupted task; a chain ending in an inapplicable skip SHALL not be retried. The bulk action SHALL use the application's standard button styling. It SHALL show queue progress and SHALL be unavailable when there are no eligible tasks.
 
 #### Scenario: The user restarts all eligible work
 
@@ -110,6 +118,13 @@ The Processing page SHALL provide a one-click `Restart all failed and unfinished
 - **THEN** each eligible task is enqueued once through the shared queue
 - **AND** no successful task or already active attempt is duplicated
 - **AND** the Processing page shows the queued work and updated attempt counts
+- **AND** the active tab keeps queued/running photo cards visible, in queue order, until their work settles
+
+#### Scenario: A document-only task is skipped for a regular photo
+
+- **WHEN** OCR skips a photo with reason `Not a document` and document-text embedding is skipped because OCR did not run
+- **THEN** neither task is counted as failed or retryable
+- **AND** bulk retry does not enqueue a no-op run for that photo
 
 #### Scenario: A bulk retry recovers a prerequisite
 
@@ -139,11 +154,19 @@ PhotoRAG SHALL keep the in-progress and completed tab counts visible whether or 
 
 The in-progress tab SHALL sort photos with currently executing work before photos waiting in the queue. Queued photos SHALL retain their queue order.
 
+An active photo card SHALL not show the full-pipeline rerun action; that action SHALL appear on settled cards only.
+
 #### Scenario: A watcher submits a large batch
 
 - **WHEN** one photo is being processed and other photos are queued
 - **THEN** the currently executing photo appears at the top of the in-progress list
 - **AND** queued photos appear after it in their expected queue order
+
+#### Scenario: A photo is already queued or running
+
+- **WHEN** the user views a photo card in the in-progress tab
+- **THEN** the card does not show the full-pipeline rerun action
+- **AND** the action remains available after the run settles
 
 ### Requirement: Completed outputs are collapsed while phase status remains visible
 
