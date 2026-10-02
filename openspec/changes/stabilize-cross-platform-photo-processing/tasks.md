@@ -46,6 +46,7 @@
 - [x] 4.16 Ignore stale Processing list responses that arrive after a newer bulk-retry refresh; add a regression test where an older empty active response resolves after a queued retry card is displayed.
 - [x] 4.17 Keep only the latest attempt expanded on completed cards and collapse previous attempt history by default, preserving its failure markers and per-task retry controls inside the disclosure.
 - [x] 4.18 Display the packaged application version in Settings through a tested Electron version API.
+- [x] 4.19 Refresh the localized in-app and generated website help for Ollama setup/model management, context handling, queue and retry behavior, platform-specific local-model availability, and application version; keep EN/RU/ES site content synchronized.
 
 ## 5. Cross-platform validation and release candidates
 

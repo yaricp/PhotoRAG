@@ -1,11 +1,35 @@
 {
   "rows": [
-    { "label": "labelVision", "small": "qwen3-vl:2b-instruct", "large": "qwen3-vl:4b-instruct" },
-    { "label": "labelOcr", "small": "qwen3-vl:2b-instruct", "large": "qwen3-vl:4b-instruct" },
-    { "label": "labelClip", "small": "qwen3-vl:2b-instruct", "large": "qwen3-vl:4b-instruct" },
-    { "label": "labelEmbedding", "small": "nomic-embed-text", "large": "mxbai-embed-large" },
-    { "label": "labelChat", "small": "qwen3-vl:2b-instruct", "large": "gemma3:4b" },
-    { "label": "labelTranslator", "small": "qwen3-vl:2b-instruct", "large": "gemma3:4b" }
+    {
+      "label": "labelVision",
+      "small": "qwen3-vl:2b-instruct",
+      "large": "qwen3-vl:4b-instruct"
+    },
+    {
+      "label": "labelOcr",
+      "small": "qwen3-vl:2b-instruct",
+      "large": "qwen3-vl:4b-instruct"
+    },
+    {
+      "label": "labelClip",
+      "small": "qwen3-vl:2b-instruct",
+      "large": "qwen3-vl:4b-instruct"
+    },
+    {
+      "label": "labelEmbedding",
+      "small": "nomic-embed-text",
+      "large": "mxbai-embed-large"
+    },
+    {
+      "label": "labelChat",
+      "small": "qwen3-vl:2b-instruct",
+      "large": "qwen3-vl:4b-instruct"
+    },
+    {
+      "label": "labelTranslator",
+      "small": "qwen3-vl:2b-instruct",
+      "large": "gemma3:4b"
+    }
   ],
   "commands": [
     "ollama --version",
