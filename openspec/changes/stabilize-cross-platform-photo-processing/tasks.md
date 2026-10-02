@@ -5,6 +5,8 @@
 - [x] 1.3 Replace unconditional pipeline-success reporting with a final summary of required outputs, failed tasks, and skipped dependencies; add focused tests for partial phase-1 failure and phase-4 no-op behavior.
 - [x] 1.4 Make task retry dependency-aware so a recovered description can trigger missing translation/embedding without clearing successful independent results; preserve prior attempts.
 - [x] 1.5 Make repeated tag labels and repeated task writes idempotent; add regression coverage for duplicate labels returned by Ollama and retrying after some photo/tag associations already exist.
+- [x] 1.6 Pass deterministic blur/detail signals to the remote tag/category model, require a minimum score of 0.5, recover once from malformed JSON, and add an exact-uniform-image detector that skips all AI-driven tasks with explicit skipped states.
+- [x] 1.7 Compare corroborating perceptual hashes and exclude uniform images and stale uncorroborated records from near-duplicate detection; retain exact-hash duplicate behavior.
 
 ## 2. Model-agnostic Ollama inference policy
 
@@ -12,7 +14,8 @@
 - [x] 2.2 Implement automatic model/role/host-aware context selection and pass `num_ctx` with PhotoRAG Ollama requests; never write Ollama global settings or require a manual token field.
 - [x] 2.3 Keep effective context stable for one Ollama model across the photo-processing workload; display the chosen value and its reason read-only.
 - [x] 2.4 Bound local Ollama inference concurrency and duration; propagate runner termination, memory, timeout and context errors without successful empty results or silent image truncation.
-- [ ] 2.5 Verify context decisions with mocked small-context, non-vision, unavailable-metadata, shared-role, remote-host and 262,144-token-global-setting cases; calibrate safe budgets on target hardware.
+- [x] 2.5 Give Ollama OCR a dedicated 300-second request/queue deadline while preserving the shared inference gate and existing deadlines for other roles.
+- [ ] 2.6 Verify context and role-specific timeout decisions with mocked small-context, non-vision, unavailable-metadata, shared-role, remote-host and 262,144-token-global-setting cases; calibrate safe budgets on target hardware.
 
 ## 3. Shared queue and opt-in recovery
 
@@ -41,13 +44,16 @@
 - [x] 4.14 Style the bulk retry action with the application's existing button treatment and verify normal, hover, and disabled states.
 - [x] 4.15 Verify a bulk retry switches to the active tab and shows queued/running photo cards with queue position while real work remains; ensure no-op/inapplicable skips are not counted or submitted.
 - [x] 4.16 Ignore stale Processing list responses that arrive after a newer bulk-retry refresh; add a regression test where an older empty active response resolves after a queued retry card is displayed.
+- [x] 4.17 Keep only the latest attempt expanded on completed cards and collapse previous attempt history by default, preserving its failure markers and per-task retry controls inside the disclosure.
+- [x] 4.18 Display the packaged application version in Settings through a tested Electron version API.
 
 ## 5. Cross-platform validation and release candidates
 
-- [ ] 5.1 Run focused backend migration/queue/inference/retry tests and frontend pagination/date/banner tests; run existing project checks and `openspec validate`.
+- [ ] 5.1 Run focused backend migration/queue/inference/retry/quality/duplicate tests and frontend pagination/date/banner/version/history tests; run existing project checks and `openspec validate`.
 - [ ] 5.2 Exercise the `verification.md` 24-photo scenario on the 16 GiB macOS test host, checking database outputs, Ollama runner stability, effective context, queue limits and complete UI history.
 - [ ] 5.3 Exercise the same model/configuration and failure/retry paths on Windows x64 with 8 GiB RAM and a Linux host; record limitations as explicit errors rather than hangs or false success.
 - [x] 5.4 Verify a lower-context Ollama model, a text-only model selected for an image role, the same model assigned to several functions, an unavailable Ollama server, and a custom Ollama URL.
-- [x] 5.5 Build macOS universal, Windows x64/ARM64 and Linux x64/ARM64 candidates from the same source revision; inspect bundled backend/frontend, architectures, versions, and checksums.
-- [ ] 5.6 Smoke-test real packaged installs on target operating systems where hardware is available; record install and first-launch results.
-- [ ] 5.7 Confirm upgrading a previous test install does not repull models, reinstall the Python environment, erase photos, or turn on startup retry without user action; preserve an existing retry preference and never replay completed outputs or explicit pauses/cancellations.
+- [ ] 5.5 Verify OCR receives its longer deadline, low-detail prompt signals and score floor are enforced, uniform images skip AI work, and visually dissimilar images with colliding dHash are not marked as duplicates.
+- [ ] 5.6 Build macOS universal, Windows x64/ARM64 and Linux x64/ARM64 candidates from the same source revision; inspect bundled backend/frontend, architectures, versions, and checksums.
+- [ ] 5.7 Smoke-test real packaged installs on target operating systems where hardware is available; record install and first-launch results.
+- [ ] 5.8 Confirm upgrading a previous test install does not repull models, reinstall the Python environment, erase photos, or turn on startup retry without user action; preserve an existing retry preference and never replay completed outputs or explicit pauses/cancellations.

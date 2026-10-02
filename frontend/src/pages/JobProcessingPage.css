@@ -259,6 +259,21 @@
     gap: 10px;
 }
 
+.photo-row__attempt-history-disclosure > summary {
+    width: fit-content;
+    color: var(--color-accent, #4fa3ff);
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.photo-row__attempt-history-disclosure[open] > summary {
+    margin-bottom: 8px;
+}
+
+.photo-row__attempt-history-disclosure > .photo-row__attempt-block {
+    margin-top: 8px;
+}
+
 .photo-row__attempt-block + .photo-row__attempt-block {
     padding-top: 10px;
     border-top: 1px solid var(--color-border);

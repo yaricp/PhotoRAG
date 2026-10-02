@@ -366,6 +366,44 @@ def test_client_uses_one_deadline_across_candidate_retries(monkeypatch):
             client.invoke([])
 
 
+def test_ollama_ocr_role_has_a_longer_deadline_than_other_roles():
+    p = policy_module()
+    assert hasattr(p, 'timeout_for_role'), 'Per-role Ollama timeout policy is missing'
+    assert p.timeout_for_role('ocr') == 300.0
+    assert p.timeout_for_role('vision') == p.INFERENCE_TIMEOUT
+    assert p.timeout_for_role('clip') == p.INFERENCE_TIMEOUT
+
+
+@pytest.mark.parametrize(('role', 'expected'), [('ocr', 300.0), ('vision', 120.0)])
+def test_ollama_role_deadline_is_applied_to_queue_and_http_request(role, expected):
+    p = policy_module()
+    from contextlib import contextmanager
+
+    from langchain_core.messages import HumanMessage
+
+    queue_timeouts = []
+    request_timeouts = []
+
+    @contextmanager
+    def gate(_url, timeout):
+        queue_timeouts.append(timeout)
+        yield
+
+    def request(_url, _payload, timeout):
+        request_timeouts.append(timeout)
+        return {'message': {'content': 'answer'}}
+
+    with (
+        patch.object(p, 'resolve_ollama_policy', return_value=p.OllamaPolicy(4096, 'test', True, True)),
+        patch.object(p, 'local_inference_gate', gate),
+        patch.object(p, '_request', side_effect=request),
+    ):
+        p.OllamaClient('http://localhost:11434', 'model', role).invoke([HumanMessage(content='read')])
+
+    assert queue_timeouts[0] > expected - 1
+    assert request_timeouts[0] > expected - 1
+
+
 @pytest.mark.asyncio
 async def test_tracking_provides_inference_log_ids():
     from src import pipeline_tracker as tracker

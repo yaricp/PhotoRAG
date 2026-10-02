@@ -66,3 +66,35 @@ PhotoRAG SHALL limit simultaneous local Ollama inference requests on constrained
 
 - **WHEN** the user runs Ollama outside PhotoRAG after configuring a model in PhotoRAG
 - **THEN** PhotoRAG's per-request context choice has not changed Ollama's global context setting
+
+### Requirement: Ollama OCR has a longer bounded deadline
+
+PhotoRAG SHALL allow up to 300 seconds for an Ollama OCR request, including time waiting for the shared local inference gate. Other Ollama roles SHALL retain their existing deadline. OCR timeout failures SHALL remain visible and SHALL NOT be converted into empty successful results.
+
+#### Scenario: A document needs longer than the standard inference budget
+
+- **WHEN** the OCR task waits for the Ollama gate or reads a document for longer than the standard role deadline but completes within 300 seconds
+- **THEN** PhotoRAG accepts the OCR result and records the actual duration
+
+#### Scenario: OCR exceeds its dedicated deadline
+
+- **WHEN** an Ollama OCR request does not finish within 300 seconds
+- **THEN** the OCR task is marked failed with a timeout reason
+- **AND** the shared gate is released so queued inference can proceed
+
+### Requirement: Remote image tagging uses image-quality context
+
+PhotoRAG SHALL provide measured blur and image-detail signals to remote vision-model tag/category prompts, instruct the model to avoid unsupported labels on blurry or low-detail images, and reject returned tag/category scores below 0.5. Scores SHALL be treated as model-reported ranking values rather than calibrated probabilities.
+
+#### Scenario: Blurry or low-detail image is classified
+
+- **WHEN** PhotoRAG sends a non-uniform image to a remote tag/category model
+- **THEN** the prompt includes its blur and detail assessment
+- **AND** labels with model-reported scores below 0.5 are not saved
+
+#### Scenario: Model returns invalid JSON
+
+- **WHEN** the remote tagger returns malformed or truncated JSON
+- **THEN** PhotoRAG makes at most one format-only correction request
+- **AND** if that response remains invalid, the task fails with a clear parse error
+- **AND** timeouts and other provider errors are not retried automatically

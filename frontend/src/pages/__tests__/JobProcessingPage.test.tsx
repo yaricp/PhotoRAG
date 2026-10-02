@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
-import { act, render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { MemoryRouter } from 'react-router-dom'
 import i18n from '@/i18n'
@@ -473,9 +473,86 @@ describe('JobProcessingPage', () => {
 
         renderPage()
         fireEvent.click(await screen.findByRole('tab', { name: /Completed/ }))
+        expect(await screen.findByText('Photo #7')).toBeInTheDocument()
+        fireEvent.click(screen.getByText('Previous attempts (1)'))
         fireEvent.click(await screen.findByRole('button', { name: 'Retry' }))
 
         await waitFor(() => expect(retryTaskId).toBe('91'))
+    })
+
+    it('shows the latest successful attempt and collapses older failed attempts', async () => {
+        const history = makeProcessingRun(102, 30, 103, 'old tag attempt failed')
+        const failedTask = { ...history.tasks[0], run_id: 101, id: 101, task_name: 'auto_tag_clip_task' }
+        const oldAttempt = { ...history.attempts[0], run_id: 101, status: 'completed-with-errors' as const, tasks: [failedTask] }
+        const succeededTask = { ...history.tasks[0], run_id: 102, id: 102, task_name: 'auto_tag_clip_task', status: 'done' as const, error: null }
+        history.run_id = 102
+        history.status = 'completed'
+        history.summary = ''
+        history.attempt_count = 2
+        history.attempts = [oldAttempt, { ...history.attempts[0], run_id: 102, status: 'completed' as const, tasks: [succeededTask] }]
+        history.tasks = [succeededTask]
+        server.use(
+            http.get('http://localhost:8000/api/pipeline/runs', ({ request }) => {
+                const bucket = new URL(request.url).searchParams.get('bucket')
+                return HttpResponse.json({ items: bucket === 'active' ? [] : [history], total: 1, page: 1, size: 20, pages: 1 })
+            })
+        )
+
+        renderPage()
+        fireEvent.click(await screen.findByRole('tab', { name: /Completed/ }))
+        expect(await screen.findByText('Photo #30')).toBeInTheDocument()
+
+        const latestTask = screen.getAllByText('auto tag clip')[0].closest('.task-chip')
+        expect(latestTask).toHaveClass('task-chip--done')
+        const previousSummary = screen.getByText('Previous attempts (1)')
+        const oldHistory = previousSummary.closest('details') as HTMLElement
+        expect(within(oldHistory).getByText('old tag attempt failed')).not.toBeVisible()
+        fireEvent.click(previousSummary)
+        expect(within(oldHistory).getByText('old tag attempt failed')).toBeVisible()
+        expect(within(oldHistory).getByRole('button', { name: 'Retry' })).toBeVisible()
+    })
+
+    it('keeps the latest failed task and its retry visible while collapsing older failures', async () => {
+        const history = makeProcessingRun(112, 31, 113, 'latest tag attempt failed')
+        const oldTask = { ...history.tasks[0], run_id: 111, id: 111, task_name: 'auto_tag_clip_task', error: 'older tag attempt failed' }
+        const oldAttempt = { ...history.attempts[0], run_id: 111, status: 'completed-with-errors' as const, tasks: [oldTask] }
+        const latestTask = { ...history.tasks[0], run_id: 112, id: 112, task_name: 'auto_tag_clip_task', error: 'latest tag attempt failed' }
+        const currentAttempt = {
+            ...history.attempts[0],
+            run_id: 112,
+            status: 'completed-with-errors' as const,
+            summary: 'latest tag attempt failed',
+            tasks: [latestTask],
+        }
+        history.run_id = 112
+        history.status = 'completed-with-errors'
+        history.summary = 'latest tag attempt failed'
+        history.attempt_count = 2
+        history.attempts = [oldAttempt, currentAttempt]
+        history.tasks = [latestTask]
+        server.use(
+            http.get('http://localhost:8000/api/pipeline/runs', ({ request }) => {
+                const bucket = new URL(request.url).searchParams.get('bucket')
+                return HttpResponse.json({ items: bucket === 'active' ? [] : [history], total: 1, page: 1, size: 20, pages: 1 })
+            })
+        )
+
+        renderPage()
+        fireEvent.click(await screen.findByRole('tab', { name: /Completed/ }))
+        expect(await screen.findByText('Photo #31')).toBeInTheDocument()
+        const latestFailure = screen.getAllByText('latest tag attempt failed').find(element =>
+            element.classList.contains('task-chip__detail')
+        )
+        expect(latestFailure).toBeVisible()
+        const latestTaskChip = latestFailure?.closest('.task-chip')
+        expect(within(latestTaskChip as HTMLElement).getByRole('button', { name: 'Retry' })).toBeVisible()
+
+        const previousSummary = screen.getByText('Previous attempts (1)')
+        const oldHistory = previousSummary.closest('details') as HTMLElement
+        expect(within(oldHistory).getByText('older tag attempt failed')).not.toBeVisible()
+        fireEvent.click(previousSummary)
+        expect(within(oldHistory).getByText('older tag attempt failed')).toBeVisible()
+        expect(screen.getAllByRole('button', { name: 'Retry' })).toHaveLength(2)
     })
 
     it('does not show a full-pipeline rerun button on an active photo card', async () => {

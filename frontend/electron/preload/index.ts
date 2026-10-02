@@ -5,6 +5,7 @@ console.log('[PRELOAD] LOADED')
 contextBridge.exposeInMainWorld('electronAPI', {
     openFolder: () => ipcRenderer.invoke('select-folder'),
     getBackendPort: () => ipcRenderer.invoke('get-backend-port'),
+    getAppVersion: () => ipcRenderer.invoke('app:get-version'),
     onBackendReady: (cb: (port: number) => void) => {
         ipcRenderer.on('backend-ready', (_, port) => cb(port))
     },

@@ -16,6 +16,7 @@ interface ModelConfigBrief {
 export interface ElectronAPI {
     openFolder: () => Promise<string | null>
     getBackendPort: () => Promise<number>
+    getAppVersion: () => Promise<string>
     onBackendReady: (cb: (port: number) => void) => void
     platform: Platform
     listOllamaModels: (url?: string) => Promise<string[]>

@@ -212,3 +212,35 @@ PhotoRAG SHALL deduplicate normalized tag labels from a single model response be
 - **WHEN** a retried tag task returns a tag already associated with the photo
 - **THEN** PhotoRAG applies the documented idempotent update policy
 - **AND** other valid tags from that response are still saved
+
+### Requirement: The latest completed attempt is the primary visible attempt
+
+On a settled photo card, PhotoRAG SHALL show the latest attempt's phase and task statuses expanded. Earlier attempts SHALL be collapsed by default and SHALL remain available with their original statuses and task-level retry controls. This presentation change SHALL NOT change the eligibility or submitted work of the existing bulk-retry action.
+
+#### Scenario: The latest attempt succeeds after an earlier failure
+
+- **WHEN** a photo has an earlier failed task and a later successful attempt of that task
+- **THEN** the latest successful task is visible with its success status
+- **AND** older failed attempts are visible only after the user expands attempt history
+
+#### Scenario: The latest attempt fails after earlier attempts
+
+- **WHEN** the latest attempt contains a failed task
+- **THEN** that latest failure and its retry action remain visible
+- **AND** older attempts stay collapsed by default
+
+### Requirement: Completely uniform images skip model-driven processing
+
+PhotoRAG SHALL detect an image whose visible pixels are all the same color and mark its AI/model-driven pipeline tasks skipped with an explicit reason. Model-free metadata, hashes, and quality checks SHALL continue. A skipped AI task SHALL NOT appear as a successful empty result.
+
+#### Scenario: A completely uniform image is processed
+
+- **WHEN** an image contains no visible pixel variation
+- **THEN** description, OCR/document classification, tagging, categorization, translation, and model embeddings are recorded as skipped with a blank-image reason
+- **AND** model-free metadata and quality tasks still run
+
+#### Scenario: An image is blurry or has low detail but is not uniform
+
+- **WHEN** an image has low edge density, low entropy, or a blur warning but still contains visible variation
+- **THEN** PhotoRAG does not classify it as completely blank
+- **AND** eligible AI tasks may run with the measured quality signals included in remote tag/category prompts

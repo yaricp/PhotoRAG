@@ -195,6 +195,7 @@
   },
   "settings": {
     "title": "Настройки",
+    "version": "Версия {{version}}",
     "general": "Основные",
     "defaultLanguage": "Язык по умолчанию",
     "defaultFolder": "Папка по умолчанию",

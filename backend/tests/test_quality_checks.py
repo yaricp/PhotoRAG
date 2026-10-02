@@ -14,6 +14,8 @@ from src.quality_checks import (
     check_exif,
     check_resolution,
     check_screenshot,
+    get_visual_metrics,
+    is_absolutely_uniform_image,
 )
 
 
@@ -40,6 +42,27 @@ def test_check_resolution_normal_not_thumbnail(tmp_path):
     is_thumb, pixels = check_resolution(path)
     assert is_thumb is False
     assert pixels == 480_000.0
+
+
+def test_absolute_uniform_detector_distinguishes_flat_from_low_detail(tmp_path):
+    flat = tmp_path / 'flat.png'
+    Image.new('RGB', (80, 60), (128, 128, 128)).save(flat)
+    assert is_absolutely_uniform_image(str(flat)) is True
+
+    detailed = tmp_path / 'detailed.png'
+    img = Image.new('RGB', (80, 60), (128, 128, 128))
+    ImageDraw.Draw(img).rectangle((20, 20, 50, 45), fill=(20, 80, 200))
+    img.save(detailed)
+    assert is_absolutely_uniform_image(str(detailed)) is False
+
+
+def test_visual_metrics_expose_blur_and_low_detail_flags(tmp_path):
+    flat = tmp_path / 'metrics-flat.png'
+    Image.new('RGB', (80, 60), (128, 128, 128)).save(flat)
+    metrics = get_visual_metrics(str(flat))
+    assert metrics['is_uniform'] is True
+    assert metrics['is_blurry'] is True
+    assert metrics['is_low_detail'] is True
 
 
 # ── check_exif ────────────────────────────────────────────────────────────

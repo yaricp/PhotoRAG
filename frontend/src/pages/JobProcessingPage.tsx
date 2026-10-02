@@ -365,22 +365,41 @@ function RunCard({
                 </>
             ) : (
                 <div className="photo-row__attempt-history">
-                    {attempts.map((attempt, index) => (
-                        <div key={attempt.run_id} className="photo-row__attempt-block">
-                            <div className="photo-row__attempt-label">
-                                {t('processing.attempt', { count: index + 1 })}
-                                {' · '}{t('processing.run', { id: attempt.run_id })}
-                                {' · '}{t(`processing.status.${RUN_STATUS_KEY[attempt.status] ?? attempt.status}`)}
-                            </div>
-                            <TaskGroups
-                                attempt={attempt}
-                                now={now}
-                                busyTaskId={busyTaskId}
-                                retryEnabled
-                                onRetryTask={onRetryTask}
-                            />
+                    <div className="photo-row__attempt-block">
+                        <div className="photo-row__attempt-label">
+                            {t('processing.attempt', { count: attempts.findIndex(attempt => attempt.run_id === currentAttempt.run_id) + 1 })}
+                            {' · '}{t('processing.run', { id: currentAttempt.run_id })}
+                            {' · '}{t(`processing.status.${RUN_STATUS_KEY[currentAttempt.status] ?? currentAttempt.status}`)}
                         </div>
-                    ))}
+                        <TaskGroups
+                            attempt={currentAttempt}
+                            now={now}
+                            busyTaskId={busyTaskId}
+                            retryEnabled
+                            onRetryTask={onRetryTask}
+                        />
+                    </div>
+                    {previousAttempts.length > 0 && (
+                        <details className="photo-row__attempt-history-disclosure">
+                            <summary>{t('processing.previousAttempts', { count: previousAttempts.length })}</summary>
+                            {previousAttempts.map(attempt => (
+                                <div key={attempt.run_id} className="photo-row__attempt-block">
+                                    <div className="photo-row__attempt-label">
+                                        {t('processing.attempt', { count: attempts.findIndex(item => item.run_id === attempt.run_id) + 1 })}
+                                        {' · '}{t('processing.run', { id: attempt.run_id })}
+                                        {' · '}{t(`processing.status.${RUN_STATUS_KEY[attempt.status] ?? attempt.status}`)}
+                                    </div>
+                                    <TaskGroups
+                                        attempt={attempt}
+                                        now={now}
+                                        busyTaskId={busyTaskId}
+                                        retryEnabled
+                                        onRetryTask={onRetryTask}
+                                    />
+                                </div>
+                            ))}
+                        </details>
+                    )}
                 </div>
             )}
         </article>

@@ -23,6 +23,7 @@ from src.pipeline_tracker import (
     init_pipeline_tasks,
     mark_task_skipped,
     pipeline_run_context,
+    run_in_thread,
     track_task,
 )
 
@@ -34,7 +35,9 @@ def _log_phase_results(photo_id: int, phase: str, results: list) -> None:
             logger.error(f"[pipeline] photo={photo_id} {phase} task failed: {type(r).__name__}: {r}")
 
 
+from src.quality_checks import is_absolutely_uniform_image
 from src.tasks.clip_tasks import (
+    _get_file_path_sync,
     auto_tag_clip_task,
     categorize_photo_task,
     compute_perceptual_hashes_task,
@@ -176,6 +179,16 @@ _PHASES = {
     "phase_4": _PHASE_4_TASKS,
 }
 _TASK_PHASES = {name: phase for phase, names in _PHASES.items() for name in names}
+_MODEL_TASKS = frozenset({
+    "auto_tag_clip_task",
+    "categorize_photo_task",
+    "vision_task",
+    "final_embedding_task",
+    "is_this_document_task",
+    "translate_description_task",
+    "ocr_task",
+    "embedding_document_text_task",
+})
 _DEPENDENCIES = {
     "translate_description_task": ["vision_task"],
     "final_embedding_task": ["vision_task"],
@@ -185,14 +198,21 @@ _DEPENDENCIES = {
 
 
 async def _run_task(photo_id, phase, name, runner):
-    for dependency in _DEPENDENCIES.get(name, []):
-        status, required = get_task_outcome(photo_id, _TASK_PHASES[dependency], dependency)
-        if status is not None and status != "done":
-            mark_task_skipped(
-                photo_id, phase, name, f"Prerequisite {dependency}: {status}", required=required or status != "skipped"
-            )
-            return
     async with track_task(photo_id, phase, name):
+        if name in _MODEL_TASKS:
+            file_path = await run_in_thread(_get_file_path_sync, photo_id)
+            if file_path and await run_in_thread(is_absolutely_uniform_image, file_path):
+                reason = "Image is completely uniform; AI processing was skipped."
+                logger.info(f"[pipeline] photo={photo_id} task={name} skipped: {reason}")
+                mark_task_skipped(photo_id, phase, name, reason, required=False)
+                return
+        for dependency in _DEPENDENCIES.get(name, []):
+            status, required = get_task_outcome(photo_id, _TASK_PHASES[dependency], dependency)
+            if status is not None and status != "done":
+                mark_task_skipped(
+                    photo_id, phase, name, f"Prerequisite {dependency}: {status}", required=required or status != "skipped"
+                )
+                return
         await runner(photo_id)
 
 

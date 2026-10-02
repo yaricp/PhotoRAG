@@ -194,7 +194,8 @@ def _load_clip_names(path: str, kind: str) -> list[str]:
 
 async def _call_remote_clip(cfg: dict, file_path: str, task: str) -> list:
     """Run remote CLIP tagging via a vision LLM."""
-    from src.ai.clip_remote import RemoteClipTagger
+    from src.ai.clip_remote import REMOTE_CLIP_MIN_SCORE, RemoteClipTagger
+    from src.quality_checks import get_visual_metrics
 
     provider = cfg.get("model_provider")
     model_name = cfg.get("model_name", "gpt-4o")
@@ -213,7 +214,14 @@ async def _call_remote_clip(cfg: dict, file_path: str, task: str) -> list:
         logger.warning("[clip/remote] No category candidates available; returning []")
         return []
 
-    tagger = RemoteClipTagger(llm=llm, all_tags=all_tags, all_categories=all_categories)
+    quality_metrics = await run_in_thread(get_visual_metrics, file_path)
+    tagger = RemoteClipTagger(
+        llm=llm,
+        all_tags=all_tags,
+        all_categories=all_categories,
+        threshold=REMOTE_CLIP_MIN_SCORE,
+        image_quality=quality_metrics,
+    )
 
     logger.debug(
         f"[clip/remote] Running task {task} on model {model_name}"

@@ -635,21 +635,52 @@ def _hamming_distance(hex_a: str, hex_b: str) -> int:
     return bin(a ^ b).count("1")
 
 
+def _perceptual_hash_match(source: PhotoHash, candidate: PhotoHash, threshold: int) -> bool:
+    """Require dHash plus corroboration from either aHash or pHash."""
+    if not source.dhash or not candidate.dhash:
+        return False
+    if _hamming_distance(source.dhash, candidate.dhash) > threshold:
+        return False
+    corroborated = any(
+        left and right and _hamming_distance(left, right) <= threshold
+        for left, right in ((source.ahash, candidate.ahash), (source.phash, candidate.phash))
+    )
+    return corroborated
+
+
+def _is_uniform_photo(photo: Optional[Photo]) -> bool:
+    if photo is None or not photo.file_path:
+        return False
+    try:
+        from pathlib import Path
+
+        if not Path(photo.file_path).is_file():
+            return False
+        from src.quality_checks import is_absolutely_uniform_image
+
+        return is_absolutely_uniform_image(photo.file_path)
+    except (OSError, ValueError):
+        # Hash rows can outlive an unavailable original file. The hash policy
+        # still applies; only a readable image can be positively marked blank.
+        return False
+
+
 def find_perceptual_duplicates(db: Session, photo_id: int, threshold: int = 10) -> list[dict]:
     """
-    Return list of {photo_id, hash_distance} for all photos whose dhash is
-    within `threshold` hamming distance of the given photo's dhash.
+    Return candidates whose dHash is close and whose aHash or pHash corroborates.
     Excludes the photo itself.
     """
     source = db.query(PhotoHash).filter_by(photo_id=photo_id).first()
-    if not source or not source.dhash:
+    if not source or not source.dhash or _is_uniform_photo(source.photo):
         return []
 
     candidates = db.query(PhotoHash).filter(PhotoHash.photo_id != photo_id).all()
     results = []
     for candidate in candidates:
+        if not candidate.dhash or _is_uniform_photo(candidate.photo):
+            continue
         dist = _hamming_distance(source.dhash, candidate.dhash)
-        if dist <= threshold:
+        if dist <= threshold and _perceptual_hash_match(source, candidate, threshold):
             results.append({"photo_id": candidate.photo_id, "hash_distance": dist})
     return results
 
@@ -680,6 +711,14 @@ def get_duplicate_groups(db: Session) -> dict:
         else:
             dup = row.duplicate_photo
             if dup.is_archived:
+                continue
+            source_hash = orig.photo_hash
+            duplicate_hash = dup.photo_hash
+            if _is_uniform_photo(orig) or _is_uniform_photo(dup):
+                continue
+            if not source_hash or not duplicate_hash:
+                continue
+            if not _perceptual_hash_match(source_hash, duplicate_hash, threshold=10):
                 continue
             dup_data = {
                 "id": dup.id,

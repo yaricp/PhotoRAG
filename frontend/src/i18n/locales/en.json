@@ -195,6 +195,7 @@
   },
   "settings": {
     "title": "Settings",
+    "version": "Version {{version}}",
     "general": "General",
     "defaultLanguage": "Default language",
     "defaultFolder": "Default folder",

@@ -24,6 +24,18 @@ export function SettingsPage() {
     const [saveError, setSaveError] = useState<string | null>(null)
     const [uninstalling, setUninstalling] = useState(false)
     const [retranslating, setRetranslating] = useState(false)
+    const [appVersion, setAppVersion] = useState<string | null>(null)
+
+    useEffect(() => {
+        let cancelled = false
+        const getVersion = typeof window !== 'undefined' ? window.electronAPI?.getAppVersion : undefined
+        if (getVersion) {
+            getVersion().then(version => {
+                if (!cancelled && version) setAppVersion(version)
+            }).catch(() => undefined)
+        }
+        return () => { cancelled = true }
+    }, [])
 
     // Load settings once on mount. Dependency array is intentionally [] — re-reading
     // from DB every time i18n changes creates a feedback loop that reverts the language.
@@ -134,6 +146,7 @@ export function SettingsPage() {
                 </button>
                 {saved && <span className="settings-saved">{t('settings.saved')}</span>}
                 {saveError && <span className="settings-save-error">{saveError}</span>}
+                {appVersion && <span className="settings-version">{t('settings.version', { version: appVersion })}</span>}
             </div>
 
             <div className="settings-section">

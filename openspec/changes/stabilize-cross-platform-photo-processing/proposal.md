@@ -19,6 +19,10 @@ The user also reported that none of the bulk-retry photos appeared in “In prog
 7. Make tag persistence safe for duplicate model labels and repeated attempts so valid inference results do not fail as a whole on a uniqueness conflict.
 8. Add a one-click Processing action to enqueue all eligible failed and incomplete tasks through the same bounded queue.
 9. Correct retry eligibility for prerequisite skips, keep failed-task retries available in attempt history, prevent stale list responses from hiding newly queued bulk retries, and make retry controls clear and visually consistent on active and completed cards.
+10. Keep the latest photo attempt expanded in the completed list and collapse older attempts by default, so stale failures and their retry controls do not distract from the current outcome. Preserve the existing bulk-retry eligibility and execution behavior.
+11. Display the installed application version in Settings using Electron's packaged runtime version.
+12. Give the Ollama OCR role a longer bounded inference deadline, and make remote tag/category prompts account for blur and low-detail quality signals. Raise the remote tag/category minimum score to 0.5 and recover once from malformed model JSON where safe.
+13. Detect absolutely uniform images before model work and record model tasks as skipped; use corroborating perceptual hashes and exclude uniform images from near-duplicate matching.
 
 ## Capabilities
 
@@ -27,6 +31,7 @@ The user also reported that none of the bulk-retry photos appeared in “In prog
 - `ollama-inference`: Model capability checks, automatic per-model context selection, bounded requests, and actionable capacity errors across Windows, macOS, and Linux.
 - `photo-pipeline`: Shared admission queue, truthful run/task states, completed history, dependency-aware retries, opt-in startup recovery, and user-controlled bulk retry.
 - `folder-monitoring`: Reliable watcher status timestamps and meaningful, safe display of missing timestamps.
+- `duplicate-detection`: Avoid false perceptual duplicate matches by rejecting uniform images and requiring corroborating hashes.
 
 ### Modified Capabilities
 
@@ -34,7 +39,7 @@ The user also reported that none of the bulk-retry photos appeared in “In prog
 
 ## Impact
 
-- Shared Python backend model gateway, observer, folder scan and retry launch paths, pipeline tracker, startup recovery preference, idempotent tag persistence, API schemas, and database migration for persistent run history.
-- React Processing, Folders, and model-warning views, a Processing recovery preference and bulk retry control, plus English, Russian, and Spanish strings.
+- Shared Python backend model gateway, observer, folder scan and retry launch paths, pipeline tracker, startup recovery preference, image-quality-aware model tasks, duplicate detection, idempotent tag persistence, API schemas, and database migration for persistent run history.
+- React Processing and Settings views, Folders and model-warning views, plus English, Russian, and Spanish strings.
 - Focused backend/frontend tests and packaged runtime verification for macOS universal, Windows x64/ARM64, and Linux x64/ARM64. Ollama remains separately installed; existing virtual environments, downloaded models, and photo records must survive an upgrade.
 - The implementation changes are committed and covered by focused red-green tests. The existing `0.1.5-pre.6` artifacts predate the latest Mac test feedback; a five-target `0.1.5-pre.7` candidate set is now built from source revision `9a92bb2`. This remains a test change, not a release, and does not authorize replaying the current test database.

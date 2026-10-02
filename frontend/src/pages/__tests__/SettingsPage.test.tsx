@@ -37,6 +37,12 @@ describe('SettingsPage', () => {
         expect(screen.getByLabelText(/default folder/i)).toBeInTheDocument()
     })
 
+    it('shows the installed Electron application version', async () => {
+        ;(window as any).electronAPI = { getAppVersion: async () => '0.1.5-pre.9' }
+        renderPage()
+        expect(await screen.findByText('Version 0.1.5-pre.9')).toBeInTheDocument()
+    })
+
     it('loads existing value from API', async () => {
         server.use(
             http.get('http://localhost:8000/api/settings/', () =>

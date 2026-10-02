@@ -7,7 +7,13 @@ from urllib.parse import urlsplit
 
 DEFAULT_URL = 'http://localhost:11434'
 INFERENCE_TIMEOUT = 120.0
+OCR_INFERENCE_TIMEOUT = 300.0
 IMAGE_ROLES = frozenset({'vision', 'ocr', 'clip'})
+
+
+def timeout_for_role(role):
+    """Return a bounded per-inference deadline; OCR gets more reading time."""
+    return OCR_INFERENCE_TIMEOUT if role == 'ocr' else INFERENCE_TIMEOUT
 
 
 def is_local_ollama(base_url):
@@ -210,11 +216,12 @@ class OllamaClient:
             self._started = started
         error_class = 'none'
         try:
-            remaining = INFERENCE_TIMEOUT - (time.monotonic() - self._started)
+            deadline = timeout_for_role(self.role)
+            remaining = deadline - (time.monotonic() - self._started)
             if remaining <= 0:
                 raise TimeoutError("Ollama inference deadline exceeded")
             with local_inference_gate(self.base_url, remaining):
-                remaining = INFERENCE_TIMEOUT - (time.monotonic() - self._started)
+                remaining = deadline - (time.monotonic() - self._started)
                 if remaining <= 0:
                     raise TimeoutError('Ollama inference queue deadline exceeded')
                 result = _request(self.base_url + endpoint, {'model': self.model_name, 'options': {'num_ctx': self.policy.effective_num_ctx}, **payload}, remaining)
@@ -349,4 +356,4 @@ def langchain_options(base_url, model_name, role):
     """Keep interactive tool-chat context aligned with pipeline model policy."""
     roles = configured_model_roles(base_url, model_name, role)
     policy = resolve_ollama_policy(base_url, model_name, role, workload_roles=roles)
-    return {'num_ctx':policy.effective_num_ctx, 'client_kwargs':{'timeout':INFERENCE_TIMEOUT}}
+    return {'num_ctx':policy.effective_num_ctx, 'client_kwargs':{'timeout':timeout_for_role(role)}}

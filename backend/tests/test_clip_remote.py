@@ -52,7 +52,7 @@ class TestRemoteClipTaggerGetTags:
             llm=mock_llm,
             all_tags=SAMPLE_TAGS,
             all_categories=SAMPLE_CATEGORIES,
-            threshold=0.3,
+            threshold=0.5,
         )
 
     def test_returns_list_of_tag_score_tuples(self, tmp_path):
@@ -79,7 +79,7 @@ class TestRemoteClipTaggerGetTags:
         llm_json = json.dumps(
             [
                 {"tag": "tag_0", "score": 0.9},
-                {"tag": "tag_1", "score": 0.1},  # below 0.3 threshold
+                {"tag": "tag_1", "score": 0.49},  # below 0.5 threshold
             ]
         )
         tagger = self._make_tagger(llm_json)
@@ -105,13 +105,49 @@ class TestRemoteClipTaggerGetTags:
         tag_names = [r[0] for r in result]
         assert "unknown_hallucinated_tag" not in tag_names
 
-    def test_raises_on_malformed_json(self, tmp_path):
+    def test_makes_one_format_only_repair_for_malformed_json(self, tmp_path):
         f = tmp_path / "img.jpg"
         f.write_bytes(b"\xff\xd8\xff\xe0" + b"\x00" * 20)
 
+        from src.ai.clip_remote import RemoteClipTagger
+
+        llm = MagicMock()
+        llm.invoke.side_effect = [
+            MagicMock(content='[{"tag":"tag_0","score":0.9'),
+            MagicMock(content='[{"tag":"tag_0","score":0.9}]'),
+        ]
+        tagger = RemoteClipTagger(llm, SAMPLE_TAGS, SAMPLE_CATEGORIES)
+        assert tagger.get_tags(str(f)) == [('tag_0', pytest.approx(0.9))]
+        assert llm.invoke.call_count == 2
+
+    def test_still_fails_after_one_invalid_json_repair(self, tmp_path):
+        f = tmp_path / "img.jpg"
+        f.write_bytes(b"\xff\xd8\xff\xe0" + b"\x00" * 20)
         tagger = self._make_tagger("not valid json { broken")
-        with pytest.raises(json.JSONDecodeError):
+        with pytest.raises(ValueError, match='malformed JSON'):
             tagger.get_tags(str(f))
+
+    def test_prompt_receives_quality_signals_and_keeps_scores_at_or_above_half(self, tmp_path):
+        from src.ai.clip_remote import RemoteClipTagger
+
+        f = tmp_path / 'img.jpg'
+        f.write_bytes(b'fake image')
+        llm = MagicMock()
+        llm.invoke.return_value = MagicMock(content=json.dumps([
+            {'tag': 'tag_0', 'score': 0.50},
+            {'tag': 'tag_1', 'score': 0.49},
+        ]))
+        tagger = RemoteClipTagger(
+            llm, SAMPLE_TAGS, SAMPLE_CATEGORIES,
+            image_quality={'is_blurry': True, 'is_low_detail': True, 'blur_variance': 12.0, 'edge_density': 0.01, 'entropy': 1.2},
+        )
+        result = tagger.get_tags(str(f))
+        prompt = llm.invoke.call_args.args[0][0].content[1]['text']
+
+        assert result == [('tag_0', pytest.approx(0.50))]
+        assert 'blurred=true' in prompt
+        assert 'low_detail=true' in prompt
+        assert 'Minimum score: 0.5' in prompt
 
     def test_raises_on_unexpected_structure(self, tmp_path):
         f = tmp_path / "img.jpg"

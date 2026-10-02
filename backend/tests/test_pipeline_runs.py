@@ -14,6 +14,11 @@ def store(tmp_path, monkeypatch):
     models.Base.metadata.create_all(engine)
     factory = sessionmaker(bind=engine)
     monkeypatch.setattr(tracker, "SessionLocal", factory)
+    # These persistence tests use a temporary database and do not exercise the
+    # image-quality gate itself; avoid looking up their photo in the app DB.
+    from src import incoming_pipeline
+
+    monkeypatch.setattr(incoming_pipeline, "_get_file_path_sync", lambda _photo_id: None)
     with factory() as db:
         photo = models.Photo(file_path="/test.jpg", hash="test", description="preserved")
         db.add(photo)

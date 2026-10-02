@@ -131,11 +131,47 @@ def test_find_perceptual_duplicates_returns_close_photos(db):
 
     # Both have the same hash → distance 0
     get_or_create_photo_hash(db, photo_a.id, dhash="0000000000000000", ahash="0", phash="0")
-    get_or_create_photo_hash(db, photo_b.id, dhash="0000000000000001", ahash="0", phash="0")
+    get_or_create_photo_hash(db, photo_b.id, dhash="0000000000000001", ahash="1", phash="1")
 
     results = find_perceptual_duplicates(db, photo_a.id, threshold=10)
 
     assert photo_b.id in [r["photo_id"] for r in results]
+
+
+def test_find_perceptual_duplicates_rejects_dhash_only_collision(db):
+    photo_a = create_photo_record(db, "hash_cross_a", "cross_a.jpg")
+    photo_b = create_photo_record(db, "hash_cross_b", "cross_b.jpg")
+    get_or_create_photo_hash(db, photo_a.id, dhash="0000000000000000", ahash="0", phash="0")
+    # dHash distance is within 10, but neither independent hash corroborates it.
+    get_or_create_photo_hash(db, photo_b.id, dhash="00000000000000ff", ahash="ffffffffffffffff", phash="ffffffffffffffff")
+
+    results = find_perceptual_duplicates(db, photo_a.id, threshold=10)
+
+    assert photo_b.id not in [r["photo_id"] for r in results]
+
+
+def test_find_perceptual_duplicates_excludes_uniform_source_and_candidates(db, tmp_path):
+    from PIL import Image, ImageDraw
+
+    blank_path = tmp_path / 'blank.png'
+    Image.new('RGB', (64, 64), (128, 128, 128)).save(blank_path)
+    detailed_path = tmp_path / 'detailed.png'
+    detailed = Image.new('RGB', (64, 64), (240, 240, 240))
+    ImageDraw.Draw(detailed).rectangle((8, 8, 48, 48), fill=(10, 20, 200))
+    detailed.save(detailed_path)
+
+    blank_source = create_photo_record(db, 'blank_hash_source', str(blank_path))
+    detailed_candidate = create_photo_record(db, 'detailed_hash_candidate', str(detailed_path))
+    get_or_create_photo_hash(db, blank_source.id, dhash='0000000000000000', ahash='0', phash='0')
+    get_or_create_photo_hash(db, detailed_candidate.id, dhash='0000000000000001', ahash='1', phash='1')
+    assert find_perceptual_duplicates(db, blank_source.id) == []
+
+    detailed_source = create_photo_record(db, 'detailed_hash_source', str(detailed_path))
+    blank_candidate = create_photo_record(db, 'blank_hash_candidate', str(blank_path))
+    get_or_create_photo_hash(db, detailed_source.id, dhash='0000000000000000', ahash='0', phash='0')
+    get_or_create_photo_hash(db, blank_candidate.id, dhash='0000000000000001', ahash='1', phash='1')
+    results = find_perceptual_duplicates(db, detailed_source.id)
+    assert blank_candidate.id not in [r['photo_id'] for r in results]
 
 
 def test_find_perceptual_duplicates_excludes_distant_photos(db):
@@ -166,6 +202,8 @@ def test_find_perceptual_duplicates_does_not_return_self(db):
 def test_get_duplicate_groups_returns_exact_and_perceptual_sections(db):
     orig = create_photo_record(db, "hash_grp_orig", "grp_orig.jpg")
     dup_perc = create_photo_record(db, "hash_grp_perc", "grp_perc.jpg")
+    get_or_create_photo_hash(db, orig.id, dhash="0", ahash="0", phash="0")
+    get_or_create_photo_hash(db, dup_perc.id, dhash="1", ahash="1", phash="1")
 
     db.add(PhotoDuplicate(original_photo_id=orig.id, duplicate_file_path="/dup/exact.jpg", match_type="exact"))
     db.add(
@@ -179,6 +217,37 @@ def test_get_duplicate_groups_returns_exact_and_perceptual_sections(db):
 
     assert "exact" in groups
     assert "perceptual" in groups
+
+
+def test_get_duplicate_groups_hides_existing_uncorroborated_or_uniform_pair(db, tmp_path):
+    from PIL import Image, ImageDraw
+
+    detailed_path = tmp_path / 'existing-detailed.png'
+    detailed = Image.new('RGB', (64, 64), (240, 240, 240))
+    ImageDraw.Draw(detailed).rectangle((8, 8, 48, 48), fill=(10, 20, 200))
+    detailed.save(detailed_path)
+    blank_path = tmp_path / 'existing-blank.png'
+    Image.new('RGB', (64, 64), (128, 128, 128)).save(blank_path)
+
+    detailed_photo = create_photo_record(db, 'existing_detailed', str(detailed_path))
+    blank_photo = create_photo_record(db, 'existing_blank', str(blank_path))
+    get_or_create_photo_hash(db, detailed_photo.id, dhash='0000000000000000', ahash='0', phash='0')
+    get_or_create_photo_hash(db, blank_photo.id, dhash='0000000000000001', ahash='ffffffffffffffff', phash='ffffffffffffffff')
+    db.add(PhotoDuplicate(
+        original_photo_id=detailed_photo.id,
+        duplicate_photo_id=blank_photo.id,
+        match_type='perceptual',
+        hash_distance=1,
+    ))
+    db.commit()
+
+    groups = get_duplicate_groups(db)
+
+    assert not any(
+        duplicate['id'] == blank_photo.id
+        for group in groups['perceptual']
+        for duplicate in group['duplicates']
+    )
 
 
 def test_get_duplicate_groups_exact_contains_correct_original(db):
@@ -208,6 +277,8 @@ def test_get_duplicate_groups_exact_contains_duplicate_file_path(db):
 def test_get_duplicate_groups_perceptual_contains_distance(db):
     orig = create_photo_record(db, "hash_gp_orig", "gp_orig.jpg")
     dup = create_photo_record(db, "hash_gp_dup", "gp_dup.jpg")
+    get_or_create_photo_hash(db, orig.id, dhash="0", ahash="0", phash="0")
+    get_or_create_photo_hash(db, dup.id, dhash="1", ahash="1", phash="1")
 
     db.add(
         PhotoDuplicate(original_photo_id=orig.id, duplicate_photo_id=dup.id, match_type="perceptual", hash_distance=8)
@@ -218,3 +289,16 @@ def test_get_duplicate_groups_perceptual_contains_distance(db):
 
     perc_group = next(g for g in groups["perceptual"] if g["original"]["id"] == orig.id)
     assert perc_group["duplicates"][0]["hash_distance"] == 8
+
+
+def test_get_duplicate_groups_hides_legacy_perceptual_pair_without_corroborating_hashes(db):
+    orig = create_photo_record(db, "hash_gp_missing_orig", "missing_orig.jpg")
+    dup = create_photo_record(db, "hash_gp_missing_dup", "missing_dup.jpg")
+    db.add(
+        PhotoDuplicate(original_photo_id=orig.id, duplicate_photo_id=dup.id, match_type="perceptual", hash_distance=1)
+    )
+    db.commit()
+
+    groups = get_duplicate_groups(db)
+
+    assert groups["perceptual"] == []

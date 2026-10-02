@@ -34,6 +34,7 @@ export function registerIpcHandlers(port: number): void {
     })
 
     ipcMain.handle('get-backend-port', () => currentPort)
+    ipcMain.handle('app:get-version', () => app.getVersion())
 
     ipcMain.handle('ollama:list-models', (_, url?: string) => listOllamaModels(url))
     ipcMain.handle('ollama:inventory', (_, url?: string) => getOllamaInventory(url))

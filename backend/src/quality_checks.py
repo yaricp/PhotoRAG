@@ -1,8 +1,33 @@
+import os
+from functools import lru_cache
+
 import numpy as np
 from loguru import logger
 from PIL import Image, ImageFilter, ImageStat
 
 THUMBNAIL_MAX_PIXELS = 10_000  # 100×100
+LOW_DETAIL_EDGE_DENSITY = 0.02
+LOW_DETAIL_ENTROPY = 3.0
+BLUR_VARIANCE_THRESHOLD = 100.0
+
+
+def _visible_rgb(img: Image.Image) -> Image.Image:
+    """Composite transparency over white so invisible RGB data is ignored."""
+    rgba = img.convert("RGBA")
+    background = Image.new("RGBA", rgba.size, (255, 255, 255, 255))
+    return Image.alpha_composite(background, rgba).convert("RGB")
+
+
+def is_absolutely_uniform_image(file_path: str) -> bool:
+    """Return true only when the visible image has exactly one RGB color."""
+    stat = os.stat(file_path)
+    return _is_absolutely_uniform_image_cached(os.path.abspath(file_path), stat.st_mtime_ns, stat.st_size)
+
+
+@lru_cache(maxsize=2048)
+def _is_absolutely_uniform_image_cached(file_path: str, _mtime_ns: int, _size: int) -> bool:
+    with Image.open(file_path) as img:
+        return all(low == high for low, high in _visible_rgb(img).getextrema())
 
 _EXIF_CAMERA_KEYS = ("Make", "Model")
 _EXIF_DATE_KEYS = ("DateTimeOriginal", "DateTimeDigitized", "DateTime")
@@ -38,7 +63,7 @@ def check_edge_density(file_path: str) -> tuple[bool, float]:
         arr = np.array(img_small.filter(ImageFilter.FIND_EDGES))
     ratio = float((arr > 10).sum()) / arr.size
     logger.debug(f"Edge density check: ratio={ratio:.4f}")
-    return ratio < 0.02, round(ratio, 4)
+    return ratio < LOW_DETAIL_EDGE_DENSITY, round(ratio, 4)
 
 
 def check_blur(file_path: str) -> tuple[bool, float]:
@@ -49,7 +74,7 @@ def check_blur(file_path: str) -> tuple[bool, float]:
     lap = arr[:-2, 1:-1] + arr[2:, 1:-1] + arr[1:-1, :-2] + arr[1:-1, 2:] - 4 * arr[1:-1, 1:-1]
     variance = float(lap.var())
     logger.debug(f"Blur check: Laplacian variance={variance:.2f}")
-    return variance < 100.0, round(variance, 2)
+    return variance < BLUR_VARIANCE_THRESHOLD, round(variance, 2)
 
 
 def check_entropy(file_path: str) -> tuple[bool, float]:
@@ -67,7 +92,7 @@ def check_entropy(file_path: str) -> tuple[bool, float]:
             entropies.append(patch.entropy())
 
     entropy = float(np.median(entropies))
-    return entropy < 3.0, round(entropy, 4)
+    return entropy < LOW_DETAIL_ENTROPY, round(entropy, 4)
 
 
 def compute_colorfulness(file_path: str) -> float:
@@ -79,8 +104,15 @@ def compute_colorfulness(file_path: str) -> float:
 
 def get_visual_metrics(file_path: str) -> dict:
     """Return all raw visual metric values without any garbage judgment."""
+    stat = os.stat(file_path)
+    return dict(_get_visual_metrics_cached(os.path.abspath(file_path), stat.st_mtime_ns, stat.st_size))
+
+
+@lru_cache(maxsize=512)
+def _get_visual_metrics_cached(file_path: str, _mtime_ns: int, _size: int) -> dict:
     with Image.open(file_path) as img:
         w, h = img.size
+        is_uniform = all(low == high for low, high in _visible_rgb(img).getextrema())
         gray = img.convert("L").resize((512, 512))
         gray_arr = np.array(gray, dtype=np.float64)
         small_rgb = img.convert("RGB").resize((256, 256))
@@ -109,6 +141,8 @@ def get_visual_metrics(file_path: str) -> dict:
     hsv_arr = np.array(Image.fromarray(np.array(small_rgb)).convert("HSV"), dtype=np.float32)
     colorfulness = round(float(hsv_arr[:, :, 1].mean()), 2)
 
+    is_blurry = blur_variance < BLUR_VARIANCE_THRESHOLD
+    is_low_detail = edge_density < LOW_DETAIL_EDGE_DENSITY or entropy < LOW_DETAIL_ENTROPY
     return {
         "width": w,
         "height": h,
@@ -118,6 +152,9 @@ def get_visual_metrics(file_path: str) -> dict:
         "edge_density": edge_density,
         "entropy": entropy,
         "colorfulness": colorfulness,
+        "is_uniform": is_uniform,
+        "is_blurry": is_blurry,
+        "is_low_detail": is_low_detail,
     }
 
 

@@ -195,6 +195,7 @@
   },
   "settings": {
     "title": "Configuración",
+    "version": "Versión {{version}}",
     "general": "General",
     "defaultLanguage": "Idioma predeterminado",
     "defaultFolder": "Carpeta predeterminada",
