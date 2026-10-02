@@ -62,7 +62,7 @@ The requested Processing refinements are now part of the acceptance scope: stabl
 - A full backend `pytest -q` run was interrupted after about 174 seconds: 262 passed, 15 failed, and 4 errored before interruption. The vector-table fixtures report `no such module: vec0`; the combined suite also leaks `MagicMock` modules into route/queue tests. The focused affected suites pass in isolation, so task 5.1 remains open until the project-wide test-order/environment failures are resolved.
 - A fresh `pytest -q --maxfail=1 --tb=short` run reproduced collection-order contamination at `test_clip_tag_persistence`: after collection, `src.tasks` and `src.tasks.clip_tasks` are `MagicMock` entries installed by legacy test modules at import time, so the persistence test never calls the real saver. The API duplicate/garbage/history/settings suites now scope their optional-module stubs to fixtures; their combined 24-test group passes with the pipeline regressions. Other legacy module-level stubs still leave the whole backend suite non-green, so task 5.1 remains open.
 - The combined focused backend recovery/history/tag and API run passed 106 tests. It exercises the Mac feedback fixes together with the previously passing queue, retry, and persistence coverage.
-- The `0.1.5-pre.7` candidate set has now been built and inspected as documented below. Real 24-photo inference and target-OS install/upgrade evidence remain outstanding; tasks 2.5, 5.1, 5.2, 5.3, 5.5, and 5.6 remain open.
+- At the pre.7 stage, the candidate set had been built and inspected as documented below. Real 24-photo inference and target-OS install/upgrade evidence remained outstanding; task 5.5 was then still open for the candidate build, and the upgrade check was then numbered 5.6 (now 5.7).
 
 ## Additional bulk-retry visibility evidence — 2026-10-02
 
@@ -83,7 +83,24 @@ All five artifacts were built from source revision `9a92bb2` with Electron Build
 | Linux ARM64 | `PhotoRAG-0.1.5-pre.7-arm64.AppImage` | 213 MiB | `440d487e71d0d6a81bfcc6f98b3f79d46eb4a6b846368004bd871865ab63a3c6` | AppImage ELF and bundled Python are AArch64; backend present; `app.asar` version verified. This macOS host cannot execute the AppImage. |
 
 - All five artifact checksums passed `shasum -a 256 -c SHA256SUMS`. Temporary unpacked directories were removed after architecture and bundle inspection; installable artifacts, blockmaps, build metadata, and the checksum list remain.
-- OpenSpec task 5.5 remains open pending real packaged-install smoke tests. Tasks 2.5, 5.2, 5.3, and 5.6 remain open pending hardware inference and upgrade evidence.
+- At the pre.7 stage, task 5.5 remained open pending candidate builds and real packaged-install smoke tests. Tasks 2.5, 5.2, 5.3, and the then-numbered task 5.6 (now 5.7) remained open pending hardware inference and upgrade runs.
+
+## Cross-platform package candidates — 2026-10-02 (`0.1.5-pre.8`)
+
+All five candidates were built from source revision `0ad7f9a66165df38cb6fffa39930b73aa77a871f` using Electron Builder metadata version `0.1.5-pre.8`; the permanent `frontend/package.json` version remains `0.1.4`. The candidates and `SHA256SUMS` are in the main project at `frontend/dist-electron/ollama-candidate-pre.8/`. Each platform's packaged `app.asar` reports `0.1.5-pre.8`, and each inspected bundle contains `resources/backend/src/main.py`.
+
+| Target | Artifact | Size | SHA-256 | Build/inspection result |
+| --- | --- | ---: | --- | --- |
+| macOS universal | `PhotoRAG-0.1.5-pre.8-universal.dmg` | 268 MiB | `050277f275335820f12374f9bb80d8f59f52bacf3a8aa57ac167018b9e21984a` | DMG CRC verification passed; bundled Python contains x86-64 and ARM64; `app.asar` version and backend source were verified. No Developer ID signing identity was available; the app was not installed or launched. |
+| Windows x64 | `PhotoRAG-Setup-0.1.5-pre.8-x64.exe` | 128 MiB | `5c444c63fa6f7ec787c3963b3cc08163f5c8eae728f3a36ccff968ada1641318` | NSIS build succeeded; Electron and Python executables are PE x86-64; `app.asar` version and backend source were verified. No Windows runtime was available for installation. |
+| Windows ARM64 | `PhotoRAG-Setup-0.1.5-pre.8-arm64.exe` | 119 MiB | `24729cd68c49ba725ed6c7873e7c4940f013fb29bf2ff4309b5f9c5dc752d0f3` | NSIS build succeeded; Electron and Python executables are PE AArch64; `app.asar` version and backend source were verified. No Windows ARM64 runtime was available for installation. |
+| Linux x64 | `PhotoRAG-0.1.5-pre.8-x86_64.AppImage` | 242 MiB | `0d1c195d2b9429a3ad9f75414d1d7d96bbf773e0af97a4fb06e0a8cc044817c0` | AppImage is ELF x86-64; bundled Python is x86-64; `app.asar` version and backend source were verified. This macOS host cannot execute the AppImage. |
+| Linux ARM64 | `PhotoRAG-0.1.5-pre.8-arm64.AppImage` | 213 MiB | `8243076cc04bbe31ee97941647e4816e42a7da2dae16d067633c480725a166e8` | AppImage is ELF AArch64; bundled Python is AArch64; `app.asar` version and backend source were verified. This macOS host cannot execute the AppImage. |
+
+- All five artifact checksums passed `shasum -a 256 -c SHA256SUMS`. Temporary unpacked bundles were removed after inspection. The source tree's Python runtime was restored to the macOS universal 3.13.13 build after cross-platform packaging.
+- Linux ARM64 was rerun with an explicit AppImage-only target after electron-builder's default target list also attempted an unavailable Snap build. The delivered ARM64 AppImage passed architecture inspection; no Snap artifact is part of the candidate set.
+- After the final UI regression was added, the full frontend suite passed 328 tests in 45 files; `npm run type-check` passed, and ESLint reported 12 warnings with no errors. The focused queue/admission backend group passed 47 tests. Strict OpenSpec validation, `git diff --check`, the five copied artifact checksums, and DMG CRC verification passed.
+- OpenSpec task 5.5 is complete. Real packaged installation smoke tests and upgrade preservation checks remain open as tasks 5.6 and 5.7. Tasks 2.5, 5.1, 5.2, and 5.3 also remain open for target-hardware inference, full-suite validation, and cross-OS runtime testing.
 
 ## Cross-platform package candidates — 2026-10-01
 
