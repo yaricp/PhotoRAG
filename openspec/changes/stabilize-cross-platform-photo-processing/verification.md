@@ -64,6 +64,12 @@ The requested Processing refinements are now part of the acceptance scope: stabl
 - The combined focused backend recovery/history/tag and API run passed 106 tests. It exercises the Mac feedback fixes together with the previously passing queue, retry, and persistence coverage.
 - The `0.1.5-pre.7` candidate set has now been built and inspected as documented below. Real 24-photo inference and target-OS install/upgrade evidence remain outstanding; tasks 2.5, 5.1, 5.2, 5.3, 5.5, and 5.6 remain open.
 
+## Additional bulk-retry visibility evidence — 2026-10-02
+
+- The installed pre.7 app logged `POST /api/pipeline/retry-eligible` as HTTP 202 at `06:36:35.152Z`, followed by an active-list HTTP 200 at `06:36:35.162Z` and repeated active-list polls while the batch ran. Access logs do not retain response bodies, so they cannot establish which run cards reached React.
+- Database runs 36–48 covered 13 photos. Twelve ran only `embedding_document_text_task` and completed as `skipped: Not a document` within milliseconds. Photo 7's run 42 executed CLIP successfully and stayed active for about 48 seconds; all 13 runs were settled by `06:37:26Z`. This supports the false-eligibility diagnosis, while the user's report that no card appeared remains a distinct UI observation.
+- Added a Processing regression test with an older empty active-list request completing after the bulk refresh has rendered a queued photo. The test failed before the request-order guard and passed after it.
+
 ## Cross-platform package candidates — 2026-10-02 (`0.1.5-pre.7`)
 
 All five artifacts were built from source revision `9a92bb2` with Electron Builder's metadata version override. The permanent `frontend/package.json` version remains `0.1.4`. Artifacts and `SHA256SUMS` are in `frontend/dist-electron/ollama-candidate-pre.7/` in the active worktree. Each packaged `app.asar` reports `0.1.5-pre.7`, and each unpacked target contained `resources/backend/src/main.py`.

@@ -6,6 +6,8 @@ Testing the `0.1.5-pre.6` macOS candidate exposed additional Processing-page iss
 
 Testing the `0.1.5-pre.7` macOS candidate exposed more retry UI and eligibility problems. The bulk action counted ordinary photos whose document-text embedding was skipped because OCR correctly classified them as “Not a document”; those no-op retries completed almost immediately and disappeared from the active tab. The per-task retry action was missing on failed task rows in earlier attempts, the bulk action had browser-default styling, and active photo cards still offered a full-pipeline rerun button. Logs and the database show that photo 7's latest tag attempts completed successfully (48 model labels, 36 distinct saved tags); older red attempts record an earlier duplicate-tag constraint error and a timeout.
 
+The user also reported that none of the bulk-retry photos appeared in “In progress.” The server log records the bulk request and repeated successful active-list HTTP responses; the database shows twelve no-op runs settling almost immediately and one real CLIP run for photo 7 taking about 48 seconds. The access log does not retain response bodies, so it cannot prove what the renderer received. The Processing page must discard older in-flight page responses when a newer bulk refresh has already displayed its queued photo, preventing a stale empty snapshot from erasing visible work.
+
 ## What Changes
 
 1. Bound Ollama-backed processing from every entry point and choose a model-aware, resource-aware context for all Ollama models. The user selects the model; PhotoRAG handles context automatically without changing Ollama's global setting or requiring a manual token field.
@@ -16,7 +18,7 @@ Testing the `0.1.5-pre.7` macOS candidate exposed more retry UI and eligibility 
 6. Refine Processing-page navigation and photo cards: show counts on both tabs, put currently running photos before queued photos, collapse completed outputs while keeping phase statuses visible, hide old outputs on an active retry, and group attempts under one photo entry.
 7. Make tag persistence safe for duplicate model labels and repeated attempts so valid inference results do not fail as a whole on a uniqueness conflict.
 8. Add a one-click Processing action to enqueue all eligible failed and incomplete tasks through the same bounded queue.
-9. Correct retry eligibility for prerequisite skips, keep failed-task retries available in attempt history, and make retry controls clear and visually consistent on active and completed cards.
+9. Correct retry eligibility for prerequisite skips, keep failed-task retries available in attempt history, prevent stale list responses from hiding newly queued bulk retries, and make retry controls clear and visually consistent on active and completed cards.
 
 ## Capabilities
 

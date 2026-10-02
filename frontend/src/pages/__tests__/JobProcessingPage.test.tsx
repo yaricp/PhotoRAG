@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { MemoryRouter } from 'react-router-dom'
 import i18n from '@/i18n'
@@ -232,6 +232,59 @@ describe('JobProcessingPage', () => {
         expect(await screen.findByText('Photo #33')).toBeInTheDocument()
         expect(screen.getByText('Queue position: 2 · Waiting 2s')).toBeInTheDocument()
         expect(button).toBeDisabled()
+    })
+
+    it('does not let an older empty active-list response erase bulk retry cards', async () => {
+        let releaseStaleResponse: () => void = () => {}
+        let staleResponseStarted: () => void = () => {}
+        let staleResponseFinished = false
+        let bulkRetryCalls = 0
+        let activeRequests = 0
+        const staleRequestStarted = new Promise<void>(resolve => { staleResponseStarted = resolve })
+        const queued = makeProcessingRun(101, 33, 102, 'queued')
+        queued.status = 'queued'
+        queued.tasks = []
+        queued.attempts[0].tasks = []
+        queued.queue_position = 1
+        server.use(
+            http.get('http://localhost:8000/api/settings/', () => HttpResponse.json({ retry_unfinished_at_startup: 'false' })),
+            http.get('http://localhost:8000/api/pipeline/runs', async ({ request }) => {
+                const bucket = new URL(request.url).searchParams.get('bucket')
+                if (bucket !== 'active') {
+                    return HttpResponse.json({ items: [], total: 0, page: 1, size: 20, pages: 1 })
+                }
+                activeRequests += 1
+                if (activeRequests === 1) {
+                    staleResponseStarted()
+                    await new Promise<void>(resolve => { releaseStaleResponse = resolve })
+                    staleResponseFinished = true
+                    return HttpResponse.json({ items: [], total: 0, page: 1, size: 20, pages: 1 })
+                }
+                const items = bulkRetryCalls ? [queued] : []
+                return HttpResponse.json({ items, total: items.length, active_total: items.length, completed_total: 0, page: 1, size: 20, pages: 1 })
+            }),
+            http.get('http://localhost:8000/api/pipeline/retry-eligible/count', () =>
+                HttpResponse.json({ eligible_photos: bulkRetryCalls ? 0 : 1, eligible_tasks: bulkRetryCalls ? 0 : 1 })
+            ),
+            http.post('http://localhost:8000/api/pipeline/retry-eligible', () => {
+                bulkRetryCalls += 1
+                return HttpResponse.json({ status: 'queued', queued_photos: 1, queued_tasks: 1, run_ids: [101] }, { status: 202 })
+            })
+        )
+
+        renderPage()
+        await staleRequestStarted
+        fireEvent.click(await screen.findByRole('button', { name: 'Restart all failed and unfinished tasks' }))
+        expect(await screen.findByText('Photo #33')).toBeInTheDocument()
+
+        await act(async () => {
+            releaseStaleResponse()
+            await waitFor(() => expect(staleResponseFinished).toBe(true))
+            await new Promise(resolve => setTimeout(resolve, 0))
+        })
+
+        expect(screen.getByText('Photo #33')).toBeInTheDocument()
+        expect(screen.getByText('Queue position: 1 · Waiting 2s')).toBeInTheDocument()
     })
 
     it('shows paginated completed runs with saved photo outputs and task errors', async () => {

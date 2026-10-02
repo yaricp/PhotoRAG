@@ -111,6 +111,7 @@ PhotoRAG SHALL provide a persisted Processing setting labeled `Retry unfinished 
 ### Requirement: Users can bulk-retry failed and incomplete tasks
 
 The Processing page SHALL provide a one-click `Restart all failed and unfinished tasks` action. It SHALL enqueue currently eligible failed/interrupted tasks through the shared bounded queue, exclude tasks already queued/running and skips rooted in legitimate inapplicability, preserve attempt history and successful task outputs, and use dependency-aware retry behavior. A skipped task SHALL be eligible only when its prerequisite chain reaches a failed or interrupted task; a chain ending in an inapplicable skip SHALL not be retried. The bulk action SHALL use the application's standard button styling. It SHALL show queue progress and SHALL be unavailable when there are no eligible tasks.
+When refreshing run data after a bulk submission or tab/page change, the Processing page SHALL ignore any response from an older request if a newer request has already completed, so stale data cannot erase newly visible queued or running work.
 
 #### Scenario: The user restarts all eligible work
 
@@ -119,6 +120,13 @@ The Processing page SHALL provide a one-click `Restart all failed and unfinished
 - **AND** no successful task or already active attempt is duplicated
 - **AND** the Processing page shows the queued work and updated attempt counts
 - **AND** the active tab keeps queued/running photo cards visible, in queue order, until their work settles
+
+#### Scenario: An older empty list response arrives after a bulk retry
+
+- **GIVEN** an active-list request started before the user submitted a bulk retry
+- **WHEN** the bulk retry refresh returns a queued photo card before the older request returns an empty list
+- **THEN** the older response is ignored
+- **AND** the queued photo card remains visible until a newer list refresh reports its settled state
 
 #### Scenario: A document-only task is skipped for a regular photo
 

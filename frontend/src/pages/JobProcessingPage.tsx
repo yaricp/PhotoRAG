@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
     getPipelineRuns,
@@ -406,16 +406,20 @@ export function JobProcessingPage() {
     const [busyRunId, setBusyRunId] = useState<number | null>(null)
     const [pendingRerunPhotoId, setPendingRerunPhotoId] = useState<number | null>(null)
     const [actionError, setActionError] = useState<string | null>(null)
+    const dataRequestId = useRef(0)
 
     const loadData = useCallback(async () => {
+        const requestId = ++dataRequestId.current
         try {
             const result = await getPipelineRuns(bucket, page, PAGE_SIZE)
-            setData(result)
-            setLoadError(false)
+            if (requestId === dataRequestId.current) {
+                setData(result)
+                setLoadError(false)
+            }
         } catch {
-            setLoadError(true)
+            if (requestId === dataRequestId.current) setLoadError(true)
         } finally {
-            setLoading(false)
+            if (requestId === dataRequestId.current) setLoading(false)
         }
     }, [bucket, page])
 
@@ -524,9 +528,13 @@ export function JobProcessingPage() {
             }))
             setBucket('active')
             setPage(1)
+            const requestId = ++dataRequestId.current
             const activeData = await getPipelineRuns('active', 1, PAGE_SIZE)
-            setData(activeData)
-            setLoading(false)
+            if (requestId === dataRequestId.current) {
+                setData(activeData)
+                setLoadError(false)
+                setLoading(false)
+            }
             await refreshRetryableCounts()
         } catch (error) {
             setActionError(error instanceof Error ? error.message : String(error))

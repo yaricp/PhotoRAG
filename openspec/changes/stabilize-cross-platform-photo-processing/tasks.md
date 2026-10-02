@@ -40,6 +40,7 @@
 - [x] 4.13 Hide the full-pipeline rerun action while a photo run is queued or running; retain it on settled photo cards.
 - [x] 4.14 Style the bulk retry action with the application's existing button treatment and verify normal, hover, and disabled states.
 - [x] 4.15 Verify a bulk retry switches to the active tab and shows queued/running photo cards with queue position while real work remains; ensure no-op/inapplicable skips are not counted or submitted.
+- [x] 4.16 Ignore stale Processing list responses that arrive after a newer bulk-retry refresh; add a regression test where an older empty active response resolves after a queued retry card is displayed.
 
 ## 5. Cross-platform validation and release candidates
 
