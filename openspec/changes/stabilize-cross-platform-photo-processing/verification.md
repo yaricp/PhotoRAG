@@ -62,8 +62,22 @@ The requested Processing refinements are now part of the acceptance scope: stabl
 - A full backend `pytest -q` run was interrupted after about 174 seconds: 262 passed, 15 failed, and 4 errored before interruption. The vector-table fixtures report `no such module: vec0`; the combined suite also leaks `MagicMock` modules into route/queue tests. The focused affected suites pass in isolation, so task 5.1 remains open until the project-wide test-order/environment failures are resolved.
 - A fresh `pytest -q --maxfail=1 --tb=short` run reproduced collection-order contamination at `test_clip_tag_persistence`: after collection, `src.tasks` and `src.tasks.clip_tasks` are `MagicMock` entries installed by legacy test modules at import time, so the persistence test never calls the real saver. The API duplicate/garbage/history/settings suites now scope their optional-module stubs to fixtures; their combined 24-test group passes with the pipeline regressions. Other legacy module-level stubs still leave the whole backend suite non-green, so task 5.1 remains open.
 - The combined focused backend recovery/history/tag and API run passed 106 tests. It exercises the Mac feedback fixes together with the previously passing queue, retry, and persistence coverage.
-- No post-change packaged build or real 24-photo inference was run yet. The next candidate is `0.1.5-pre.7`; tasks 2.5, 5.2, 5.3, 5.5, and 5.6 remain open pending hardware, package, and upgrade evidence.
-- A pre.7 macOS runtime download was attempted after the default sandbox blocked DNS and the approved network retry downloaded both pinned Python archives. Extraction stopped with `No space left on device`; `df -h` showed only 290 MiB available. The download script cleaned its temporary directory, and the pre-existing `3.13.13+20260510-linux-arm64` runtime stamp remained. No candidate artifacts were created; task 5.5 remains open until several GiB of free or writable external storage are available.
+- The `0.1.5-pre.7` candidate set has now been built and inspected as documented below. Real 24-photo inference and target-OS install/upgrade evidence remain outstanding; tasks 2.5, 5.1, 5.2, 5.3, 5.5, and 5.6 remain open.
+
+## Cross-platform package candidates — 2026-10-02 (`0.1.5-pre.7`)
+
+All five artifacts were built from source revision `9a92bb2` with Electron Builder's metadata version override. The permanent `frontend/package.json` version remains `0.1.4`. Artifacts and `SHA256SUMS` are in `frontend/dist-electron/ollama-candidate-pre.7/` in the active worktree. Each packaged `app.asar` reports `0.1.5-pre.7`, and each unpacked target contained `resources/backend/src/main.py`.
+
+| Target | Artifact | Size | SHA-256 | Build/inspection result |
+| --- | --- | ---: | --- | --- |
+| macOS universal | `PhotoRAG-0.1.5-pre.7-universal.dmg` | 268 MiB | `d09b470c1fb23b9dcb60d4e14b308611c0fc4c1ed887f1dc3b11884fb08ae7cc` | DMG built; bundled Python is universal x86-64/ARM64; backend present; `app.asar` version verified. No Developer ID identity was available, and the app was not installed or launched. |
+| Windows x64 | `PhotoRAG-Setup-0.1.5-pre.7-x64.exe` | 128 MiB | `21b7d610b12e7285b891b4675073d4da2e7a4f705174475aca7d6249518b1970` | NSIS build succeeded; unpacked Electron and Python are x86-64; backend present; `app.asar` version verified. No Windows runtime was available for installation. |
+| Windows ARM64 | `PhotoRAG-Setup-0.1.5-pre.7-arm64.exe` | 119 MiB | `0fb6cee7d258a3ff1436f02476eee8979b0075b4ce5da89a4203d40b5c8dbb52` | NSIS build succeeded; unpacked Electron and Python are AArch64; backend present; `app.asar` version verified. No Windows ARM64 runtime was available for installation. |
+| Linux x64 | `PhotoRAG-0.1.5-pre.7-x86_64.AppImage` | 242 MiB | `c572bb743065fac423131a007efa0dfe1f728498a80d2fdcddde76c476f7af7e` | AppImage ELF and bundled Python are x86-64; backend present; `app.asar` version verified. This macOS host cannot execute the AppImage. |
+| Linux ARM64 | `PhotoRAG-0.1.5-pre.7-arm64.AppImage` | 213 MiB | `440d487e71d0d6a81bfcc6f98b3f79d46eb4a6b846368004bd871865ab63a3c6` | AppImage ELF and bundled Python are AArch64; backend present; `app.asar` version verified. This macOS host cannot execute the AppImage. |
+
+- All five artifact checksums passed `shasum -a 256 -c SHA256SUMS`. Temporary unpacked directories were removed after architecture and bundle inspection; installable artifacts, blockmaps, build metadata, and the checksum list remain.
+- OpenSpec task 5.5 remains open pending real packaged-install smoke tests. Tasks 2.5, 5.2, 5.3, and 5.6 remain open pending hardware inference and upgrade evidence.
 
 ## Cross-platform package candidates — 2026-10-01
 
