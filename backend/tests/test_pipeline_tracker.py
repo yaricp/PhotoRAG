@@ -5,15 +5,8 @@ Uses an in-memory SQLite database to avoid touching the production DB.
 SessionLocal is monkeypatched to use the test engine.
 """
 
-import sys
-from unittest.mock import MagicMock
-
-import sqlalchemy.types
-
-# Mock sqlite_vec so src.db.database can be imported in the test environment
-sys.modules.setdefault("sqlite_vec", MagicMock())
-
 import pytest
+import sqlalchemy.types
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 

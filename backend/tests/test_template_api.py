@@ -8,8 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import sqlalchemy.types
 
-for _mod in [
-    "sqlite_vec",
+_ISOLATED_IMPORT_STUBS = [
     "langgraph",
     "langgraph.graph",
     "src.database",
@@ -37,8 +36,8 @@ for _mod in [
     "src.watcher_service",
     "src.task_notifier",
     "src.deps",
-]:
-    sys.modules.setdefault(_mod, MagicMock())
+]
+
 
 import pytest
 from fastapi.testclient import TestClient

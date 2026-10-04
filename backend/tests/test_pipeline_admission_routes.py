@@ -33,10 +33,14 @@ def routes(monkeypatch, queue_store):
         "src.task_notifier",
     ]:
         monkeypatch.setitem(sys.modules, name, MagicMock())
+    sys.modules.pop("src.main", None)
     main = importlib.import_module("src.main")
     _, factory = queue_store
     monkeypatch.setattr(main, "SessionLocal", factory)
-    return main
+    try:
+        yield main
+    finally:
+        sys.modules.pop("src.main", None)
 
 
 @pytest.mark.asyncio
@@ -142,7 +146,12 @@ def test_resume_endpoint_requeues_only_the_selected_interrupted_run(routes, queu
         db.flush()
         db.add(models.PipelineQueueEntry(run_id=old.id, lane="local-ollama", retry_task_name="vision_task"))
         original_task = models.PipelineTask(
-            photo_id=1, run_id=old.id, phase="phase_1", task_name="vision_task", status="interrupted", error="runner stopped"
+            photo_id=1,
+            run_id=old.id,
+            phase="phase_1",
+            task_name="vision_task",
+            status="interrupted",
+            error="runner stopped",
         )
         db.add(original_task)
         db.flush()
@@ -158,7 +167,8 @@ def test_resume_endpoint_requeues_only_the_selected_interrupted_run(routes, queu
         assert db.get(models.PipelineRun, old_id).status == "interrupted"
         assert db.get(models.PipelineRun, other_id).status == "interrupted"
         assert (db.get(models.PipelineTask, task_id).status, db.get(models.PipelineTask, task_id).error) == (
-            "interrupted", "runner stopped"
+            "interrupted",
+            "runner stopped",
         )
         resumed = db.get(models.PipelineRun, resumed_id)
         assert (resumed.photo_id, resumed.status, resumed.source) == (1, "queued", "resume")
@@ -298,7 +308,9 @@ def test_run_history_groups_attempts_by_photo_and_active_retry_supersedes_comple
         db.flush()
         db.add_all(
             [
-                models.PipelineQueueEntry(run_id=active_retry.id, lane="local-ollama", retry_task_name="auto_tag_clip_task"),
+                models.PipelineQueueEntry(
+                    run_id=active_retry.id, lane="local-ollama", retry_task_name="auto_tag_clip_task"
+                ),
                 models.PipelineQueueEntry(run_id=running.id, lane="local-ollama"),
                 models.PipelineQueueEntry(run_id=later_queued.id, lane="local-ollama"),
                 models.PipelineTask(
@@ -600,9 +612,7 @@ def test_model_save_remains_available_while_photo_is_queued(routes, queue_store,
             ),
             db,
         )
-        assert (saved.mode, saved.model_provider, saved.model_name) == (
-            "remote", "ollama", "qwen3-vl:2b-instruct"
-        )
+        assert (saved.mode, saved.model_provider, saved.model_name) == ("remote", "ollama", "qwen3-vl:2b-instruct")
         assert db.get(models.PipelineRun, queued_run_id).status == "queued"
 
 

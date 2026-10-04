@@ -16,8 +16,7 @@ from unittest.mock import MagicMock, patch
 import sqlalchemy.types
 
 # Native extensions and heavy dependencies unavailable in the test environment
-for _mod in [
-    "sqlite_vec",
+_ISOLATED_IMPORT_STUBS = [
     "src.database",
     "src.vector_db_services",
     "src.ai",
@@ -36,8 +35,8 @@ for _mod in [
     "src.tasks.clip_tasks",
     "src.tasks.translation_tasks",
     "src.model_services",
-]:
-    sys.modules.setdefault(_mod, MagicMock())
+]
+
 
 import os
 from datetime import datetime

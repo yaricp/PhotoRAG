@@ -1,11 +1,6 @@
-import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
-
-sys.modules.setdefault("open_clip", MagicMock())
-sys.modules.setdefault("sentence_transformers", MagicMock())
-sys.modules.setdefault("transformers", MagicMock())
 
 from src.ai.registry import AIModelRegistry
 

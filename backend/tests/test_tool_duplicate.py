@@ -4,8 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import sqlalchemy.types
 
-for _mod in [
-    "sqlite_vec",
+_ISOLATED_IMPORT_STUBS = [
     "langgraph",
     "langgraph.graph",
     "src.database",
@@ -30,25 +29,8 @@ for _mod in [
     "src.tasks.translation_tasks",
     "src.model_services",
     "src.deps",
-]:
-    sys.modules.setdefault(_mod, MagicMock())
+]
 
-
-# imagehash is not installed in the test environment — provide a stub that
-# returns valid 16-char hex strings so _hamming_distance can parse them.
-class _FakeHash:
-    def __init__(self, val="0" * 16):
-        self._v = val
-
-    def __str__(self):
-        return self._v
-
-
-_mock_imagehash = MagicMock()
-_mock_imagehash.dhash.return_value = _FakeHash("0" * 16)
-_mock_imagehash.average_hash.return_value = _FakeHash("0" * 16)
-_mock_imagehash.phash.return_value = _FakeHash("0" * 16)
-sys.modules["imagehash"] = _mock_imagehash
 
 import pytest
 from PIL import Image

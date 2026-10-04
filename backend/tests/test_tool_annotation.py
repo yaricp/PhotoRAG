@@ -4,8 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import sqlalchemy.types
 
-for _mod in [
-    "sqlite_vec",
+_ISOLATED_IMPORT_STUBS = [
     "langgraph",
     "langgraph.graph",
     "src.database",
@@ -34,8 +33,8 @@ for _mod in [
     "geopy.exc",
     # exifread is not installed in the test environment
     "exifread",
-]:
-    sys.modules.setdefault(_mod, MagicMock())
+]
+
 
 import pytest
 from sqlalchemy import create_engine

@@ -54,7 +54,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from src.models import Base, Photo, PhotoDuplicate
+from src.models import Base, Photo, PhotoDuplicate, PhotoHash
 
 TEST_DB = "test_api_duplicates.sqlite3"
 _engine = create_engine(f"sqlite:///{TEST_DB}")
@@ -146,6 +146,12 @@ def test_get_duplicates_returns_perceptual_group(client, db):
     dup = Photo(hash="api_perc_dup", file_path="/photos/perc_dup.jpg")
     db.add_all([orig, dup])
     db.flush()
+    db.add_all(
+        [
+            PhotoHash(photo_id=orig.id, dhash="0000000000000000", ahash="1111111111111111"),
+            PhotoHash(photo_id=dup.id, dhash="0000000000000001", ahash="1111111111111111"),
+        ]
+    )
     db.add(
         PhotoDuplicate(
             original_photo_id=orig.id,

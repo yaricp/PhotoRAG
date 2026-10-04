@@ -3,23 +3,17 @@ TDD tests for translator.py — language-agnostic direction logic.
 Phase 8.1 of multilingual support.
 """
 
-import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-# Mock heavy ML dependencies before any src.ai.translator import
 _mock_torch = MagicMock()
 _mock_torch.cuda.is_available.return_value = False
 _mock_torch.backends.mps.is_available.return_value = False
-sys.modules.setdefault("torch", _mock_torch)
-sys.modules.setdefault("transformers", MagicMock())
-
-# Other test files (api/tool) set src.ai and src.ai.translator to MagicMocks.
-# Evict them so we import the real translator module (with mocked torch/transformers).
-sys.modules.pop("src.ai", None)
-sys.modules.pop("src.ai.translator", None)
-
+_ISOLATED_IMPORT_STUBS = {
+    "torch": _mock_torch,
+    "transformers": MagicMock(),
+}
 
 # ---------------------------------------------------------------------------
 # LANG_DICT completeness

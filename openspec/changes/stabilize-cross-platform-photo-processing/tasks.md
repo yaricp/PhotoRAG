@@ -52,11 +52,11 @@
 ## 5. Cross-platform validation and release candidates
 
 - [x] 5.1 Run focused backend migration/queue/inference/retry/quality/duplicate tests and frontend pagination/date/banner/version/history tests; run targeted project checks and strict `openspec validate`.
-- [ ] 5.2 Exercise the `verification.md` 24-photo scenario on the 16 GiB macOS test host, checking database outputs, Ollama runner stability, effective context, queue limits and complete UI history.
+- [x] 5.2 Exercise the `verification.md` 24-photo scenario on the 16 GiB macOS test host, checking database outputs, Ollama runner stability, effective context, queue limits and complete UI history. User confirms it works well on macOS; this does not claim Windows or Linux runtime validation.
 - [x] 5.3 Exercise remote-model processing and local Ollama failure/retry on the available Windows x64 VM (Apple Silicon host; 8 GiB then 12 GiB assigned RAM); record that local Ollama is not guaranteed in this environment. Linux runtime testing is deferred from 0.1.5.
 - [x] 5.4 Verify a lower-context Ollama model, a text-only model selected for an image role, the same model assigned to several functions, an unavailable Ollama server, and a custom Ollama URL.
 - [x] 5.5 Verify OCR receives its longer deadline, low-detail prompt signals and score floor are enforced, uniform images skip AI work, and visually dissimilar images with colliding dHash are not marked as duplicates.
 - [x] 5.6 Build macOS universal, Windows x64/ARM64 and Linux x64/ARM64 candidates from the same source revision; inspect bundled backend/frontend, architectures, versions, and checksums.
 - [x] 5.7 Smoke-test the packaged candidate on macOS and the available Windows x64 VM; record install and first-launch results. Linux runtime testing is deferred from 0.1.5.
 - [x] 5.8 Confirm upgrading a previous test install does not repull models, reinstall the Python environment, erase photos, or turn on startup retry without user action; preserve an existing retry preference and never replay completed outputs or explicit pauses/cancellations. User confirmed the upgrade-preservation check passed on the installed candidate.
-- [ ] 5.9 Resolve the legacy backend full-suite failures (test-module `MagicMock` contamination and missing `vec0` in the current test environment), then rerun the complete backend suite.
+- [x] 5.9 Resolve backend test-order contamination by scoping dependency stubs to their test modules and using the installed `sqlite-vec` extension; update the perceptual-duplicate API test to provide corroborating hashes. The complete standard backend suite passes: 575 passed, 1 skipped.

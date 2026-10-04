@@ -6,6 +6,10 @@ preventing pydantic Settings validation errors during test collection.
 """
 
 import os
+import sys
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 # Files that cannot be collected in this environment:
 #  - ai/ tests require torch / easyocr (not installed in dev venv)
@@ -65,6 +69,42 @@ collect_ignore = [
     # which is the outdated Huey task-call API.
     "test_synthesis.py",
 ]
+
+
+@pytest.fixture(scope="module", autouse=True)
+def isolate_import_stubs(request):
+    """Scope optional dependency stubs to the test module that declares them.
+
+    Older tests inserted MagicMocks into ``sys.modules`` while pytest was
+    collecting files. Those mocks then replaced real application modules for
+    unrelated tests, depending on collection order. Tests can declare
+    ``_ISOLATED_IMPORT_STUBS`` and receive the same stubs only while their
+    module's tests run.
+    """
+    names = getattr(request.module, "_ISOLATED_IMPORT_STUBS", ())
+    if not names:
+        yield
+        return
+
+    modules_before = set(sys.modules)
+    if isinstance(names, dict):
+        stubs = {name: value for name, value in names.items() if name != "sqlite_vec"}
+    else:
+        stubs = {name: MagicMock() for name in names if name != "sqlite_vec"}
+    with patch.dict(sys.modules, stubs):
+        yield
+
+    # Source modules imported while their dependencies were stubbed may hold
+    # references to those stubs. Evict only modules created in this fixture so
+    # later tests import clean, real modules.
+    created = [name for name in sys.modules if name.startswith("src.") and name not in modules_before]
+    for name in sorted(created, key=lambda item: item.count("."), reverse=True):
+        module = sys.modules.pop(name, None)
+        parent_name, _, child_name = name.rpartition(".")
+        parent = sys.modules.get(parent_name)
+        if parent is not None and getattr(parent, child_name, None) is module:
+            delattr(parent, child_name)
+
 
 # Set test env vars before any src.* import touches Settings()
 os.environ.setdefault("DATABASE_NAME", "test_photo_db")

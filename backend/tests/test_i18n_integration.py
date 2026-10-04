@@ -16,8 +16,7 @@ import sqlalchemy.types
 
 # --- atomic mocks for heavy deps (must run before any src.* import) ---
 
-for _mod in [
-    "sqlite_vec",
+_ISOLATED_IMPORT_STUBS = [
     "langgraph",
     "langgraph.graph",
     "langgraph.prebuilt",
@@ -51,8 +50,8 @@ for _mod in [
     "src.watcher_service",
     "src.watcher",
     "src.incoming_pipeline",
-]:
-    sys.modules.setdefault(_mod, MagicMock())
+]
+
 
 import pytest
 from sqlalchemy import create_engine

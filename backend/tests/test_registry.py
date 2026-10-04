@@ -1,16 +1,9 @@
-import sys
 from unittest.mock import MagicMock, patch
 
-# ATOMIC MOCK setup to prevent actual model loading during registry test
-sys.modules.setdefault("open_clip", MagicMock())
-sys.modules.setdefault("sentence_transformers", MagicMock())
-sys.modules.setdefault("transformers", MagicMock())
-sys.modules.setdefault("src.ai.clip", MagicMock())
-
-# Earlier test files mock src.ai and src.ai.registry as MagicMocks.
-# Evict them so we import the real AIModelRegistry class here.
-sys.modules.pop("src.ai", None)
-sys.modules.pop("src.ai.registry", None)
+_ISOLATED_IMPORT_STUBS = {
+    "sentence_transformers": MagicMock(),
+    "src.ai.clip": MagicMock(),
+}
 
 from src.ai.registry import AIModelRegistry
 
