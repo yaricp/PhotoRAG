@@ -1095,8 +1095,8 @@ def get_pipeline_runs_endpoint(
     db: Session = Depends(get_db),
 ):
     """Return a page of photo runs with their complete task attempts and saved outputs."""
-    import math
     import json
+    import math
 
     from sqlalchemy import case, func
 
@@ -1112,11 +1112,15 @@ def get_pipeline_runs_endpoint(
     )
 
     active_statuses = ("queued", "running")
-    statuses = active_statuses if bucket == "active" else (
-        "completed",
-        "completed-with-errors",
-        "paused",
-        "interrupted",
+    statuses = (
+        active_statuses
+        if bucket == "active"
+        else (
+            "completed",
+            "completed-with-errors",
+            "paused",
+            "interrupted",
+        )
     )
     active_photos = db.query(PipelineRun.photo_id).filter(PipelineRun.status.in_(active_statuses))
     completed_statuses = ("completed", "completed-with-errors", "paused", "interrupted")
@@ -1132,12 +1136,8 @@ def get_pipeline_runs_endpoint(
     grouped_photos = photo_query.group_by(PipelineRun.photo_id)
     if bucket == "active":
         running_rank = func.max(case((PipelineRun.status == "running", 1), else_=0))
-        running_start = func.min(
-            case((PipelineRun.status == "running", PipelineRun.started_at), else_=None)
-        )
-        oldest_queued_id = func.min(
-            case((PipelineRun.status == "queued", PipelineRun.id), else_=None)
-        )
+        running_start = func.min(case((PipelineRun.status == "running", PipelineRun.started_at), else_=None))
+        oldest_queued_id = func.min(case((PipelineRun.status == "queued", PipelineRun.id), else_=None))
         grouped_photos = grouped_photos.order_by(
             running_rank.desc(),
             running_start.asc(),
@@ -1146,10 +1146,7 @@ def get_pipeline_runs_endpoint(
         )
     else:
         grouped_photos = grouped_photos.order_by(func.max(PipelineRun.id).desc())
-    photo_ids = [
-        photo_id
-        for (photo_id,) in grouped_photos.offset((page - 1) * size).limit(size).all()
-    ]
+    photo_ids = [photo_id for (photo_id,) in grouped_photos.offset((page - 1) * size).limit(size).all()]
 
     if not photo_ids:
         return {
@@ -1180,12 +1177,7 @@ def get_pipeline_runs_endpoint(
     run_ids = [run.id for run in history_runs]
     queued_positions = {}
     if bucket == "active":
-        queued_ids = (
-            db.query(PipelineRun.id)
-            .filter(PipelineRun.status == "queued")
-            .order_by(PipelineRun.id)
-            .all()
-        )
+        queued_ids = db.query(PipelineRun.id).filter(PipelineRun.status == "queued").order_by(PipelineRun.id).all()
         queued_positions = {run_id: position for position, (run_id,) in enumerate(queued_ids, start=1)}
     queue_entries = {
         entry.run_id: entry

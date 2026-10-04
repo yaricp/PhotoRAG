@@ -1,6 +1,6 @@
 # Verification plan for the next implementation
 
-The acceptance checks below remain the future manual/platform acceptance plan. The execution notes at the end record automated evidence only. All result notes and test instructions in this change are in English. No existing PhotoRAG database, Ollama configuration, installed model, or original image should be reset by verification without the tester's explicit choice.
+The acceptance checks below define the remaining manual acceptance plan for 0.1.5. Execution notes record automated and user-reported evidence. Linux runtime verification is explicitly deferred from this release; its installers receive static packaging inspection only. All result notes and test instructions in this change are in English. No existing PhotoRAG database, Ollama configuration, installed model, or original image should be reset by verification without the tester's explicit choice.
 
 ## Baseline to reproduce
 
@@ -15,8 +15,7 @@ The acceptance checks below remain the future manual/platform acceptance plan. T
 | Automatic context | Keep Ollama's global 262,144-token setting, select `qwen3-vl:2b-instruct` for image roles, process representative normal and high-resolution photos. Repeat with another vision model and a model with a smaller native limit. | PhotoRAG sends an explicit bounded effective context within the selected model's limit; the global Ollama setting is unchanged; the UI shows the chosen value; oversized inputs produce a bounded, clear outcome. No Qwen-name-only branch. |
 | Image compatibility | Select a text-only Ollama model for description/OCR/tagging. | The mismatch is visible before successful image processing is claimed; no fake description, tags, or categories are saved. |
 | Bulk import | Add 24 photos to a watched folder in one burst on the macOS host, including ordinary and high-resolution images. | All 24 have visible queued/running/completed or completed-with-errors run records; concurrency stays within the policy; successful outputs exist in the database; any failures have task-level reasons and are not hidden behind green phase-4 rows. |
-| Limited Windows hardware | Repeat with the 8 GiB Windows test machine and the model chosen by the tester. | Work stays bounded. If the model cannot fit, tasks finish with actionable resource errors and remain retryable; the application does not hang indefinitely or claim success. |
-| Linux | Repeat normal import and one induced Ollama failure on a real Linux install. | The same context, queue, status, and retry contract holds without OS-specific code paths. |
+| Windows x64 VM | Exercise remote-model processing and local Ollama failure/retry on the available Windows x64 VM hosted by Apple Silicon, first with 8 GiB and later with 12 GiB assigned RAM. | Record the tested configuration and limitations. The current VM results do not establish reliable local Ollama support on native Windows hardware. |
 | Retry dependencies | Cause description to fail, then retry only that task after Ollama recovers. | Description, dependent translation/embedding, independent tags/categories, and prior attempt history have correct outcomes; no successful independent data disappears. |
 | Startup retry | Stop PhotoRAG with queued/running work and leave failed tasks, then relaunch with the setting off and again with it on. | Off leaves old work visible and idle. On enqueues at most one attempt per eligible failed/interrupted task through the bounded queue; successful, explicitly paused, canceled, and already active work is not replayed; a second failure does not loop during that session. |
 | Bulk retry | Make several photos contain failed/interrupted tasks and click `Restart all failed and unfinished tasks`. | Every eligible task is enqueued once through the shared queue; completed outputs and attempt history remain; active work is not duplicated; queue progress and attempt counts update. |
@@ -28,7 +27,7 @@ The acceptance checks below remain the future manual/platform acceptance plan. T
 | Product version | Open Settings in an installed packaged build. | The displayed version matches Electron's packaged application version. |
 | Duplicate tag output | Use or mock an Ollama tag response containing repeated normalized labels, then retry after some tags are already attached. | Each distinct tag association is saved once with deterministic confidence handling; valid results are not lost to a unique-constraint failure; retry history remains inspectable. |
 | Folder/status UI | Add an active watcher; load a legacy watcher without `updated_at`; save vision and translation model configurations after the banner appears. Repeat in English, Russian and Spanish. | No `Invalid Date`; active status has correct meaning; warning refreshes and uses the selected language; configured but unavailable is distinct from unconfigured. |
-| Upgrade/installers | Upgrade existing packaged installs and inspect one real runtime per OS, plus all target installer contents. | No model repull, venv reinstall, or photo deletion. A missing retry preference defaults off; an existing preference survives the upgrade. Candidate binaries contain the same backend revision and pass packaging checks. |
+| Upgrade/installers | Smoke-test real installs on macOS and Windows x64; inspect all candidate installer contents. Run the upgrade-preservation scenario separately. | Record install and first launch on macOS and Windows. Linux runtime is out of scope for 0.1.5; only its package architecture and contents are checked. Upgrade preservation remains pending until task 5.8 passes. |
 
 ## Evidence to capture
 
@@ -132,3 +131,24 @@ The user reported repeated failed attempts cluttering completed cards, unreliabl
 - `tests/test_pipeline_runs.py` passed 30 tests after its temporary-database fixture was taught to bypass the image gate, which is covered separately by the blank-image pipeline tests. `tests/test_model_services.py` passed 18 tests.
 - The full frontend suite passed 332 tests in 45 files; `npm run type-check` passed. ESLint reported 12 warnings and no errors. Ruff checks on changed Python files, `git diff --check`, and `openspec validate stabilize-cross-platform-photo-processing --strict` passed.
 - A combined backend invocation that included legacy mocking-heavy suites was not green: it exposed module-level `MagicMock` contamination between test modules and outdated `test_pipeline_perceptual.py` expectations (it calls the async task with an obsolete second argument and expects the removed `folder_scanners.start_pipeline` entry point). The new duplicate-policy and model-gate suites pass in isolation. The broader backend suite and real Ollama/platform acceptance remain open; no packaged pre.9 build or hardware inference is claimed here.
+
+## Cross-platform package candidates — 2026-10-05 (`0.1.5-pre.10`)
+
+All five test installers were built from the same `main` working tree at commit `566fbfb8a5458fad781bfaafd0926d039e472de8`. The tree also contained the documented Ruff-only edits and release-notes draft; no application changes were made between platform builds. All packaged `app.asar` manifests report `0.1.5-pre.10`; Electron and bundled Python executables match each target architecture; backend resources are present. The macOS bundle structure checks passed 9/9 and the DMG passed `hdiutil verify`. All five SHA-256 checks passed.
+
+| Target | Artifact | SHA-256 |
+| --- | --- | --- |
+| macOS universal | `PhotoRAG-0.1.5-pre.10-universal.dmg` | `83f795545e98e8d9d8c4a86cd3d619b91c30d59fd4fd3c71b5f59e8b6a9ea3eb` |
+| Windows x64 | `PhotoRAG-Setup-0.1.5-pre.10-x64.exe` | `41b72ab643b2f0172ab6de6c2d30a5915029dd056bd58e432bde75d11fb2e20a` |
+| Windows ARM64 | `PhotoRAG-Setup-0.1.5-pre.10-arm64.exe` | `b9ce6d1c963c504a6862d123ceb70511de29e2525991a0e3af3488e5b40d0ac7` |
+| Linux x86_64 | `PhotoRAG-0.1.5-pre.10-x86_64.AppImage` | `1b0d86cf4bc221417a310d7f87a64f15202f60cdbdee60a4dd40414e5f367f13` |
+| Linux ARM64 | `PhotoRAG-0.1.5-pre.10-arm64.AppImage` | `590476e66d647c0e1a74b5a60e2ec1c8f62b400c4d5b74146a4c974ffb9e82a1` |
+
+Linux artifacts were inspected for architecture and bundled contents only. No Linux install or runtime test was performed during the pre.10 build; the current release scope and remaining acceptance status are recorded below.
+
+## Manual platform feedback and current 0.1.5 scope — 2026-10-05
+
+- The user installed the pre.10 candidate on macOS and reports that all tested model variants, including local Ollama, process photos successfully and quickly. The exact 24-photo burst acceptance scenario above has not been explicitly confirmed, so task 5.2 remains open.
+- The user installed the pre.10 Windows x64 candidate in an x64 Windows VM hosted on an Apple Silicon Mac. Remote models were tested. Local Ollama was also exercised with `qwen3-vl:2b-instruct`: the VM was raised from 8 GiB to 12 GiB RAM, and attempts with the original photo and a 512-pixel derivative still timed out; Ollama logs show canceled `/api/chat` requests returning HTTP 500. Treat local Ollama on this VM as not guaranteed for 0.1.5. This does not establish behavior on native Windows x64 hardware.
+- Linux x64/ARM64 candidates were built and statically inspected, but no Linux installation or runtime test was performed. Linux runtime verification is removed from the 0.1.5 acceptance scope.
+- Automated policy-matrix tests, focused backend/frontend checks, and strict OpenSpec validation are complete (tasks 2.6 and 5.1). Native Windows local-Ollama calibration remains open (2.7); full 24-photo macOS acceptance remains open (5.2); the Windows VM behavior has been recorded (5.3); package install/first-launch smoke tests are recorded for macOS and Windows (5.7). The complete backend suite remains non-green and is tracked separately in task 5.9. Upgrade preservation remains open in task 5.8.

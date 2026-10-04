@@ -48,7 +48,7 @@ async def test_retry_pipeline_task_rejects_unknown_task(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_retry_pipeline_tasks_runs_only_selected_attempts_in_dependency_order(monkeypatch, store):
+async def test_retry_pipeline_tasks_runs_only_selected_attempts_in_dependency_order(monkeypatch, store):  # noqa: F811 - shared pytest fixture
     incoming_pipeline = import_real_incoming_pipeline()
     _, factory, photo_id = store
     from src.models import PipelineRun, PipelineTask
@@ -58,43 +58,54 @@ async def test_retry_pipeline_tasks_runs_only_selected_attempts_in_dependency_or
         previous = PipelineRun(photo_id=photo_id, source="manual", status="completed-with-errors")
         db.add(previous)
         db.flush()
-        db.add_all([
-            PipelineTask(
-                photo_id=photo_id,
-                run_id=previous.id,
-                phase="phase_1",
-                task_name="vision_task",
-                status="failed",
-                error="old error",
-            ),
-            PipelineTask(
-                photo_id=photo_id,
-                run_id=previous.id,
-                phase="phase_2",
-                task_name="translate_description_task",
-                status="skipped",
-                skip_reason="Prerequisite vision_task: failed",
-            ),
-        ])
+        db.add_all(
+            [
+                PipelineTask(
+                    photo_id=photo_id,
+                    run_id=previous.id,
+                    phase="phase_1",
+                    task_name="vision_task",
+                    status="failed",
+                    error="old error",
+                ),
+                PipelineTask(
+                    photo_id=photo_id,
+                    run_id=previous.id,
+                    phase="phase_2",
+                    task_name="translate_description_task",
+                    status="skipped",
+                    skip_reason="Prerequisite vision_task: failed",
+                ),
+            ]
+        )
         db.commit()
         previous_id = previous.id
-        previous_task_id = db.query(PipelineTask.id).filter_by(
-            run_id=previous_id,
-            task_name="vision_task",
-        ).scalar()
+        previous_task_id = (
+            db.query(PipelineTask.id)
+            .filter_by(
+                run_id=previous_id,
+                task_name="vision_task",
+            )
+            .scalar()
+        )
 
     calls = []
 
     def succeed(task_name):
         async def runner(_photo_id):
             calls.append(task_name)
+
         return runner
 
-    monkeypatch.setattr(incoming_pipeline, "_TASK_RUNNERS", {
-        "auto_tag_clip_task": succeed("auto_tag_clip_task"),
-        "vision_task": succeed("vision_task"),
-        "translate_description_task": succeed("translate_description_task"),
-    })
+    monkeypatch.setattr(
+        incoming_pipeline,
+        "_TASK_RUNNERS",
+        {
+            "auto_tag_clip_task": succeed("auto_tag_clip_task"),
+            "vision_task": succeed("vision_task"),
+            "translate_description_task": succeed("translate_description_task"),
+        },
+    )
     run_id = create_pipeline_run(photo_id, "bulk-retry")
     await incoming_pipeline.retry_pipeline_tasks(
         photo_id,

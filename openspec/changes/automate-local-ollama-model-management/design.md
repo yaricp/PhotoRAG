@@ -36,7 +36,7 @@ None required for this change. Exact model quality remains a release-validation 
 
 ## Verification limits
 
-The automated tests mock Ollama's HTTP responses and Electron IPC. They verify pull progress, reuse, cancellation, deletion, configuration and localized UI behavior, but they do not install or run Ollama on Windows, macOS or Linux. Before release, the packaged builds should be checked against an installed Ollama app on each platform, including a custom `OLLAMA_MODELS` location and low disk space.
+The automated tests mock Ollama's HTTP responses and Electron IPC. They verify pull progress, reuse, cancellation, deletion, configuration and localized UI behavior. For the 0.1.5 release, the manual packaged installer/Ollama workflow check is limited to macOS and Windows. Linux artifacts receive static packaging inspection only; Linux installation and runtime checks are deferred.
 
 Candidate installers use an Electron Builder metadata version override and a separate output directory. This keeps the published-version files synchronized with the last release while avoiding replacement of earlier installers. Candidate packaging and runtime checks are tracked in section 5 of `tasks.md`.
 

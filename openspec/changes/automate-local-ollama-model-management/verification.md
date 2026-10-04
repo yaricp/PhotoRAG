@@ -1,5 +1,19 @@
 # Candidate build verification
 
+## Updated cross-platform test installers: 0.1.5-pre.10 — 2026-10-05
+
+All five candidate packages were built from the same source working tree at commit `566fbfb8a5458fad781bfaafd0926d039e472de8`. The packaged manifests report `0.1.5-pre.10`; Electron and Python binaries match their target architectures; backend resources are present; all five artifact checksums passed. The macOS DMG passed `hdiutil verify` and its bundle structure check passed 9/9 assertions.
+
+| Target | Artifact | SHA-256 |
+| --- | --- | --- |
+| macOS universal | `PhotoRAG-0.1.5-pre.10-universal.dmg` | `83f795545e98e8d9d8c4a86cd3d619b91c30d59fd4fd3c71b5f59e8b6a9ea3eb` |
+| Windows x64 | `PhotoRAG-Setup-0.1.5-pre.10-x64.exe` | `41b72ab643b2f0172ab6de6c2d30a5915029dd056bd58e432bde75d11fb2e20a` |
+| Windows ARM64 | `PhotoRAG-Setup-0.1.5-pre.10-arm64.exe` | `b9ce6d1c963c504a6862d123ceb70511de29e2525991a0e3af3488e5b40d0ac7` |
+| Linux x86_64 | `PhotoRAG-0.1.5-pre.10-x86_64.AppImage` | `1b0d86cf4bc221417a310d7f87a64f15202f60cdbdee60a4dd40414e5f367f13` |
+| Linux ARM64 | `PhotoRAG-0.1.5-pre.10-arm64.AppImage` | `590476e66d647c0e1a74b5a60e2ec1c8f62b400c4d5b74146a4c974ffb9e82a1` |
+
+The user has installed the pre.10 candidate on macOS and on the available Windows x64 VM. All model variants tested on macOS are reported to work; Windows remote models were tested, while local Ollama is not guaranteed in this VM. Linux packages were checked statically on macOS, with no Linux install or runtime test. Linux runtime verification is deferred from 0.1.5. The broader installer and Ollama workflow checklist in task 5.4 remains open for macOS and Windows.
+
 ## Cross-platform follow-up test installers: 0.1.5-pre.5
 
 Built locally on 2026-09-28 from application commit `8bfe3c8` after replacing the blocking Ollama download dialog on the Models page with per-card progress and correcting remote CLIP failure handling. The application checks whether a chosen Ollama model is already installed, shares an active pull for that model, and leaves other model cards usable. Oversized remote CLIP candidate lists are retried in smaller groups; provider failures are reported as task failures.
@@ -45,7 +59,7 @@ The macOS DMG passed `hdiutil verify`; its unpacked app passed all nine structur
 
 Electron Builder used cached Electron 43.2.0 archives with download-time checksum validation disabled for these local candidate builds. After packaging, all six Electron archives used by the five targets matched the official Electron 43.2.0 `SHASUMS256.txt`. The macOS DMG is not signed or notarized; code-signing status on the other targets was not verified. Final publication should use normal CI checksum validation and the project's release signing process.
 
-Linux ARM64 was built locally with an explicit `--linux AppImage --arm64` target. Its existing CI job remains disabled because the default target configuration has previously fallen back to missing `snapcraft` on the runner. No installer was run on its target OS during this build; the real Windows/macOS/Linux installation and Ollama workflow checks in task 5.4 remain open.
+Linux ARM64 was built locally with an explicit `--linux AppImage --arm64` target. Its existing CI job remains disabled because the default target configuration has previously fallen back to missing `snapcraft` on the runner. No installer was run on its target OS during this build. The pre.3 task 5.4 covered all three systems at that time; the current 0.1.5 scope is macOS and Windows, with Linux runtime verification deferred as recorded at the top of this file.
 
 ## Earlier test installers: 0.1.5-pre.2
 

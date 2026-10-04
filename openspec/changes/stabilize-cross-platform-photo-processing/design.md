@@ -34,7 +34,7 @@ The pre.7 Mac test revealed that the bulk retry classifier treats any task skipp
 ## Risks / Trade-offs
 
 - **A single Ollama run lowers throughput on high-memory hosts** → Keep the admission policy configurable internally and raise it only after real multi-photo measurements; correctness and bounded memory are the release default.
-- **Model metadata and file size cannot precisely predict runtime memory or image tokens** → Clamp to a conservative policy, catch explicit Ollama failures, and validate representative images on 8 GiB Windows and 16 GiB macOS plus Linux. Never silently truncate content.
+- **Model metadata and file size cannot precisely predict runtime memory or image tokens** → Clamp to a conservative policy, catch explicit Ollama failures, and validate representative images on macOS and available Windows hardware. Linux runtime calibration is deferred from 0.1.5; never silently truncate content.
 - **Multiple functions use one Ollama model** → Reuse a stable context for pipeline calls to reduce reloading; disclose when a larger chat workload needs a different budget.
 - **Persistent queue and retry migration affect existing databases** → Back up/migrate transactionally, preserve old photo content and task evidence, and provide rollback without deleting models or the Python environment.
 - **Recovery can consume resources when explicitly enabled** → Keep startup retry off by default and use the same bounded queue for recovery and bulk retry; never rerun successful tasks.
@@ -46,5 +46,5 @@ Introduce additive run/attempt fields or tables, backfill one legacy run per exi
 
 ## Open Questions
 
-- Calibrate the automatic host-capacity policy and timeout on the actual Windows 8 GiB CPU test machine, macOS 16 GiB machine, and a Linux host before finalizing defaults. The specification fixes the externally observable behavior; these measurements choose the safe thresholds.
+- Calibrate the automatic host-capacity policy and timeout on native Windows x64 hardware and the 16 GiB macOS machine before claiming reliable local Ollama support on those environments. The current Windows x64 VM is hosted on Apple Silicon and does not substitute for native Windows hardware. Linux runtime calibration is deferred from 0.1.5.
 - Confirm whether an existing custom Ollama URL exposes model metadata; if it does not, show an unknown-capacity state and a bounded attempt rather than assuming local disk or memory information.
