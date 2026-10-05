@@ -1,4 +1,5 @@
 """PhotoRAG's per-request Ollama policy; never changes server preferences."""
+
 import ipaddress
 import os
 from contextlib import contextmanager
@@ -29,9 +30,11 @@ def is_local_ollama(base_url):
 def _host_memory_gib():
     try:
         import psutil
-        return psutil.virtual_memory().total / (1024 ** 3)
+
+        return psutil.virtual_memory().total / (1024**3)
     except ImportError:
         import sys
+
         if sys.platform == 'win32':
             try:
                 import ctypes
@@ -52,18 +55,17 @@ def _host_memory_gib():
                 status = MemoryStatusEx()
                 status.dwLength = ctypes.sizeof(status)
                 if ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(status)):
-                    return status.ullTotalPhys / (1024 ** 3)
+                    return status.ullTotalPhys / (1024**3)
             except (AttributeError, OSError):
                 return None
         try:
-            return os.sysconf('SC_PAGE_SIZE') * os.sysconf('SC_PHYS_PAGES') / (1024 ** 3)
+            return os.sysconf('SC_PAGE_SIZE') * os.sysconf('SC_PHYS_PAGES') / (1024**3)
         except (ValueError, OSError, AttributeError):
             return None
 
 
 def _show(base_url, model_name):
-    return _request(f'{(base_url or DEFAULT_URL).rstrip("/")}/api/show', {'model':model_name}, 5)
-
+    return _request(f'{(base_url or DEFAULT_URL).rstrip("/")}/api/show', {'model': model_name}, 5)
 
 
 @dataclass(frozen=True)
@@ -98,7 +100,15 @@ def resolve_ollama_policy(base_url, model_name, role, workload_roles=None):
     capabilities = metadata.get('capabilities')
     vision = ('vision' in capabilities) if isinstance(capabilities, list) else None
     info = metadata.get('model_info') or {}
-    limits = [value for key, value in info.items() if key.endswith('.context_length') and isinstance(value, int) and not isinstance(value, bool) and value > 0] if isinstance(info, dict) else []
+    limits = (
+        [
+            value
+            for key, value in info.items()
+            if key.endswith('.context_length') and isinstance(value, int) and not isinstance(value, bool) and value > 0
+        ]
+        if isinstance(info, dict)
+        else []
+    )
     limit = min(limits) if limits else None
     memory = _host_memory_gib() if local else None
     known = memory is not None and limit is not None
@@ -116,13 +126,21 @@ def resolve_ollama_policy(base_url, model_name, role, workload_roles=None):
     # Image workloads can use 8k on 8 GiB and 16k on 16 GiB hosts. Text
     # workloads stay at 4k below 16 GiB. Remote RAM is not measurable locally.
     if image_workload:
-        ceiling = 16384 if local and memory is not None and memory >= 16 else 8192 if local and memory is not None and memory >= 8 else 4096
+        ceiling = (
+            16384
+            if local and memory is not None and memory >= 16
+            else 8192
+            if local and memory is not None and memory >= 8
+            else 4096
+        )
     else:
         ceiling = 8192 if local and memory is not None and memory >= 16 else 4096
     effective = min(budget, ceiling, limit or 4096)
     if not local:
         reason_code = 'remote_capacity_unverified'
-        reason = f'Remote host capacity is not measurable; {effective} tokens is the conservative {budget_name} context.'
+        reason = (
+            f'Remote host capacity is not measurable; {effective} tokens is the conservative {budget_name} context.'
+        )
     elif memory is None:
         reason_code = 'host_memory_unavailable'
         reason = f'Host memory is unavailable; {effective} tokens is the conservative {budget_name} context.'
@@ -150,15 +168,24 @@ def configured_model_roles(base_url, model_name, fallback_role):
         from src.models import AIModelConfig
 
         with SessionLocal() as db:
-            configs = db.query(
-                AIModelConfig.type,
-                AIModelConfig.mode,
-                AIModelConfig.model_provider,
-                AIModelConfig.model_name,
-                AIModelConfig.url,
-            ).filter_by(mode='remote', model_provider='ollama', model_name=model_name).all()
+            configs = (
+                db.query(
+                    AIModelConfig.type,
+                    AIModelConfig.mode,
+                    AIModelConfig.model_provider,
+                    AIModelConfig.model_name,
+                    AIModelConfig.url,
+                )
+                .filter_by(mode='remote', model_provider='ollama', model_name=model_name)
+                .all()
+            )
         for cfg in configs:
-            if cfg.mode == 'remote' and cfg.model_provider == 'ollama' and cfg.model_name == model_name and _normalized_endpoint(cfg.url) == endpoint:
+            if (
+                cfg.mode == 'remote'
+                and cfg.model_provider == 'ollama'
+                and cfg.model_name == model_name
+                and _normalized_endpoint(cfg.url) == endpoint
+            ):
                 roles.add(cfg.type)
     except Exception:
         # Keep inference bounded if the database is unavailable during startup or migration.
@@ -179,8 +206,16 @@ def _request(url, payload, timeout):
             if response.is_error:
                 # Never echo server response bodies: they may contain prompts/URLs.
                 body = response.text.lower()
-                kind = 'context overflow' if 'context' in body else 'insufficient memory' if 'memory' in body else 'runner failure'
-                raise RuntimeError(f'Ollama {kind} (HTTP {response.status_code}); check model compatibility and resources.')
+                kind = (
+                    'context overflow'
+                    if 'context' in body
+                    else 'insufficient memory'
+                    if 'memory' in body
+                    else 'runner failure'
+                )
+                raise RuntimeError(
+                    f'Ollama {kind} (HTTP {response.status_code}); check model compatibility and resources.'
+                )
             result = response.json()
             if result.get('error'):
                 raise RuntimeError('Ollama runner failure; check the selected model and available memory.')
@@ -197,6 +232,7 @@ def _request(url, payload, timeout):
 
 class OllamaClient:
     """Small LangChain-compatible sync adapter with explicit Ollama request policy."""
+
     def __init__(self, base_url, model_name, role):
         self.base_url = (base_url or DEFAULT_URL).rstrip('/')
         self.model_name = model_name
@@ -211,6 +247,7 @@ class OllamaClient:
         import time
 
         from loguru import logger
+
         started = time.monotonic()
         if self._started is None:
             self._started = started
@@ -224,21 +261,37 @@ class OllamaClient:
                 remaining = deadline - (time.monotonic() - self._started)
                 if remaining <= 0:
                     raise TimeoutError('Ollama inference queue deadline exceeded')
-                result = _request(self.base_url + endpoint, {'model': self.model_name, 'options': {'num_ctx': self.policy.effective_num_ctx}, **payload}, remaining)
+                result = _request(
+                    self.base_url + endpoint,
+                    {'model': self.model_name, 'options': {'num_ctx': self.policy.effective_num_ctx}, **payload},
+                    remaining,
+                )
                 return validate(result)
         except Exception as exc:
             error_class = type(exc).__name__
             raise
         finally:
             from src.pipeline_tracker import _inference_ids
+
             ids = _inference_ids.get()
-            logger.info('Ollama photo_id={} run_id={} task_id={} model={} effective_context={} role={} duration={:.3f} error_class={}', ids.get('photo_id'), ids.get('run_id'), ids.get('task_id'), self.model_name, self.policy.effective_num_ctx, self.role, time.monotonic()-started, error_class)
+            logger.info(
+                'Ollama photo_id={} run_id={} task_id={} model={} effective_context={} role={} duration={:.3f} error_class={}',
+                ids.get('photo_id'),
+                ids.get('run_id'),
+                ids.get('task_id'),
+                self.model_name,
+                self.policy.effective_num_ctx,
+                self.role,
+                time.monotonic() - started,
+                error_class,
+            )
 
     def invoke(self, messages):
         from langchain_core.messages import AIMessage
+
         converted = []
         for message in messages:
-            role = {'human':'user', 'ai':'assistant'}.get(message.type, message.type)
+            role = {'human': 'user', 'ai': 'assistant'}.get(message.type, message.type)
             content = message.content
             images = []
             if isinstance(content, list):
@@ -252,18 +305,24 @@ class OllamaClient:
                             raise ValueError('Ollama requires an inline base64 image')
                         images.append(image_url.split(';base64,', 1)[1])
                     else:
-                        raise ValueError('Unsupported message content block; Ollama image content must use inline base64.')
+                        raise ValueError(
+                            'Unsupported message content block; Ollama image content must use inline base64.'
+                        )
                 content = '\n'.join(texts)
-            converted.append({'role':role, 'content':content, **({'images':images} if images else {})})
+            converted.append({'role': role, 'content': content, **({'images': images} if images else {})})
+
         def validate(result):
-            if result.get('done_reason') == 'length' or result.get('prompt_eval_count', 0) >= self.policy.effective_num_ctx - 256:
+            if (
+                result.get('done_reason') == 'length'
+                or result.get('prompt_eval_count', 0) >= self.policy.effective_num_ctx - 256
+            ):
                 raise ValueError('Ollama context overflow or truncated response; use a model with sufficient context.')
             content = result.get('message', {}).get('content')
             if not isinstance(content, str) or not content.strip():
                 raise ValueError('Ollama returned an empty response')
             return AIMessage(content=content)
 
-        return self._call('/api/chat', {'messages':converted, 'stream':False}, validate)
+        return self._call('/api/chat', {'messages': converted, 'stream': False}, validate)
 
     def embed_query(self, text):
         def validate(result):
@@ -272,13 +331,14 @@ class OllamaClient:
                 raise ValueError('Ollama returned an empty embedding')
             return vectors[0]
 
-        return self._call('/api/embed', {'input':text, 'truncate':False}, validate)
+        return self._call('/api/embed', {'input': text, 'truncate': False}, validate)
 
 
 def _gate_path():
     from pathlib import Path
 
     from src.config import Database_Settings
+
     return Path(Database_Settings().DATABASE_PATH).resolve().parent / 'ollama-inference.lock'
 
 
@@ -286,6 +346,7 @@ def _gate_path():
 def local_inference_gate(base_url, timeout):
     """OS-owned lock shared across loops, threads and processes; no stale lease."""
     import time
+
     if not is_local_ollama(base_url):
         yield
         return
@@ -295,22 +356,28 @@ def local_inference_gate(base_url, timeout):
     with open(path, 'a+b') as lock:
         if os.name == 'nt':
             import msvcrt
+
             lock.seek(0, 2)
             if lock.tell() == 0:
                 lock.write(b'0')
                 lock.flush()
+
             def acquire():
                 lock.seek(0)
                 msvcrt.locking(lock.fileno(), msvcrt.LK_NBLCK, 1)
+
             def release():
                 lock.seek(0)
                 msvcrt.locking(lock.fileno(), msvcrt.LK_UNLCK, 1)
         else:
             import fcntl
+
             def acquire():
                 fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+
             def release():
                 fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
+
         while True:
             try:
                 acquire()
@@ -318,7 +385,7 @@ def local_inference_gate(base_url, timeout):
             except OSError:
                 if time.monotonic() >= deadline:
                     raise TimeoutError('Ollama inference queue deadline exceeded') from None
-                time.sleep(min(.05, max(0, deadline-time.monotonic())))
+                time.sleep(min(0.05, max(0, deadline - time.monotonic())))
         try:
             yield
         finally:
@@ -328,6 +395,7 @@ def local_inference_gate(base_url, timeout):
 def policy_status(configs):
     """Read-only serializable information; omit endpoint URLs and credentials."""
     from dataclasses import asdict
+
     result = []
     grouped = {}
     for cfg in configs:
@@ -342,7 +410,14 @@ def policy_status(configs):
     for cfg in configs:
         if cfg.mode == 'remote' and cfg.model_provider == 'ollama':
             key = (_normalized_endpoint(cfg.url), cfg.model_name)
-            result.append({'type':cfg.type, 'model_name':cfg.model_name, 'workload_roles':sorted(grouped[key]), **asdict(policies[key])})
+            result.append(
+                {
+                    'type': cfg.type,
+                    'model_name': cfg.model_name,
+                    'workload_roles': sorted(grouped[key]),
+                    **asdict(policies[key]),
+                }
+            )
     return result
 
 
@@ -356,4 +431,4 @@ def langchain_options(base_url, model_name, role):
     """Keep interactive tool-chat context aligned with pipeline model policy."""
     roles = configured_model_roles(base_url, model_name, role)
     policy = resolve_ollama_policy(base_url, model_name, role, workload_roles=roles)
-    return {'num_ctx':policy.effective_num_ctx, 'client_kwargs':{'timeout':timeout_for_role(role)}}
+    return {'num_ctx': policy.effective_num_ctx, 'client_kwargs': {'timeout': timeout_for_role(role)}}

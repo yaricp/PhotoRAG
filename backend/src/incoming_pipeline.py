@@ -179,16 +179,18 @@ _PHASES = {
     "phase_4": _PHASE_4_TASKS,
 }
 _TASK_PHASES = {name: phase for phase, names in _PHASES.items() for name in names}
-_MODEL_TASKS = frozenset({
-    "auto_tag_clip_task",
-    "categorize_photo_task",
-    "vision_task",
-    "final_embedding_task",
-    "is_this_document_task",
-    "translate_description_task",
-    "ocr_task",
-    "embedding_document_text_task",
-})
+_MODEL_TASKS = frozenset(
+    {
+        "auto_tag_clip_task",
+        "categorize_photo_task",
+        "vision_task",
+        "final_embedding_task",
+        "is_this_document_task",
+        "translate_description_task",
+        "ocr_task",
+        "embedding_document_text_task",
+    }
+)
 _DEPENDENCIES = {
     "translate_description_task": ["vision_task"],
     "final_embedding_task": ["vision_task"],
@@ -210,7 +212,11 @@ async def _run_task(photo_id, phase, name, runner):
             status, required = get_task_outcome(photo_id, _TASK_PHASES[dependency], dependency)
             if status is not None and status != "done":
                 mark_task_skipped(
-                    photo_id, phase, name, f"Prerequisite {dependency}: {status}", required=required or status != "skipped"
+                    photo_id,
+                    phase,
+                    name,
+                    f"Prerequisite {dependency}: {status}",
+                    required=required or status != "skipped",
                 )
                 return
         await runner(photo_id)

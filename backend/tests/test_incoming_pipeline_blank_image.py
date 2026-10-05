@@ -5,16 +5,19 @@ import pytest
 from PIL import Image
 
 
-@pytest.mark.parametrize('task_name', [
-    'auto_tag_clip_task',
-    'categorize_photo_task',
-    'vision_task',
-    'final_embedding_task',
-    'is_this_document_task',
-    'translate_description_task',
-    'ocr_task',
-    'embedding_document_text_task',
-])
+@pytest.mark.parametrize(
+    'task_name',
+    [
+        'auto_tag_clip_task',
+        'categorize_photo_task',
+        'vision_task',
+        'final_embedding_task',
+        'is_this_document_task',
+        'translate_description_task',
+        'ocr_task',
+        'embedding_document_text_task',
+    ],
+)
 @pytest.mark.asyncio
 async def test_uniform_image_skips_every_model_task(monkeypatch, tmp_path, task_name):
     from src import incoming_pipeline

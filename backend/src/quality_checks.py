@@ -29,6 +29,7 @@ def _is_absolutely_uniform_image_cached(file_path: str, _mtime_ns: int, _size: i
     with Image.open(file_path) as img:
         return all(low == high for low, high in _visible_rgb(img).getextrema())
 
+
 _EXIF_CAMERA_KEYS = ("Make", "Model")
 _EXIF_DATE_KEYS = ("DateTimeOriginal", "DateTimeDigitized", "DateTime")
 

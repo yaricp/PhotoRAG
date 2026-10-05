@@ -211,19 +211,51 @@ def test_collect_retryable_tasks_uses_latest_outcome_and_skips_active_paused_or_
         db.add_all(runs)
         db.flush()
         tasks = [
-            models.PipelineTask(photo_id=1, run_id=runs[0].id, phase="phase_1", task_name="vision_task", status="failed"),
-            models.PipelineTask(photo_id=1, run_id=runs[0].id, phase="phase_1", task_name="auto_tag_clip_task", status="failed"),
-            models.PipelineTask(photo_id=1, run_id=runs[0].id, phase="phase_2", task_name="translate_description_task", status="skipped", skip_reason="Prerequisite vision_task: failed"),
+            models.PipelineTask(
+                photo_id=1, run_id=runs[0].id, phase="phase_1", task_name="vision_task", status="failed"
+            ),
+            models.PipelineTask(
+                photo_id=1, run_id=runs[0].id, phase="phase_1", task_name="auto_tag_clip_task", status="failed"
+            ),
+            models.PipelineTask(
+                photo_id=1,
+                run_id=runs[0].id,
+                phase="phase_2",
+                task_name="translate_description_task",
+                status="skipped",
+                skip_reason="Prerequisite vision_task: failed",
+            ),
             models.PipelineTask(photo_id=1, run_id=runs[1].id, phase="phase_1", task_name="vision_task", status="done"),
-            models.PipelineTask(photo_id=1, run_id=runs[1].id, phase="phase_1", task_name="auto_tag_clip_task", status="failed"),
-            models.PipelineTask(photo_id=1, run_id=runs[1].id, phase="phase_2", task_name="translate_description_task", status="skipped", skip_reason="Prerequisite vision_task: failed"),
-            models.PipelineTask(photo_id=2, run_id=runs[2].id, phase="phase_1", task_name="vision_task", status="interrupted"),
+            models.PipelineTask(
+                photo_id=1, run_id=runs[1].id, phase="phase_1", task_name="auto_tag_clip_task", status="failed"
+            ),
+            models.PipelineTask(
+                photo_id=1,
+                run_id=runs[1].id,
+                phase="phase_2",
+                task_name="translate_description_task",
+                status="skipped",
+                skip_reason="Prerequisite vision_task: failed",
+            ),
+            models.PipelineTask(
+                photo_id=2, run_id=runs[2].id, phase="phase_1", task_name="vision_task", status="interrupted"
+            ),
             models.PipelineTask(photo_id=2, run_id=runs[2].id, phase="phase_3", task_name="ocr_task", status="paused"),
-            models.PipelineTask(photo_id=3, run_id=runs[3].id, phase="phase_1", task_name="vision_task", status="failed"),
-            models.PipelineTask(photo_id=4, run_id=runs[4].id, phase="phase_1", task_name="auto_tag_clip_task", status="failed"),
-            models.PipelineTask(photo_id=4, run_id=runs[5].id, phase="phase_1", task_name="auto_tag_clip_task", status="done"),
-            models.PipelineTask(photo_id=5, run_id=runs[6].id, phase="phase_1", task_name="vision_task", status="failed"),
-            models.PipelineTask(photo_id=6, run_id=runs[7].id, phase="phase_1", task_name="vision_task", status="canceled"),
+            models.PipelineTask(
+                photo_id=3, run_id=runs[3].id, phase="phase_1", task_name="vision_task", status="failed"
+            ),
+            models.PipelineTask(
+                photo_id=4, run_id=runs[4].id, phase="phase_1", task_name="auto_tag_clip_task", status="failed"
+            ),
+            models.PipelineTask(
+                photo_id=4, run_id=runs[5].id, phase="phase_1", task_name="auto_tag_clip_task", status="done"
+            ),
+            models.PipelineTask(
+                photo_id=5, run_id=runs[6].id, phase="phase_1", task_name="vision_task", status="failed"
+            ),
+            models.PipelineTask(
+                photo_id=6, run_id=runs[7].id, phase="phase_1", task_name="vision_task", status="canceled"
+            ),
         ]
         db.add_all(tasks)
         db.add(models.PipelineQueueEntry(run_id=runs[3].id, lane="local-ollama"))
@@ -391,24 +423,26 @@ def test_bulk_recovery_admits_a_24_photo_backlog_once_and_keeps_it_bounded(queue
         db.add_all(runs)
         db.flush()
         for run in runs:
-            db.add_all([
-                models.PipelineTask(
-                    photo_id=run.photo_id,
-                    run_id=run.id,
-                    phase="phase_1",
-                    task_name="vision_task",
-                    status="failed",
-                    error="model stopped",
-                ),
-                models.PipelineTask(
-                    photo_id=run.photo_id,
-                    run_id=run.id,
-                    phase="phase_2",
-                    task_name="translate_description_task",
-                    status="skipped",
-                    skip_reason="Prerequisite vision_task: failed",
-                ),
-            ])
+            db.add_all(
+                [
+                    models.PipelineTask(
+                        photo_id=run.photo_id,
+                        run_id=run.id,
+                        phase="phase_1",
+                        task_name="vision_task",
+                        status="failed",
+                        error="model stopped",
+                    ),
+                    models.PipelineTask(
+                        photo_id=run.photo_id,
+                        run_id=run.id,
+                        phase="phase_2",
+                        task_name="translate_description_task",
+                        status="skipped",
+                        skip_reason="Prerequisite vision_task: failed",
+                    ),
+                ]
+            )
         db.commit()
 
     result = queue.enqueue_retryable_tasks(source="bulk-retry")
@@ -416,9 +450,9 @@ def test_bulk_recovery_admits_a_24_photo_backlog_once_and_keeps_it_bounded(queue
     assert result["queued_photos"] == 24
     assert result["queued_tasks"] == 48
     with factory() as db:
-        admitted = db.query(models.PipelineRun).filter_by(source="bulk-retry").order_by(
-            models.PipelineRun.photo_id
-        ).all()
+        admitted = (
+            db.query(models.PipelineRun).filter_by(source="bulk-retry").order_by(models.PipelineRun.photo_id).all()
+        )
         assert [run.photo_id for run in admitted] == list(range(1, 25))
         assert all(run.status == "queued" for run in admitted)
         assert all(
@@ -538,9 +572,7 @@ def test_watcher_burst_admits_all_24_photos(queue_store, monkeypatch, tmp_path):
     )
     monkeypatch.setattr(observer, "get_photo_capture_date", lambda path: None)
     monkeypatch.setattr(observer, "move_photo", lambda path, destination: str(path))
-    monkeypatch.setattr(
-        observer, "check_photo_hash_exists", lambda db, file_hash: None
-    )
+    monkeypatch.setattr(observer, "check_photo_hash_exists", lambda db, file_hash: None)
     monkeypatch.setattr(
         observer,
         "create_photo_record",

@@ -128,9 +128,12 @@ def finalize_pipeline_run(run_id: int) -> str:
             run.status = "interrupted"
             run.finished_at = run.finished_at or datetime.now(timezone.utc)
             interrupted = [task for task in outcomes if task.status == "interrupted"]
-            run.summary = "; ".join(
-                f"{task.task_name}: {task.error or task.skip_reason or 'interrupted'}" for task in interrupted
-            )[:2000] or run.summary
+            run.summary = (
+                "; ".join(
+                    f"{task.task_name}: {task.error or task.skip_reason or 'interrupted'}" for task in interrupted
+                )[:2000]
+                or run.summary
+            )
         elif run.status == "paused" or "paused" in statuses:
             run.status = "paused"
             run.finished_at = None

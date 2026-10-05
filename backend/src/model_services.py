@@ -202,7 +202,14 @@ async def _call_remote_clip(cfg: dict, file_path: str, task: str) -> list:
     api_key = cfg.get("api_key")
     api_url = cfg.get("url")
 
-    llm = await run_in_thread(_build_langchain_vision_model, provider, model_name, api_key, api_url, **({"role": "clip"} if provider == "ollama" else {}))
+    llm = await run_in_thread(
+        _build_langchain_vision_model,
+        provider,
+        model_name,
+        api_key,
+        api_url,
+        **({"role": "clip"} if provider == "ollama" else {}),
+    )
 
     clip_cfg = CLIP_Settings()
     all_tags = _load_clip_names(clip_cfg.TAGS_NAMES_PATH, "tags")
@@ -223,9 +230,7 @@ async def _call_remote_clip(cfg: dict, file_path: str, task: str) -> list:
         image_quality=quality_metrics,
     )
 
-    logger.debug(
-        f"[clip/remote] Running task {task} on model {model_name}"
-    )
+    logger.debug(f"[clip/remote] Running task {task} on model {model_name}")
     if task == "tags":
         result = await run_in_thread(tagger.get_tags, file_path)
         logger.debug(f"[clip/remote] result: {result}")
@@ -445,7 +450,14 @@ async def _call_remote_translation(
             tgt_lang=tgt_name,
         )
     else:
-        llm = await run_in_thread(_build_langchain_vision_model, provider, model_name or "gpt-4o-mini", api_key, api_url, **({"role": "translator"} if p == "ollama" else {}))
+        llm = await run_in_thread(
+            _build_langchain_vision_model,
+            provider,
+            model_name or "gpt-4o-mini",
+            api_key,
+            api_url,
+            **({"role": "translator"} if p == "ollama" else {}),
+        )
         translator = RemoteTranslator(llm=llm, tgt_lang=tgt_name)
 
     logger.debug(f"[translation/remote] '{provider or 'LLM'}' → {tgt_name} | model='{model_name or 'default'}'")
@@ -496,7 +508,14 @@ async def _call_remote_ocr(cfg: dict, file_path: str) -> str:
     api_key = cfg.get("api_key")
     api_url = cfg.get("url")
 
-    llm = await run_in_thread(_build_langchain_vision_model, provider, model_name, api_key, api_url, **({"role": "ocr"} if provider == "ollama" else {}))
+    llm = await run_in_thread(
+        _build_langchain_vision_model,
+        provider,
+        model_name,
+        api_key,
+        api_url,
+        **({"role": "ocr"} if provider == "ollama" else {}),
+    )
     ocr = RemoteOCR(llm)
     return await run_in_thread(ocr.extract_text, file_path)
 
