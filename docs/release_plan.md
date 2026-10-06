@@ -2,6 +2,8 @@
 
 ## PhotoRAG 0.1.5
 
+The target version for this release is explicitly fixed at 0.1.5. This overrides Release Please's commit-derived 0.2.0 suggestion for this release cycle.
+
 This release includes the photo-processing history and recovery work, the local Ollama model-management flow, automatic context selection, and safeguards for low-detail and blank images. Remote model providers remain available across the supported desktop platforms.
 
 ## Platform verification and support limits
