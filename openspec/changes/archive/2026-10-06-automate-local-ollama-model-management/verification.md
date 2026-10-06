@@ -12,7 +12,7 @@ All five candidate packages were built from the same source working tree at comm
 | Linux x86_64 | `PhotoRAG-0.1.5-pre.10-x86_64.AppImage` | `1b0d86cf4bc221417a310d7f87a64f15202f60cdbdee60a4dd40414e5f367f13` |
 | Linux ARM64 | `PhotoRAG-0.1.5-pre.10-arm64.AppImage` | `590476e66d647c0e1a74b5a60e2ec1c8f62b400c4d5b74146a4c974ffb9e82a1` |
 
-The user has installed the pre.10 candidate on macOS and on the available Windows x64 VM. All model variants tested on macOS are reported to work; Windows remote models were tested, while local Ollama is not guaranteed in this VM. Linux packages were checked statically on macOS, with no Linux install or runtime test. Linux runtime verification is deferred from 0.1.5. The broader installer and Ollama workflow checklist in task 5.4 remains open for macOS and Windows.
+The user has installed the pre.10 candidate on macOS and on the available Windows x64 VM. All model variants tested on macOS are reported to work. The user confirmed on 2026-10-07 that the full installer and Ollama management workflow in task 5.4 also works as expected on both macOS and Windows. This covers first-run language/help, model pull progress, inventory/free-space status, cancellation, individual/all model deletion, and reopening an existing configuration. Windows local-Ollama inference calibration remains a separate open item in `stabilize-cross-platform-photo-processing` task 2.7; this workflow confirmation does not establish native Windows x64 inference performance. Linux packages were checked statically on macOS, with no Linux install or runtime test. Linux runtime verification is deferred from 0.1.5.
 
 ## Cross-platform follow-up test installers: 0.1.5-pre.5
 
