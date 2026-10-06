@@ -16,7 +16,7 @@
 - [x] 2.4 Bound local Ollama inference concurrency and duration; propagate runner termination, memory, timeout and context errors without successful empty results or silent image truncation.
 - [x] 2.5 Give Ollama OCR a dedicated 300-second request/queue deadline while preserving the shared inference gate and existing deadlines for other roles.
 - [x] 2.6 Verify context and role-specific timeout decisions with mocked small-context, non-vision, unavailable-metadata, shared-role, remote-host and 262,144-token-global-setting cases.
-- [ ] 2.7 Calibrate local Ollama context and timeout budgets on native Windows x64 hardware before claiming reliable Windows local-model support; the available Windows test was an x64 VM hosted on Apple Silicon.
+- [ ] 2.7 Calibrate local Ollama context and timeout budgets on native Windows x64 hardware before claiming reliable Windows local-model support; the available Windows test was an x64 VM hosted on Apple Silicon. Deferred beyond 0.1.5, which does not claim reliable Windows local Ollama support.
 
 ## 3. Shared queue and opt-in recovery
 
