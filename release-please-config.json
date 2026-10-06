@@ -2,6 +2,7 @@
   "packages": {
     "frontend": {
       "release-type": "node",
+      "release-as": "0.1.5",
       "package-name": "photorag",
       "bump-minor-pre-major": true,
       "changelog-path": "/CHANGELOG.md",
