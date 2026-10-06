@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.2.0](https://github.com/yaricp/PhotoRAG/compare/photorag-v0.1.4...photorag-v0.2.0) (2026-10-06)
+
+
+### Features
+
+* add paginated processing run history ([ac4b4d2](https://github.com/yaricp/PhotoRAG/commit/ac4b4d227296e4200f9e3370539eef40546138cb))
+* add processing recovery and grouped history ([f765efe](https://github.com/yaricp/PhotoRAG/commit/f765efec6df47548df1102a47dc4cb6e53ae54f2))
+* publish multilingual app help on user site ([c0405d0](https://github.com/yaricp/PhotoRAG/commit/c0405d0c9e6b7e689fd4cf8610e590d51dabf0b7))
+* select and display shared Ollama context ([e925b3f](https://github.com/yaricp/PhotoRAG/commit/e925b3fa03bd5cab9857539e1052853e293d93fa))
+
+
+### Bug Fixes
+
+* align CI checks with project environment ([c6afc10](https://github.com/yaricp/PhotoRAG/commit/c6afc102186b5058ccc6b1e39a08f17d41f22c0b))
+* align CI checks with project environment ([e5c879f](https://github.com/yaricp/PhotoRAG/commit/e5c879f83b92f12c1c2d41bdd67f1110319249c9))
+* correct processing retries and card actions ([6f19a32](https://github.com/yaricp/PhotoRAG/commit/6f19a32db2cf6767862d021710d93e2bb08fc090))
+* harden photo processing and attempt history ([a60fc05](https://github.com/yaricp/PhotoRAG/commit/a60fc050af5176931bae01da8a70dc80c96e24f9))
+* prevent stale retry cards from disappearing ([0ad7f9a](https://github.com/yaricp/PhotoRAG/commit/0ad7f9a66165df38cb6fffa39930b73aa77a871f))
+* refresh localized pipeline warnings ([bf6c984](https://github.com/yaricp/PhotoRAG/commit/bf6c984e7d7677ee437cfa85f3625205c00f3635))
+* serialize watcher timestamps and statuses ([c4fabbd](https://github.com/yaricp/PhotoRAG/commit/c4fabbdc65945d4dae2f0552a198d899e9b63a17))
+* streamline Ollama model setup and surface CLIP failures ([8bfe3c8](https://github.com/yaricp/PhotoRAG/commit/8bfe3c8bcbc000a02fcd999fe465dbe0ac3d821d))
+
 ## [0.1.4](https://github.com/yaricp/PhotoRAG/compare/photorag-v0.1.3...photorag-v0.1.4) (2026-09-20)
 
 
