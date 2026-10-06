@@ -2,6 +2,12 @@
 
 ## [0.1.5](https://github.com/yaricp/PhotoRAG/compare/photorag-v0.1.4...photorag-v0.1.5) (2026-10-06)
 
+### Platform verification
+
+- **macOS:** All supported model options were tested, including local models through Ollama.
+- **Windows:** Remote model providers were tested. Local Ollama inference is unverified and is not guaranteed for this release. The observed local-model tests used an x64 Windows VM emulated on an Apple Silicon Mac.
+- **Linux:** The x86_64 AppImage was built, but runtime behavior was not tested. Linux ARM64 is not included.
+- Installers are unsigned and macOS builds are not notarized.
 
 ### Features
 
