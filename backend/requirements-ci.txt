@@ -1,6 +1,6 @@
 # Lightweight requirements for CI test runs.
 # Linting and coverage tools.
-ruff
+ruff==0.12.0
 mypy
 pytest-cov
 # Heavy ML packages (torch, easyocr, open-clip, sentence-transformers, etc.)
@@ -17,6 +17,7 @@ python-dotenv
 loguru
 Pillow
 numpy
+imagehash
 watchdog
 huey==2.5.0
 sqlite-vec

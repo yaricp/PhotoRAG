@@ -178,7 +178,10 @@ def test_save_rejects_known_text_only_ollama_for_image_role():
         "api_key": None,
         "model_provider": "ollama",
     }
-    with patch("src.ollama_policy.validate_configuration", side_effect=ValueError("Selected Ollama model does not support vision")):
+    with patch(
+        "src.ollama_policy.validate_configuration",
+        side_effect=ValueError("Selected Ollama model does not support vision"),
+    ):
         response = client.put("/api/models/vision", json=update_data)
 
     assert response.status_code == 400

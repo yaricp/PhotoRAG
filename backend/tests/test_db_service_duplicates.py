@@ -143,7 +143,9 @@ def test_find_perceptual_duplicates_rejects_dhash_only_collision(db):
     photo_b = create_photo_record(db, "hash_cross_b", "cross_b.jpg")
     get_or_create_photo_hash(db, photo_a.id, dhash="0000000000000000", ahash="0", phash="0")
     # dHash distance is within 10, but neither independent hash corroborates it.
-    get_or_create_photo_hash(db, photo_b.id, dhash="00000000000000ff", ahash="ffffffffffffffff", phash="ffffffffffffffff")
+    get_or_create_photo_hash(
+        db, photo_b.id, dhash="00000000000000ff", ahash="ffffffffffffffff", phash="ffffffffffffffff"
+    )
 
     results = find_perceptual_duplicates(db, photo_a.id, threshold=10)
 
@@ -232,21 +234,23 @@ def test_get_duplicate_groups_hides_existing_uncorroborated_or_uniform_pair(db, 
     detailed_photo = create_photo_record(db, 'existing_detailed', str(detailed_path))
     blank_photo = create_photo_record(db, 'existing_blank', str(blank_path))
     get_or_create_photo_hash(db, detailed_photo.id, dhash='0000000000000000', ahash='0', phash='0')
-    get_or_create_photo_hash(db, blank_photo.id, dhash='0000000000000001', ahash='ffffffffffffffff', phash='ffffffffffffffff')
-    db.add(PhotoDuplicate(
-        original_photo_id=detailed_photo.id,
-        duplicate_photo_id=blank_photo.id,
-        match_type='perceptual',
-        hash_distance=1,
-    ))
+    get_or_create_photo_hash(
+        db, blank_photo.id, dhash='0000000000000001', ahash='ffffffffffffffff', phash='ffffffffffffffff'
+    )
+    db.add(
+        PhotoDuplicate(
+            original_photo_id=detailed_photo.id,
+            duplicate_photo_id=blank_photo.id,
+            match_type='perceptual',
+            hash_distance=1,
+        )
+    )
     db.commit()
 
     groups = get_duplicate_groups(db)
 
     assert not any(
-        duplicate['id'] == blank_photo.id
-        for group in groups['perceptual']
-        for duplicate in group['duplicates']
+        duplicate['id'] == blank_photo.id for group in groups['perceptual'] for duplicate in group['duplicates']
     )
 
 

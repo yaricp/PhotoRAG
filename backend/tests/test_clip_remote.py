@@ -133,13 +133,25 @@ class TestRemoteClipTaggerGetTags:
         f = tmp_path / 'img.jpg'
         f.write_bytes(b'fake image')
         llm = MagicMock()
-        llm.invoke.return_value = MagicMock(content=json.dumps([
-            {'tag': 'tag_0', 'score': 0.50},
-            {'tag': 'tag_1', 'score': 0.49},
-        ]))
+        llm.invoke.return_value = MagicMock(
+            content=json.dumps(
+                [
+                    {'tag': 'tag_0', 'score': 0.50},
+                    {'tag': 'tag_1', 'score': 0.49},
+                ]
+            )
+        )
         tagger = RemoteClipTagger(
-            llm, SAMPLE_TAGS, SAMPLE_CATEGORIES,
-            image_quality={'is_blurry': True, 'is_low_detail': True, 'blur_variance': 12.0, 'edge_density': 0.01, 'entropy': 1.2},
+            llm,
+            SAMPLE_TAGS,
+            SAMPLE_CATEGORIES,
+            image_quality={
+                'is_blurry': True,
+                'is_low_detail': True,
+                'blur_variance': 12.0,
+                'edge_density': 0.01,
+                'entropy': 1.2,
+            },
         )
         result = tagger.get_tags(str(f))
         prompt = llm.invoke.call_args.args[0][0].content[1]['text']

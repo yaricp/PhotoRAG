@@ -114,8 +114,10 @@ describe('JobProcessingPage', () => {
         renderPage()
         const activeTab = await screen.findByRole('tab', { name: /In progress/ })
         const completedTab = screen.getByRole('tab', { name: /Completed/ })
-        expect(activeTab).toHaveTextContent('2')
-        expect(completedTab).toHaveTextContent('3')
+        await waitFor(() => {
+            expect(activeTab).toHaveTextContent('2')
+            expect(completedTab).toHaveTextContent('3')
+        })
         fireEvent.click(completedTab)
         expect(await screen.findByText('Photo #22')).toBeInTheDocument()
         expect(screen.getByText('A completed description')).not.toBeVisible()

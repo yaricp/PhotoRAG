@@ -90,7 +90,6 @@ class TestBuildLangchainVisionModel:
         assert isinstance(model, OllamaClient)
         assert model.policy.effective_num_ctx <= 4096
 
-
     def test_default_unknown_provider_uses_openai(self):
         from src.model_services import _build_langchain_vision_model
 

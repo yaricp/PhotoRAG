@@ -72,7 +72,7 @@ class RemoteClipTagger:
     def get_tags(self, file_path: str) -> list[tuple[str, float]]:
         results = []
         for start in range(0, len(self.all_tags), MAX_TAGS_PER_CALL):
-            results.extend(self._classify(file_path, self.all_tags[start:start + MAX_TAGS_PER_CALL], self.all_tags))
+            results.extend(self._classify(file_path, self.all_tags[start : start + MAX_TAGS_PER_CALL], self.all_tags))
         return results
 
     def get_categories(self, file_path: str) -> list[tuple[str, float]]:
@@ -149,6 +149,7 @@ class RemoteClipTagger:
         metrics = self.image_quality
         if not metrics:
             return "blurred=unknown; low_detail=unknown; uniform=unknown"
+
         def flag(key: str) -> str:
             return "unknown" if key not in metrics else str(bool(metrics[key])).lower()
 
@@ -175,15 +176,15 @@ class RemoteClipTagger:
             items = parse(raw)
         except json.JSONDecodeError:
             try:
-                corrected = self.llm.invoke([
-                    HumanMessage(content=_JSON_REPAIR_PROMPT.format(raw=raw[:12000]))
-                ])
+                corrected = self.llm.invoke([HumanMessage(content=_JSON_REPAIR_PROMPT.format(raw=raw[:12000]))])
             except Exception:
                 raise
             try:
                 items = parse(corrected.content)
             except (json.JSONDecodeError, AttributeError, TypeError) as repair_error:
-                raise ValueError("[RemoteClipTagger] Model returned malformed JSON after one repair attempt") from repair_error
+                raise ValueError(
+                    "[RemoteClipTagger] Model returned malformed JSON after one repair attempt"
+                ) from repair_error
         if not isinstance(items, list):
             raise ValueError("[RemoteClipTagger] Expected a JSON array from the vision model")
         return items
