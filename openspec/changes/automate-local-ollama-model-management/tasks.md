@@ -33,7 +33,7 @@
 - [x] 5.1 Build a separately versioned macOS universal candidate from this change and inspect its bundled code and Python runtime.
 - [x] 5.2 Build separately versioned Windows x64 and ARM64 candidates and inspect their bundled code and Python runtimes.
 - [x] 5.3 Build separately versioned Linux x64 and ARM64 candidates and inspect their bundled code and Python runtimes.
-- [ ] 5.4 Exercise the installer and Ollama workflow on macOS and Windows: first-run language/help, model pull progress, inventory/free space, cancellation, individual/all deletion and reopening an existing configuration. Linux runtime verification is deferred from 0.1.5; its installers were inspected statically.
+- [ ] 5.4 Exercise the installer and Ollama workflow on macOS and Windows: first-run language/help, model pull progress, inventory/free space, cancellation, individual/all deletion and reopening an existing configuration. For 0.1.5, the user confirmed macOS model variants work; only remote providers were tested on Windows, so Windows local Ollama is not validated or guaranteed. Linux runtime verification is deferred from 0.1.5.
 - [x] 5.5 Rebuild all five current test installers with the compact vision model, record artifact checksums, and verify the cached Electron archives against the official release manifest.
 - [x] 5.6 Build follow-up Windows test installers with the compact OCR/chat suggestions directly below the provider choice and verify their bundled UI and runtimes.
 - [x] 5.7 Build and verify updated macOS universal, Windows x64/ARM64 and Linux x64/ARM64 test installers from the same source revision.

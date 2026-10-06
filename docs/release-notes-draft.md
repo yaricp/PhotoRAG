@@ -8,7 +8,7 @@ Ollama setup now includes model discovery and management, with model-aware conte
 
 - **macOS:** All model variants currently supported by PhotoRAG were tested, including local models through Ollama. The checks passed.
 - **Windows:** Only remote model providers were tested. Local model inference is not validated or guaranteed, including through Ollama. The Ollama failure observed during this test occurred in an x64 Windows virtual machine emulated on an Apple Silicon Mac and does not establish behavior on native Windows hardware.
-- **Linux:** Installers for x86_64 and ARM64 are prepared. Installation and runtime behavior have not yet been tested on Linux.
+- **Linux:** The release build provides an x86_64 AppImage. Installation and runtime behavior have not yet been tested on Linux. A Linux ARM64 installer is not included in this release.
 
 ## Available installer targets
 
@@ -16,4 +16,3 @@ Ollama setup now includes model discovery and management, with model-aware conte
 - Windows x64
 - Windows ARM64
 - Linux x86_64 AppImage
-- Linux ARM64 AppImage
