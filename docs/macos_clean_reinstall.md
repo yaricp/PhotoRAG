@@ -2,7 +2,7 @@
 
 Use this procedure to test PhotoRAG's first launch as if it had never been installed for the current macOS user. It removes the app, photo database and task queues, settings, Python virtual environment, models downloaded by PhotoRAG, caches, and logs. **Your original photo files are not deleted.** To test dependency installation from scratch, remove `~/Library/Application Support/PhotoRAG`; moving only the `.app` to the Trash leaves the previous installation's data in place.
 
-Run the commands below in **macOS Terminal**. They cover a standard `PhotoRAG.app` installation in `/Applications` or `~/Applications`. If you installed the app elsewhere, remove that copy manually as well. The [Windows procedure](windows_clean_reinstall.md) is in the same directory.
+Run the commands below in **macOS Terminal**. They cover a standard `PhotoRAG.app` installation in `/Applications` or `~/Applications`. If you installed the app elsewhere, remove that copy manually as well. The [Windows](windows_clean_reinstall.md) and [Linux](linux_clean_reinstall.md) procedures are in the same directory.
 
 ## 1. Quit the app
 

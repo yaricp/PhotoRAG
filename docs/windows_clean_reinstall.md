@@ -2,7 +2,7 @@
 
 Use this procedure when you need to test PhotoRAG on Windows as if it had never been installed on the machine.
 
-For macOS, see [the clean reinstall procedure](macos_clean_reinstall.md).
+See the clean reinstall procedures for [macOS](macos_clean_reinstall.md) and [Linux](linux_clean_reinstall.md).
 
 ## 1. Close running apps
 
