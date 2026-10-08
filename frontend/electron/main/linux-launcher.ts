@@ -81,6 +81,7 @@ export async function ensureLinuxAppMenuEntry(): Promise<void> {
     } catch (error) {
         logToFile(`[startup] could not keep AppImage in Applications: ${error instanceof Error ? error.message : String(error)}`)
     }
+    const launchedFromOutsideApplications = resolve(sourceAppImage) !== resolve(executable)
 
     const dataHome = process.env.XDG_DATA_HOME || join(app.getPath('home'), '.local', 'share')
     const applicationsDir = join(dataHome, 'applications')
@@ -125,6 +126,14 @@ export async function ensureLinuxAppMenuEntry(): Promise<void> {
         writeFileSync(desktopPath, desktopEntry, { mode: 0o755 })
         chmodSync(desktopPath, 0o755)
         logToFile('[startup] added PhotoRAG to the current user application menu')
+        if (launchedFromOutsideApplications) {
+            const savedMessage = `[startup] PhotoRAG was saved to ${executable} and added to the Applications menu.`
+            const nextStepMessage = '[startup] If the setup window did not appear, stop this launch (Ctrl+C in this terminal), then open PhotoRAG from the Applications menu to continue setup.'
+            logToFile(savedMessage)
+            logToFile(nextStepMessage)
+            console.log(savedMessage)
+            console.log(nextStepMessage)
+        }
     } catch (error) {
         logToFile(`[startup] could not add application-menu entry: ${error instanceof Error ? error.message : String(error)}`)
     }

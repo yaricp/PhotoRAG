@@ -71,6 +71,7 @@ afterEach(() => {
 
 describe('ensureLinuxAppMenuEntry', () => {
     it('keeps a persistent AppImage in ~/Applications and points the menu entry to it', async () => {
+        const terminalMessage = vi.spyOn(console, 'log').mockImplementation(() => {})
         const { ensureLinuxAppMenuEntry } = await import('../linux-launcher')
 
         await ensureLinuxAppMenuEntry()
@@ -88,6 +89,8 @@ describe('ensureLinuxAppMenuEntry', () => {
             expect.stringContaining(`Exec="${applicationCopy}"`),
             { mode: 0o755 }
         )
+        expect(terminalMessage).toHaveBeenCalledWith(expect.stringContaining(`PhotoRAG was saved to ${applicationCopy}`))
+        expect(terminalMessage).toHaveBeenCalledWith(expect.stringContaining('stop this launch (Ctrl+C in this terminal)'))
     })
 
     it('copies the AppImage when hard links are unavailable', async () => {
