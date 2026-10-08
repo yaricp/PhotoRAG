@@ -100,10 +100,10 @@ export async function ensureLinuxAppMenuEntry(): Promise<void> {
     }
 
     const execArgs = [executable]
-    for (const switchName of ['ozone-platform', 'ozone-platform-hint']) {
+    for (const switchName of ['disable-gpu', 'enable-gpu', 'ozone-platform', 'ozone-platform-hint']) {
         if (!app.commandLine.hasSwitch(switchName)) continue
         const value = app.commandLine.getSwitchValue(switchName)
-        if (value) execArgs.push(`--${switchName}=${value}`)
+        execArgs.push(value ? `--${switchName}=${value}` : `--${switchName}`)
     }
 
     const desktopEntry = [

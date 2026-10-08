@@ -9,6 +9,8 @@ let renameSyncMock: ReturnType<typeof vi.fn>
 let chmodSyncMock: ReturnType<typeof vi.fn>
 let copyFileMock: ReturnType<typeof vi.fn>
 let logToFileMock: ReturnType<typeof vi.fn>
+let commandLineHasSwitchMock: ReturnType<typeof vi.fn>
+let commandLineGetSwitchValueMock: ReturnType<typeof vi.fn>
 
 beforeEach(() => {
     vi.resetModules()
@@ -26,6 +28,8 @@ beforeEach(() => {
     chmodSyncMock = vi.fn()
     copyFileMock = vi.fn().mockResolvedValue(undefined)
     logToFileMock = vi.fn()
+    commandLineHasSwitchMock = vi.fn(() => false)
+    commandLineGetSwitchValueMock = vi.fn(() => '')
 
     const fsMock = {
         chmodSync: chmodSyncMock,
@@ -52,8 +56,8 @@ beforeEach(() => {
         getPath: vi.fn(() => '/home/test'),
         getVersion: vi.fn(() => '0.1.5'),
         commandLine: {
-            hasSwitch: vi.fn(() => false),
-            getSwitchValue: vi.fn(() => ''),
+            hasSwitch: commandLineHasSwitchMock,
+            getSwitchValue: commandLineGetSwitchValueMock,
         },
     }
     vi.doMock('electron', () => ({ default: { app: appMock }, app: appMock }))
@@ -100,5 +104,19 @@ describe('ensureLinuxAppMenuEntry', () => {
         expect(copyFileMock).toHaveBeenCalledWith(appImagePath, temporary)
         expect(chmodSyncMock).toHaveBeenCalledWith(temporary, 0o755)
         expect(renameSyncMock).toHaveBeenCalledWith(temporary, applicationCopy)
+    })
+
+    it('stores the startup rendering defaults in the application-menu entry', async () => {
+        commandLineHasSwitchMock.mockImplementation((name: string) => ['disable-gpu', 'ozone-platform'].includes(name))
+        commandLineGetSwitchValueMock.mockImplementation((name: string) => name === 'ozone-platform' ? 'x11' : '')
+        const { ensureLinuxAppMenuEntry } = await import('../linux-launcher')
+
+        await ensureLinuxAppMenuEntry()
+
+        expect(writeFileSyncMock).toHaveBeenCalledWith(
+            '/home/test/.local/share/applications/com.photorag.app.desktop',
+            expect.stringContaining(`Exec="${applicationCopy}" "--disable-gpu" "--ozone-platform=x11"`),
+            { mode: 0o755 }
+        )
     })
 })
