@@ -3,8 +3,24 @@ import { join } from 'path'
 import { registerIpcHandlers } from './ipc'
 import { registerAppProtocol } from './protocol'
 import { getBackendSetupIssue, startBackend, stopBackend } from './backend'
+import { ensureLinuxAppMenuEntry } from './linux-launcher'
 
 app.setName('PhotoRAG')
+
+// Some packaged Linux builds can start under Wayland without ever showing the
+// hidden startup window. Use XWayland when the session exposes both displays;
+// keep native Wayland for systems without XWayland and honor explicit flags.
+if (
+    app.isPackaged &&
+    process.platform === 'linux' &&
+    process.env.WAYLAND_DISPLAY &&
+    process.env.DISPLAY &&
+    !app.commandLine.hasSwitch('ozone-platform') &&
+    !app.commandLine.hasSwitch('ozone-platform-hint')
+) {
+    app.commandLine.appendSwitch('ozone-platform', 'x11')
+    console.info('[startup] Wayland session detected; using XWayland for this packaged Linux run')
+}
 
  
 let mainWindow: BrowserWindow | null = null
@@ -49,6 +65,7 @@ if (!gotSingleInstanceLock) {
 
     app.whenReady().then(async () => {
         registerAppProtocol()
+        void ensureLinuxAppMenuEntry()
 
         const setupIssue = getBackendSetupIssue()
 

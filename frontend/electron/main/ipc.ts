@@ -622,19 +622,42 @@ function getSetupInstallLockPath(): string {
 
 async function acquireSetupInstallLock(): Promise<number | null> {
     const lockPath = getSetupInstallLockPath()
-    try {
-        const fd = openSync(lockPath, 'wx')
-        writeFileSync(fd, `${process.pid}\n${new Date().toISOString()}\n`)
-        logToFile(`[setup] acquired dependency installation lock: ${lockPath}`)
-        return fd
-    } catch (error) {
-        const code = error && typeof error === 'object' && 'code' in error
-            ? String((error as { code?: unknown }).code)
-            : ''
-        if (code !== 'EEXIST') throw error
-        logToFile(`[setup] dependency installation lock already exists; waiting: ${lockPath}`)
-        await waitForSetupInstallLockRelease(lockPath)
-        return null
+    while (true) {
+        try {
+            const fd = openSync(lockPath, 'wx')
+            writeFileSync(fd, `${process.pid}\n${new Date().toISOString()}\n`)
+            logToFile(`[setup] acquired dependency installation lock: ${lockPath}`)
+            return fd
+        } catch (error) {
+            const code = error && typeof error === 'object' && 'code' in error
+                ? String((error as { code?: unknown }).code)
+                : ''
+            if (code !== 'EEXIST') throw error
+
+            let lockContents: string
+            try {
+                lockContents = readFileSync(lockPath, 'utf8')
+            } catch (readError) {
+                const readCode = readError && typeof readError === 'object' && 'code' in readError
+                    ? String((readError as { code?: unknown }).code)
+                    : ''
+                if (readCode === 'ENOENT') continue
+                logToFile(`[setup] could not inspect dependency installation lock: ${String(readError)}`)
+                await waitForSetupInstallLockRelease(lockPath)
+                return null
+            }
+
+            const lockPid = getSetupLockPid(lockContents)
+            if (lockPid !== null && !isProcessRunning(lockPid)) {
+                if (removeStaleSetupInstallLock(lockPath, lockContents)) continue
+            }
+
+            const owner = lockPid === null ? 'unknown owner' : `pid ${lockPid}`
+            logToFile(`[setup] dependency installation lock already exists (${owner}); waiting: ${lockPath}`)
+            const staleLockRemoved = await waitForSetupInstallLockRelease(lockPath)
+            if (staleLockRemoved) continue
+            return null
+        }
     }
 }
 
@@ -647,9 +670,59 @@ function releaseSetupInstallLock(fd: number): void {
     } catch { /* ignore lock cleanup errors */ }
 }
 
-async function waitForSetupInstallLockRelease(lockPath: string): Promise<void> {
+function getSetupLockPid(contents: string): number | null {
+    const pid = Number.parseInt(contents.split(/\r?\n/, 1)[0], 10)
+    return Number.isSafeInteger(pid) && pid > 0 ? pid : null
+}
+
+function isProcessRunning(pid: number): boolean {
+    try {
+        process.kill(pid, 0)
+        return true
+    } catch (error) {
+        const code = error && typeof error === 'object' && 'code' in error
+            ? String((error as { code?: unknown }).code)
+            : ''
+        if (code === 'ESRCH') return false
+        // EPERM means the process exists but this user cannot signal it.
+        return true
+    }
+}
+
+function removeStaleSetupInstallLock(lockPath: string, expectedContents: string): boolean {
+    try {
+        // Avoid deleting a lock that another process replaced while we checked its owner.
+        if (readFileSync(lockPath, 'utf8') !== expectedContents) return false
+        unlinkSync(lockPath)
+        logToFile(`[setup] removed stale dependency installation lock: ${lockPath}`)
+        return true
+    } catch (error) {
+        const code = error && typeof error === 'object' && 'code' in error
+            ? String((error as { code?: unknown }).code)
+            : ''
+        if (code === 'ENOENT') return true
+        logToFile(`[setup] could not remove stale dependency installation lock: ${String(error)}`)
+        return false
+    }
+}
+
+async function waitForSetupInstallLockRelease(lockPath: string): Promise<boolean> {
     for (let i = 0; i < SETUP_LOCK_MAX_POLLS; i++) {
-        if (!existsSync(lockPath)) return
+        if (!existsSync(lockPath)) return false
+
+        try {
+            const contents = readFileSync(lockPath, 'utf8')
+            const pid = getSetupLockPid(contents)
+            if (pid !== null && !isProcessRunning(pid) && removeStaleSetupInstallLock(lockPath, contents)) {
+                return true
+            }
+        } catch (error) {
+            const code = error && typeof error === 'object' && 'code' in error
+                ? String((error as { code?: unknown }).code)
+                : ''
+            if (code === 'ENOENT') return false
+        }
+
         await new Promise(resolve => setTimeout(resolve, SETUP_LOCK_POLL_MS))
     }
     throw new Error(`Dependency installation is already running and did not finish: ${lockPath}`)

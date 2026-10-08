@@ -254,7 +254,7 @@
       "installingPackages": "Installing packages: {{installed}} / {{total}}",
       "latestInstalled": "Latest installed: {{packageName}}",
       "lastActivity": "Last activity: {{time}}",
-      "installingPackagesHint": "This stage can stay quiet for several minutes on Windows while large packages are unpacked. If this text keeps updating, installation is still running."
+      "installingPackagesHint": "Unpacking large packages can take several minutes with no new messages. If the activity time keeps updating, installation is still running."
     },
     "stepInitDb": {
       "title": "Initialising Database",

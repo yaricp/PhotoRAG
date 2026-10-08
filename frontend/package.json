@@ -141,6 +141,13 @@
       "include": "build/installer.nsh"
     },
     "linux": {
+      "icon": "resources/icon-source.png",
+      "extraResources": [
+        {
+          "from": "resources/icon-source.png",
+          "to": "photorag-icon.png"
+        }
+      ],
       "target": [
         {
           "target": "AppImage",
