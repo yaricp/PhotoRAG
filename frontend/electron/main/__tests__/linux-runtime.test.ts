@@ -31,13 +31,16 @@ describe('configureLinuxRuntime', () => {
         ])
     })
 
-    it('keeps an explicitly selected ozone platform and adds software rendering', () => {
-        const { app, appendSwitch } = createApp(true, ['ozone-platform'])
+    it('overrides Electron ozone hints with X11 and adds software rendering', () => {
+        const { app, appendSwitch } = createApp(true, ['ozone-platform', 'ozone-platform-hint'])
         vi.spyOn(console, 'info').mockImplementation(() => undefined)
 
         configureLinuxRuntime(app, 'linux')
 
-        expect(appendSwitch.mock.calls).toEqual([['disable-gpu']])
+        expect(appendSwitch.mock.calls).toEqual([
+            ['disable-gpu'],
+            ['ozone-platform', 'x11'],
+        ])
     })
 
     it('does not override explicit GPU options', () => {

@@ -22,13 +22,8 @@ export function configureLinuxRuntime(
         console.info('[startup] Linux packaged app: using software rendering')
     }
 
-    // Use the X11 mode that successfully displays the first-run window. Relying
-    // on DISPLAY to select it is unreliable in some launch environments.
-    if (
-        !app.commandLine.hasSwitch('ozone-platform') &&
-        !app.commandLine.hasSwitch('ozone-platform-hint')
-    ) {
-        app.commandLine.appendSwitch('ozone-platform', 'x11')
-        console.info('[startup] Linux packaged app: using X11 for window rendering')
-    }
+    // Use the X11 mode that successfully displays the first-run window. Electron
+    // may report an implicit ozone-platform-hint even when no platform was chosen.
+    app.commandLine.appendSwitch('ozone-platform', 'x11')
+    console.info('[startup] Linux packaged app: using X11 for window rendering')
 }

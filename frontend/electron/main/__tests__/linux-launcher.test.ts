@@ -107,8 +107,12 @@ describe('ensureLinuxAppMenuEntry', () => {
     })
 
     it('stores the startup rendering defaults in the application-menu entry', async () => {
-        commandLineHasSwitchMock.mockImplementation((name: string) => ['disable-gpu', 'ozone-platform'].includes(name))
-        commandLineGetSwitchValueMock.mockImplementation((name: string) => name === 'ozone-platform' ? 'x11' : '')
+        commandLineHasSwitchMock.mockImplementation((name: string) => ['disable-gpu', 'ozone-platform', 'ozone-platform-hint'].includes(name))
+        commandLineGetSwitchValueMock.mockImplementation((name: string) => {
+            if (name === 'ozone-platform') return 'x11'
+            if (name === 'ozone-platform-hint') return 'auto'
+            return ''
+        })
         const { ensureLinuxAppMenuEntry } = await import('../linux-launcher')
 
         await ensureLinuxAppMenuEntry()
@@ -118,5 +122,7 @@ describe('ensureLinuxAppMenuEntry', () => {
             expect.stringContaining(`Exec="${applicationCopy}" "--disable-gpu" "--ozone-platform=x11"`),
             { mode: 0o755 }
         )
+        const desktopContents = writeFileSyncMock.mock.calls.find(([path]) => path === '/home/test/.local/share/applications/com.photorag.app.desktop')?.[1]
+        expect(desktopContents).not.toContain('ozone-platform-hint')
     })
 })
