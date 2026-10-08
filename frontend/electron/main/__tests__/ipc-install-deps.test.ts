@@ -9,6 +9,7 @@ let openSyncMock = vi.fn(() => 42)
 let closeSyncMock = vi.fn()
 let unlinkSyncMock = vi.fn()
 let readdirSyncMock = vi.fn(() => [])
+let cpMock = vi.fn().mockResolvedValue(undefined)
 
 function mockSuccessfulSpawn({ emitClose = true, emitExit = false } = {}) {
     const stdoutHandlers: Array<(data: Buffer) => void> = []
@@ -55,6 +56,7 @@ beforeEach(() => {
     closeSyncMock = vi.fn()
     unlinkSyncMock = vi.fn()
     readdirSyncMock = vi.fn(() => [])
+    cpMock = vi.fn().mockResolvedValue(undefined)
     spawnMock = vi.fn(() => mockSuccessfulSpawn())
 
     vi.doMock('electron', () => ({
@@ -88,8 +90,8 @@ beforeEach(() => {
         readdirSync: readdirSyncMock,
     }))
     vi.doMock('fs/promises', () => ({
-        default: { cp: vi.fn().mockResolvedValue(undefined) },
-        cp: vi.fn().mockResolvedValue(undefined),
+        default: { cp: cpMock },
+        cp: cpMock,
     }))
     vi.doMock('child_process', () => ({
         default: { spawn: spawnMock },
@@ -110,6 +112,22 @@ afterEach(() => {
 })
 
 describe('setup:install-deps', () => {
+    it('dereferences bundled Python symlinks when copying the Linux runtime out of the AppImage', async () => {
+        vi.stubGlobal('process', { ...process, platform: 'linux', resourcesPath: '/mock/resources' })
+        const { registerIpcHandlers } = await import('../ipc')
+
+        registerIpcHandlers(0)
+        const installDepsHandler = mockHandle.mock.calls.find(call => call[0] === 'setup:install-deps')?.[1]
+        await installDepsHandler({ sender: { send: mockSend } })
+
+        expect(cpMock).toHaveBeenCalledWith(
+            '/mock/resources/python',
+            expect.stringContaining('PhotoRAG/python'),
+            { recursive: true, dereference: true }
+        )
+        expect(spawnMock.mock.calls[0][0]).toContain('PhotoRAG/python/bin/python3')
+    })
+
     it('installs requirements through venv python -m pip on Windows', async () => {
         const { registerIpcHandlers } = await import('../ipc')
 

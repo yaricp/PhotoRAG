@@ -69,9 +69,9 @@ export function registerIpcHandlers(port: number): void {
 
                 // Step 0 (packaged Linux/Windows): the bundled Python stores its DLL
                 // search path relative to process.resourcesPath (RPATH on Linux,
-                // pyvenv.cfg `home` on Windows). After an app update that path is gone,
-                // breaking the venv. Fix: copy the entire Python tree to userData once
-                // and create the venv from that stable copy.
+                // pyvenv.cfg `home` on Windows). AppImage Python may also contain
+                // symlinks into its temporary /tmp mount. Dereference them while
+                // copying, or the saved runtime and venv break when the AppImage exits.
                 let python = locatePython()
                 if (app.isPackaged && process.platform !== 'darwin') {
                     const stablePythonDir = join(userData, 'python')
@@ -81,7 +81,7 @@ export function registerIpcHandlers(port: number): void {
                         line: 'Extracting Python runtime…', percent: 1,
                     })
                     rmSync(stablePythonDir, { recursive: true, force: true })
-                    await cpAsync(bundledDir, stablePythonDir, { recursive: true })
+                    await cpAsync(bundledDir, stablePythonDir, { recursive: true, dereference: true })
                     python = process.platform === 'win32'
                         ? join(stablePythonDir, 'python.exe')
                         : join(stablePythonDir, 'bin', 'python3')
