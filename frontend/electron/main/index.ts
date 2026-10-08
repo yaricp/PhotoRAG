@@ -7,7 +7,7 @@ import { ensureLinuxAppMenuEntry } from './linux-launcher'
 import { configureLinuxRuntime } from './linux-runtime'
 
 app.setName('PhotoRAG')
-configureLinuxRuntime(app, process.platform, process.env)
+configureLinuxRuntime(app, process.platform)
 
 let mainWindow: BrowserWindow | null = null
 const gotSingleInstanceLock = app.requestSingleInstanceLock()

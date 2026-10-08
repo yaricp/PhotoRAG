@@ -12,7 +12,6 @@ interface RuntimeApp {
 export function configureLinuxRuntime(
     app: RuntimeApp,
     platform: NodeJS.Platform,
-    env: NodeJS.ProcessEnv,
 ): void {
     if (!app.isPackaged || platform !== 'linux') return
 
@@ -23,14 +22,13 @@ export function configureLinuxRuntime(
         console.info('[startup] Linux packaged app: using software rendering')
     }
 
-    // Prefer X11/XWayland when available. Native Wayland startup can leave the
-    // hidden first window waiting forever on some desktop/compositor combinations.
+    // Use the X11 mode that successfully displays the first-run window. Relying
+    // on DISPLAY to select it is unreliable in some launch environments.
     if (
-        env.DISPLAY &&
         !app.commandLine.hasSwitch('ozone-platform') &&
         !app.commandLine.hasSwitch('ozone-platform-hint')
     ) {
         app.commandLine.appendSwitch('ozone-platform', 'x11')
-        console.info('[startup] Linux display detected; using X11 for window rendering')
+        console.info('[startup] Linux packaged app: using X11 for window rendering')
     }
 }

@@ -19,11 +19,11 @@ function createApp(isPackaged = true, existingSwitches: string[] = []) {
 describe('configureLinuxRuntime', () => {
     afterEach(() => vi.restoreAllMocks())
 
-    it('uses X11 and software rendering for a packaged Linux desktop session', () => {
+    it('uses X11 and software rendering by default for a packaged Linux app', () => {
         const { app, appendSwitch } = createApp()
         vi.spyOn(console, 'info').mockImplementation(() => undefined)
 
-        configureLinuxRuntime(app, 'linux', { DISPLAY: ':0', WAYLAND_DISPLAY: 'wayland-0' })
+        configureLinuxRuntime(app, 'linux')
 
         expect(appendSwitch.mock.calls).toEqual([
             ['disable-gpu'],
@@ -35,7 +35,7 @@ describe('configureLinuxRuntime', () => {
         const { app, appendSwitch } = createApp(true, ['ozone-platform'])
         vi.spyOn(console, 'info').mockImplementation(() => undefined)
 
-        configureLinuxRuntime(app, 'linux', { DISPLAY: ':0' })
+        configureLinuxRuntime(app, 'linux')
 
         expect(appendSwitch.mock.calls).toEqual([['disable-gpu']])
     })
@@ -44,18 +44,9 @@ describe('configureLinuxRuntime', () => {
         const { app, appendSwitch } = createApp(true, ['enable-gpu'])
         vi.spyOn(console, 'info').mockImplementation(() => undefined)
 
-        configureLinuxRuntime(app, 'linux', { DISPLAY: ':0' })
+        configureLinuxRuntime(app, 'linux')
 
         expect(appendSwitch.mock.calls).toEqual([['ozone-platform', 'x11']])
-    })
-
-    it('uses software rendering without selecting X11 when DISPLAY is unavailable', () => {
-        const { app, appendSwitch } = createApp()
-        vi.spyOn(console, 'info').mockImplementation(() => undefined)
-
-        configureLinuxRuntime(app, 'linux', { WAYLAND_DISPLAY: 'wayland-0' })
-
-        expect(appendSwitch.mock.calls).toEqual([['disable-gpu']])
     })
 
     it('does not change development or non-Linux runs', () => {
@@ -63,8 +54,8 @@ describe('configureLinuxRuntime', () => {
         const developmentApp = createApp(false)
         const packagedApp = createApp(true)
 
-        configureLinuxRuntime(developmentApp.app, 'linux', { DISPLAY: ':0' })
-        configureLinuxRuntime(packagedApp.app, 'darwin', { DISPLAY: ':0' })
+        configureLinuxRuntime(developmentApp.app, 'linux')
+        configureLinuxRuntime(packagedApp.app, 'darwin')
 
         expect(developmentApp.appendSwitch).not.toHaveBeenCalled()
         expect(packagedApp.appendSwitch).not.toHaveBeenCalled()
