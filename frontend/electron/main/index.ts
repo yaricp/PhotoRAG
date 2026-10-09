@@ -69,7 +69,7 @@ function createMainWindow(): BrowserWindow {
     win.webContents.on('render-process-gone', (_event, details) => {
         reportRendererFailure(`The application window stopped unexpectedly (${details.reason}, exit code ${details.exitCode}).`)
     })
-    win.webContents.on('console-message', (_event, details) => {
+    win.webContents.on('console-message', (details) => {
         if (details.level === 'warning' || details.level === 'error') {
             logToFile(`[renderer:${details.level}] ${details.sourceId}:${details.lineNumber} ${details.message}`)
         }
@@ -107,7 +107,25 @@ if (!gotSingleInstanceLock) {
 
     app.whenReady().then(async () => {
         registerAppProtocol()
-        void ensureLinuxAppMenuEntry()
+
+        const shouldContinueFromMenu = await ensureLinuxAppMenuEntry()
+        if (shouldContinueFromMenu) {
+            if (!process.stdout.isTTY) {
+                try {
+                    await dialog.showMessageBox({
+                        type: 'info',
+                        title: 'PhotoRAG is ready',
+                        message: 'PhotoRAG was added to the Applications menu.',
+                        detail: 'This launch will now close. Open PhotoRAG from the Applications menu to continue setup.',
+                        buttons: ['OK'],
+                    })
+                } catch (error) {
+                    logToFile(`[startup] could not show first-launch message: ${error instanceof Error ? error.message : String(error)}`)
+                }
+            }
+            app.quit()
+            return
+        }
 
         const setupIssue = getBackendSetupIssue()
 

@@ -74,7 +74,7 @@ describe('ensureLinuxAppMenuEntry', () => {
         const terminalMessage = vi.spyOn(console, 'log').mockImplementation(() => {})
         const { ensureLinuxAppMenuEntry } = await import('../linux-launcher')
 
-        await ensureLinuxAppMenuEntry()
+        const shouldContinueFromMenu = await ensureLinuxAppMenuEntry()
 
         expect(linkSyncMock).toHaveBeenCalledWith(
             appImagePath,
@@ -90,7 +90,8 @@ describe('ensureLinuxAppMenuEntry', () => {
             { mode: 0o755 }
         )
         expect(terminalMessage).toHaveBeenCalledWith(expect.stringContaining(`PhotoRAG was saved to ${applicationCopy}`))
-        expect(terminalMessage).toHaveBeenCalledWith(expect.stringContaining('stop this launch (Ctrl+C in this terminal)'))
+        expect(terminalMessage).toHaveBeenCalledWith(expect.stringContaining('This launch will now close'))
+        expect(shouldContinueFromMenu).toBe(true)
     })
 
     it('copies the AppImage when hard links are unavailable', async () => {
@@ -101,12 +102,31 @@ describe('ensureLinuxAppMenuEntry', () => {
         })
         const { ensureLinuxAppMenuEntry } = await import('../linux-launcher')
 
-        await ensureLinuxAppMenuEntry()
+        const shouldContinueFromMenu = await ensureLinuxAppMenuEntry()
 
         const temporary = expect.stringMatching(/^\/home\/test\/Applications\/PhotoRAG\.AppImage\.tmp-/)
         expect(copyFileMock).toHaveBeenCalledWith(appImagePath, temporary)
         expect(chmodSyncMock).toHaveBeenCalledWith(temporary, 0o755)
         expect(renameSyncMock).toHaveBeenCalledWith(temporary, applicationCopy)
+        expect(shouldContinueFromMenu).toBe(true)
+    })
+
+    it('continues startup when launched from the persistent Applications copy', async () => {
+        vi.stubGlobal('process', {
+            ...process,
+            platform: 'linux',
+            resourcesPath: '/app/resources',
+            env: { ...process.env, APPIMAGE: applicationCopy, XDG_DATA_HOME: undefined },
+        })
+        existsSyncMock.mockImplementation((path: string) => path === appImagePath || path === applicationCopy)
+        const terminalMessage = vi.spyOn(console, 'log').mockImplementation(() => {})
+        const { ensureLinuxAppMenuEntry } = await import('../linux-launcher')
+
+        const shouldContinueFromMenu = await ensureLinuxAppMenuEntry()
+
+        expect(shouldContinueFromMenu).toBe(false)
+        expect(linkSyncMock).not.toHaveBeenCalled()
+        expect(terminalMessage).not.toHaveBeenCalled()
     })
 
     it('stores the startup rendering defaults in the application-menu entry', async () => {
@@ -118,7 +138,7 @@ describe('ensureLinuxAppMenuEntry', () => {
         })
         const { ensureLinuxAppMenuEntry } = await import('../linux-launcher')
 
-        await ensureLinuxAppMenuEntry()
+        const shouldContinueFromMenu = await ensureLinuxAppMenuEntry()
 
         expect(writeFileSyncMock).toHaveBeenCalledWith(
             '/home/test/.local/share/applications/com.photorag.app.desktop',
@@ -127,5 +147,6 @@ describe('ensureLinuxAppMenuEntry', () => {
         )
         const desktopContents = writeFileSyncMock.mock.calls.find(([path]) => path === '/home/test/.local/share/applications/com.photorag.app.desktop')?.[1]
         expect(desktopContents).not.toContain('ozone-platform-hint')
+        expect(shouldContinueFromMenu).toBe(true)
     })
 })

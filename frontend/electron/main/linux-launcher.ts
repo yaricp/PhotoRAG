@@ -61,18 +61,20 @@ async function persistAppImage(source: string): Promise<string> {
     }
 }
 
-/** Keep a persistent per-user AppImage copy and register it in the desktop menu. */
-export async function ensureLinuxAppMenuEntry(): Promise<void> {
-    if (process.platform !== 'linux' || !app.isPackaged) return
+/** Keep a persistent per-user AppImage copy and register it in the desktop menu.
+ * Returns true when this invocation should close and continue from the menu entry.
+ */
+export async function ensureLinuxAppMenuEntry(): Promise<boolean> {
+    if (process.platform !== 'linux' || !app.isPackaged) return false
 
     // AppImage runtimes expose APPIMAGE as the absolute path to the original file.
     const appImagePath = process.env.APPIMAGE
-    if (!appImagePath) return
+    if (!appImagePath) return false
 
     const sourceAppImage = resolve(appImagePath)
     if (!existsSync(sourceAppImage) || /[\r\n]/.test(sourceAppImage)) {
         logToFile('[startup] skipped application-menu entry: AppImage path is unavailable')
-        return
+        return false
     }
 
     let executable = sourceAppImage
@@ -121,6 +123,7 @@ export async function ensureLinuxAppMenuEntry(): Promise<void> {
         '',
     ].join('\n')
 
+    let menuEntryCreated = false
     try {
         mkdirSync(applicationsDir, { recursive: true })
         writeFileSync(desktopPath, desktopEntry, { mode: 0o755 })
@@ -128,13 +131,16 @@ export async function ensureLinuxAppMenuEntry(): Promise<void> {
         logToFile('[startup] added PhotoRAG to the current user application menu')
         if (launchedFromOutsideApplications) {
             const savedMessage = `[startup] PhotoRAG was saved to ${executable} and added to the Applications menu.`
-            const nextStepMessage = '[startup] If the setup window did not appear, stop this launch (Ctrl+C in this terminal), then open PhotoRAG from the Applications menu to continue setup.'
+            const nextStepMessage = '[startup] This launch will now close. Open PhotoRAG from the Applications menu to continue setup.'
             logToFile(savedMessage)
             logToFile(nextStepMessage)
             console.log(savedMessage)
             console.log(nextStepMessage)
         }
+        menuEntryCreated = true
     } catch (error) {
         logToFile(`[startup] could not add application-menu entry: ${error instanceof Error ? error.message : String(error)}`)
     }
+
+    return launchedFromOutsideApplications && menuEntryCreated
 }
